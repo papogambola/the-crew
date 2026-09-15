@@ -237,7 +237,7 @@ decisions at the end.
 - **Hover briefs.** Hover a trade — on the roster, a crew card, the crew strip, or a "wants
   X" tag on a posting or job file — for a small card saying what it is, which attribute it
   leans on, what knowledge it comes with, and which jobs want it. The same on knowledge tags
-  and on MUS / BRN / TCH / CHM / NRV. Keyboard focus or a tap on a phone shows it too.
+  and on MUS / BRN / TCH / CHM / NRV. Keyboard focus shows it too.
 - **Temperament.** Two files in three carry a trait, and a trait is a fact about working with
   them rather than a number on a bar: **Steady** never loses faith after a bad night;
   **Hothead** is worth +3 and costs +4 heat; **Careful** takes 4 heat off any job they work;
@@ -352,9 +352,22 @@ more to decide per week, a crew that takes a career to build, a world that answe
 and that is the part a real-time or online layer would then stretch across months, rather than
 something to fake now by making the numbers bigger.
 
+## What it runs on
+
+**A desktop or laptop browser. There is no phone version and none is planned.** The game is a
+board you read across — a jobs list beside a world map, a crew strip above it, a minute-by-minute
+feed — and that is a wide-screen shape, not a thumb-sized one. Nothing here is built for touch,
+there is no viewport meta tag, and a phone will show a zoomed-out desktop page rather than a
+cramped one.
+
+The layout does still answer to a **narrow window**, because a half-screen browser is a normal
+desktop thing to do: the top bar wraps to two rows below about 740px, the jobs grid drops the map
+under the board below 900px, and the tab row measures the wrapped bar rather than assuming a
+height. That is a resized window, not a phone.
+
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 28 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 29 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
