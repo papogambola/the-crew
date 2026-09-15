@@ -127,7 +127,7 @@ smallest one; none is a decision.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 13 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 14 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
