@@ -49,6 +49,19 @@ decisions at the end.
   expiry. Your crew sits above the board in a strip so a posting can be judged without leaving;
   keys 1–4 jump between the tabs. **Crew · Jobs · Roster · Log pins under the top bar** and stays
   there however far down a board you are, so no tab is ever a scroll away.
+- **The split, before you take the job.** The job file shows where the fee goes: a line for each
+  person going with their percentage and their money, what the crew take between them, and what
+  **you keep** — then the **wages** for the weeks the job holds the crew, and **what is left on
+  the table**. The shares are fixed; the money they come off is not, so the three figures a clean,
+  plain and messy night pay are printed above the split.
+- **Bench somebody and watch it move.** Leave a member behind and their cut comes out of the split
+  and stays with you — the row is struck through — and a line appears comparing the two: what you
+  keep either way, what it does to the reckoning and to the odds of a clean night, and what you
+  come away with on each. Two things it is careful about. **Benching saves their cut and not their
+  wages** — everybody on the books draws pay for those weeks, whether they go or sit. And the
+  comparison **does not tell you what to do**: it is the money from this one job, and it says so —
+  it cannot count who ends up in a bed or a cell on the worse odds, weeks you go on paying for,
+  what the one who sat it out did not learn, or the heat, which lands the same either way.
 - **The map.** Beside the postings, a world map drawn in the same ink — continents and a
   graticule, no borders — with a lit marker on every country that has a posting (and a count
   when there are several). Choose a job and the map zooms to its country, centred and spotlit
@@ -372,7 +385,7 @@ computers that must not be stopped.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 30 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 31 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
