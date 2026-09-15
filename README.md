@@ -133,8 +133,14 @@ decisions at the end.
   its state and has a **Start the radio** button.
 - **Sound.** A small set of synthesised effects — clicks, the verdict stamp, a coin on a
   hire, a siren on a raid. No files; the office switch turns it off.
-- **Tutorial.** On the first game, ten steps walk through the screens, highlighting each
-  thing as it goes. Skip it, or run it again from the **i** button or the controls book.
+- **Tutorial, and a reminder.** The first time anyone plays, eleven steps walk through every
+  screen — the top line, your file, the seats and the money rules, other crews, the roster, a
+  file, the board, who can go, the reckoning and the twist, the log and what happens between
+  jobs, the office — highlighting each thing as it goes. The second sitting (a return after half
+  an hour or more away) opens with a five-card reminder. After that, nothing runs on its own.
+  Both wait behind the **i** button, and the office has a **tutorial clipboard** on the wall:
+  the whole thing, the short reminder, or any one of the eleven cards on its own, whenever the
+  player wants a recap. A decision left waiting mid-job comes before either.
 - **The i button.** Beside the menu button on every screen (or press **i**): what this screen
   is and how each part works, in plain words.
 - **Hover briefs.** Hover a technique — on the roster, a crew card, the crew strip, or a "wants
@@ -184,7 +190,7 @@ smallest one; none is a decision.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 17 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 18 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
