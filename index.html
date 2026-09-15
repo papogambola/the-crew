@@ -1224,6 +1224,9 @@ const BRIEF_PAY_ALT=["The money — {fee}, on delivery — comes from {client}."
   "It is posted by {client}, and paid the same night it is done.",
   "The fee is {fee}, from {client}, and no questions come with it."];
 function anA(w){return /^[aeiou]/i.test(w)?"an "+w:"a "+w;}
+// Two points of the same attribute read as "+2 BRN", not "+1 BRN, +1 BRN".
+function upList(up){const c={};up.forEach(a=>{c[a]=(c[a]||0)+1;});return Object.keys(c).map(a=>"+"+c[a]+" "+ATTR_ABBR[a]).join(", ");}
+function listAnd(a){return a.length<2?(a[0]||""):a.slice(0,-1).join(", ")+" and "+a[a.length-1];}
 function jobSeed(job){
   const s=(job.id||"")+"|"+(job.title||"")+"|"+(job.country||"");
   let h=2166136261;
@@ -1438,7 +1441,15 @@ const YOU_RUN=["You run it from {place}.","You keep to {place} and the phone.","
 const YOU_INSIDE=["You run it from the inside — your call, your hands.","You lead from the front; there is no back seat on this one.","You give the orders and take a door yourself.","No hotel room for you on this one: you are in it up to the elbows.","Commander and crew at once — you plan it in the morning and work it at night."];
 const STANDIN=["{X} runs it while you wait across the border.","{X} takes the lead; you take the calls from two countries away.","{X} runs the day. You hear about it afterwards."];
 const LEADERLESS=["Nobody is running it, and it shows.","No commander in the field. Everyone has a plan; nobody has the same one."];
-const NOTECH=[["No {T} on the crew. {X} improvises.","No {T} on the crew. You improvise."],["Nobody here is a {T}; {X} watches a video about it.","Nobody here is a {T}; you watch a video about it."]];
+// Nobody on the crew has the trade, so somebody spends the week before learning enough of it to
+// stand in. If the job comes off, that week is worth a point of brains on the end-of-job screen —
+// see stoodBy in finishJob. If it doesn't, they learned nothing they can use.
+const NOTECH=[
+  ["No {T} on the crew; {X} spent the week before learning enough of it to try.","No {T} on the crew; you spent the week before learning enough of it to try."],
+  ["Nobody here is {aT}; {X} was learning the trade before the operation.","Nobody here is {aT}; you were learning the trade before the operation."],
+  ["No {T} on the crew; {X} read the trade up and is about to find out how much of it stuck.","No {T} on the crew; you read the trade up and are about to find out how much of it stuck."],
+  ["Nobody here is {aT}; {X} was taught the trade in a hurry by somebody who isn't here.","Nobody here is {aT}; you were taught the trade in a hurry by somebody who isn't here."],
+  ["No {T} on the crew. {X} has been practising for six days and has never done it for real.","No {T} on the crew. You have been practising for six days and have never done it for real."]];
 const TEXTURE=[["{X} plays cards badly and wins.","You play cards badly and win."],["{X} sleeps in the van.","You sleep in the van."],["{X} finds the one restaurant open after midnight.","You find the one restaurant open after midnight."],["{X} keeps checking a phone that never rings.","You keep checking a phone that never rings."],["{X} buys a hat. It helps, somehow.","You buy a hat. It helps, somehow."],["{X} argues with a parking attendant and loses.","You argue with a parking attendant and lose."],["Nobody sleeps much.","Nobody sleeps much."],["The radio in the safe house gets one station.","The radio in the safe house gets one station."],["{X} learns the word for 'receipt'.","You learn the word for 'receipt'."],["Two days of waiting. Waiting is the job.","Two days of waiting. Waiting is the job."],["A dog adopts {X} for the week.","A dog adopts you for the week."],["{X} wins the argument about the route by not having it.","You win the argument about the route by not having it."]];
 const FIXED=["It costs twenty minutes and a favour.","Handled. Nobody outside the crew ever knows.","It's tight, and then it isn't.","A phone call fixes it; the call costs.","Somebody improvises and, for once, it works.","Twenty minutes of nobody breathing."];
 const EXIT_OK=[["{W} has the engine running. Nobody runs.","You have the engine running. Nobody runs."],["{W} takes the long way out, and it's the right way.","You take the long way out, and it's the right way."],["The van is gone before the lights change.","The van is gone before the lights change."],["By the time anyone counts, the crew is three towns away.","By the time anyone counts, the crew is three towns away."]];
@@ -1461,6 +1472,7 @@ function narrate(job,a,tier,rng,x,mode,clock){
   const team=a.team;
   let h=clock?clock.h:(job.tags.includes("night")?ri(rng,20,23):ri(rng,7,15)),m=clock?clock.m:ri(rng,0,59);
   const lines=[];
+  const stood=[];                                 // {id,k}: who learned a trade the crew hasn't got
   const push=(t,tone)=>{m+=ri(rng,4,26);if(m>=60){m-=60;h=(h+1)%24;}lines.push({t:String(h).padStart(2,"0")+":"+String(m).padStart(2,"0"),x:t,tone:tone||""});};
   S.recent=S.recent||[];
   const key=p=>typeof p==="string"?p:p[0];
@@ -1469,6 +1481,9 @@ function narrate(job,a,tier,rng,x,mode,clock){
   const nm=c=>c.isPlayer?"You":c.first;
   const say=(pool,c,vars,tone)=>push(fill2(pair(fresh(pool),c),Object.assign({X:c?nm(c):"",P:cap(police(co))},vars||{})),tone);
   const someone=()=>team.length?pick(rng,team):null;
+  // two missing trades are two people's weeks, not one person's — unless the crew is smaller
+  // than the number of gaps, and then somebody covers two and still learns one thing.
+  const someoneNew=()=>{if(!team.length)return null;const used=stood.map(s=>s.id);const free=team.filter(c=>used.indexOf(c.id)<0);return pick(rng,free.length?free:team);};
   if(mode!=="post"){
     const kind=co.terrain.some(t=>["islands","coast","port","fjords","canal"].includes(t))&&chance(rng,0.5)?"water":co.terrain.includes("megacity")?"city":co.terrain.includes("mountains")?"mountain":"road";
     const how=fresh(HOW[kind]);
@@ -1491,7 +1506,7 @@ function narrate(job,a,tier,rng,x,mode,clock){
     let tb=0;
     job.techs.forEach(t=>{const c=team.find(y=>y.tech===t);
       if(c){if(tb<2){push(nm(c)+" ("+TECH_BY_K[t].l+") "+pair(fresh(TECH_BEAT[t]),c)+".");tb++;}}
-      else say(NOTECH,someone(),{T:TECH_BY_K[t].l},"warn");});
+      else{const st=someoneNew();if(st)stood.push({id:st.id,k:t});say(NOTECH,st,{T:TECH_BY_K[t].l,aT:anA(TECH_BY_K[t].l)},"warn");}});
     job.know.forEach(k=>{const c=team.find(y=>y.know.includes(k));
       if(c)say(KNOW_HAS,c,{k,y:KNOW_BEAT[k]});
       else push(fill2(fresh(KNOW_NONE),{k,y:KNOW_BEAT[k],Y:cap(KNOW_BEAT[k])}),"warn");});
@@ -1521,7 +1536,7 @@ function narrate(job,a,tier,rng,x,mode,clock){
     else push(fresh(NOPAY),"bad");
     (x.betrayals||[]).forEach(b=>push(b,"bad"));
   }
-  return {lines,clock:{h,m}};
+  return {lines,clock:{h,m},stood};
 }
 
 /* ------------------------------ TWISTS -------------------------------- */
@@ -1672,7 +1687,7 @@ function startJob(job,opts){
   let twist=null;
   const pTw=(a.margin>=10?0.25:0.08)+(team.some(c=>hasTrait(c,"jinx"))?0.12:0);
   if(!opts.noTwist&&!cr&&!job.final&&team.length>=2&&chance(rng,pTw))twist=makeTwist(job,team,rng);
-  const P={jobId:job.id,job:Object.assign({},job),roll,leaked,teamIds:team.map(c=>c.id),pre:pre.lines,clock:pre.clock,postSeed:ri(rng,1,2000000000),twist,week:S.week,
+  const P={jobId:job.id,job:Object.assign({},job),roll,leaked,teamIds:team.map(c=>c.id),pre:pre.lines,clock:pre.clock,stood:pre.stood,postSeed:ri(rng,1,2000000000),twist,week:S.week,
     crewId:cr?cr.id:null,crewName:cr?cr.name:null,leadId:cr?cr.leadId||null:null,memberIds:members?members.map(c=>c.id):null};
   S.pendingJob=P;
   const d={id:job.id+"-w"+S.week+(cr?"-c"+cr.id:""),week:S.week,job:P.job,crew:P.crewName,narrative:pre.lines.slice(),revealed:0,done:false,twist:twist?{h:twist.h,s:twist.s,opts:twist.opts.map(o=>o.t)}:null,awaiting:false,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}};
@@ -1788,6 +1803,10 @@ function finishJob(P,choiceIdx,d){
   const cat=CAT_BY_K[job.cat];
   const weighted=Object.keys(cat.w).sort((p,q)=>cat.w[q]-cat.w[p]);
   const mentored=team.some(c=>hasTrait(c,"mentor"));
+  // somebody stood in for a trade nobody on the crew has. A week of reading is worth a point of
+  // brains only if the job came off — otherwise all it proved is that reading isn't the trade.
+  const stoodBy={};
+  if(tier>=3)(P.stood||[]).forEach(s=>{const t=TECH_BY_K[s.k];if(!t)return;const l=stoodBy[s.id]=stoodBy[s.id]||[];if(l.indexOf(t.l)<0)l.push(t.l);});
   team.forEach(c=>{
     let mul=xpMul;
     if(hasTrait(c,"quick"))mul*=2;
@@ -1795,9 +1814,10 @@ function finishJob(P,choiceIdx,d){
     const g={first:c.isPlayer?"You":c.first,xp:Math.round(xpBase*mul),up:[],rank:null};
     c.xp=(c.xp||0)+g.xp;c._touched=true;
     const need=xpNeeded(c.exp);
-    if(need!==null&&c.xp>=need){c.exp=Math.min(5,c.exp+1);g.rank=EXP[c.exp-1];logMsg((c.isPlayer?"You are":c.first+" is")+" now a "+g.rank+".","good");}
+    if(need!==null&&c.xp>=need){c.exp=Math.min(5,c.exp+1);g.rank=EXP[c.exp-1];logMsg((c.isPlayer?"You are":c.first+" is")+" now "+anA(g.rank)+".","good");}
     const n=tier>=3?(chance(rng,0.5)?2:1):(tier===2&&chance(rng,0.5)?1:0);
     for(let i=0;i<n;i++){const at=weighted[Math.min(i,weighted.length-1)];if(c.attrs[at]<98){c.attrs[at]+=1;g.up.push(at);}}
+    if(stoodBy[c.id]){g.stood=listAnd(stoodBy[c.id].map(anA));if(c.attrs.brains<98){c.attrs.brains+=1;g.up.push("brains");}}
     growth.push(g);
   });
   // the crew becomes something by working together, or by losing together
@@ -2834,7 +2854,7 @@ function modalResult(d){
     +d.rk.map(r=>'<span class="k">'+esc(r.k)+'</span><span class="'+(r.v>=0?"plus":"minus")+' num">'+(r.v>=0?"+":"")+r.v+'</span>').join("")+'</div>'
     +'<div class="mono" style="font-size:12.5px;margin-top:8px">'+d.repBefore+' → <b>'+d.repAfter+'</b> · '+esc(d.rankBefore)+(d.rankAfter!==d.rankBefore?' → <b>'+esc(d.rankAfter)+'</b>':'')+'</div>';
   const growth=d.growth.length?'<hr class="rule"><div class="kicker">What they learned</div>'
-    +d.growth.map(g=>'<div class="mono" style="font-size:12px;padding:2px 0">'+esc(g.first)+': +'+g.xp+' xp'+(g.up.length?', '+g.up.map(at=>'+1 '+ATTR_ABBR[at]).join(', '):'')+(g.rank?' — <b>now a '+esc(g.rank)+'</b>':'')+'</div>').join(""):"";
+    +d.growth.map(g=>'<div class="mono" style="font-size:12px;padding:2px 0">'+esc(g.first)+': +'+g.xp+' xp'+(g.up.length?', '+upList(g.up):'')+(g.stood?' — <span style="color:var(--muted)">stood in as '+esc(g.stood)+'</span>':'')+(g.rank?' — <b>now '+esc(anA(g.rank))+'</b>':'')+'</div>').join(""):"";
   const ev=d.events.length?'<hr class="rule"><div class="kicker">Fallout</div>'+d.events.map(e=>'<div class="mono" style="font-size:12px;color:var(--stamp);padding:3px 0">— '+esc(e)+'</div>').join(""):"";
   const MARK={gone:"GONE",taken:"TAKEN",hurt:"HURT",quit:"QUIT"};
   const roster='<hr class="rule"><div class="kicker">In the field</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'
@@ -3134,7 +3154,7 @@ const INFO={
   result:{h:"The job report",t:[
     "First the job as it happened, minute by minute — who got in and who didn't, who did the talking, what each technique bought, what went right and what went wrong, the exit, the split. Skip to the end if you'd rather.",
     "Then the verdict: <b>Clean</b>, <b>Success</b>, <b>Messy</b>, <b>Botched</b> or <b>Disaster</b> — crew power against difficulty, plus the roll. Gross is the fee earned, cuts go to the crew, the net is yours.",
-    "<b>Ranking — why</b> lists every reason the crew's ranking moved: up for a clean or successful job (more for a bigger job, a little more if nobody was hurt), down for messy, botched or disastrous work, a leak, an arrest, or a member walking with the money. <b>What they learned</b>: everyone who went gains experience; ranks are earned at 40, 110, 220 and 400 xp, and good work adds a point to the attributes the job leaned on.",
+    "<b>Ranking — why</b> lists every reason the crew's ranking moved: up for a clean or successful job (more for a bigger job, a little more if nobody was hurt), down for messy, botched or disastrous work, a leak, an arrest, or a member walking with the money. <b>What they learned</b>: everyone who went gains experience; ranks are earned at 40, 110, 220 and 400 xp, and good work adds a point to the attributes the job leaned on. If the job wanted a trade nobody on the crew has, somebody spends the week before learning enough of it to stand in — and if the job comes off, that week is worth a point of brains, marked <i>stood in as</i>. A job that doesn't come off teaches them nothing.",
     "<b>Fallout</b>: injuries (out two weeks), arrests (held for weeks, then back on the roster), leaks (an informant talked), and betrayals (someone skimmed the split and vanished).",
     "<b>The twist.</b> On some jobs — one good fit in four, one long shot in twelve — the report stops: something has gone wrong and six options wait for your call. Only one sets the crew free, and it is always the one the crew you brought can actually do: a wheelman can hot-wire the second car, a forger can re-paper the manifest, a hacker can kill the alarm. A call your crew can make but not best costs time and money; a call nobody can make costs blood, a seat, and ranking. Walking away is always on the list — it keeps everyone and loses the score. The report then shows what you chose, what would have set you free, and why."]},
   event:{h:"Between jobs",t:[
@@ -3412,7 +3432,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 22 · 15 September 2026";
+const BUILD="build 23 · 15 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */

@@ -68,6 +68,12 @@ decisions at the end.
   speeds, Slowest to Fastest, on the report itself and in the office. The field
   roster marks who came back: **GONE** in red on anyone who walked with the money, **TAKEN** on
   anyone the police held, **HURT** on the injured.
+- **Standing in for a trade you haven't got.** Take a job that wants a Safecracker with no
+  safecracker on the books and somebody spends the week before learning enough of it to try —
+  the report says who, by name. If the job comes off, that week is worth a point of brains, and
+  **What they learned** says what it bought: *stood in as a Safecracker*. If the job doesn't
+  come off, they learned nothing they can use. Two gaps are two people's weeks; a crew smaller
+  than the number of gaps means somebody covers two and still learns the one thing.
 - **Job recaps.** Every job you have run stays on file. The Log's week is a dropdown to any
   past week, and each job reopens as its full report — the minute-by-minute, the verdict, the
   split, why the ranking moved, what they learned, who came back.
@@ -239,7 +245,7 @@ smallest one; none is a decision.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 22 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 23 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
