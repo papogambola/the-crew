@@ -261,6 +261,14 @@ decisions at the end.
 - **They become a crew.** Everyone who goes on a job together builds a bond — +1 for a success
   or better, −1 for a botched or disastrous one, from −3 to +3. The reckoning counts it, up to
   ±6, as *They have worked together* or *Bad blood*, and the cards say who gets on with whom.
+- **And you can ask why.** Hover *Bad blood* on the reckoning — or any line on a card or a file
+  saying who somebody will not work with — and it tells you **which nights did it**: the week, the
+  verdict, the job and the country, and which way each one moved them. Bad blood comes from jobs,
+  and a job is shared by everyone on it, so four people off one bad night are six pairs with the
+  same history; pairs whose background is identical are named together and said **once** —
+  *You, Aiko, Karim and Shai — bad blood all round (−2 each, 6 pairs)* — so every pair the
+  reckoning counts is accounted for without repeating a word of it. A file saved before any of
+  this was recorded says the nights are not known rather than inventing any.
 - **The record.** Everything the crew has done, counted: jobs, verdicts, money earned and paid
   out in cuts, the biggest score, countries worked, twists called right, who was hurt, taken or
   lost, and the current run of jobs without a scratch. Under it, eighteen **career marks** from
@@ -385,7 +393,7 @@ computers that must not be stopped.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 31 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 32 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
