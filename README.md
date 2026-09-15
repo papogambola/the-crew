@@ -105,14 +105,28 @@ decisions at the end.
   you:** a Nobody sees only tier 1–2 postings at −20% pay, loses a point of crew loyalty a
   week, and no Veteran or Legend will sign; Small time pays −10%; Known opens tier 3 at full
   pay and Veterans sign; Respected opens tier 4 at +10%, Legends sign, loyalty gains a point a
-  week, and the police look 5% harder; Feared pays +20% at +10% heat; The Crew pays +35% at
-  +15% heat, holds loyalty at +2, and the final score appears at 100. The Log's operation
-  panel says what the current name buys and what the next one costs; a file on the roster that
-  won't sign yet says so under the fee.
-- **A crew that grows.** Everyone who goes on a job gains experience; ranks — Rookie,
-  Operator, Professional, Veteran, Legend — are earned at 40, 110, 220 and 400 xp, and good
-  work adds a point to the attributes the job leaned on. You included.
-- **Seats, and other crews.** Four soldiers' seats to start; a Respected name (ranking 60)
+  week; then Feared, Notorious, Untouchable and The Crew, which pays +50% and carries +22%
+  heat. Eight names across six hundred points, and **the last two rungs are most of the
+  game**. A job well beneath your name barely moves it — a Feared crew doing corner work is
+  not getting more feared — so the way up is up the tiers. The Log's operation panel says what
+  the current name buys, what the next one costs, and what the last score is still waiting for.
+- **The world answers the name.** The bigger you get, the better defended the rooms you are
+  given: difficulty carries a pressure term that rises with your ranking, and it has no
+  ceiling. A country you have worked lately is watching for you — local heat, which makes
+  every room there harder and cools a point a week, so the map is something to rotate around
+  rather than a backdrop.
+- **A job is weeks, not a week.** A tier-1 errand is gone by Friday; a tier-2 takes a week, a
+  tier-3 two, a tier-4 three, and the last score four. The crew is gone for that whole time,
+  which is what makes a second crew earning without you worth founding.
+- **Casing.** Before you take a posting you can watch it: a week and a fee for **+9** on the
+  reckoning, up to four weeks on the biggest rooms. It is the difference between a coin flip
+  and a plan — and it is a week the posting might not survive, in which case the week and the
+  money are spent and the client has stopped waiting.
+- **A crew that grows slowly.** Everyone who goes on a job gains experience; ranks — Rookie,
+  Operator, Professional, Veteran, Legend — are earned at 60, 180, 430 and 900 xp. Good work
+  adds a point to the attributes the job leaned on, but **getting better gets harder**: a 40
+  climbs quickly, an 85 barely moves. A crew of Legends is a career's work, not ten jobs'.
+- **Seats, and other crews.** Four soldiers' seats to start; a Respected name (ranking 65)
   opens two more, for six soldiers and you. From week 104 (two years in), Feared, with seven on
   your crew, you can **found a second crew**: a commander-type and four soldiers out of your
   seven, named after its commander, which takes a job of its own each week from the same board
@@ -183,6 +197,13 @@ decisions at the end.
   lost, and the current run of jobs without a scratch. Under it, eighteen **career marks** from
   the first job to the final score — each paying ranking, money or both, announced in a box
   when it lands, with the next three always shown.
+- **The last score is three operations.** Not one roll. Read the names in the ledger, open the
+  floor below the floor, then move all of it out — each its own job, in order, each able to go
+  wrong. A stage that goes wrong does not end you: the Committee moves things and the door is
+  worth trying again in five to nine weeks. It appears only when the crew is ready for it, and
+  the Log lists the conditions, ticked off as they arrive: **a name at the top of the board**
+  (ranking 420), **a career behind you** (55 jobs), **five in the field**, and **a war chest**
+  ($5M) — because nobody funds this one but you.
 - **Standing arrangements.** Money with somewhere to go. Three people on a weekly retainer: a
   **lawyer** (anyone taken is held half as long), a **doctor** (a wound is one week, not two),
   a **fixer** (two more postings a week, and one written for the crew you actually have) — paid
@@ -232,7 +253,7 @@ decisions at the end.
 smallest one; none is a decision.
 
 - **Missions** resolve in one roll: crew power (weighted attributes × experience, plus the
-  factors above) against difficulty, ±18, and — when a twist strikes — the decision's cost.
+  factors above) against difficulty, ±26, and — when a twist strikes — the decision's cost.
   Five verdicts: Clean, Success, Messy, Botched, Disaster. The live report narrates that
   outcome; apart from the twist, it does not change it.
 - **"Very basic"** is read as: four tabs, no map, no per-job assignment — the whole crew
@@ -243,9 +264,41 @@ smallest one; none is a decision.
   grow a point at a time with good work.
 - **Language** is English only; the paper on the desk is where more will go.
 
+## How long is a game, and how is that known?
+
+Every number that decides the difficulty and the length lives in one object, `BAL`, at the top
+of the script — difficulty, the verdict bands, the roll, weeks per tier, casing, the ranking
+damping, the pay ladder, the cut sizes, the gate on the last score. The whole curve can be read
+in one screen, and changing the game means changing numbers there rather than hunting through
+three thousand lines.
+
+`tools/sim.js` plays the game headlessly, many times, with no screen, and reports what came out:
+
+```
+node tools/sim.js 25            # 25 runs of a player who plays well
+node tools/sim.js 25 "" median  # a player who calls twists right less than half the time
+```
+
+Measured over 24 runs of the current build, against the same tool run on the old one:
+
+| | before | now |
+|---|---|---|
+| weeks to finish (median) | 18 | **348** |
+| jobs run (median) | 10 | **137** |
+| verdicts that came back CLEAN | ~90% | **31%** |
+| botched or disastrous | ~2% | **11%** |
+| people lost, hurt or arrested (median) | ~0 | **30** |
+| runs that ended in losing | rare | **8%** |
+
+A caveat worth being plain about: 348 in-game weeks is roughly six to twelve hours of real
+play, not the months the brief asked for. Weeks are not hours. What is here is the depth —
+more to decide per week, a crew that takes a career to build, a world that answers the name —
+and that is the part a real-time or online layer would then stretch across months, rather than
+something to fake now by making the numbers bigger.
+
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 23 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 24 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

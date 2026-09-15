@@ -359,6 +359,54 @@
    Single file, no dependencies. Progress saved in this browser.
    ========================================================================= */
 
+/* ----------------------------- BALANCE -------------------------------- */
+// Every number that decides how hard and how long the game is, in one place, so the whole
+// curve can be read at once and the simulator (tools/sim.js) can sweep it.
+//
+// The rule the old numbers broke: a crew's effectiveness runs past 150 while difficulty was
+// capped at 96, so any competent crew took CLEAN on every job and the game was over in
+// eighteen weeks. The world now answers the name — the bigger the crew, the better defended
+// the rooms it is given, and a country worked lately is watching for it.
+const BAL={
+  // --- the job ---
+  // The spread between tiers widens rather than the floor rising: a tier-1 errand stays a way
+  // for a new crew to eat, a tier-4 room is a different kind of problem.
+  diffBase:25, diffPerTier:16, diffJitter:7,
+  repPressure:19,         // difficulty per 100 ranking, sub-linear: at 420 the world is +62 harder
+  countryPressure:0.34,   // difficulty added per point of local heat
+  // --- the verdict --- margin thresholds, widest first. CLEAN is the one that moved: it used
+  // to be the default outcome for any competent crew, and it is now something you prepare for.
+  vClean:34, vSuccess:8, vMessy:-12, vBotched:-36,
+  roll:26,                // ±, so no margin is ever safe and none is ever hopeless
+  messyPay:0.6,           // a messy job still has to feed the crew
+  // --- time --- weeks on the ground per job tier, and what casing one costs
+  jobWeeks:[0,1,1,2,3], finalWeeks:4,
+  caseMax:[0,1,2,3,4],    // how many weeks of casing a tier will take
+  caseGain:9,             // margin per week cased
+  caseCostPct:0.06,       // of the fee, per week
+  caseHeat:2,
+  // --- the name --- how ranking climbs, and how it slips
+  repDamp:900,            // gains fall away as the name grows; the climb slows, never stops
+  idleDecay:1, idleEvery:3,   // a name unused is a name forgotten
+  // --- the end ---
+  finalRep:420,           // the ranking the last score asks for
+  finalStages:3,          // and it is three jobs, not one
+  finalMoney:5000000,     // and it is funded out of your own float, which gives the late money a job
+  // --- the crew --- how long it takes to become good, which is most of what a career is
+  attrCeil:105,           // an attribute this high stops improving; 40 climbs fast, 85 crawls
+  xpSteps:[0,60,180,430,900],  // Operator, Professional, Veteran, Legend
+  // --- the money --- a crew of six takes roughly half the gross in cuts and eats every week
+  // whether it works or not, so the fee has to be worth the weeks the job costs. It didn't
+  // used to matter: every job was one week and the game was over in eighteen of them.
+  payTier:[0,52000,150000,380000,950000],
+  payWeeks:0.42,          // a job pays (1−this)+(this×weeks): a three-week room pays ~1.8×
+  startMoney:150000,      // the opening stake has to survive a bad first month, not just a good one
+  // What a soldier takes off the top. Six Legends used to take 13–18% each — ninety per cent of
+  // every score between them — so building the crew the game wants you to build bankrupted you.
+  // A big crew of good people should be expensive, not impossible.
+  cutBase:0.03, cutPerExp:0.012, cutJitter:0.03,
+  countryHeatPerJob:14, countryHeatDecay:1,
+};
 /* ----------------------------- RNG ------------------------------------ */
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 function ri(rng,a,b){return Math.floor(rng()*(b-a+1))+a;}
@@ -593,9 +641,9 @@ function genChar(rng,i,used){
   const p=genProfile(rng,nat,gender);
   const feeBase=(p.exp*7000)+(avg(p.attrs)*260)+(p.know.length-1)*2500+p.edu*900+(p.tech==="hacker"||p.tech==="safecracker"||p.tech==="forger"?4000:0);
   const fee=Math.round(feeBase*(1+rng()*0.35)/500)*500;
-  let cut=Math.round((0.05+(p.exp-1)*0.02+rng()*0.05)*100)/100;
-  if(p.limits.includes("cut"))cut=Math.max(cut,0.15);
-  if(p.traits&&p.traits.indexOf("mercenary")>=0)cut=Math.round((cut+0.03)*100)/100;
+  let cut=Math.round((BAL.cutBase+(p.exp-1)*BAL.cutPerExp+rng()*BAL.cutJitter)*1000)/1000;
+  if(p.limits.includes("cut"))cut=Math.max(cut,0.1);
+  if(p.traits&&p.traits.indexOf("mercenary")>=0)cut=Math.round((cut+0.02)*1000)/1000;
   return Object.assign({
     id:"C"+(1000+i),n,first,gender,nat:nat.name,
     fee,cut,
@@ -820,12 +868,25 @@ function avatar(seed,gender,face){
 /* ------------------------------ STATE --------------------------------- */
 let S=null;
 const SAVE_KEY="thecrew_save_v2";
+// How hot a country is on you: working one burns it, and it cools a point a week.
+function countryHeat(name){return (S&&S.coHeat&&S.coHeat[name])||0;}
+function countryHeatAdd(name,n){if(!S)return;S.coHeat=S.coHeat||{};S.coHeat[name]=clamp((S.coHeat[name]||0)+n,0,100);}
+// The world answers the name. Sub-linear, so the last hundred points of ranking do not make
+// the game unplayable — but a Feared crew is never handed an easy room again.
+function repPressure(){return Math.round(BAL.repPressure*Math.pow(Math.max(0,(S?S.rep:0))/100,0.92));}
+// What a job of this tier is worth to a name of this size. Full value for the biggest thing
+// the board will post to you; a fraction of it for anything well below that.
+function tierWorth(jobTier){
+  if(jobTier>=5)return 1;
+  const under=Math.max(0,(rankInfo(S?S.rep:0).maxTier)-jobTier);
+  return [1,0.55,0.28,0.12][Math.min(3,under)];
+}
 
 function newGame(player){
   const seed=(Date.now()^Math.floor(Math.random()*1e9))>>>0;
   S={
     v:2,seed,player,roster:buildRoster(seed),
-    crewIds:[],money:60000,heat:0,week:1,rep:0,jobSeq:0,
+    crewIds:[],money:BAL.startMoney,heat:0,week:1,rep:0,jobSeq:0,
     tab:"crew",modal:null,filter:{q:"",tech:"",role:"",nat:"",sort:"fee"},shown:30,
     jobs:[],log:[],finalDone:false,over:null,seenFinal:false,
   };
@@ -1094,7 +1155,10 @@ const PAID_WEEKS=3;
 function paidUp(c){return !c.isPlayer&&c.paidUntil!=null&&c.paidUntil>=S.week;}
 // Small money: a cut under two weeks of a member's own upkeep is a job done for you, not for them.
 // Three in a row and they grumble; five and they may walk.
-function smallMoney(c,job){return !c.isPlayer&&job.payout*c.cut<c.upkeep*2;}
+// A cut worth less than a week of what they cost you is a job they did for you, not for
+// themselves. Tied to a week rather than two, because the cuts themselves were halved — the
+// test has to move with them or every job on the board reads as an insult.
+function smallMoney(c,job){return !c.isPlayer&&job.payout*c.cut<c.upkeep*(job.weeks||1);}
 function restless(c){return !c.isPlayer&&(c.lowRun||0)>=3;}
 function foundingRules(){
   const n=crews().length;
@@ -1141,8 +1205,11 @@ function makeJob(rng,tierBias){
   // clients post to a name: a Nobody sees tier 1–2, a Known crew tier 3, Respected and up tier 4
   const tier=clamp((tierBias||0)+(r<0.34?1:r<0.64?2:r<0.87?3:4),1,rk.maxTier);
   const need=[0,ri(rng,2,3),ri(rng,3,4),ri(rng,4,5),5][tier];
-  const diff=clamp(34+tier*10+ri(rng,-6,6)+Math.floor(S.rep/14)+(co.gate===2?4:0),34,96);
-  const payBase=[0,42000,120000,300000,720000][tier]*[0,0.65,0.8,1][co.eco];
+  // No ceiling: the room is as hard as the name, the tier and the local temperature make it.
+  const diff=Math.max(20,Math.round(BAL.diffBase+tier*BAL.diffPerTier+ri(rng,-BAL.diffJitter,BAL.diffJitter)
+    +repPressure()+countryHeat(co.name)*BAL.countryPressure+(co.gate===2?5:0)+(co.auth?4:0)));
+  const wks=BAL.jobWeeks[tier]||1;
+  const payBase=BAL.payTier[tier]*[0,0.65,0.8,1][co.eco]*((1-BAL.payWeeks)+BAL.payWeeks*wks);
   const payout=Math.round(payBase*(0.7+rng()*0.8)*rk.pay/1000)*1000;
   const heat=Math.round(cat.heat*(0.8+tier*0.12)*(co.auth?1.2:1));
   const techs=[];const pool=cat.techs.slice();
@@ -1163,7 +1230,10 @@ function makeJob(rng,tierBias){
     need,diff,payout,heat,techs,know,tags,
     client:pick(rng,CLIENTS),
     title:pick(rng,cat.v)+" "+pick(rng,cat.n),
-    expires:S.week+ri(rng,2,4),
+    // a job is time as well as money: a big one holds the crew for weeks, and a posting that
+    // sits on the board long enough to be cased is a posting somebody else may take first
+    weeks:BAL.jobWeeks[tier]||1,
+    expires:S.week+ri(rng,3,6),
   };
 }
 /* ------------------------------ THE BRIEF ----------------------------- */
@@ -1239,6 +1309,7 @@ function jobNoun(job){
   return i<0?t.toLowerCase():t.slice(i+5);
 }
 function jobBrief(job){
+  if(job.brief)return job.brief;            // the three stages of the last score write their own
   if(job.final)return "Everything you have built, against the one room that has never been opened. There is no posting for this and no client to pay you — there is a name at the end of it, and the certainty that nobody gets a second run at it. Take the whole crew.";
   const rng=mulberry32(jobSeed(job));
   const v={noun:jobNoun(job),city:job.city,country:job.country,client:cap(job.client||"the client"),fee:money(job.payout)};
@@ -1275,12 +1346,79 @@ function refreshJobs(fill){
   }
   maybeUnlockFinal();
 }
+// The last score is not one roll. It is three operations in order, each one able to go wrong,
+// and going wrong sets the crew back rather than ending them — the stage has to be taken again.
+const FINAL_STAGES=[
+  {id:"JFINAL1",cat:"infiltration",country:"Switzerland",city:"Zug, and a room with no windows",
+   need:4,diff:150,payout:1800000,heat:44,techs:["infiltrator","hacker","forger"],know:["Finance","Law"],tags:["night"],
+   title:"Read the names in the ledger",kicker:"Stage one of three",
+   brief:"Nobody robs the Committee. They are not a bank and they are not a family; they are the room where the names are kept, and the names are what everything else is built on. Before anything can be taken, the ledger has to be read — quietly, in one night, in a building in Zug that does not appear on any of its own paperwork. Get in, read it, get out without anybody knowing a page was turned. Every other door on this job opens from the names on that page."},
+  {id:"JFINAL2",cat:"vault",country:"Switzerland",city:"Zürich, four floors below the street",
+   need:5,diff:176,payout:4200000,heat:62,techs:["safecracker","demolitions","overwatch"],know:["Finance","Weapons"],tags:["underground","night","violence"],
+   title:"Open the floor below the floor",kicker:"Stage two of three",
+   brief:"The names bought a plan of a building that officially has three basements. It has four. The fourth is the reason the other three exist. This is the room that has never been opened, and everything about it was built by people who assumed somebody would try — overlapping shifts, two keys held in different countries, and men downstairs who are paid to end the conversation rather than have it. Take the whole crew. There is no second night."},
+  {id:"JFINAL3",cat:"smuggling",country:"Switzerland",city:"Zürich, then everywhere",
+   need:4,diff:162,payout:8000000,heat:70,techs:["smuggler","wheelman","cleaner"],know:["Logistics","Maritime"],tags:["night","water"],
+   title:"Everything, and out",kicker:"The last one",
+   brief:"Having it is not the same as keeping it. Every border between here and anywhere is now a question with your face on it, and what you are carrying cannot be explained, declared, or put in a bank. This is the part nobody plans, because nobody gets this far. Move all of it, move the crew, and end in a country that will not be asked. Do this and the name at the top of the chart is never spoken aloud again."},
+];
+/* ------------------------------ CASING -------------------------------- */
+// A room you have watched is not the room you were told about. Weeks spent on a posting before
+// taking it buy margin — and cost the weeks, the money, and the risk that somebody else takes
+// the posting or it expires while you are still sitting outside it in a car.
+function casedWeeks(job){return (job&&S.cased&&S.cased[job.id])||0;}
+function caseMax(job){return job.final?4:(BAL.caseMax[job.tier]||0);}
+function caseCost(job){return Math.max(4000,Math.round(job.payout*BAL.caseCostPct/1000)*1000);}
+function canCase(job){return !!job&&casedWeeks(job)<caseMax(job)&&assessJob(job,jobPool(job)).team.length>0;}
+const CASE_LINES=[
+  "Two days on the same bench, a different coat each day. The shift changes at ten past, not on the hour.",
+  "The delivery door is propped open every Thursday for eleven minutes. Nobody has noticed in years.",
+  "A drink with somebody who used to work the night desk. He talks about the old alarm, which is still the alarm.",
+  "The plans cost money and are three years out of date, but the load-bearing walls have not moved.",
+  "A dry run at four in the morning, with nothing in anybody's pockets that could not be explained.",
+  "The guard with the limp does the basement round. The one who actually looks at the screens does not.",
+  "Photographs of a door, from across a street, for six hours. The lock is older than the building's owner.",
+  "Somebody's ex-wife, over coffee, on the subject of her ex-husband's routine.",
+];
+function caseJob(id){
+  const j=S.jobs.find(x=>x.id===id);if(!j||!canCase(j))return;
+  const c=caseCost(j);
+  if(S.money<c){note("Casing it costs "+money(c)+" and the float won't carry it.");return;}
+  S.money-=c;
+  S.cased=S.cased||{};S.cased[j.id]=casedWeeks(j)+1;
+  const rng=freshRng();
+  S.heat=clamp(S.heat+BAL.caseHeat,0,120);
+  countryHeatAdd(j.country,3);
+  logMsg("Cased "+j.title+" ("+money(c)+", one week). "+pick(rng,CASE_LINES)+" The crew goes in knowing "+casedWeeks(j)+" week"+(casedWeeks(j)>1?"s":"")+" more than the client told them.","good");
+  weekTick(rng);refreshJobs(false);
+  // the board does not wait: a posting can expire while you are still watching it
+  if(!S.jobs.some(x=>x.id===j.id)){logMsg("The posting for "+j.title+" is gone. Somebody else took it, or the client stopped waiting. The week and the "+money(c)+" are spent.","bad",true);S.jobOpen=null;}
+  save();render();
+}
+function finalStage(){return S.finalStage||0;}
+// What the last score asks for before it will appear at all.
+function finalGate(){
+  const st=stats();
+  return [
+    {k:"A name at the top of the board",have:S.rep,want:BAL.finalRep,ok:S.rep>=BAL.finalRep,fmt:v=>"ranking "+v},
+    {k:"A career behind you",have:st.jobs,want:55,ok:st.jobs>=55,fmt:v=>v+" jobs run"},
+    {k:"A crew, not a pair",have:field().length,want:5,ok:field().length>=5,fmt:v=>v+" in the field"},
+    // nobody funds this one. Three operations against people who own banks, out of your float.
+    {k:"A war chest",have:S.money,want:BAL.finalMoney,ok:S.money>=BAL.finalMoney,fmt:v=>money(v)+" on hand"},
+  ];
+}
+function finalReady(){return finalGate().every(g=>g.ok);}
 function maybeUnlockFinal(){
-  if(S.rep>=100&&!S.finalDone&&!S.jobs.some(j=>j.final)){
-    S.jobs.unshift({id:"JFINAL",final:true,cat:"vault",tier:5,country:"Switzerland",city:"Zürich, then everywhere",
-      need:5,diff:94,payout:6000000,heat:60,techs:["safecracker","hacker","wheelman"],know:["Finance","Logistics"],tags:["night","underground"],
-      client:"the Committee",title:"The one that ends it",expires:9999});
-    if(!S.seenFinal){S.seenFinal=true;logMsg("Your name has reached the right ears. The final score is on the board.","big",true);}
+  if(S.finalDone||finalStage()>=FINAL_STAGES.length)return;
+  if(S.finalBack&&S.week<S.finalBack)return;          // a failed stage takes weeks to set up again
+  if(!finalReady()){if(S.jobs.some(j=>j.final))S.jobs=S.jobs.filter(j=>!j.final);return;}
+  if(S.jobs.some(j=>j.final))return;
+  const s=FINAL_STAGES[finalStage()];
+  S.jobs.unshift(Object.assign({final:true,tier:5,client:"the Committee",expires:9999,stage:finalStage()},s));
+  if(S.seenFinal!==finalStage()){
+    S.seenFinal=finalStage();
+    logMsg(finalStage()===0?"Your name has reached the right ears. The last score is on the board — three operations, in order."
+      :"Stage "+(finalStage()+1)+" of the last score is ready: "+s.title+".","big",true);
   }
 }
 
@@ -1356,30 +1494,44 @@ function assessJob(job,members,leadId){
   if(grum.length)add("Restless",-2*grum.length,grum.map(c=>c.first).join(", ")+" grumbling about the money");
   const streets=team.reduce((m,c)=>Math.max(m,c.streets),0);
   const heatCut=Math.min(4,Math.floor(streets/5));
+  const cased=casedWeeks(job);
+  if(cased)add("Cased",cased*BAL.caseGain,cased+" week"+(cased>1?"s":"")+" watching it before anybody went in");
   if(S.heat>0)add("Heat",-Math.round(S.heat*0.24),"the world is watching");
   const eff=power+adj;
   const margin=eff-job.diff;
-  const lo=margin-18,hi=margin+18;
+  const lo=margin-BAL.roll,hi=margin+BAL.roll;
   const pAbove=t=>clamp((hi-t)/(hi-lo),0,1);
-  const pGood=pAbove(22),pFailish=pAbove(-4),pDis=pAbove(-22);
+  const pGood=pAbove(BAL.vClean),pFailish=pAbove(BAL.vMessy),pDis=pAbove(BAL.vBotched);
   return {team,checks,factors,power:Math.round(power),eff:Math.round(eff),margin:Math.round(margin),heatCut,
     canRun:team.length>0&&team.length>=job.need,
     pClean:Math.round(pGood*100),pOk:Math.round((pFailish-pGood)*100),pFail:Math.round((pDis-pFailish)*100),pDis:Math.round((1-pDis)*100)};
 }
 /* ---------------------------- PROGRESSION ----------------------------- */
 // Everyone who goes on a job learns from it. Experience ranks are earned, not bought.
-const XP_STEPS=[0,40,110,220,400];
+const XP_STEPS=BAL.xpSteps;
 function xpNeeded(exp){return exp>=5?null:XP_STEPS[exp];}
 // Ranking is a name with consequences: what clients post, what they pay, who will sign,
 // whether the crew stays, and how hard the police look. Resolved in one place.
+// Eight names across six hundred points, not six across a hundred. The old ladder was climbed
+// out of in eight jobs; this one is a career, and the last two rungs are most of it.
 const RANKS=[
-  [100,"The Crew",{pay:1.35,maxTier:4,hireExp:5,loyDrift:2,heatMul:1.15,seats:6,note:"Top of the board. Jobs pay +35%, anyone will sign, loyalty holds by itself (+2 a week), six soldiers' seats, other crews can be founded — and every police force knows the name (heat +15%)."}],
-  [80,"Feared",{pay:1.2,maxTier:4,hireExp:5,loyDrift:1,heatMul:1.1,seats:6,note:"Jobs pay +20%. Legends will sign. Loyalty +1 a week. Six soldiers' seats, and from the second year a full crew can found another. The police look harder (heat +10%)."}],
-  [60,"Respected",{pay:1.1,maxTier:4,hireExp:5,loyDrift:1,heatMul:1.05,seats:6,note:"Tier-4 jobs open. Jobs pay +10%. Legends will sign. Loyalty +1 a week. Two more seats: six soldiers. Heat +5%."}],
-  [40,"Known",{pay:1.0,maxTier:3,hireExp:4,loyDrift:0,heatMul:1.0,seats:4,note:"Tier-3 jobs open. Full pay. Veterans will sign. Four soldiers' seats."}],
-  [20,"Small time",{pay:0.9,maxTier:2,hireExp:3,loyDrift:0,heatMul:1.0,seats:4,note:"Jobs pay −10%. Tier 1–2 only. Nobody above Professional will sign. Four soldiers' seats."}],
+  [420,"The Crew",{pay:1.5,maxTier:4,hireExp:5,loyDrift:2,heatMul:1.22,seats:6,note:"Top of the board, and the last score is on it. Jobs pay +50%, anyone will sign, loyalty holds by itself (+2 a week), six soldiers' seats — and every police force on the board knows the name (heat +22%)."}],
+  [300,"Untouchable",{pay:1.38,maxTier:4,hireExp:5,loyDrift:2,heatMul:1.18,seats:6,note:"Jobs pay +38%. Loyalty +2 a week. Nobody turns you down. Every room you are given is defended against you, and the police look harder than they look at anybody (heat +18%)."}],
+  [190,"Notorious",{pay:1.28,maxTier:4,hireExp:5,loyDrift:1,heatMul:1.14,seats:6,note:"Jobs pay +28%. Legends sign without asking twice. The name is worth money and it costs heat (+14%)."}],
+  [110,"Feared",{pay:1.2,maxTier:4,hireExp:5,loyDrift:1,heatMul:1.1,seats:6,note:"Jobs pay +20%. Legends will sign. Loyalty +1 a week. Six soldiers' seats, and from the second year a full crew can found another. The police look harder (heat +10%)."}],
+  [65,"Respected",{pay:1.1,maxTier:4,hireExp:5,loyDrift:1,heatMul:1.05,seats:6,note:"Tier-4 jobs open. Jobs pay +10%. Legends will sign. Loyalty +1 a week. Two more seats: six soldiers. Heat +5%."}],
+  [35,"Known",{pay:1.0,maxTier:3,hireExp:4,loyDrift:0,heatMul:1.0,seats:5,note:"Tier-3 jobs open. Full pay. Veterans will sign. Five soldiers' seats."}],
+  [15,"Small time",{pay:0.9,maxTier:2,hireExp:3,loyDrift:0,heatMul:1.0,seats:4,note:"Jobs pay −10%. Tier 1–2 only. Nobody above Professional will sign. Four soldiers' seats."}],
   [0,"Nobody",{pay:0.8,maxTier:2,hireExp:3,loyDrift:-1,heatMul:1.0,seats:4,note:"Jobs pay −20%. Tier 1–2 only. Nobody above Professional will sign, and loyalty slips a point a week — nobody stays loyal to a nobody. Four soldiers' seats."}],
 ];
+// The ladder, written out from RANKS itself — so the help can never describe a ladder the
+// game no longer has. It went stale once already, when six rungs became eight.
+function rankLadderText(){
+  return "<b>Ranking — what the name buys.</b> The name decides everything a client, a recruit and a police force does with you, and it decides how hard the rooms you are offered are defended. "
+    +RANKS.slice().reverse().map(r=>"<b>"+r[1]+"</b> ("+r[0]+"): "+r[2].note).join(" ")
+    +" Clean and successful work raises it — a job well beneath your name barely moves it — messy work, leaks, arrests and walkouts lower it, and "
+    +BAL.idleEvery+" weeks without a job costs a point. A name unused is a name forgotten.";
+}
 function rankInfo(rep){for(const r of RANKS)if(rep>=r[0])return Object.assign({name:r[1],min:r[0]},r[2]);const r=RANKS[RANKS.length-1];return Object.assign({name:r[1],min:r[0]},r[2]);}
 function rankName(rep){return rankInfo(rep).name;}
 function rankNext(rep){let nx=null;for(const r of RANKS){if(r[0]>rep&&(nx===null||r[0]<nx[0]))nx=r;}return nx?Object.assign({name:nx[1],min:nx[0]},nx[2]):null;}
@@ -1678,7 +1830,7 @@ function startJob(job,opts){
   const members=cr?crewMembers(cr):(opts.pool||null);
   const a=assessJob(job,members,cr?cr.leadId:null);
   const team=a.team;
-  let roll=ri(rng,-18,18);
+  let roll=ri(rng,-BAL.roll,BAL.roll);
   team.forEach(c=>{if(hasTrait(c,"lucky"))roll+=4;if(hasTrait(c,"jinx"))roll-=0;});
   const hasMole=team.some(c=>c.mole);
   let leaked=false;
@@ -1687,7 +1839,7 @@ function startJob(job,opts){
   let twist=null;
   const pTw=(a.margin>=10?0.25:0.08)+(team.some(c=>hasTrait(c,"jinx"))?0.12:0);
   if(!opts.noTwist&&!cr&&!job.final&&team.length>=2&&chance(rng,pTw))twist=makeTwist(job,team,rng);
-  const P={jobId:job.id,job:Object.assign({},job),roll,leaked,teamIds:team.map(c=>c.id),pre:pre.lines,clock:pre.clock,stood:pre.stood,postSeed:ri(rng,1,2000000000),twist,week:S.week,
+  const P={jobId:job.id,job:Object.assign({},job),roll,leaked,teamIds:team.map(c=>c.id),pre:pre.lines,clock:pre.clock,stood:pre.stood,prep:casedWeeks(job),postSeed:ri(rng,1,2000000000),twist,week:S.week,
     crewId:cr?cr.id:null,crewName:cr?cr.name:null,leadId:cr?cr.leadId||null:null,memberIds:members?members.map(c=>c.id):null};
   S.pendingJob=P;
   const d={id:job.id+"-w"+S.week+(cr?"-c"+cr.id:""),week:S.week,job:P.job,crew:P.crewName,narrative:pre.lines.slice(),revealed:0,done:false,twist:twist?{h:twist.h,s:twist.s,opts:twist.opts.map(o=>o.t)}:null,awaiting:false,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}};
@@ -1708,16 +1860,18 @@ function finishJob(P,choiceIdx,d){
     twLine={t:"— —",x:r.text,tone:r.free?"good":"bad"};
     twRec={h:P.twist.h,s:P.twist.s,chosen:P.twist.opts[choiceIdx].t,correct:P.twist.opts[r.correct].t,free:r.free,why:twistWhy(P.twist,team)};
   }
+  // the casing is already in a.margin as a factor of its own — counting P.prep here too would
+  // pay for those weeks twice
   const m=a.margin+P.roll+dm;
   let tier;
-  if(m>22)tier=4;else if(m>10)tier=3;else if(m>-4)tier=2;else if(m>-22)tier=1;else tier=0;
+  if(m>BAL.vClean)tier=4;else if(m>BAL.vSuccess)tier=3;else if(m>BAL.vMessy)tier=2;else if(m>BAL.vBotched)tier=1;else tier=0;
   if(twLose>=1&&tier>2)tier=2;
   const verdictName=["DISASTER","BOTCHED","MESSY","SUCCESS","CLEAN"][tier];
   const base=job.final?100:[0,6,12,22,36][job.tier];
   let take=0,loyD=0,heatMul=0;
   if(tier===4){take=Math.round(job.payout*1.08);loyD=6;heatMul=0.5;}
   else if(tier===3){take=job.payout;loyD=3;heatMul=0.85;}
-  else if(tier===2){take=Math.round(job.payout*0.55);loyD=-3;heatMul=1.25;}
+  else if(tier===2){take=Math.round(job.payout*BAL.messyPay);loyD=-3;heatMul=1.25;}
   else if(tier===1){loyD=-7;heatMul=1.5;}
   else{loyD=-13;heatMul=1.9;}
   if(twLose>0)take=Math.round(take*(1-twLose));
@@ -1781,11 +1935,22 @@ function finishJob(P,choiceIdx,d){
   // ranking: up for the job and how it went, down when it goes wrong
   const rk=[];
   const addR=(k,v)=>rk.push({k,v});
-  if(tier===4){addR("Clean — tier "+job.tier+" job",base);if(!fallout.length)addR("Nobody hurt",2);}
-  else if(tier===3)addR("Success — tier "+job.tier+" job",Math.round(base*0.7));
-  else if(tier===2)addR(twLose>=1?"Walked away — no score":"Messy work",-job.tier*2);
-  else if(tier===1)addR("Botched job",-job.tier*4);
-  else addR("Disaster",-job.tier*6);
+  // A name gets harder to build the bigger it is — the tenth clean tier-4 job impresses nobody
+  // the way the first one did — and it is built by taking rooms worth taking. A Feared crew
+  // doing corner work is not getting more feared; the board notices what you are seen doing.
+  // Without this, grinding the easiest posting on the board was the fastest way up, which is
+  // both the safest play and the dullest.
+  // What it is worth, and what it costs, both scale with how far the job is beneath the name.
+  // They have to move together: rewarding a corner job at 12% while charging full price for
+  // botching one makes small work net-negative, and the ranking bleeds however well you play.
+  const worth=tierWorth(job.tier);
+  const damp=v=>Math.max(1,Math.round(v*Math.max(0.16,1-S.rep/BAL.repDamp)*worth));
+  const pen=v=>Math.min(-1,Math.round(v*worth));
+  if(tier===4){addR("Clean — tier "+job.tier+" job",damp(base));if(!fallout.length)addR("Nobody hurt",1);}
+  else if(tier===3)addR("Success — tier "+job.tier+" job",damp(Math.round(base*0.7)));
+  else if(tier===2)addR(twLose>=1?"Walked away — no score":"Messy work",pen(-job.tier*2));
+  else if(tier===1)addR("Botched job",pen(-job.tier*4));
+  else addR("Disaster",pen(-job.tier*6));
   if(twRank)addR("Twist: "+twRank[0],twRank[1]);
   if(P.leaked)addR("The job leaked",-3);
   betrayals.forEach(()=>addR("A member walked with the money",-2));
@@ -1815,8 +1980,13 @@ function finishJob(P,choiceIdx,d){
     c.xp=(c.xp||0)+g.xp;c._touched=true;
     const need=xpNeeded(c.exp);
     if(need!==null&&c.xp>=need){c.exp=Math.min(5,c.exp+1);g.rank=EXP[c.exp-1];logMsg((c.isPlayer?"You are":c.first+" is")+" now "+anA(g.rank)+".","good");}
+    // Getting better gets harder. A 40 climbs quickly, an 85 barely moves — otherwise every
+    // crew is maxed out by its fortieth job and the world can never catch up with it again.
     const n=tier>=3?(chance(rng,0.5)?2:1):(tier===2&&chance(rng,0.5)?1:0);
-    for(let i=0;i<n;i++){const at=weighted[Math.min(i,weighted.length-1)];if(c.attrs[at]<98){c.attrs[at]+=1;g.up.push(at);}}
+    for(let i=0;i<n;i++){
+      const at=weighted[Math.min(i,weighted.length-1)];
+      if(c.attrs[at]<98&&chance(rng,clamp(1.25-c.attrs[at]/BAL.attrCeil,0.06,1))){c.attrs[at]+=1;g.up.push(at);}
+    }
     if(stoodBy[c.id]){g.stood=listAnd(stoodBy[c.id].map(anA));if(c.attrs.brains<98){c.attrs.brains+=1;g.up.push("brains");}}
     growth.push(g);
   });
@@ -1827,12 +1997,28 @@ function finishJob(P,choiceIdx,d){
   if(P.twist){narrative.push({t:"— —",x:"Then it goes wrong.",tone:"bad",twist:true});if(twLine)narrative.push(twLine);}
   post.lines.forEach(l=>narrative.push(l));
   S.jobs=S.jobs.filter(j=>j.id!==job.id);
+  if(S.cased)delete S.cased[job.id];       // the weeks are spent; the notes are no use to anyone now
   logMsg((P.crewName?P.crewName+" — ":"")+verdictName+" — "+job.title+" ("+job.city+", "+job.country+"). "+(net>0?"Net "+money(net)+".":"No pay.")+" Ranking "+(repDelta>=0?"+":"")+repDelta+".",tier>=3?"good":tier===2?"warn":"bad",true);
-  if(job.final&&tier>=3){S.finalDone=true;S.over="win";}
+  if(job.final){
+    if(tier>=3){
+      S.finalStage=(S.finalStage||0)+1;S.finalBack=0;
+      if(S.finalStage>=FINAL_STAGES.length){S.finalDone=true;S.over="win";}
+      else logMsg("Stage "+S.finalStage+" is done. "+FINAL_STAGES[S.finalStage].title+" is next — it will take a few weeks to put together.","good",true);
+      S.finalBack=S.week+(S.finalStage>=FINAL_STAGES.length?0:ri(rng,2,4));
+    } else {
+      // a stage that goes wrong is not the end; it is a door that has to be found again
+      S.finalBack=S.week+ri(rng,5,9);
+      logMsg("The stage went wrong. The Committee will have moved things by morning — it will be weeks before that door is worth trying again.","bad",true);
+    }
+  }
   const wk=P.week;
-  // your own job takes the week; another crew's job takes that crew's week
+  // A job is weeks, not a week. A tier-1 errand is gone by Friday; the big rooms hold the
+  // crew for a month, which is why another crew earning without you is worth having.
+  const onGround=Math.max(1,job.final?BAL.finalWeeks:(job.weeks||BAL.jobWeeks[job.tier]||1));
+  // your own job takes the weeks; another crew's job takes that crew's week
   if(P.crewId){const cr=crewById(P.crewId);if(cr)cr.jobWeek=wk;}
-  else weekTick(rng);
+  else{for(let i=0;i<onGround&&!S.over;i++)weekTick(rng);S.idle=0;}
+  countryHeatAdd(job.country,Math.round(BAL.countryHeatPerJob*(tier>=3?1:1.5)));
   refreshJobs(false);
   const res={id:job.id+"-w"+wk+(P.crewId?"-c"+P.crewId:""),week:wk,crew:P.crewName,tier,verdictName,take,cuts,net,heatGain,repDelta,repBefore,repAfter:S.rep,rankBefore,rankAfter,rk,growth,marks,events:fallout.concat(betrayals),leaked:P.leaked,job:P.job,teamIds:team.map(t=>t.id),narrative,twist:twRec,revealed:0,done:false};
   // the record
@@ -1988,6 +2174,12 @@ function weekTick(rng){
     if(c.status==="jailed"&&S.week>=c.out){c.status="available";c.jail+=1;logMsg(c.first+" walked. Back on the roster, a year older.","warn");}
   });
   S.heat=clamp(S.heat-heatDrop(),0,120);
+  // a country you have worked lately is watching for you, and forgets slowly
+  if(S.coHeat)for(const k in S.coHeat){S.coHeat[k]=Math.max(0,S.coHeat[k]-BAL.countryHeatDecay);if(!S.coHeat[k])delete S.coHeat[k];}
+  // A name unused is a name forgotten. Weeks spent on a job are not unused weeks — the counter
+  // is reset by finishing one — so a three-week operation never costs you for taking it.
+  S.idle=(S.idle||0)+1;
+  if(S.idle>=BAL.idleEvery){S.idle=0;if(S.rep>0)S.rep=Math.max(0,S.rep-BAL.idleDecay);}
   // somebody else is working the board, and somebody is keeping a file
   if(!S.rival&&S.rep>=20){S.rival=makeRival(rng);
     S.notices=(S.notices||[]).concat([{k:"The competition · week "+S.week,h:cap(S.rival.name),
@@ -2055,6 +2247,14 @@ function load(){
       S.player.traits=t;
     }
     if(S.player&&!S.player.face)S.player.face=randomFace(mulberry32(((S.player.avseed||1)*2654435761)>>>0),S.player.gender);
+    // A file from before the long game: the last score used to be one job at ranking 100, and
+    // postings had no weeks on them. seenFinal was a flag and is now which stage was announced.
+    S.cased=S.cased||{};S.coHeat=S.coHeat||{};S.idle=S.idle||0;
+    S.finalStage=S.finalStage||0;S.finalBack=S.finalBack||0;
+    if(typeof S.seenFinal!=="number")S.seenFinal=S.seenFinal?0:-1;
+    (S.jobs||[]).forEach(j=>{if(!j.final&&!j.weeks)j.weeks=BAL.jobWeeks[j.tier]||1;});
+    S.jobs=(S.jobs||[]).filter(j=>!j.final);   // the old single final score is not this one
+    if(S.finalDone)S.finalStage=FINAL_STAGES.length;
     // a job left mid-decision picks up exactly there: the report so far, then the six options
     const P=S.pendingJob;
     if(P&&P.twist&&Array.isArray(P.pre)){
@@ -2506,7 +2706,7 @@ function jobsList(){
     return '<div class="jobrow" data-act="open-job" data-id="'+j.id+'" data-country="'+esc(j.country)+'" role="button" tabindex="0">'
       +'<div class="code">'+(j.final?"—":"№"+j.id.slice(1).padStart(3,"0"))+'<br>'+diffbar(j.diff,j.heat>22)+'</div>'
       +'<div><div class="t">'+(j.final?'<span class="chip c-bad">Final score</span> ':'')+esc(j.title)+'</div>'
-        +'<div class="loc">'+co.flag+' '+esc(j.city)+', '+esc(j.country)+' · crew of '+j.need+' · '+esc(co.langs[0])+' · from '+esc(j.client)+(j.final?'':' · expires wk '+j.expires)+'</div>'
+        +'<div class="loc">'+co.flag+' '+esc(j.city)+', '+esc(j.country)+' · crew of '+j.need+' · <span dir="ltr">'+(j.final?BAL.finalWeeks:(j.weeks||1))+' wk</span> · '+esc(co.langs[0])+' · from '+esc(j.client)+(j.final?'':' · expires wk '+j.expires)+(casedWeeks(j)?' · <span style="color:var(--good)">cased '+casedWeeks(j)+'</span>':'')+'</div>'
         +'<div class="meta"><span class="tag">'+CAT_BY_K[j.cat].l+'</span>'+techs+' '+kn+' '+fit+'</div></div>'
       +'<div class="pay num">'+money(j.payout)+'<div class="loc" style="text-align:right">+'+j.heat+' heat</div></div></div>';
   }).join("");
@@ -2554,10 +2754,23 @@ function jobPanel(j){
   const odds=a.team.length?('<div class="odds" title="estimated outcome spread"><i class="o-good" style="width:'+a.pClean+'%"></i><i class="o-mid" style="width:'+a.pOk+'%"></i><i class="o-bad" style="width:'+(a.pFail+a.pDis)+'%"></i></div>'
     +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span style="color:var(--good)">Clean ~'+a.pClean+'%</span><span style="color:var(--warn)">Messy ~'+a.pOk+'%</span><span style="color:var(--stamp)">Blown ~'+(a.pFail+a.pDis)+'%</span></div>'
     +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">Crew '+a.eff+' vs difficulty '+j.diff+'</div>'):'';
+  const wks=j.final?BAL.finalWeeks:(j.weeks||1);
   const reqs='<div class="req"><div class="b"><div class="k">Fee</div><div class="v num">'+money(j.payout)+'</div></div>'
     +'<div class="b"><div class="k">Crew</div><div class="v num">'+a.team.length+' / '+j.need+'</div></div>'
+    +'<div class="b"><div class="k">On the ground</div><div class="v num" dir="ltr">'+wks+' week'+(wks>1?'s':'')+'</div></div>'
     +'<div class="b"><div class="k">Difficulty</div><div class="v">'+diffbar(j.diff,j.heat>22)+'</div></div>'
     +'<div class="b"><div class="k">Heat</div><div class="v num">+'+j.heat+'</div></div></div>';
+  // Weeks spent watching a room before you walk into it. The board does not wait while you do.
+  const cw=casedWeeks(j),cmax=caseMax(j);
+  const localHeat=countryHeat(j.country);
+  const caseBlock=cmax?'<hr class="rule"><div class="kicker">Casing it</div>'
+    +'<div class="sel-help">A room you have watched is not the room the client described. Each week spent on it costs '+money(caseCost(j))+' and adds <b>+'+BAL.caseGain+'</b> to the reckoning — and it is a week the posting might not survive.</div>'
+    +'<div class="mono" style="font-size:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px">'
+    +'<span>'+(cw?'<b>'+cw+' of '+cmax+'</b> week'+(cmax>1?'s':'')+' cased — <span style="color:var(--good)">+'+(cw*BAL.caseGain)+' to the reckoning</span>':'Nobody has been near it. <span style="color:var(--muted)">'+cmax+' week'+(cmax>1?'s':'')+' available.</span>')+'</span>'
+    +(cw<cmax?'<button class="btn ghost sm" data-act="case" data-id="'+j.id+'" '+(S.money>=caseCost(j)&&a.team.length?"":"disabled")+'>Case it a week · '+money(caseCost(j))+'</button>':'<span style="color:var(--muted)">There is nothing left to learn from the outside.</span>')
+    +'</div>'
+    +(localHeat>=20?'<div class="mono" style="font-size:11.5px;color:var(--stamp);margin-top:6px">'+esc(j.country)+' is watching for you — '+localHeat+' points of local heat, and every room here is harder for it. It cools a point a week.</div>':'')
+    :'';
   const h='<div class="panel-h" style="align-items:center"><div><div class="kicker">'+esc(co.name)+' · '+cat.l+(j.final?' · Final score':'')+'</div>'
     +'<h2 style="font-size:20px;margin-top:4px;text-transform:none;letter-spacing:.02em">'+esc(j.title)+'</h2></div><button class="btn ghost sm" data-act="close-job">← All postings</button></div>';
   // a crew you founded can take it instead of you — its own reckoning, its own report
@@ -2568,7 +2781,7 @@ function jobPanel(j){
       +'<div><button class="btn sm" data-act="execute-crew" data-id="'+j.id+'" data-crew="'+cr.id+'" '+(ac.canRun&&!busy&&!j.final?"":"disabled")+'>Send →</button></div></div>';}).join("");
   const othersBlock=crews().length?'<hr class="rule"><div class="kicker">Other crews</div><div class="sel-help">A crew you founded can take this instead of you: its own reckoning, its own report, and your week stays yours. One job per crew per week. No twists — you are not there to decide.</div>'+others:'';
   const b='<div class="panel-b">'+theJob+brief+'<div class="mono" style="font-size:12px;color:var(--muted)">The plan leans on '+wtxt+'.</div>'+chips+reqs
-    +'<hr class="rule"><div class="kicker">Who goes</div>'+benchBar+checks
+    +'<hr class="rule"><div class="kicker">Who goes</div>'+benchBar+checks+caseBlock
     +'<hr class="rule"><div class="kicker">The reckoning</div>'+factors+'<div style="margin-top:10px">'+odds+'</div>'+othersBlock
     +'<hr class="rule"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" data-act="close-job">Walk away</button>'
     +'<button class="btn stamp" data-act="execute" data-id="'+j.id+'" '+(a.canRun?"":"disabled")+'>'+(a.canRun?"Take the job →":"Needs "+j.need+" in the field")+'</button></div></div>';
@@ -2659,7 +2872,12 @@ function tabLog(){
     +'<div class="mono" style="font-size:13px;margin-top:6px"><b>'+esc(rkNow.name)+'</b> · '+S.rep+' points</div>'
     +'<div class="loy" style="height:9px;margin-top:6px"><i style="width:'+clamp(S.rep,0,100)+'%"></i></div>'
     +'<div class="mono" style="font-size:11.5px;line-height:1.6;margin-top:6px">'+esc(rkNow.note)+'</div>'
-    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">'+(S.finalDone?"It's done.":finalUp?"The final score is live online.":rkNext?"Next: <b>"+esc(rkNext.name)+"</b> at "+rkNext.min+" — "+esc(rkNext.note):"Top of the board. Reach 100 and the final score appears.")+'</div>'
+    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">'+(S.finalDone?"It's done.":finalUp?"Stage "+(finalStage()+1)+" of the last score is live: <b>"+esc(FINAL_STAGES[finalStage()].title)+"</b>.":rkNext?"Next: <b>"+esc(rkNext.name)+"</b> at "+rkNext.min+" — "+esc(rkNext.note):"Top of the board.")+'</div>'
+    // what the last score is waiting for, ticked off as it arrives — so there is always a
+    // next thing to be working towards, and it is never a mystery what it is
+    +(S.finalDone?'':'<hr class="rule"><div class="kicker">The last score · '+(finalStage()?"stage "+(finalStage()+1)+" of "+FINAL_STAGES.length:FINAL_STAGES.length+" operations, in order")+'</div>'
+      +'<div class="factors">'+finalGate().map(g=>'<span class="k">'+esc(g.k)+'</span><span class="'+(g.ok?"plus":"minus")+' num" dir="ltr">'+(g.ok?"✓ ":"")+esc(g.fmt(g.have))+(g.ok?"":" / "+esc(g.fmt(g.want)))+'</span>').join("")+'</div>'
+      +(S.finalBack&&S.week<S.finalBack?'<div class="mono" style="font-size:11px;color:var(--stamp);margin-top:6px">The Committee has moved things. That door is worth trying again in week '+S.finalBack+'.</div>':''))
     +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">Clean and successful work raises it; messy work, leaks, arrests and walkouts lower it; a week laid low costs a point.'+(S.poach?' <span style="color:var(--stamp)">'+esc(S.poach.name)+' is buying your crew drinks — '+S.poach.weeks+' more week'+(S.poach.weeks===1?'':'s')+'.</span>':'')+'</div>'
     +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="tab" data-k="jobs">Jobs →</button><button class="btn ghost" data-act="laylow">Lay low a week</button></div>'
     +'</div></div>';
@@ -3031,7 +3249,7 @@ const TUT={on:false,step:0,mode:"full"};
 // The first time anyone plays: the whole game, screen by screen. The second time: a short reminder.
 // Both can be run again from the i button or the controls book.
 const TUT_STEPS=[
-  {tab:"crew",sel:".topbar",h:"The top line",t:"Balance is your money — hires, upkeep, bonuses and vetting come out of it. Week counts time: every job or lay-low is a week. Ranking is your name — Nobody, Small time, Known, Respected, Feared, The Crew — and the name decides what clients post, what they pay, who will sign with you, how many seats you have and whether your crew stays; at 100 the final job appears. Heat is how hard the police are looking: every job adds some, and at 100 there is a raid."},
+  {tab:"crew",sel:".topbar",h:"The top line",t:"Balance is your money — hires, upkeep, bonuses and vetting come out of it. Week counts time: every job or lay-low is a week. Ranking is your name — eight of them, Nobody up to The Crew — and the name decides what clients post, what they pay, who will sign with you, how many seats you have, whether your crew stays, and how hard every room you are given is defended. The last score is three operations and it asks for a great deal more than a number. Heat is how hard the police are looking: every job adds some, and at 100 there is a raid."},
   {tab:"crew",sel:".id.you",h:"This is you",t:"The commander. Your file goes on every job: five attributes, a technique, education, time in jail and on the streets, knowledge, languages, and anything you won't do. If a border keeps you out, the crew goes without you — a commander-type recruit runs it, well or badly."},
   {tab:"crew",sel:".id.slot",h:"The empty seats",t:"Fill them from the Roster. Everyone you hire goes on every job, takes a cut of every score, and costs upkeep each week. Four seats to start; a Respected name opens two more. Every member has a price: a cut under two weeks of their own upkeep is small money — three small jobs in a row and they grumble, five and they may walk. A bonus settles it and keeps them sharp for three weeks."},
   {tab:"crew",sel:"[data-act=found-open]",h:"Other crews, later",t:"Two years in, Feared, with seven on your crew, you can found a second crew out of your own people — a commander and four soldiers, named after its commander — that takes a job of its own each week without you. A third at three years, a fourth at four, no more. The game announces each milestone in a box when you reach it."},
@@ -3131,7 +3349,7 @@ const INFO={
     "Postings from clients, by country. Each row: category, the techniques and knowledge it wants — <b>green</b> if someone on your crew has it, <b>red</b> if nobody does — city, country and language, crew needed, fee, heat, when it expires, and a chip: <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go.",
     "<b>Sort</b> the board by best fit, crew needed, technique wanted, fee, heat, difficulty, country or expiry. <b>Your crew</b> sits above the board — passport, technique, attributes, languages, knowledge, limits — so a posting can be judged without leaving; hide it if you know them by heart. Keys <b>1–4</b> jump between the tabs.",
     "The bars are difficulty; red means high heat. Open a posting to see the reckoning before you commit.",
-    "<b>Lay low a week</b>: −15 heat, upkeep still due, postings refresh, ranking −1. Clients post to a name: a Nobody or Small time crew sees tier 1–2 postings, a Known crew tier 3, Respected and up tier 4 — and the fee is scaled to the name, from −20% to +35%. Reach 100 ranking and the final score appears at the top of the board.",
+    "<b>Lay low a week</b>: −15 heat, upkeep still due, postings refresh, ranking −1. Clients post to a name: a Nobody or Small time crew sees tier 1–2 postings, a Known crew tier 3, Respected and up tier 4 — and the fee is scaled to the name, from −20% to +50%. A job is <b>weeks</b>, not a week: a tier-1 errand is gone by Friday, a tier-4 room holds the crew for three. Before you take one you can <b>case</b> it — a week and a fee, for a real gain on the reckoning and the risk that the posting is gone when you look up.",
     "On some jobs the live report stops mid-way: something has gone wrong and six options wait for your call. One sets the crew free — the one the crew you brought can actually do — so read the file before you take the job.",
     "Once you have founded other crews, every job file lists them under <b>Other crews</b> with their own reckoning and a <b>Send</b> button: a crew's job does not spend your week, one job per crew per week, and their reports are filed on the Log like yours."]},
   log:{h:"The Log",t:[
@@ -3141,7 +3359,7 @@ const INFO={
     "<b>The competition and the law</b> name the two things that used to be numbers. Once you are Small time, a rival outfit appears, run by somebody with a name: they work the same board, take the best posting left most weeks, and their standing climbs when they do. When their standing passes your ranking they start buying your crew drinks. You can buy a name inside their operation, or send your enforcer — which works about two times in three, and is loud when it doesn't. A <b>detective</b> opens a file once the heat has been up or your name has grown; the file thickens with heat and thins when you lie low, pay a desk, or get raided — and past 50 the raid comes at heat 90 instead of 100, past 75 at 80.",
     "<b>The record</b> counts everything the crew has done — jobs, verdicts, money earned and paid out, the biggest score, countries worked, twists called right, who was hurt, taken or lost, and the current run of jobs without a scratch. Under it, <b>Next</b> shows the three nearest marks on the wall: eighteen career goals from the first job to the final score, each paying ranking, money or both when it lands, and announced in a box when it does.",
     "<b>Standing arrangements</b> is where money goes. Three people on a weekly retainer — a <b>lawyer</b> (anyone taken is held half as long), a <b>doctor</b> (a wound is one week, not two), a <b>fixer</b> (two more postings a week, and one written for the crew you actually have) — paid out of the same payroll as the crew, so a missed week loses them. A <b>safe house</b> is bought outright, in three moves: heat falls 7, then 9, then 11 a week, and the best one keeps most of the float through a raid. And a <b>desk</b> can be paid to lose a file: heat −20, priced by how hot you are.",
-    "<b>Ranking — what the name buys.</b> The name decides everything a client, a recruit and a police force does with you. <b>Nobody</b> (0): jobs pay −20%, only tier 1–2 postings, nobody above Professional will sign, loyalty slips a point a week. <b>Small time</b> (20): pay −10%. <b>Known</b> (40): tier-3 postings, full pay, Veterans sign. <b>Respected</b> (60): tier-4 postings, pay +10%, Legends sign, loyalty +1 a week, heat +5%. <b>Feared</b> (80): pay +20%, heat +10%. <b>The Crew</b> (100): pay +35%, loyalty +2, heat +15%, and the final score appears. Clean and successful work raises it; messy work, leaks, arrests and walkouts lower it; a week laid low costs a point — a name unused is a name forgotten."]},
+    rankLadderText()]},
   job:{h:"A job file",t:[
     "<b>The job</b>, at the top: what the client actually wants, in four sentences — the work itself, how well the thing is held, what the posting asks for, and the terms. It is written from the posting, so it reads the same every time you open it.",
     "<b>The brief</b>: who posted it, and the country — language, money, politics, religion, terrain, and the border rule. Chips: the category, techniques and knowledge wanted, and tags such as <i>on the water</i> or <i>at night</i> that trip a crew member's limits.",
@@ -3164,7 +3382,7 @@ const INFO={
     "Pause and settings, drawn as the boss's office. The <b>radio</b>: SOUND is the master switch, MUSIC switches the track, VOLUME turns both — click the knob's left to lower, right to raise. An hour of suspense loops under the office and every board; each job report brings its own track, and the verdict another. The <b>monitor</b>: brightness. The <b>paper</b>: language. The <b>book</b>: controls and how the game works. The <b>clipboard</b> on the wall: the tutorial whenever you want it — the whole thing, the short reminder, or any one card. The <b>file cabinet</b>: write the game out as a code you can keep anywhere, or read one back in — a save lives in one browser only, and this is how it leaves. The <b>door</b>: back to the game, or burn the file. Your <b>hat</b>: your own file.",
     "Settings are kept apart from the game and survive a new game. Esc closes the office."]},
   over:{h:"The end",t:[
-    "You win when the final score — the job that appears at 100 ranking — comes back Clean or a Success. You lose when there is no crew left and no money to hire one.",
+    "You win by taking <b>the last score</b>, and it is not one job. It is three operations against the Committee, in order — read the ledger, open the floor below the floor, then move all of it out — and it appears only when the crew is ready for it: a name at the very top of the board, a career of jobs behind you, five in the field, and a war chest to fund it out of your own float. A stage that goes wrong does not end you; it costs you weeks while they move things, and then the door is worth trying again. You lose when there is no crew left and no money to hire one.",
     "<b>Run it again</b> starts a new file; settings stay."]},
 };
 function infoHTML(){
@@ -3315,7 +3533,7 @@ function officePanel(){
       +'<span class="k">Saving</span><span>Automatic, in this browser. Settings are kept separately and survive a new game.</span></div>'
       +'<hr class="rule"><div class="mono" style="font-size:12px;line-height:1.8"><b>How it works.</b> You are the commander. Fill four seats from 5,000 files — each has a passport, five attributes, a technique, knowledge, education, time in jail, time on the streets, and things they will not do. '
       +'Clients post jobs online by country; each country has its own categories, language, money, politics and terrain. Everyone on the crew goes on every job, if they can get in and the job doesn\'t hit one of their limits. '
-      +'Success pays and builds ranking; failure adds heat and gets people hurt or held. Reach 100 ranking and the final score appears.</div>'
+      +'Success pays and builds ranking; failure adds heat and gets people hurt or held. Build the name to the top of the board and the last score — three operations against the Committee — opens up.</div>'
       +(S&&!S.over?'<hr class="rule"><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" data-act="tut-start">Run the tutorial again</button><button class="btn ghost sm" data-act="tut-remind">The short reminder</button></span>':'');
   } else if(UI.panel==="tutor"){
     h="Recap";
@@ -3432,7 +3650,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 23 · 15 September 2026";
+const BUILD="build 24 · 15 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
@@ -3547,6 +3765,7 @@ document.addEventListener("click",e=>{
     case "vet": vet(id); break;
     case "bonus": bonus(id); break;
     case "drop": drop(id); break;
+    case "case": caseJob(id); break;
     case "execute": doExecute(id); break;
     case "execute-crew": doExecute(id,+t.getAttribute("data-crew")); break;
     case "crew-send": crewSend(id,+t.getAttribute("data-crew")); break;
