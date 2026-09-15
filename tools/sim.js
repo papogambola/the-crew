@@ -29,11 +29,22 @@ for(let run=0;run<RUNS;run++){
   newGame(Object.assign({id:"YOU",isPlayer:true,n:"Sim",first:"Sim",gender:"M",nat:"Israel",avseed:run+1,status:"crew",cut:0,upkeep:0,loyalty:100,greed:0,mole:false,vetted:true,vetFlag:false,limits:[]},draft.profile));
   if(typeof TUT!=="undefined"&&TUT.on)tutEnd();
   const r=freshRng();
-  let weeks=0,jobsRun=0,laid=0,failed=0,clean=0,hires=0,peakMoney=0,broke=0,twistsSeen=0,twistsRight=0,feesPaid=0;
+  let weeks=0,jobsRun=0,laid=0,failed=0,clean=0,hires=0,peakMoney=0,broke=0,twistsSeen=0,twistsRight=0,feesPaid=0,trips=0,snags=0,refused=0,wasted=0;
   let lastWeek=S.week;
   while(!S.over&&weeks<1500){
     // clear anything waiting for a click
     S.notices=[];S.modal=null;
+    // somebody outside the crew: answer it the cheapest way that is available
+    while(S.loose&&S.loose.length){
+      const L=S.loose[0],cc=byId(L.id);
+      if(!cc){S.loose.shift();continue;}
+      const opts=looseOptions(cc,L.why);
+      let pickIdx=0;
+      const kill=opts.findIndex(o=>o.kill&&o.need!==false);
+      if(kill>=0&&r()<0.25){pickIdx=kill;wasted++;}
+      else{const quiet=opts.findIndex(o=>!o.kill&&o.need!==false&&o.talk<opts[0].talk);pickIdx=quiet>=0&&r()<0.5?quiet:0;}
+      looseResolve(pickIdx);
+    }
     if(S.event){const W=WEEKLY.find(w=>w.k===S.event.k);let i=0;
       // take the first option the crew can actually perform
       for(let k=0;k<W.opts.length;k++){const o=W.opts[k];
@@ -59,9 +70,27 @@ for(let run=0;run<RUNS;run++){
       const want=cand.sort(rich?(a,b)=>power(b)-power(a)
         :(a,b)=>power(b)/Math.max(1,b.upkeep)-power(a)/Math.max(1,a.upkeep))[0];
       if(!want)break;
-      const before=recruits().length,f=want.fee;hire(want.id);
-      if(recruits().length===before)break;
-      hires++;feesPaid+=f;
+      // hiring is a trip now: it takes a week, it can be turned down, and a meeting that goes
+      // wrong is answered with whatever the crew brought
+      const before=recruits().length,f=want.fee,m0=S.money;
+      hire(want.id);
+      if(!S.modal||S.modal.type!=="trip"){break;}
+      const Tr=S.modal.data;
+      trips++;
+      if(S.pendingTrip){
+        snags++;
+        const cc=byId(S.pendingTrip.cid),kit=tripKit(cc);
+        const W=TRIP_SNAGS.find(x=>x.k===S.pendingTrip.snag.k);
+        // the best answer the crew can actually take, by the same priority a player would read
+        let bi=0,bp=99;
+        W.opts.forEach((o,i)=>{if(tripCan(o,cc,kit)&&o.pri<bp){bp=o.pri;bi=i;}});
+        if(r()>P.twist){bi=Math.floor(r()*W.opts.length);}   // an imperfect player
+        finishTrip(S.pendingTrip,bi,Tr);
+      }
+      S.modal=null;
+      if(Tr.outcome==="signed"){hires++;feesPaid+=(m0-S.money);}
+      else {refused++;feesPaid+=Math.max(0,m0-S.money);}
+      if(recruits().length===before&&Tr.outcome!=="signed")break;
     }
     // a player with money buys the things money buys
     if(S.money>600000)RETAINERS.forEach(rt=>{if(!hasRetainer(rt.k))toggleRetainer(rt.k);});
@@ -108,7 +137,7 @@ for(let run=0;run<RUNS;run++){
   const v={clean:st.clean||0,success:st.success||0,messy:st.messy||0,botched:st.botched||0,disaster:st.disaster||0};
   out.push({win:S.over==="win",over:S.over,weeks:S.week,jobs:jobsRun,laid,failed,clean,hires,rep:S.rep,money:S.money,peak:peakMoney,
     v,earned:st.earned||0,cuts:st.cuts||0,fees:feesPaid,upkeepPaid:Math.max(0,(st.earned||0)-(st.cuts||0)-feesPaid-S.money+60000),
-    crew:recruits().filter(c=>c.status==="crew").length,broke,twistsSeen,twistsRight,
+    crew:recruits().filter(c=>c.status==="crew").length,broke,twistsSeen,twistsRight,trips,snags,refused,wasted,
     lostPeople:(stats()&&stats().lost)||0,hurt:(stats()&&stats().hurt)||0,taken:(stats()&&stats().taken)||0});
 }
 const num=a=>a.slice().sort((x,y)=>x-y);
@@ -126,6 +155,7 @@ if(W.length)console.log("  weeks to win   median "+med(W)+"   p10 "+pct(W,0.1)+"
 console.log("  jobs run       median "+med(out.map(o=>o.jobs))+"   laid low median "+med(out.map(o=>o.laid)));
 console.log("  failed jobs    median "+med(out.map(o=>o.failed))+" of "+med(out.map(o=>o.jobs))+"   clean median "+med(out.map(o=>o.clean)));
 console.log("  final ranking  median "+med(out.map(o=>o.rep))+"   final money median "+money(med(out.map(o=>o.money)))+"   peak "+money(med(out.map(o=>o.peak))));
+console.log("  trips median "+med(out.map(o=>o.trips))+"  of which snagged "+med(out.map(o=>o.snags))+"  refused "+med(out.map(o=>o.refused))+"  people dealt with "+med(out.map(o=>o.wasted)));
 console.log("  hires median "+med(out.map(o=>o.hires))+"   people lost median "+med(out.map(o=>o.lostPeople))+"   hurt "+med(out.map(o=>o.hurt))+"   taken "+med(out.map(o=>o.taken)));
 console.log("  weeks broke median "+med(out.map(o=>o.broke)));
 console.log("  ECONOMY per run: earned "+money(med(out.map(o=>o.earned)))+"  crew cuts "+money(med(out.map(o=>o.cuts)))

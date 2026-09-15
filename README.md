@@ -3,7 +3,7 @@
 A black-ink-on-white-paper game of global crime. You are the criminals. One file, no dependencies.
 
 You are the name at the top of the police's chart, and the commander of the crew. Fill the
-other four seats from **5,000 operatives**, then take the jobs clients post online — country
+other four places from **5,000 operatives**, then take the jobs clients post online — country
 by country, each with its own language, money, politics, religion, terrain and job
 categories. Everyone on the crew goes on every job, if the border lets them in and the job
 doesn't hit one of their limits.
@@ -17,7 +17,7 @@ decisions at the end.
 
 - **A five-person crew, you included.** You create your own file — alias, sex (male or
   female), nationality, technique — and the rest of your profile is rolled, re-rollable. You
-  are the commander. Four seats to fill from the roster.
+  are the commander. Four places to fill from the roster.
 - **5,000 operatives**, generated from a seed so a save stores only what changed. Every file
   carries: nationality and passport tier; five attributes (Muscle, Brains, Tech, Charm,
   Nerve); a technique (16); experience rank; knowledge domains (10); education (six levels,
@@ -52,7 +52,7 @@ decisions at the end.
   violence), what the client asked for, and the terms. Written from the posting itself, so it
   reads the same every time it is opened and after a save. The final score has its own words.
 - **Who goes.** Every eligible crew member goes by default, and you can **bench** any of them
-  on the job file, yourself included. A bench seat takes no cut of the score, learns nothing,
+  on the job file, yourself included. A benched member takes no cut of the score, learns nothing,
   and cannot be hurt, arrested or killed — and the crew that does go is smaller, which the
   reckoning counts. Bench yourself and a commander-type runs it in your place.
 - **The reckoning.** Before you take a job, the file shows who can go and why not (border,
@@ -74,6 +74,38 @@ decisions at the end.
   **What they learned** says what it bought: *stood in as a Safecracker*. If the job doesn't
   come off, they learned nothing they can use. Two gaps are two people's weeks; a crew smaller
   than the number of gaps means somebody covers two and still learns the one thing.
+- **Recruitment is a trip.** Nobody joins a crew because a fee was paid. **Go and ask** and you
+  fly to wherever they live and put it to them in person: a week off the calendar, a live feed
+  like a job — the border, the city, the bar with two doors, how they read you — and their
+  answer at the end of it. The fee is only paid if they sign; turn back, or get turned down,
+  and the money stays with you while the week does not.
+- **Most of them are difficult, and the cheap ones are the worst.** Every trip ends with how
+  hard that file was, as a percentage. It rises with greed, years inside, a temperament, a hard
+  border, and **low numbers in the things that matter** — desperate people make a mess of a
+  meeting. A **Legend** is difficult for the opposite reason: they test you.
+- **When a meeting goes wrong it is not a money problem.** They don't show; the number moves;
+  they bring somebody who is not introduced; a car sits outside for forty minutes; they want to
+  know what happened to the last person in the job; three men and a shut door; they have been
+  drinking since lunch; two officers in the hotel lobby at seven. What answers it is what you
+  brought — an **enforcer** in the room, a **face** to do the talking, a **forger** for papers,
+  a **fixer** to find out who moved them, the local **language**, your own **Charm** or
+  **Nerve**, or a **record** long enough to answer with. Walking out is always on the list, and
+  somebody who turns you down will not take another meeting for a couple of months.
+- **Somebody who leaves is carrying you around with them.** Walk out over the money, take a cut
+  of the score and vanish, go to a rival, resign, or get cut loose — and the game asks what you
+  are going to do about it, with **the odds written on every answer**. The box says how many
+  jobs they worked with you and the percentage they eventually talk; a talker is a slow leak,
+  putting something else in the detective's file every few weeks for as long as they are alive.
+  Let them go and that percentage stands. Buy the silence, and it will be asked for again. A
+  word from your **enforcer** costs heat and some of the crew's good opinion. Your **fixer** can
+  put them four borders away — the cleanest thing on the list that leaves them breathing.
+- **And the other kind of answer.** A **cleaner** makes it an accident: the most expensive and
+  the quietest, 86% clean. A stranger you never meet is cheaper and 62%. Your enforcer tonight
+  is cheapest, loudest and 50%, and when it goes wrong it is your enforcer the police take.
+  Each option says what happens when it does not go cleanly. It works — a body does not talk,
+  and the board notices what happens to people who leave your crew: **ranking +2** when it is
+  clean. It also costs heat, the detective's file, and **loyalty across everybody still with
+  you**, because they can all count. Nobody is safe working for somebody who does that.
 - **Job recaps.** Every job you have run stays on file. The Log's week is a dropdown to any
   past week, and each job reopens as its full report — the minute-by-minute, the verdict, the
   split, why the ranking moved, what they learned, who came back.
@@ -84,7 +116,7 @@ decisions at the end.
   and **six options wait for your call**. Only one sets the crew free, and it is always the one
   the crew you brought can actually do — a wheelman hot-wires the second car, a forger
   re-papers the manifest, a hacker kills the alarm. A call your crew can make but not best
-  costs time and money (−2 ranking); a call nobody can make costs blood, a seat, heat and −4
+  costs time and money (−2 ranking); a call nobody can make costs blood, a place, heat and −4
   ranking; walking away is always on the list and keeps everyone while losing the score. The
   options are shuffled every time. The decision cannot be clicked away, survives a reload, and
   the verdict screen — and the recap on file — shows what you chose, what would have set you
@@ -95,7 +127,7 @@ decisions at the end.
   walked with your money and is talking about the police, a detective asking around the bars.
   The six types rotate, so each comes round before any repeats; the least loyal member is
   usually the one it happens to. Each asks for a decision with a price and a consequence —
-  money, loyalty, a seat, heat, sometimes a gamble the text is honest about — and the hard
+  money, loyalty, a place, heat, sometimes a gamble the text is honest about — and the hard
   answers need an Enforcer on the crew.
 - **Ranking, with consequences.** The crew's standing — Nobody, Small time, Known, Respected,
   Feared, The Crew — rises with clean and successful jobs (more for a bigger job, a little
@@ -126,7 +158,7 @@ decisions at the end.
   Operator, Professional, Veteran, Legend — are earned at 60, 180, 430 and 900 xp. Good work
   adds a point to the attributes the job leaned on, but **getting better gets harder**: a 40
   climbs quickly, an 85 barely moves. A crew of Legends is a career's work, not ten jobs'.
-- **Seats, and other crews.** Four soldiers' seats to start; a Respected name (ranking 65)
+- **Places, and other crews.** Four soldiers' places to start; a Respected name (ranking 65)
   opens two more, for six soldiers and you. From week 104 (two years in), Feared, with seven on
   your crew, you can **found a second crew**: a commander-type and four soldiers out of your
   seven, named after its commander, which takes a job of its own each week from the same board
@@ -134,8 +166,8 @@ decisions at the end.
   you are not there to decide), its own live report, and its take, heat and ranking are
   yours, as is its payroll. A third crew at three years, a fourth at four, no more. People
   move between crews from their cards; dissolving a crew brings them back as far as your
-  seats allow.
-- **Milestones, announced.** A box in the middle of the screen, once each: the two seats a
+  places allow.
+- **Milestones, announced.** A box in the middle of the screen, once each: the two places a
   Respected name opens; each year mark (weeks 104, 156, 208) when another crew is within reach,
   with what is still missing; and the moment a second, third or fourth crew can actually be
   founded, with a button straight into founding it. Later closes it; the Crew tab and the case
@@ -169,7 +201,7 @@ decisions at the end.
 - **Sound.** A small set of synthesised effects — clicks, the verdict stamp, a coin on a
   hire, a siren on a raid. No files; the office switch turns it off.
 - **Tutorial, and a reminder.** The first time anyone plays, eleven steps walk through every
-  screen — the top line, your file, the seats and the money rules, other crews, the roster, a
+  screen — the top line, your file, the places and the money rules, other crews, the roster, a
   file, the board, who can go, the reckoning and the twist, the log and what happens between
   jobs, the office — highlighting each thing as it goes. The second sitting (a return after half
   an hour or more away) opens with a five-card reminder. After that, nothing runs on its own.
@@ -257,9 +289,9 @@ smallest one; none is a decision.
   Five verdicts: Clean, Success, Messy, Botched, Disaster. The live report narrates that
   outcome; apart from the twist, it does not change it.
 - **"Very basic"** is read as: four tabs, no map, no per-job assignment — the whole crew
-  goes, and the game is choosing who sits in the seats and which postings to take.
-- **Recruitment** is a one-off fee plus weekly upkeep and a cut of each score, with four
-  seats and the option to cut anyone loose.
+  goes, and the game is choosing who fills the places and which postings to take.
+- **Recruitment** is a trip, a one-off fee plus weekly upkeep and a cut of each score, with four
+  places and the option to cut anyone loose.
 - **Attribute values** run 12–98 and are rolled from experience, technique and role, then
   grow a point at a time with good work.
 - **Language** is English only; the paper on the desk is where more will go.
@@ -283,14 +315,14 @@ Measured over 24 runs of the current build, against the same tool run on the old
 
 | | before | now |
 |---|---|---|
-| weeks to finish (median) | 18 | **348** |
-| jobs run (median) | 10 | **137** |
-| verdicts that came back CLEAN | ~90% | **31%** |
-| botched or disastrous | ~2% | **11%** |
+| weeks to finish (median) | 18 | **338** |
+| jobs run (median) | 10 | **90** |
+| verdicts that came back CLEAN | ~90% | **30%** |
+| botched or disastrous | ~2% | **9%** |
 | people lost, hurt or arrested (median) | ~0 | **30** |
-| runs that ended in losing | rare | **8%** |
+| runs that ended in losing | rare | **37%** |
 
-A caveat worth being plain about: 348 in-game weeks is roughly six to twelve hours of real
+A caveat worth being plain about: 338 in-game weeks is roughly six to twelve hours of real
 play, not the months the brief asked for. Weeks are not hours. What is here is the depth —
 more to decide per week, a crew that takes a career to build, a world that answers the name —
 and that is the part a real-time or online layer would then stretch across months, rather than
@@ -298,7 +330,7 @@ something to fake now by making the numbers bigger.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 24 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 25 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
