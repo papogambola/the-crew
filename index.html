@@ -1252,7 +1252,7 @@ function makeJob(rng,tierBias){
   return {
     id:"J"+S.jobSeq,cat:cat.k,tier,country:co.name,city:pick(rng,co.cities),
     need,diff,payout,heat,techs,know,tags,
-    client:pick(rng,CLIENTS),
+    client:pick(rng,openClients()),   // a client with a grudge does not post to you
     title:pick(rng,cat.v)+" "+pick(rng,cat.n),
     // a job is time as well as money: a big one holds the crew for weeks, and a posting that
     // sits on the board long enough to be cased is a posting somebody else may take first
@@ -2035,6 +2035,12 @@ function finishJob(P,choiceIdx,d){
       logMsg("The stage went wrong. The Committee will have moved things by morning — it will be weeks before that door is worth trying again.","bad",true);
     }
   }
+  // A client who lost money on this takes it personally often enough to matter. Not the
+  // Committee — the last score has no client to offend — and not another crew's job.
+  if(!job.final&&!P.crewId&&tier<=2&&job.client){
+    const pg=tier===0?GRUDGE.pDisaster:tier===1?GRUDGE.pBotched:GRUDGE.pMessy;
+    if(chance(rng,pg*(1+(job.tier-1)*0.12)))grudgeAdd(job.client,rng,job,tier);
+  }
   const wk=P.week;
   // A job is weeks, not a week. A tier-1 errand is gone by Friday; the big rooms hold the
   // crew for a month, which is why another crew earning without you is worth having.
@@ -2211,7 +2217,7 @@ function weekTick(rng){
     logMsg(cap(S.rival.name)+" is working the same board. "+S.rival.boss+" runs it.","warn",true);}
   if(!S.det&&(S.heat>=30||S.rep>=40)){S.det=makeDetective(rng);
     logMsg(S.det.name+" has your alias in a folder.","warn",true);}
-  rivalWorks(rng);detWatch(rng);looseTick(rng);
+  rivalWorks(rng);detWatch(rng);looseTick(rng);grudgeTick(rng);
   if(S.heat>=raidAt()){
     const rc2=recruits().filter(c=>c.status==="crew");
     if(rc2.length){
@@ -2273,7 +2279,7 @@ function load(){
     if(S.player&&!S.player.face)S.player.face=randomFace(mulberry32(((S.player.avseed||1)*2654435761)>>>0),S.player.gender);
     // A file from before the long game: the last score used to be one job at ranking 100, and
     // postings had no weeks on them. seenFinal was a flag and is now which stage was announced.
-    S.cased=S.cased||{};S.coHeat=S.coHeat||{};S.idle=S.idle||0;
+    S.cased=S.cased||{};S.coHeat=S.coHeat||{};S.idle=S.idle||0;S.grudges=S.grudges||[];S.revenge=S.revenge||null;
     S.finalStage=S.finalStage||0;S.finalBack=S.finalBack||0;
     if(typeof S.seenFinal!=="number")S.seenFinal=S.seenFinal?0:-1;
     (S.jobs||[]).forEach(j=>{if(!j.final&&!j.weeks)j.weeks=BAL.jobWeeks[j.tier]||1;});
@@ -2376,6 +2382,7 @@ function render(){
   if(!TUT.on){   // nothing pops up under a tutorial; it all waits for the last card
     if(S.notices&&S.notices.length&&!S.modal&&!S.over){S.modal={type:"notice"};sfx("stamp");}
     if(S.loose&&S.loose.length&&!S.modal&&!S.event&&!S.over){S.modal={type:"loose"};sfx("bad");}
+    if(S.revenge&&!S.modal&&!S.over){S.modal={type:"revenge"};sfx("bad");}
     if(S.event&&!S.modal&&!S.over)S.modal={type:"event"};
   }
   if(S.over&&!(S.modal&&(isFeed(S.modal.type)||S.modal.type==="event"))){root.innerHTML=screenOver()+chrome();bind();return;}
@@ -2717,6 +2724,12 @@ function jobsList(){
   const sortOpts=[["fit","Best fit first"],["need","Crew needed"],["tech","Trade wanted"],["pay","Fee, high first"],["heat","Heat, low first"],["diff","Difficulty, low first"],["country","Country"],["expires","Expiring soonest"]];
   const cur=S.jobSort||"fit";
   const sortSel='<span class="field" style="gap:2px"><label for="jsort">Sort</label><select id="jsort">'+sortOpts.map(o=>'<option value="'+o[0]+'"'+(cur===o[0]?" selected":"")+'>'+o[1]+'</option>').join("")+'</select></span>';
+  // Fewer postings with no explanation is a bug as far as a player is concerned. Say who.
+  const ban=bannedClients();
+  const unfinished=grudges().some(g=>g.kind==="blood"&&!g.done);
+  const banLine=ban.length?'<div class="warnbox" style="margin-bottom:10px"><b>'+ban.length+' client'+(ban.length>1?'s':'')+' will not deal with you.</b> '
+    +ban.map(b=>esc(b.c)+' <span class="mono" style="color:var(--muted)">to week '+b.until+'</span>').join(' · ')
+    +(unfinished?'<br><span style="color:var(--stamp)">And one of them is not finished with you.</span>':'')+'</div>':'';
   const head='<div class="panel-h"><h2>Jobs · Postings</h2><span style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap"><span class="kicker" style="padding-bottom:8px">Week '+S.week+' · postings expire</span>'+sortSel+'<button class="btn ghost sm" data-act="laylow" style="margin-bottom:2px">Lay low a week</button></span></div>';
   const filt=S.jobCountry?'<div style="display:flex;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap"><span class="tag ok">Showing '+esc(S.jobCountry)+'</span><button class="btn ghost sm" data-act="map-clear">All countries</button></div>':'';
   let jobs=S.jobs;
@@ -2746,7 +2759,7 @@ function jobsList(){
         +'<div class="meta"><span class="tag">'+CAT_BY_K[j.cat].l+'</span>'+techs+' '+kn+' '+fit+'</div></div>'
       +'<div class="pay num">'+money(j.payout)+'<div class="loc" style="text-align:right">+'+j.heat+' heat</div></div></div>';
   }).join("");
-  return '<div class="panel">'+head+filt+rows+'</div>';
+  return '<div class="panel">'+head+banLine+filt+rows+'</div>';
 }
 // The job file, in the left column beside the map.
 function jobPanel(j){
@@ -2984,6 +2997,7 @@ function renderModal(){
   if(m.type==="found")return modalFound();
   if(m.type==="notice")return modalNotice();
   if(m.type==="loose")return modalLoose();
+  if(m.type==="revenge")return modalRevenge();
   return "";
 }
 // Both the job report and the recruitment trip play out line by line in the same ticker.
@@ -3429,6 +3443,11 @@ const INFO={
     "<b>The fee is only paid if they sign.</b> Turn back, or get turned down, and the money stays with you. The week does not.",
     "<b>If the meeting stops, it is not a money problem.</b> Four or five answers, and the one that works is the one you brought the means for: an <b>enforcer</b> in the room, a <b>face</b> to do the talking, a <b>forger</b> for papers, a <b>fixer</b> to find out who moved them, the local <b>language</b>, your own <b>Charm</b> or <b>Nerve</b>, or a <b>record</b> long enough to answer with. Walking out is always there, costs nothing but the week, and they will not take another meeting for a couple of months.",
     "The last screen says <b>how hard that file was</b>, as a percentage. Greed, years inside, a temperament, a hard border and low numbers in the things that matter all push it up — and so does being a <b>Legend</b>, who is difficult for the opposite reason."]},
+  revenge:{h:"An unhappy client",t:[
+    "A client who lost money on a job that went wrong does not simply post again next week. Some of them take it personally, and there are two ways to take it personally. The first is to <b>tell everybody</b>: that client stops posting to you for twenty or thirty weeks and takes one or two of the people they drink with, the postings they already had come off the board, and the Jobs board says who and until when. The second is to <b>come and find you</b>, which is this.",
+    "<b>Every answer carries the odds it goes your way</b>, and what you have decides which are open: an <b>enforcer</b> to meet them at the door or collect what was taken, a <b>fixer</b> to find out who carried it or what was said to the police, a <b>safe house</b> to leave behind, or the money to pay back what they lost. Paying is the only answer that is certain, and it is the only one that also lifts the ban.",
+    "Four ways it comes: three cars outside the safe house at four in the morning; the count short because somebody walked into the flat in daylight; a detective outside the wrong café two days running; or somebody buying drinks for your least loyal member. Which one depends on what you have and who you have.",
+    "It is the bill for a job that went wrong, and it is paid whichever answer you give."]},
   loose:{h:"Somebody outside the crew",t:[
     "Anybody who leaves alive is carrying you around with them: which countries, which clients, which nights. The box says how many jobs they worked with you and <b>the odds they eventually talk</b> — and a talker is not an event, it is a slow leak. Every few weeks they put something else in the detective's file and a little more heat on the board, for as long as they are alive.",
     "<b>Every answer has its number on it.</b> Let them go, and the percentage stands. Buy the silence, and it drops — and it will be asked for again. A word from your <b>enforcer</b> costs nothing but a little heat and some of the crew's good opinion. Your <b>fixer</b> can put them four borders away with a job and a flat, which is the cleanest thing on the list that leaves them breathing.",
@@ -3445,6 +3464,7 @@ const INFO={
     "About one file in fourteen is a <b>police informant</b>: they leak jobs and leak heat. <b>Vet</b> a file for $6K — a dull crew misses one in three, so a clean stamp is a guess with money behind it."]},
   jobs:{h:"Jobs",t:[
     "Postings from clients, by country. Each row: category, the trades and knowledge it wants — <b>green</b> if someone on your crew has it, <b>red</b> if nobody does — city, country and language, crew needed, fee, heat, when it expires, and a chip: <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go.",
+    "<b>Clients remember.</b> Botch a job badly enough and the client may stop posting to you for twenty or thirty weeks, take one or two other clients with them, and pull the postings they already had. The board says who will not deal with you and until when — and whether one of them is not finished with you.",
     "<b>Sort</b> the board by best fit, crew needed, trade wanted, fee, heat, difficulty, country or expiry. <b>Your crew</b> sits above the board — passport, trade, attributes, languages, knowledge, limits — so a posting can be judged without leaving; hide it if you know them by heart. Keys <b>1–4</b> jump between the tabs.",
     "The bars are difficulty; red means high heat. Open a posting to see the reckoning before you commit.",
     "<b>Lay low a week</b>: −15 heat, upkeep still due, postings refresh, ranking −1. Clients post to a name: a Nobody or Small time crew sees tier 1–2 postings, a Known crew tier 3, Respected and up tier 4 — and the fee is scaled to the name, from −20% to +50%. A job is <b>weeks</b>, not a week: a tier-1 errand is gone by Friday, a tier-4 room holds the crew for three. Before you take one you can <b>case</b> it — a week and a fee, for a real gain on the reckoning and the risk that the posting is gone when you look up.",
@@ -3753,7 +3773,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 26 · 15 September 2026";
+const BUILD="build 27 · 15 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
@@ -3802,6 +3822,7 @@ document.addEventListener("click",e=>{
     case "twist": twistChoose(+t.getAttribute("data-i")); break;
     case "trip-opt": tripChoose(+t.getAttribute("data-i")); break;
     case "loose": looseResolve(+t.getAttribute("data-i")); break;
+    case "revenge": revengeResolve(+t.getAttribute("data-i")); break;
     case "event": if(S&&S.event&&!S.event.outcome)eventApply(S.event,+t.getAttribute("data-i")); render(); break;
     case "event-close": if(S){S.event=null;S.modal=null;save();} render(); window.scrollTo(0,0); break;
     case "speed-down": SET.speed=clamp(speedIdx()-1,0,SPEEDS.length-1); saveSettings(); render(); break;
@@ -3900,7 +3921,7 @@ document.addEventListener("keydown",e=>{
     else if(S&&S.modal){
       if(S.modal.type==="event"){if(S.event&&S.event.outcome){S.event=null;S.modal=null;save();render();}}
       else if(S.modal.type==="notice"){noticeDone();render();}
-      else if(S.modal.type==="loose"){}
+      else if(S.modal.type==="loose"||S.modal.type==="revenge"){}
       else if(isFeed(S.modal.type)&&S.modal.data.awaiting){}
       else if(isFeed(S.modal.type)&&!S.modal.data.done)tickerFinish();
       else{S.modal=null;render();}
@@ -3914,6 +3935,188 @@ document.addEventListener("keydown",e=>{
     const row=el.closest(".jobrow");if(row){e.preventDefault();row.click();}
   }
 });
+
+/* ------------------------------ GRUDGES ------------------------------- */
+// A client who lost money on a botched job does not simply post again next week. Some of them
+// take it personally, and there are two ways to take it personally: tell everybody, or come and
+// find you. Both are visible on the board before anything happens, because a consequence nobody
+// can see coming is just a dice roll with extra steps.
+const GRUDGE={
+  pBotched:0.34, pDisaster:0.62, pMessy:0.05,   // the chance a client takes it badly
+  pBlood:0.42,                                   // of those, how many come for you rather than talk
+  banWeeks:[16,34],                              // how long the word lasts
+  banFriends:[1,2],                              // and how many other clients they take with them
+  revengeIn:[2,6],                               // weeks until they turn up
+};
+function grudges(){return S.grudges||(S.grudges=[]);}
+function clientBanned(name){return grudges().some(g=>g.c===name&&S.week<g.until);}
+function bannedClients(){const seen={};grudges().forEach(g=>{if(S.week<g.until)seen[g.c]=Math.max(seen[g.c]||0,g.until);});
+  return Object.keys(seen).map(c=>({c,until:seen[c]})).sort((a,b)=>b.until-a.until);}
+function openClients(){const free=CLIENTS.filter(c=>!clientBanned(c));return free.length?free:CLIENTS;}
+// The word goes round: this client, and the ones they drink with, stop posting to you.
+function grudgeAdd(client,rng,job,verdict){
+  if(!client||client==="the Committee")return null;
+  const blood=chance(rng,GRUDGE.pBlood+(verdict===0?0.18:0));
+  const until=S.week+ri(rng,GRUDGE.banWeeks[0],GRUDGE.banWeeks[1]);
+  const g={c:client,since:S.week,until,kind:blood?"blood":"word",
+    job:job?job.title:"",noun:job?("the "+jobNoun(job)):"",country:job?job.country:"",fee:job?job.payout:0,
+    revengeAt:blood?S.week+ri(rng,GRUDGE.revengeIn[0],GRUDGE.revengeIn[1]):0,done:false};
+  grudges().push(g);
+  // they take some of the people they drink with
+  const friends=CLIENTS.filter(c=>c!==client&&c!=="the Committee"&&!clientBanned(c));
+  const n=ri(rng,GRUDGE.banFriends[0],GRUDGE.banFriends[1]);
+  const took=[];
+  for(let i=0;i<n&&friends.length;i++){
+    const f=friends.splice(Math.floor(rng()*friends.length),1)[0];
+    grudges().push({c:f,since:S.week,until:S.week+ri(rng,8,20),kind:"word",job:"",country:"",fee:0,revengeAt:0,done:true,via:client});
+    took.push(f);
+  }
+  // and the postings they already had on the board come down
+  const pulled=S.jobs.filter(j=>!j.final&&(j.client===client||took.indexOf(j.client)>=0)).length;
+  S.jobs=S.jobs.filter(j=>j.final||(j.client!==client&&took.indexOf(j.client)<0));
+  logMsg(cap(client)+" is not taking it well. "+cap(client)+" will not post to you until week "+until
+    +(took.length?", and has had a word with "+listAnd(took)+".":".")
+    +(pulled?" "+pulled+" posting"+(pulled>1?"s":"")+" came off the board.":"")
+    +(blood?" And that is not the end of it.":""),"bad",true);
+  return g;
+}
+// Somebody turns up. Four ways it can go, and what you have decides which answers are open.
+const REVENGE=[
+  {k:"door",h:"They come to the door",
+   s:"Three cars outside the safe house at four in the morning, and the man getting out of the second one is the one who paid for {J} and did not get it.",
+   opts:[
+    {t:"Let {E} meet them at the door",req:"enforcer",p:0.78,ok:"{E} goes out alone and comes back in twenty minutes. Nobody comes in. Whatever was said, it was enough.",
+     bad:"{E} goes out alone. Two of them are carried away and so is {E}.",eff:{heat:10},badEff:{hurtEnforcer:true,heat:22}},
+    {t:"Out the back, leave the flat",p:0.9,ok:"You are four streets away before the door goes in. The flat is a loss and nothing else is.",
+     bad:"The back was watched. It costs somebody a bad night.",eff:{money:-18000,house:true},badEff:{hurt:1,heat:12}},
+    {t:"Pay them back what they lost, in cash, now",pay:true,settles:true,p:1,ok:"You count it out on the bonnet of their car. It is expensive, it is humiliating, and it ends there — they will take your calls again.",eff:{clear:true}},
+    {t:"Sit tight and see what they do",p:0.35,ok:"They stand outside for an hour and leave. Somebody was bluffing and it was not you.",
+     bad:"They do not leave. It is a long night and two of you are hurt.",eff:{},badEff:{hurt:2,heat:18}},
+   ]},
+  {k:"rob",h:"They take it back",
+   s:"The count is short. Not stolen from a job — taken from the flat, in daylight, by people who knew which flat and which day. {C} is making a point about {J}.",
+   opts:[
+    {t:"Let it go; it is money",p:1,ok:"You let it go. The crew notices that you let it go.",eff:{robbed:0.22,loyAll:-4}},
+    {t:"Have {F} find out who carried it",req:"fixer",p:0.72,ok:"{F} has two names by Thursday and most of it back by Sunday. {C} calls it even.",
+     bad:"{F} asks the wrong person. Now they know you are looking.",eff:{robbed:0.06,clear:true},badEff:{robbed:0.3,heat:14}},
+    {t:"Send {E} to collect it",req:"enforcer",p:0.6,ok:"{E} collects. All of it, and an apology nobody meant.",
+     bad:"{E} collects nothing and is held for three days on somebody else's word.",eff:{robbed:0.05,clear:true},badEff:{robbed:0.28,jailEnforcer:true,heat:16}},
+    {t:"Move the float where it cannot be walked out of",p:0.85,ok:"It costs a percentage to move it and a week of nobody being able to touch it. Worth both.",
+     bad:"The move is what they were waiting for. They take it in transit.",eff:{robbed:0.1,money:-9000},badEff:{robbed:0.35}},
+   ]},
+  {k:"police",h:"Somebody gave them your week",
+   s:"A detective's car outside the wrong café two days running. {C} did not come for you; {c} made a phone call about {J} and let somebody else come for you.",
+   opts:[
+    {t:"Lie low and let it cool",p:0.8,ok:"Two weeks of nothing at all. It works, and it costs two weeks.",eff:{weeks:2,heat:-12},badEff:{heat:8}},
+    {t:"Have {F} find out what was said, and to whom",req:"fixer",p:0.75,ok:"{F} reads it back to you over lunch. Half of it is wrong, and the half that is right is fixable.",
+     bad:"{F} is remembered asking. The file gets a page for it.",eff:{det:-10},badEff:{det:12,heat:8}},
+    {t:"Pay a desk to lose the paperwork",pay:true,p:0.88,ok:"It is expensive and it is the oldest trick there is, and it works.",
+     bad:"You pay the wrong desk. The money is gone and the file is not.",eff:{det:-16},badEff:{heat:10}},
+    {t:"Carry on as if nothing has happened",p:0.3,ok:"Nothing happens. Sometimes nothing happens.",
+     bad:"They have had two weeks of watching you carry on.",eff:{},badEff:{heat:20,det:14}},
+   ]},
+  {k:"buy",h:"They make an offer to your crew",
+   s:"{L} has been drinking with somebody who buys the drinks and asks about {J}. {C} cannot reach you, so {c} is reaching the people around you.",
+   opts:[
+    {t:"Pay {L} a bonus and say nothing about it",pay:true,p:0.85,ok:"{L} takes the bonus and the point. Nothing more is said by anybody.",
+     bad:"{L} takes the bonus and the other offer as well.",eff:{loyOne:14},badEff:{turn:true}},
+    {t:"Put it to {L} straight",p:0.6,ok:"{L} tells you the whole of it, including the part where it was tempting. That is worth more than a denial.",
+     bad:"{L} denies all of it, badly, and is gone within the month.",eff:{loyOne:8},badEff:{turn:true,loyAll:-4}},
+    {t:"Have {E} find the man buying the drinks",req:"enforcer",p:0.7,ok:"The drinks stop. So does the asking.",
+     bad:"{E} finds him. So does everybody else in the bar, and one of them talks to the police.",eff:{},badEff:{heat:18,det:10}},
+    {t:"Let them make their offer and see who takes it",p:0.5,ok:"Nobody takes it. You know something about your crew that you did not know on Monday.",
+     bad:"Somebody takes it.",eff:{loyAll:3},badEff:{turn:true}},
+   ]},
+];
+function revengeCost(g){return Math.max(40000,Math.round((g.fee||120000)*0.55/1000)*1000);}
+function revengeMake(g,rng){
+  const enf=field().find(c=>!c.isPlayer&&c.tech==="enforcer");
+  const fix=field().find(c=>!c.isPlayer&&c.tech==="fixer");
+  const low=recruits().filter(c=>c.status==="crew").sort((a,b)=>a.loyalty-b.loyalty)[0];
+  let pool=REVENGE.slice();
+  if(!low)pool=pool.filter(r=>r.k!=="buy");
+  if(!field().length)pool=pool.filter(r=>r.k==="police"||r.k==="rob");
+  const R=pick(rng,pool.length?pool:REVENGE);
+  const v={C:cap(g.c),c:g.c,J:g.noun||"the job",E:enf?enf.first:"your enforcer",F:fix?fix.first:"your fixer",L:low?low.first:"somebody on the crew"};
+  return {k:R.k,c:g.c,h:fill2(R.h,v),s:fill2(R.s,v),cost:revengeCost(g),lowId:low?low.id:null,
+    opts:R.opts.map(o=>({t:fill2(o.t,v),req:o.req||null,pay:!!o.pay,p:o.p})),v,week:S.week};
+}
+function revengeCan(o){
+  if(!o.req)return true;
+  return field().some(c=>!c.isPlayer&&c.tech===o.req);
+}
+function revengeResolve(i){
+  const V=S.revenge;if(!V)return;
+  const R=REVENGE.find(x=>x.k===V.k);const o=R&&R.opts[i];
+  if(!o)return;
+  if(o.req&&!revengeCan(o))return;
+  if(o.pay&&S.money<V.cost)return;
+  const rng=freshRng();
+  const lines=[];
+  if(o.pay){S.money=Math.max(0,S.money-V.cost);lines.push(money(V.cost)+" paid.");}
+  const good=chance(rng,o.p);
+  const e=(good?o.eff:o.badEff)||{};
+  lines.push(fill2(good?o.ok:(o.bad||o.ok),V.v));
+  const rc=field().filter(c=>!c.isPlayer);
+  if(e.money)S.money=Math.max(0,S.money+e.money);
+  // They are taking back what they lost, not a percentage of everything you own. A slice of the
+  // float alone means a rich crew is robbed of millions over a job that paid two hundred thousand.
+  if(e.robbed){
+    const cap=Math.max(25000,Math.round((V.cost||80000)*2));
+    const lost=Math.min(Math.round(S.money*e.robbed),cap);
+    S.money=Math.max(0,S.money-lost);lines.push(money(lost)+" gone.");
+  }
+  if(e.heat)S.heat=clamp(S.heat+e.heat,0,120);
+  if(e.det&&detective())detective().file=clamp(detective().file+e.det,0,100);
+  if(e.house&&S.safehouse){S.safehouse=Math.max(0,S.safehouse-1);lines.push("The safe house is burned; you are a step down the list.");}
+  if(e.loyAll)rc.forEach(c=>{c.loyalty=clamp(c.loyalty+e.loyAll,0,100);c._touched=true;});
+  if(e.loyOne&&V.lowId){const m=byId(V.lowId);if(m){m.loyalty=clamp(m.loyalty+e.loyOne,0,100);m._touched=true;}}
+  if(e.hurtEnforcer){const en=field().find(c=>!c.isPlayer&&c.tech==="enforcer");
+    if(en){en.status="injured";en.out=S.week+(hasRetainer("doctor")?1:2);en._touched=true;leaveCrew(en);lines.push(en.first+" is out until week "+en.out+".");}}
+  if(e.jailEnforcer){const en=field().find(c=>!c.isPlayer&&c.tech==="enforcer");
+    if(en){en.status="jailed";en.out=S.week+ri(rng,2,4);en._touched=true;leaveCrew(en);lines.push(en.first+" is held until week "+en.out+".");}}
+  if(e.hurt){const pool=rc.filter(c=>c.status==="crew").sort(()=>rng()-0.5);
+    for(let n=0;n<e.hurt&&n<pool.length;n++){const c=pool[n];c.status="injured";c.out=S.week+(hasRetainer("doctor")?1:2);c._touched=true;leaveCrew(c);lines.push(c.first+" is hurt — out until week "+c.out+".");}}
+  if(e.turn&&V.lowId){const m=byId(V.lowId);
+    if(m&&m.status==="crew"){m.status="gone";m._touched=true;leaveCrew(m);looseAdd(m,"poach");lines.push(m.first+" is working for "+cap(V.c)+" now.");}}
+  if(e.weeks){for(let n=0;n<e.weeks&&!S.over;n++)weekTick(freshRng());refreshJobs(false);}
+  // paying them off, or settling it, lifts the word as well
+  if(e.clear){
+    const g=grudges().find(x=>x.c===V.c&&S.week<x.until);
+    if(g){g.until=S.week;lines.push(cap(V.c)+" will take your calls again.");}
+  }
+  const g2=grudges().find(x=>x.c===V.c&&x.kind==="blood");
+  if(g2){g2.done=true;g2.revengeAt=0;}
+  logMsg(cap(V.c)+" — "+V.h+". "+lines.join(" "),good?"warn":"bad",true);
+  S.revenge=null;S.modal=null;
+  checkOver();save();render();
+}
+function modalRevenge(){
+  const V=S.revenge;if(!V)return "";
+  const h='<div class="modal-h"><div><div class="kicker" style="color:var(--stamp)">'+esc(cap(V.c))+' · week '+S.week+'</div>'
+    +'<h2 style="font-size:22px;margin-top:4px">'+esc(V.h)+'</h2></div></div>';
+  const body='<p class="mono" style="font-size:12.5px;line-height:1.7;margin:0 0 4px">'+esc(V.s)+'</p>';
+  const letters="ABCDEF";
+  const list='<div class="twist-opts" style="margin-top:12px">'+V.opts.map((o,i)=>{
+    const can=(!o.req||revengeCan(o))&&(!o.pay||S.money>=V.cost);
+    const why=o.req&&!revengeCan(o)?"You have no "+o.req+" on the crew."
+      :o.pay&&S.money<V.cost?"The float will not carry "+money(V.cost)+"."
+      :Math.round(o.p*100)+"% it goes the way you want it to.";
+    return '<button class="twist-opt" data-act="revenge" data-i="'+i+'" '+(can?"":"disabled")+'>'
+      +'<b>'+letters[i]+'</b> <span>'+esc(o.t)+(o.pay?' — '+money(V.cost):'')
+      +'<br><span class="mono" style="font-size:11.5px;color:var(--muted)">'+esc(why)+'</span></span></button>';
+  }).join("")+'</div>';
+  const foot='<div class="sel-help" style="margin-top:10px">This is the bill for a job that went wrong. It is paid whichever answer you give.</div>';
+  return modalWrap(h+'<div class="modal-b">'+body+list+foot+'</div>');
+}
+// Grudges age out, and the ones that are not finished with you turn up.
+function grudgeTick(rng){
+  if(!S.grudges||!S.grudges.length)return;
+  S.grudges=S.grudges.filter(g=>S.week<g.until||(g.kind==="blood"&&!g.done));
+  if(S.revenge)return;
+  const due=S.grudges.find(g=>g.kind==="blood"&&!g.done&&g.revengeAt&&S.week>=g.revengeAt);
+  if(due)S.revenge=revengeMake(due,rng);
+}
 
 /* ------------------------- WHAT THEY KNOW ----------------------------- */
 // Somebody who has worked with you is not the same as a stranger once they are outside. They

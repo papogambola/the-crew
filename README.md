@@ -128,6 +128,22 @@ decisions at the end.
   options are shuffled every time. The decision cannot be clicked away, survives a reload, and
   the verdict screen — and the recap on file — shows what you chose, what would have set you
   free, and why.
+- **Clients remember a job that went wrong.** Botch one badly enough and the client may take it
+  personally — about a third of botched jobs and two in three disasters, more on a big fee. There
+  are two ways to take it personally, and the first is the common one: **the word goes round.**
+  That client stops posting to you for twenty or thirty weeks, has a quiet word with one or two
+  of the people they drink with, and the postings they already had come off the board. The Jobs
+  board says who will not deal with you and until when, so a thinner board is never a mystery.
+- **The other way is that they come and find you.** A few weeks later, one of four things: three
+  cars outside the safe house at four in the morning; the count short because somebody walked
+  into the flat in daylight; a detective outside the wrong café two days running; or somebody
+  buying drinks for your least loyal member. **Every answer carries the odds it goes your way**,
+  and what you have decides which are open — an **enforcer** to meet them at the door or collect
+  what was taken, a **fixer** to find out who carried it or what was said and to whom, a **safe
+  house** to walk away from, or the cash to pay back what they lost. Paying them back at the door
+  is the only answer that is certain, and the only one that also lifts the ban; paying a police
+  desk settles a file, and paying your own man settles your own man. The board warns you it is
+  coming: *and one of them is not finished with you*.
 - **Between jobs.** Every three to seven weeks something happens that is not a job: a death on
   holiday, a member gone without a word, one who wants out, one who has joined another crew
   and is buying yours drinks (someone may leave every week until it stops), an old face who
@@ -337,7 +353,7 @@ something to fake now by making the numbers bigger.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 26 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 27 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

@@ -29,7 +29,7 @@ for(let run=0;run<RUNS;run++){
   newGame(Object.assign({id:"YOU",isPlayer:true,n:"Sim",first:"Sim",gender:"M",nat:"Israel",avseed:run+1,status:"crew",cut:0,upkeep:0,loyalty:100,greed:0,mole:false,vetted:true,vetFlag:false,limits:[]},draft.profile));
   if(typeof TUT!=="undefined"&&TUT.on)tutEnd();
   const r=freshRng();
-  let weeks=0,jobsRun=0,laid=0,failed=0,clean=0,hires=0,peakMoney=0,broke=0,twistsSeen=0,twistsRight=0,feesPaid=0,trips=0,snags=0,refused=0,wasted=0;
+  let weeks=0,jobsRun=0,laid=0,failed=0,clean=0,hires=0,peakMoney=0,broke=0,twistsSeen=0,twistsRight=0,feesPaid=0,trips=0,snags=0,refused=0,wasted=0,grudged=0;
   let lastWeek=S.week;
   while(!S.over&&weeks<1500){
     // clear anything waiting for a click
@@ -44,6 +44,14 @@ for(let run=0;run<RUNS;run++){
       if(kill>=0&&r()<0.25){pickIdx=kill;wasted++;}
       else{const quiet=opts.findIndex(o=>!o.kill&&o.need!==false&&o.talk<opts[0].talk);pickIdx=quiet>=0&&r()<0.5?quiet:0;}
       looseResolve(pickIdx);
+    }
+    // an unhappy client at the door: pay them back if the float can carry it, otherwise take the
+    // best answer the crew can actually give
+    if(S.revenge){
+      const V=S.revenge;
+      let pi=V.opts.findIndex(o=>o.pay&&S.money>=V.cost);
+      if(pi<0){let best=-1,bp=-1;V.opts.forEach((o,i2)=>{if((!o.req||revengeCan(o))&&!o.pay&&o.p>bp){bp=o.p;best=i2;}});pi=best;}
+      if(pi>=0){grudged++;revengeResolve(pi);}else S.revenge=null;
     }
     if(S.event){const W=WEEKLY.find(w=>w.k===S.event.k);let i=0;
       // take the first option the crew can actually perform
@@ -137,7 +145,7 @@ for(let run=0;run<RUNS;run++){
   const v={clean:st.clean||0,success:st.success||0,messy:st.messy||0,botched:st.botched||0,disaster:st.disaster||0};
   out.push({win:S.over==="win",over:S.over,weeks:S.week,jobs:jobsRun,laid,failed,clean,hires,rep:S.rep,money:S.money,peak:peakMoney,
     v,earned:st.earned||0,cuts:st.cuts||0,fees:feesPaid,upkeepPaid:Math.max(0,(st.earned||0)-(st.cuts||0)-feesPaid-S.money+60000),
-    crew:recruits().filter(c=>c.status==="crew").length,broke,twistsSeen,twistsRight,trips,snags,refused,wasted,
+    crew:recruits().filter(c=>c.status==="crew").length,broke,twistsSeen,twistsRight,trips,snags,refused,wasted,grudged,banned:(S.grudges||[]).length,
     lostPeople:(stats()&&stats().lost)||0,hurt:(stats()&&stats().hurt)||0,taken:(stats()&&stats().taken)||0});
 }
 const num=a=>a.slice().sort((x,y)=>x-y);
@@ -155,6 +163,7 @@ if(W.length)console.log("  weeks to win   median "+med(W)+"   p10 "+pct(W,0.1)+"
 console.log("  jobs run       median "+med(out.map(o=>o.jobs))+"   laid low median "+med(out.map(o=>o.laid)));
 console.log("  failed jobs    median "+med(out.map(o=>o.failed))+" of "+med(out.map(o=>o.jobs))+"   clean median "+med(out.map(o=>o.clean)));
 console.log("  final ranking  median "+med(out.map(o=>o.rep))+"   final money median "+money(med(out.map(o=>o.money)))+"   peak "+money(med(out.map(o=>o.peak))));
+console.log("  clients at the door median "+med(out.map(o=>o.grudged))+"  grudges still standing "+med(out.map(o=>o.banned)));
 console.log("  trips median "+med(out.map(o=>o.trips))+"  of which snagged "+med(out.map(o=>o.snags))+"  refused "+med(out.map(o=>o.refused))+"  people dealt with "+med(out.map(o=>o.wasted)));
 console.log("  hires median "+med(out.map(o=>o.hires))+"   people lost median "+med(out.map(o=>o.lostPeople))+"   hurt "+med(out.map(o=>o.hurt))+"   taken "+med(out.map(o=>o.taken)));
 console.log("  weeks broke median "+med(out.map(o=>o.broke)));
