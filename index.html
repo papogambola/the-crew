@@ -182,14 +182,24 @@
   .filecard{max-width:720px;margin:0 auto}
   .redacted{background:var(--ink);color:var(--ink);user-select:none}
 
-  .create-grid{display:grid;grid-template-columns:288px 1fr;gap:22px}
+  .create-grid{display:grid;grid-template-columns:288px 1fr;gap:22px;align-items:start}
   @media(max-width:700px){.create-grid{grid-template-columns:1fr}}
   .bigav{width:100%;max-width:288px;aspect-ratio:200/240;border:2px solid var(--ink);background:#fff;margin:0 auto}
+  /* The picture stays put while the ten sliders scroll past it. Choosing a nose you cannot see
+     is not choosing anything, and ten parts is taller than a laptop screen. */
+  .facecol{position:sticky;top:12px;z-index:2;background:var(--paper);padding-bottom:8px}
   /* ---- the face builder: one slider a part ---- */
   .facebox{margin-top:10px;padding:10px 12px 12px}
-  .facerow{display:grid;grid-template-columns:1fr;gap:2px;margin-top:8px}
-  .facerow label{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-  .faceval{font-family:var(--f-mono);font-size:11px;color:var(--ink-2)}
+  /* label and value share a line, so a part is two rows instead of three */
+  .facerow{display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:baseline;margin-top:7px}
+  /* placed explicitly: the name and the choice share the top line, the slider runs under both.
+     Left to auto-placement the value lands below its own slider and reads as the next part's. */
+  .facerow label{grid-area:1/1;font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .faceval{grid-area:1/2;text-align:right;font-family:var(--f-mono);font-size:11px;color:var(--ink)}
+  .faceslide{grid-area:2/1/3/3}
+  /* what the trade actually is, the first time anybody reads the word */
+  .tradehint{margin-top:6px;font-size:11.5px;line-height:1.6;color:var(--ink-2);border-left:2px solid var(--line);padding-left:9px}
+  @media(max-width:700px){.bigav{max-width:190px}.facecol{padding-top:6px}}
   .faceslide{-webkit-appearance:none;appearance:none;width:100%;height:14px;background:transparent;cursor:pointer;margin:2px 0}
   .faceslide::-webkit-slider-runnable-track{height:12px;background:var(--line-2);border:1px solid var(--line)}
   .faceslide::-moz-range-track{height:12px;background:var(--line-2);border:1px solid var(--line)}
@@ -1497,7 +1507,7 @@ function assessJob(job,members,leadId){
   covered.forEach(k=>{const schooled=team.some(c=>c.know.includes(k)&&c.edu>=3);add("Knows "+k,schooled?10:5,schooled?"and studied it":"street knowledge");});
   job.know.filter(k=>!covered.includes(k)).forEach(k=>add("Nobody knows "+k,-6,"wanted for this job"));
   const hits=job.techs.filter(t=>team.some(c=>c.tech===t)).length;
-  if(hits)add("Techniques",hits*4,hits+" of "+job.techs.length+" wanted");
+  if(hits)add("Trades",hits*4,hits+" of "+job.techs.length+" wanted");
   const paid=team.filter(c=>paidUp(c));
   if(paid.length)add("Paid up",Math.min(6,2*paid.length),paid.map(c=>c.first).join(", ")+(paid.length>1?" are":" is")+" working for it");
   const tb=traitBonus(team);
@@ -1664,7 +1674,7 @@ function narrate(job,a,tier,rng,x,mode,clock){
     const speaker=team.find(c=>c.langs.some(l=>co.langs.includes(l)));
     if(speaker)say(SPEAKS,speaker,{L:co.langs.find(l=>speaker.langs.includes(l))});
     else if(team.length)say(NOSPEAK,someone(),{L:co.langs[0]},"warn");
-    // you can't be across the street and at the door: if your own technique is wanted, you work it
+    // you can't be across the street and at the door: if your own trade is wanted, you work it
     const you=team.find(c=>c.isPlayer);
     if(you&&job.techs.includes(you.tech))push(fresh(YOU_INSIDE));
     else if(you)push(fill2(fresh(YOU_RUN),{place:fresh(PLACES)}));
@@ -2397,12 +2407,12 @@ function tabsBar(){
   return '<div class="tabs" role="tablist">'+t("crew","Crew",(1+recruits().length)+"/"+(1+crewSeats())+(crews().length?" +"+crews().length:""))+t("jobs","Jobs",S.jobs.length)+t("roster","Roster")+t("log","Log")+'</div>';
 }
 
-/* ---- hover briefs: what a technique, a knowledge or an attribute means ---- */
+/* ---- hover briefs: what a trade, a knowledge or an attribute means ---- */
 const ATTR_NAME={muscle:"Muscle",brains:"Brains",tech:"Tech",charm:"Charm",nerve:"Nerve"};
 const ATTR_DESC={muscle:"force, doors, the night guard",brains:"planning, locks, paperwork",tech:"networks, cameras, charges",charm:"talk, lies, doors that open for a smile",nerve:"composure, driving, borders"};
 function techBrief(k){
   const t=TECH_BY_K[k];const wants=CATS.filter(c=>c.techs.includes(k)).map(c=>c.l);
-  return t.l.toUpperCase()+" — leans on "+ATTR_NAME[t.a]+"\n"+t.d+"\nComes with "+t.know+". Wanted by: "+(wants.join(", ")||"no job in particular")+". A wanted technique on the crew is +14 to that member on the job.";
+  return t.l.toUpperCase()+" — leans on "+ATTR_NAME[t.a]+"\n"+t.d+"\nComes with "+t.know+". Wanted by: "+(wants.join(", ")||"no job in particular")+". A wanted trade on the crew is +14 to that member on the job.";
 }
 function knowBrief(k){
   const wants=CATS.filter(c=>c.know.includes(k)).map(c=>c.l);
@@ -2704,7 +2714,7 @@ function jobsList(){
   const inField=field();
   const has=t=>inField.some(c=>c.tech===t);
   const knows=k=>inField.some(c=>c.know.includes(k));
-  const sortOpts=[["fit","Best fit first"],["need","Crew needed"],["tech","Technique wanted"],["pay","Fee, high first"],["heat","Heat, low first"],["diff","Difficulty, low first"],["country","Country"],["expires","Expiring soonest"]];
+  const sortOpts=[["fit","Best fit first"],["need","Crew needed"],["tech","Trade wanted"],["pay","Fee, high first"],["heat","Heat, low first"],["diff","Difficulty, low first"],["country","Country"],["expires","Expiring soonest"]];
   const cur=S.jobSort||"fit";
   const sortSel='<span class="field" style="gap:2px"><label for="jsort">Sort</label><select id="jsort">'+sortOpts.map(o=>'<option value="'+o[0]+'"'+(cur===o[0]?" selected":"")+'>'+o[1]+'</option>').join("")+'</select></span>';
   const head='<div class="panel-h"><h2>Jobs · Postings</h2><span style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap"><span class="kicker" style="padding-bottom:8px">Week '+S.week+' · postings expire</span>'+sortSel+'<button class="btn ghost sm" data-act="laylow" style="margin-bottom:2px">Lay low a week</button></span></div>';
@@ -2816,7 +2826,7 @@ function jobPanel(j){
 // Your crew, compact, above the postings — so a job can be judged without leaving the board.
 function crewStrip(){
   const hidden=!!S.stripHidden;
-  const head='<div class="strip-h"><span class="kicker">Your crew · '+field().length+' ready · green tags below are techniques and knowledge you have, red are missing</span>'
+  const head='<div class="strip-h"><span class="kicker">Your crew · '+field().length+' ready · green tags below are trades and knowledge you have, red are missing</span>'
     +'<span style="display:flex;gap:6px"><button class="btn ghost sm" data-act="tab" data-k="crew">Open crew</button><button class="btn ghost sm" data-act="strip-toggle">'+(hidden?"Show crew":"Hide")+'</button></span></div>';
   if(hidden)return '<div class="strip">'+head+'</div>';
   const cards=crewAll().map(c=>{
@@ -2847,7 +2857,7 @@ function tabRoster(){
   const opt=(v,l,cur)=>'<option value="'+esc(v)+'"'+(cur===v?" selected":"")+'>'+l+'</option>';
   const bar='<div class="rosterbar">'
     +'<div class="field"><label for="q">Search</label><input type="text" id="q" value="'+esc(f.q)+'" placeholder="name, country, language, knowledge" autocomplete="off" style="min-width:220px"></div>'
-    +'<div class="field"><label for="ftech">Technique</label><select id="ftech">'+opt("","All",f.tech)+TECHS.map(t=>opt(t.k,t.l,f.tech)).join("")+'</select></div>'
+    +'<div class="field"><label for="ftech">Trade</label><select id="ftech">'+opt("","All",f.tech)+TECHS.map(t=>opt(t.k,t.l,f.tech)).join("")+'</select></div>'
     +'<div class="field"><label for="frole">Role</label><select id="frole">'+opt("","Any",f.role)+opt("commander","Commander",f.role)+opt("soldier","Soldier",f.role)+'</select></div>'
     +'<div class="field"><label for="fnat">Nationality</label><select id="fnat">'+opt("","All",f.nat)+COUNTRIES.map(c=>opt(c.name,c.flag+" "+c.name,f.nat)).join("")+'</select></div>'
     +'<div class="field"><label for="fsort">Sort</label><select id="fsort">'+opt("fee","Fee, low first",f.sort)+opt("feeD","Fee, high first",f.sort)+opt("exp","Experience",f.sort)+opt("power","Raw skill",f.sort)+opt("name","Name",f.sort)+'</select></div>'
@@ -2996,7 +3006,7 @@ function modalRecruit(id){
       +'<div class="mono" style="font-size:10px;color:var(--muted);text-align:center;margin-top:4px">'+nat.flag+' '+esc(nat.name)+'</div></div>'
     +'<div style="flex:1;min-width:220px">'
       +'<div class="kv"><span class="k">Role</span><span>'+(c.isPlayer?"Commander — it's your crew (+"+c.cmd+")":c.role==="commander"?"Commander by nature — takes orders badly, can lead if you can't get in (+"+c.cmd+")":"Soldier — does the work")+'</span>'
-        +'<span class="k">Technique</span><span>'+t.l+' — '+t.d+'</span>'
+        +'<span class="k">Trade</span><span>'+t.l+' — '+t.d+'</span>'
         +'<span class="k">Experience</span><span>'+EXP[c.exp-1]+' '+pips(c.exp)+'</span>'
         +'<span class="k">Education</span><span>'+EDU[c.edu]+'</span>'
         +'<span class="k">Knowledge</span><span>'+c.know.join(", ")+'</span>'
@@ -3325,14 +3335,14 @@ const TUT={on:false,step:0,mode:"full"};
 // Both can be run again from the i button or the controls book.
 const TUT_STEPS=[
   {tab:"crew",sel:".topbar",h:"The top line",t:"Balance is your money — hires, upkeep, bonuses and vetting come out of it. Week counts time: every job or lay-low is a week. Ranking is your name — eight of them, Nobody up to The Crew — and the name decides what clients post, what they pay, who will sign with you, how many places you have, whether your crew stays, and how hard every room you are given is defended. The last score is three operations and it asks for a great deal more than a number. Heat is how hard the police are looking: every job adds some, and at 100 there is a raid."},
-  {tab:"crew",sel:".id.you",h:"This is you",t:"The commander. Your file goes on every job: five attributes, a technique, education, time in jail and on the streets, knowledge, languages, and anything you won't do. If a border keeps you out, the crew goes without you — a commander-type recruit runs it, well or badly."},
+  {tab:"crew",sel:".id.you",h:"This is you",t:"The commander. Your file goes on every job: five attributes, a trade, education, time in jail and on the streets, knowledge, languages, and anything you won't do. If a border keeps you out, the crew goes without you — a commander-type recruit runs it, well or badly."},
   {tab:"crew",sel:".id.slot",h:"The empty places",t:"Fill them from the Roster. Everyone you hire goes on every job, takes a cut of every score, and costs upkeep each week. Four places to start; a Respected name opens two more. Every member has a price: a cut under two weeks of their own upkeep is small money — three small jobs in a row and they grumble, five and they may walk. A bonus settles it and keeps them sharp for three weeks."},
   {tab:"crew",sel:"[data-act=found-open]",h:"Other crews, later",t:"Two years in, Feared, with seven on your crew, you can found a second crew out of your own people — a commander and four soldiers, named after its commander — that takes a job of its own each week without you. A third at three years, a fourth at four, no more. The game announces each milestone in a box when you reach it."},
-  {tab:"roster",sel:".rosterbar",h:"Five thousand files",t:"Search by name, country, language or knowledge. Filter by technique, role and nationality. Sort by fee, experience or raw skill."},
-  {tab:"roster",sel:".cards .id",h:"A file",t:"Flag and passport tier (P1 strong, P4 weak), technique and rank, the five attributes, then education, jail, streets, knowledge, languages — and in red, what this one will not do. Hover the technique, or MUS, BRN, TCH, CHM, NRV, for a brief. File opens the whole thing and lets you vet for informants. Hire pays the fee — if the file will sign with a crew of your name: Veterans want a Known crew, Legends a Respected one."},
-  {tab:"jobs",sel:".jobrow",h:"Jobs",t:"Clients post jobs by country; the map beside them lights every country with a posting. Each row: category, the techniques and knowledge it wants — green if your crew has it, red if not — city, crew needed, fee, heat, when it expires, and a chip saying how your crew fits. Open one."},
+  {tab:"roster",sel:".rosterbar",h:"Five thousand files",t:"Search by name, country, language or knowledge. Filter by trade, role and nationality. Sort by fee, experience or raw skill."},
+  {tab:"roster",sel:".cards .id",h:"A file",t:"Flag and passport tier (P1 strong, P4 weak), trade and rank, the five attributes, then education, jail, streets, knowledge, languages — and in red, what this one will not do. Hover the trade, or MUS, BRN, TCH, CHM, NRV, for a brief. File opens the whole thing and lets you vet for informants. Hire pays the fee — if the file will sign with a crew of your name: Veterans want a Known crew, Legends a Respected one."},
+  {tab:"jobs",sel:".jobrow",h:"Jobs",t:"Clients post jobs by country; the map beside them lights every country with a posting. Each row: category, the trades and knowledge it wants — green if your crew has it, red if not — city, crew needed, fee, heat, when it expires, and a chip saying how your crew fits. Open one."},
   {tab:"jobs",openJob:true,sel:".check",h:"Who can go",t:"Every crew member, ✓ or ✗, with the reason: the border and their passport, a conviction, a limit the job trips, an injury. A forger on the crew gets weak passports through. Above, every requirement carries a tick or a cross — including the money: who calls this job small money."},
-  {tab:"jobs",openJob:true,sel:".factors",h:"The reckoning",t:"Every factor with its number — crew size, who commands, language, a local national, knowledge, techniques, heat — then the odds. Take the job and the report plays minute by minute; a week passes. On some jobs the report stops on a twist: six options, and one sets the crew free — the one the crew you brought can actually do. Choose badly and it costs blood, a place, heat and ranking."},
+  {tab:"jobs",openJob:true,sel:".factors",h:"The reckoning",t:"Every factor with its number — crew size, who commands, language, a local national, knowledge, trades, heat — then the odds. Take the job and the report plays minute by minute; a week passes. On some jobs the report stops on a twist: six options, and one sets the crew free — the one the crew you brought can actually do. Choose badly and it costs blood, a place, heat and ranking."},
   {tab:"log",sel:".log",h:"The case log",t:"Everything that happened, week by week; the Week dropdown goes back to any past week, and every job you have run is on file above as a recap. Every few weeks something happens between jobs — a death, a disappearance, a resignation, a rival crew buying drinks, an old face, a detective — and asks for a decision with a price. The panel on the right says what your ranking buys and what the next name costs. Lay low a week here or on the Jobs board: −15 heat, ranking −1, upkeep still due."},
   {tab:"log",sel:".burger",h:"The office",t:"Esc, or this button, on any screen: pause, sound, music, brightness, the controls book, your file, and the door out. The i button beside it explains whatever is on screen, and can run this tutorial again."},
 ];
@@ -3396,11 +3406,11 @@ const INFO={
     "The first time anyone plays, a tutorial walks through every screen. The second sitting opens with a short reminder. After that, both wait behind this button and in the controls book."]},
   create:{h:"Who are you",t:[
     "<b>Alias</b> — any name. <b>Sex</b> — male or female. <b>Nationality</b> — your passport, and the languages you speak. A strong passport (P1–P2) walks into more countries; a weak one needs a visa, or a forger on the crew.",
-    "<b>Technique</b> — your specialty. A job that wants it pays +14 on the reckoning.",
+    "<b>Trade</b> — the thing you actually do. A job that wants it pays +14 on the reckoning, and a job that wants one nobody has costs somebody a week of learning it.",
     "<b>Your appearance</b> — under the picture, a slider for each part of the face: hair or hat, face shape, eyebrows, eyes, nose, mouth, ears, glasses, and facial hair or earrings, plus a scar. The picture redraws as you move them. <b>↻ Random</b> rolls every part at once. Three million faces for a man, four and a half million for a woman.",
     "<b>Your file</b> — five attributes, education, time in jail, time on the streets, knowledge, languages, anything you will not do, and a temperament — is rolled. <b>Another life</b> rolls it again. You are always the commander."]},
   crew:{h:"The Crew",t:[
-    "Five places. You are the first. Each card: flag and passport tier, technique and rank (the pips), the five attributes — Muscle, Brains, Tech, Charm, Nerve — then education, jail, streets, knowledge, languages, and in red what this one will <b>not</b> do.",
+    "Five places. You are the first. Each card: flag and passport tier, trade and rank (the pips), the five attributes — Muscle, Brains, Tech, Charm, Nerve — then education, jail, streets, knowledge, languages, and in red what this one will <b>not</b> do.",
     "<b>Loyalty</b> rises with success and bonuses, falls with failure and missed payroll. Under 35, after a big score, a member may skim the split and vanish. <b>Upkeep</b> is charged every week. <b>Cut loose</b> frees the place.",
     "Everyone on the crew goes on every job — if the border lets them in and the job doesn't trip one of their limits. A commander-type recruit takes your orders badly (−3 on a job you lead) but can run the crew on a job you can't get into.",
     "Loyalty also follows the name: a Nobody's crew loses a point a week, a Respected crew gains one. Every few weeks something happens between jobs — a death, a disappearance, a resignation, a rival crew buying drinks, an old face, a detective — and the least loyal member is usually the one it happens to. An <b>Enforcer</b> on the crew opens the hard answers.",
@@ -3425,8 +3435,8 @@ const INFO={
     "<b>The rest end them</b>, and each says how likely it is to go cleanly and what happens when it does not. A <b>cleaner</b> makes it an accident — the most expensive and the quietest. A stranger you never meet is cheaper and worse. Your enforcer tonight is cheapest, loudest, and half the time somebody sees; when it goes wrong it is your enforcer the police take.",
     "It works. A body does not talk, and the board notices what happens to people who leave your crew — <b>ranking +2</b> when it is clean. It also costs: <b>heat</b>, the detective's file, and <b>loyalty across everybody still with you</b>, because they can all count. Nobody is safe working for somebody who does that, and they know it."]},
   roster:{h:"The Roster",t:[
-    "5,000 files. <b>Search</b> by name, country, language or knowledge. Filter by <b>technique</b>, <b>role</b> and <b>nationality</b>; sort by fee, experience, raw skill or name. Show 30 more at the bottom.",
-    "<b>Hover a technique</b> (or MUS, BRN, TCH, CHM, NRV) for a brief: what it is, what it leans on, what it comes with, and which jobs want it. On a phone, tap it.",
+    "5,000 files. <b>Search</b> by name, country, language or knowledge. Filter by <b>trade</b>, <b>role</b> and <b>nationality</b>; sort by fee, experience, raw skill or name. Show 30 more at the bottom.",
+    "<b>Hover a trade</b> (or MUS, BRN, TCH, CHM, NRV) for a brief: what it is, what it leans on, what it comes with, and which jobs want it. On a phone, tap it.",
     "<b>Temperament.</b> Two files in three carry a trait, and a trait is a fact about working with them, not a number on a bar. <b>Steady</b> never loses faith after a bad night. <b>Hothead</b> is worth +3 and costs +4 heat. <b>Careful</b> takes 4 heat off any job they work. <b>Quick study</b> learns at double speed; a <b>Mentor</b> is +2 and teaches everyone else half again as fast. <b>Mercenary</b> is +2 and takes 3% more. <b>Lucky</b> adds 4 to the night's roll, <b>Jinx</b> takes 3 off it and pulls twists towards the crew. A <b>Ghost</b> is never the one the police get their hands on.",
     "<b>Fee</b> is paid once, and only if they say yes. <b>Cut</b> is their share of every score. <b>Upkeep</b> is weekly. <b>File</b> opens the whole profile; <b>Go and ask</b> needs an open place, the fee — and a name they will sign with. Rookies, Operators and Professionals sign with anyone; a <b>Veteran</b> wants a Known crew, a <b>Legend</b> a Respected one. A file that won't sign yet says so under the fee.",
     "<b>Nobody joins a crew because a fee was paid.</b> Go and ask and you fly to wherever they live and put it to them in person: a week on the calendar, a live feed like a job, and their answer at the end of it. The trip is where the fee is spent — turn back, or get turned down, and the money stays in your pocket while the week does not.",
@@ -3434,8 +3444,8 @@ const INFO={
     "<b>When a meeting goes wrong it is not about money.</b> They don't show; the number moves; they bring somebody; a car sits outside for forty minutes; they want to know what happened to the last person in the job; three men and a shut door. What answers it is what you brought — an <b>enforcer</b> in the room, a <b>face</b> to do the talking, a <b>forger</b> for papers, a <b>fixer</b> to find out who moved them, the <b>language</b>, your own <b>Charm</b> or <b>Nerve</b>, and the record of what your crew has actually done. Walking out is always on the list. Somebody who turns you down will not take another meeting for a couple of months.",
     "About one file in fourteen is a <b>police informant</b>: they leak jobs and leak heat. <b>Vet</b> a file for $6K — a dull crew misses one in three, so a clean stamp is a guess with money behind it."]},
   jobs:{h:"Jobs",t:[
-    "Postings from clients, by country. Each row: category, the techniques and knowledge it wants — <b>green</b> if someone on your crew has it, <b>red</b> if nobody does — city, country and language, crew needed, fee, heat, when it expires, and a chip: <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go.",
-    "<b>Sort</b> the board by best fit, crew needed, technique wanted, fee, heat, difficulty, country or expiry. <b>Your crew</b> sits above the board — passport, technique, attributes, languages, knowledge, limits — so a posting can be judged without leaving; hide it if you know them by heart. Keys <b>1–4</b> jump between the tabs.",
+    "Postings from clients, by country. Each row: category, the trades and knowledge it wants — <b>green</b> if someone on your crew has it, <b>red</b> if nobody does — city, country and language, crew needed, fee, heat, when it expires, and a chip: <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go.",
+    "<b>Sort</b> the board by best fit, crew needed, trade wanted, fee, heat, difficulty, country or expiry. <b>Your crew</b> sits above the board — passport, trade, attributes, languages, knowledge, limits — so a posting can be judged without leaving; hide it if you know them by heart. Keys <b>1–4</b> jump between the tabs.",
     "The bars are difficulty; red means high heat. Open a posting to see the reckoning before you commit.",
     "<b>Lay low a week</b>: −15 heat, upkeep still due, postings refresh, ranking −1. Clients post to a name: a Nobody or Small time crew sees tier 1–2 postings, a Known crew tier 3, Respected and up tier 4 — and the fee is scaled to the name, from −20% to +50%. A job is <b>weeks</b>, not a week: a tier-1 errand is gone by Friday, a tier-4 room holds the crew for three. Before you take one you can <b>case</b> it — a week and a fee, for a real gain on the reckoning and the risk that the posting is gone when you look up.",
     "On some jobs the live report stops mid-way: something has gone wrong and six options wait for your call. One sets the crew free — the one the crew you brought can actually do — so read the file before you take the job.",
@@ -3450,15 +3460,15 @@ const INFO={
     rankLadderText()]},
   job:{h:"A job file",t:[
     "<b>The job</b>, at the top: what the client actually wants, in four sentences — the work itself, how well the thing is held, what the posting asks for, and the terms. It is written from the posting, so it reads the same every time you open it.",
-    "<b>The brief</b>: who posted it, and the country — language, money, politics, religion, terrain, and the border rule. Chips: the category, techniques and knowledge wanted, and tags such as <i>on the water</i> or <i>at night</i> that trip a crew member's limits.",
+    "<b>The brief</b>: who posted it, and the country — language, money, politics, religion, terrain, and the border rule. Chips: the category, trades and knowledge wanted, and tags such as <i>on the water</i> or <i>at night</i> that trip a crew member's limits.",
     "<b>Who goes</b>: every crew member, ✓ or ✗, with the reason — the border against their passport, a conviction at a strict border, a limit the job hits, an injury. A forger on the crew gets weak passports through.",
     "<b>Bench</b> anyone you would rather keep out of it, yourself included. A benched member takes no cut of the score, learns nothing from the job, and cannot be hurt, arrested or killed on it — and the crew that does go is smaller, which the reckoning counts. Bench yourself and a commander-type runs it in your place. <b>Send everyone</b> puts them all back.",
-    "<b>The reckoning</b>: every factor with its number — crew size, who commands, language, a local national, knowledge (double if studied), techniques, heat — then the odds. <b>Take the job</b>: the whole eligible crew goes and a week passes. <b>Walk away</b> costs nothing."]},
+    "<b>The reckoning</b>: every factor with its number — crew size, who commands, language, a local national, knowledge (double if studied), trades, heat — then the odds. <b>Take the job</b>: the whole eligible crew goes and a week passes. <b>Walk away</b> costs nothing."]},
   recruit:{h:"A personnel file",t:[
-    "Everything on record: role, technique, experience, education, knowledge, languages, time in jail, time on the streets, passport, sex, what they will not do, and the price — fee once, a cut of each score, upkeep weekly.",
+    "Everything on record: role, trade, experience, education, knowledge, languages, time in jail, time on the streets, passport, sex, what they will not do, and the price — fee once, a cut of each score, upkeep weekly.",
     "<b>Vet</b> reads the file for informant ties against your crew's instincts. <b>Hire</b> needs an open place and the fee."]},
   result:{h:"The job report",t:[
-    "First the job as it happened, minute by minute — who got in and who didn't, who did the talking, what each technique bought, what went right and what went wrong, the exit, the split. Skip to the end if you'd rather.",
+    "First the job as it happened, minute by minute — who got in and who didn't, who did the talking, what each trade bought, what went right and what went wrong, the exit, the split. Skip to the end if you'd rather.",
     "Then the verdict: <b>Clean</b>, <b>Success</b>, <b>Messy</b>, <b>Botched</b> or <b>Disaster</b> — crew power against difficulty, plus the roll. Gross is the fee earned, cuts go to the crew, the net is yours.",
     "<b>Ranking — why</b> lists every reason the crew's ranking moved: up for a clean or successful job (more for a bigger job, a little more if nobody was hurt), down for messy, botched or disastrous work, a leak, an arrest, or a member walking with the money. <b>What they learned</b>: everyone who went gains experience; ranks are earned at 40, 110, 220 and 400 xp, and good work adds a point to the attributes the job leaned on. If the job wanted a trade nobody on the crew has, somebody spends the week before learning enough of it to stand in — and if the job comes off, that week is worth a point of brains, marked <i>stood in as</i>. A job that doesn't come off teaches them nothing.",
     "<b>Fallout</b>: injuries (out two weeks), arrests (held for weeks, then back on the roster), leaks (an informant talked), and betrayals (someone skimmed the split and vanished).",
@@ -3619,7 +3629,7 @@ function officePanel(){
       +'<span class="k">Enter / Space</span><span>Open the posting you have selected.</span>'
       +'<span class="k">✓ / ✗</span><span>On a job file: who can go, and why not.</span>'
       +'<span class="k">Saving</span><span>Automatic, in this browser. Settings are kept separately and survive a new game.</span></div>'
-      +'<hr class="rule"><div class="mono" style="font-size:12px;line-height:1.8"><b>How it works.</b> You are the commander. Fill four places from 5,000 files — each has a passport, five attributes, a technique, knowledge, education, time in jail, time on the streets, and things they will not do. '
+      +'<hr class="rule"><div class="mono" style="font-size:12px;line-height:1.8"><b>How it works.</b> You are the commander. Fill four places from 5,000 files — each has a passport, five attributes, a trade, knowledge, education, time in jail, time on the streets, and things they will not do. '
       +'Clients post jobs online by country; each country has its own categories, language, money, politics and terrain. Everyone on the crew goes on every job, if they can get in and the job doesn\'t hit one of their limits. '
       +'Success pays and builds ranking; failure adds heat and gets people hurt or held. Build the name to the top of the board and the last score — three operations against the Committee — opens up.</div>'
       +(S&&!S.over?'<hr class="rule"><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" data-act="tut-start">Run the tutorial again</button><button class="btn ghost sm" data-act="tut-remind">The short reminder</button></span>':'');
@@ -3708,14 +3718,19 @@ function screenCreate(){
   const fake={attrs:p.attrs,edu:p.edu,jail:p.jail,streets:p.streets,know:p.know,langs:p.langs,limits:p.limits};
   return '<div class="wrap"><div class="hero" style="padding:34px 0 22px"><div class="eyebrow">New dossier</div><h1 style="font-size:clamp(38px,10vw,74px)">Who are you?</h1></div>'
     +'<div class="panel" style="max-width:820px;margin:0 auto"><div class="panel-b"><div class="create-grid">'
-      +'<div><div class="bigav" id="bigav">'+avatar(draft.avseed,draft.gender,draft.face)+'</div>'+facePanel()+'</div>'
+      +'<div><div class="facecol"><div class="bigav" id="bigav">'+avatar(draft.avseed,draft.gender,draft.face)+'</div></div>'+facePanel()+'</div>'
       +'<div>'
         +'<div class="field" style="margin-bottom:12px"><label for="pname">Alias</label><input type="text" id="pname" maxlength="22" value="'+esc(draft.name)+'" placeholder="e.g. Vera Kessler" autocomplete="off"></div>'
         +'<div class="field" style="margin-bottom:12px"><label>Sex</label><div class="swatchrow">'+g("M","Male","draft-gender","gender")+g("F","Female","draft-gender","gender")+'</div></div>'
         +'<div class="field" style="margin-bottom:12px"><label>Role</label><div class="mono" style="font-size:13px"><b>Commander</b> — it\'s your crew. The places are for soldiers, and the odd commander-type who takes your orders badly but can lead when you can\'t get in.</div></div>'
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
           +'<div class="field"><label for="pnat">Nationality · passport</label><select id="pnat">'+natOpts+'</select></div>'
-          +'<div class="field"><label for="ptech">Technique</label><select id="ptech">'+techOpts+'</select></div></div>'
+          // This is the first time anybody sees these words, so the file says what the trade is,
+          // what it leans on and what it comes with — rather than leaving sixteen job titles to
+          // be guessed at and found out on a job.
+          +'<div class="field"><label for="ptech">Trade</label><select id="ptech">'+techOpts+'</select>'
+            +'<div class="tradehint mono"><b>'+esc(TECH_BY_K[draft.tech].l)+'</b> — '+esc(TECH_BY_K[draft.tech].d)
+            +'<br><span style="color:var(--muted)">Leans on '+esc(ATTR_NAME[TECH_BY_K[draft.tech].a])+' · comes with '+esc(TECH_BY_K[draft.tech].know)+'</span></div></div></div>'
         +'<div class="kicker">Your file</div><div class="rolled">'
           +'<div class="attrs" style="padding:0 0 6px;grid-template-columns:1fr 1fr">'+attrRow(fake)+'</div>'
           +'<div class="mono" style="font-size:11px;line-height:1.6;color:var(--ink-2)"><b>'+EDU[p.edu]+'</b> · jail '+yrs(p.jail)+' · streets '+yrs(p.streets)+'<br>Knows '+p.know.join(", ")+' · Speaks '+p.langs.join(", ")
@@ -3738,7 +3753,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 25 · 15 September 2026";
+const BUILD="build 26 · 15 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
@@ -4106,7 +4121,7 @@ const TRIP_TALK={
   charm:["You are good at this. It is the one thing the file on you would say.",
     "You let {F} do most of it, and agree in the right places."],
   record:["You put the record on the table. {n} jobs. {F} reads it twice.",
-    "{F} asks what happened to the last person in this technique. You tell the truth, and it helps."],
+    "{F} asks what happened to the last person in this trade. You tell the truth, and it helps."],
 };
 const TRIP_SIGN=[
   "{F} signs nothing, because nobody signs anything. {F} says a day and a place.",
@@ -4118,7 +4133,7 @@ const TRIP_SIGN=[
 const TRIP_HOME=["You are back by Friday, with one more name on the books.",
   "The flight home is the first time you sleep all week.",
   "You come home the slow way and nobody follows you.",
-  "By the weekend {F} is on the payroll and the crew has a technique it did not have."];
+  "By the weekend {F} is on the payroll and the crew has a trade it did not have."];
 const TRIP_NO=["You fly home with the fee still in your pocket, which is no comfort at all.",
   "The week is gone. That is what it cost.",
   "You come home with nothing, and a week off the calendar."];
@@ -4451,7 +4466,7 @@ function note(msg){logMsg(msg,"warn");render();}
 
 /* ------------------------------ BOOT ---------------------------------- */
 document.addEventListener("visibilitychange",()=>{musicSync();});
-// hover briefs on techniques, knowledge and attributes
+// hover briefs on trades, knowledge and attributes
 document.addEventListener("mouseover",e=>{const el=e.target&&e.target.closest?e.target.closest(".tip"):null;if(el)tipShow(el);});
 document.addEventListener("mouseout",e=>{const el=e.target&&e.target.closest?e.target.closest(".tip"):null;if(el)tipHide();});
 document.addEventListener("focusin",e=>{const el=e.target&&e.target.closest?e.target.closest(".tip"):null;if(el)tipShow(el);});

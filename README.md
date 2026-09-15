@@ -16,11 +16,11 @@ decisions at the end.
 ## What is in the build
 
 - **A five-person crew, you included.** You create your own file — alias, sex (male or
-  female), nationality, technique — and the rest of your profile is rolled, re-rollable. You
+  female), nationality, trade — and the rest of your profile is rolled, re-rollable. You
   are the commander. Four places to fill from the roster.
 - **5,000 operatives**, generated from a seed so a save stores only what changed. Every file
   carries: nationality and passport tier; five attributes (Muscle, Brains, Tech, Charm,
-  Nerve); a technique (16); experience rank; knowledge domains (10); education (six levels,
+  Nerve); a trade (16); experience rank; knowledge domains (10); education (six levels,
   from no schooling to doctorate); time in jail; time on the streets; languages; commander
   or soldier by nature; a fee, a cut and weekly upkeep; and things they will not do — cannot
   swim, will not fly, fear of heights, claustrophobic, no violence, won't work nights, banned
@@ -29,16 +29,23 @@ decisions at the end.
   a man, fifteen for a woman), face shape, eyebrows, eyes, nose, mouth, ears, glasses, facial
   hair or earrings, and a scar. A roster file rolls them from its seed. **You** move a slider for
   each one on the dossier screen, under your picture, which redraws as you go, with **↻ Random**
-  to roll the lot. That is 3,000,000 faces for a man and 4,500,000 for a woman.
+  to roll the lot. That is 3,000,000 faces for a man and 4,500,000 for a woman. The picture
+  **stays on screen** while you work down the parts — ten sliders is taller than a laptop window,
+  and choosing a nose you cannot see is not choosing anything.
+- **Trade, said once.** The sixteen lines of work — Safecracker, Wheelman, Face, Cleaner, Forger,
+  Enforcer and the rest — are **trades**, on the dossier and everywhere else, which is the word
+  the live report already used. Choosing yours on the dossier prints the trade under the
+  dropdown: what it is, what it leans on, and what knowledge it comes with. It is the first time
+  anybody meets these words, so the screen says what they mean instead of leaving them to a job.
 - **49 countries**, each with languages, currency, majority religion, political system,
   economy, terrain, a border rule (open, visa, strict) and **its own subset of the twelve
   job categories** — interception, recovery, extraction, escort, surveillance, infiltration,
   cyber, smuggling, papers, negotiation, sabotage, vault. Countries share categories, but no
   two offer the same list.
 - **Jobs.** Seven or so postings a week from named clients, each with a fee (scaled by the
-  local economy), difficulty, heat, wanted techniques and knowledge — coloured green if your
+  local economy), difficulty, heat, wanted trades and knowledge — coloured green if your
   crew has them, red if not — and the tags that trip a crew member's limits. Postings expire.
-  Sort the board by best fit, crew needed, technique wanted, fee, heat, difficulty, country or
+  Sort the board by best fit, crew needed, trade wanted, fee, heat, difficulty, country or
   expiry. Your crew sits above the board in a strip so a posting can be judged without leaving;
   keys 1–4 jump between the tabs.
 - **The map.** Beside the postings, a world map drawn in the same ink — continents and a
@@ -57,12 +64,12 @@ decisions at the end.
   reckoning counts. Bench yourself and a commander-type runs it in your place.
 - **The reckoning.** Before you take a job, the file shows who can go and why not (border,
   conviction, a limit the job hits, injury), then every factor with its number: crew size,
-  who commands, language, local national, knowledge (double if studied), techniques, heat,
+  who commands, language, local national, knowledge (double if studied), trades, heat,
   temperament, and what the crew have been through together.
-  Every requirement on the file — crew size, techniques, knowledge, language, the job's
+  Every requirement on the file — crew size, trades, knowledge, language, the job's
   conditions — carries a green tick or a red cross, and the chip's border says the same.
 - **The live report.** Take the job and it plays out minute by minute, manager-game style:
-  the crew arriving, who got in and who didn't, who does the talking, what each technique
+  the crew arriving, who got in and who didn't, who does the talking, what each trade
   buys, what goes right and wrong for that kind of job, the exit, the police by morning, the
   split — then the verdict stamp. You are "you" throughout, never named in the third person. Skip to the end if you'd rather, or set the pace: five
   speeds, Slowest to Fastest, on the report itself and in the office. The field
@@ -210,7 +217,7 @@ decisions at the end.
   player wants a recap. A decision left waiting mid-job comes before either.
 - **The i button.** Beside the menu button on every screen (or press **i**): what this screen
   is and how each part works, in plain words.
-- **Hover briefs.** Hover a technique — on the roster, a crew card, the crew strip, or a "wants
+- **Hover briefs.** Hover a trade — on the roster, a crew card, the crew strip, or a "wants
   X" tag on a posting or job file — for a small card saying what it is, which attribute it
   leans on, what knowledge it comes with, and which jobs want it. The same on knowledge tags
   and on MUS / BRN / TCH / CHM / NRV. Keyboard focus or a tap on a phone shows it too.
@@ -292,7 +299,7 @@ smallest one; none is a decision.
   goes, and the game is choosing who fills the places and which postings to take.
 - **Recruitment** is a trip, a one-off fee plus weekly upkeep and a cut of each score, with four
   places and the option to cut anyone loose.
-- **Attribute values** run 12–98 and are rolled from experience, technique and role, then
+- **Attribute values** run 12–98 and are rolled from experience, trade and role, then
   grow a point at a time with good work.
 - **Language** is English only; the paper on the desk is where more will go.
 
@@ -330,7 +337,7 @@ something to fake now by making the numbers bigger.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 25 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 26 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
