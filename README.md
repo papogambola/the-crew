@@ -100,6 +100,11 @@ decisions at the end.
   yours, as is its payroll. A third crew at three years, a fourth at four, no more. People
   move between crews from their cards; dissolving a crew brings them back as far as your
   seats allow.
+- **Milestones, announced.** A box in the middle of the screen, once each: the two seats a
+  Respected name opens; each year mark (weeks 104, 156, 208) when another crew is within reach,
+  with what is still missing; and the moment a second, third or fourth crew can actually be
+  founded, with a button straight into founding it. Later closes it; the Crew tab and the case
+  log keep the record.
 - **The bonus buys something.** Three weeks' upkeep ($4K at least) for +14 loyalty and three
   weeks *paid up*: +2 on every reckoning that member goes on, deaf to another crew's drinks,
   never the one who skims the split, and not the one the between-jobs trouble picks on. It also
@@ -179,7 +184,7 @@ smallest one; none is a decision.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 16 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 17 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

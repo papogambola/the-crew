@@ -261,6 +261,11 @@
   .twist-opt:disabled{color:var(--muted);border-color:var(--line-2);cursor:not-allowed;background:var(--paper-2)}
   .twist-opt.on{background:var(--ink);color:var(--paper)}
   .twist-opt.on b{color:var(--paper)}
+  /* ---- a milestone, announced in the middle of the screen ---- */
+  .scrim.center{align-items:center}
+  .modal.notice{max-width:560px;border-width:3px;outline:1px solid var(--ink);outline-offset:4px;animation:pop .2s ease-out}
+  @keyframes pop{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+  @media(prefers-reduced-motion:reduce){.modal.notice{animation:none}}
   .nosign{display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;color:var(--stamp);font-weight:400}
   .live{color:var(--stamp);font-weight:500;animation:blink 1.2s steps(2) infinite}
   @keyframes blink{50%{opacity:.25}}
@@ -739,7 +744,12 @@ function crewOf(id){return crews().find(cr=>cr.memberIds.includes(id))||null;}
 function crewById(id){return crews().find(cr=>cr.id===id)||null;}
 function payroll(){let a=recruits();crews().forEach(cr=>{a=a.concat(crewMembers(cr));});return a;}   // everyone on the books
 function leaveCrew(c){S.crewIds=S.crewIds.filter(id=>id!==c.id);crews().forEach(cr=>{cr.memberIds=cr.memberIds.filter(id=>id!==c.id);});}
-function crewLeader(cr){return crewMembers(cr).filter(c=>c.status==="crew"&&c.role==="commander").sort((a,b)=>b.cmd-a.cmd)[0]||null;}
+// The commander the crew was founded under leads it while on the books and on their feet; otherwise the best commander-type left.
+function crewLeader(cr){
+  const named=cr.leadId?byId(cr.leadId):null;
+  if(named&&cr.memberIds.includes(named.id)&&named.status==="crew"&&named.role==="commander")return named;
+  return crewMembers(cr).filter(c=>c.status==="crew"&&c.role==="commander").sort((a,b)=>b.cmd-a.cmd)[0]||null;
+}
 // A bonus buys three weeks of a member working for it: sharper on the job, deaf to other crews, and not the one trouble picks on.
 const PAID_WEEKS=3;
 function paidUp(c){return !c.isPlayer&&c.paidUntil!=null&&c.paidUntil>=S.week;}
@@ -755,6 +765,33 @@ function foundingRules(){
     full:recruits().length>=CREW_MAX_SEATS,cmdr:ready.some(c=>c.role==="commander"),ready:ready.length>=EXTRA_CREW_SIZE};
 }
 function canFound(){const r=foundingRules();return r.more&&r.weekOk&&r.repOk&&r.full&&r.cmdr&&r.ready;}
+// Milestones are announced once, in a box in the middle of the screen: the seats a name opens,
+// each year mark when another crew is within reach, and the moment one can be founded.
+function checkMilestones(){
+  if(!S||S.over)return;
+  S.milestones=S.milestones||{};S.notices=S.notices||[];
+  const M=S.milestones;
+  const push=(k,n)=>{if(M[k])return;M[k]=true;S.notices.push(n);logMsg(n.h+" — "+n.text,"good",true);};
+  if(crewSeats()>=CREW_MAX_SEATS)push("seats6",{k:"Milestone · "+rankName(S.rep),h:"Two more seats",
+    text:"The name is "+rankName(S.rep)+". Seats six and seven are open: six soldiers, and you. Fill them from the roster — and from week 104, Feared, with all seven on the crew, you can found a second crew that works without you.",go:"roster",goText:"To the roster →"});
+  const fr=foundingRules();
+  if(fr.more){
+    const n=fr.n+2,ord=["","","second","third","fourth"][n],years=fr.week/52;
+    if(canFound()){
+      M["year"+n]=true;
+      push("found"+n,{k:"Milestone · week "+S.week+" · "+rankName(S.rep),h:"A "+ord+" crew",
+        text:years+" years in, "+rankName(S.rep)+", seven on the crew. You can found a "+ord+" crew: a commander-type and four soldiers out of your seven, named after its commander, taking a job of its own each week without you. Its take, its heat and its ranking are yours — and so is its payroll.",go:"found",goText:"Found a crew →"});
+    } else if(fr.weekOk){
+      const need=[];
+      if(!fr.repOk)need.push("a Feared name (ranking "+fr.rep+", now "+S.rep+")");
+      if(!fr.full)need.push("seven on your crew (now "+(1+recruits().length)+")");
+      if(!fr.cmdr)need.push("a commander-type among them");
+      if(!fr.ready)need.push("five ready to go");
+      push("year"+n,{k:"Milestone · week "+fr.week,h:years+" years in",
+        text:"A "+ord+" crew is within reach: a commander and four soldiers out of your seven, working without you, from the same board. Still needed: "+need.join("; ")+". The Crew tab keeps the list.",go:"crew",goText:"To the crew →"});
+    }
+  }
+}
 
 /* ------------------------------ JOBS ---------------------------------- */
 function makeJob(rng,tierBias){
@@ -837,7 +874,7 @@ function memberEff(c,job){
   if((cat.w.brains||0)>=3)e+=c.edu*1.2;
   return e;
 }
-function assessJob(job,members){
+function assessJob(job,members,leadId){
   const co=COUNTRY_BY_NAME[job.country];
   const cat=CAT_BY_K[job.cat];
   const all=members||crewAll();
@@ -858,7 +895,7 @@ function assessJob(job,members){
     add("You command",S.player.cmd||5,"your crew, your call");
     if(cmdTypes.length)add("Commanders under you",-3*cmdTypes.length,cmdTypes.map(c=>c.first).join(", ")+" take orders badly");
   } else if(cmdTypes.length){
-    const lead=cmdTypes.slice().sort((a,b)=>b.cmd-a.cmd)[0];
+    const lead=(leadId&&cmdTypes.find(c=>c.id===leadId))||cmdTypes.slice().sort((a,b)=>b.cmd-a.cmd)[0];
     add("Stand-in leader",Math.max(1,lead.cmd-2),lead.first+" runs it while you stay out");
   } else add("Leaderless",-10,"you can't get in and nobody else can lead");
   const speaks=team.some(c=>c.langs.some(l=>co.langs.includes(l)));
@@ -1184,7 +1221,7 @@ function startJob(job,opts){
   const rng=freshRng();
   const cr=opts.crew||null;                       // another crew, run by its own commander, without you
   const members=cr?crewMembers(cr):null;
-  const a=assessJob(job,members);
+  const a=assessJob(job,members,cr?cr.leadId:null);
   const team=a.team;
   let roll=ri(rng,-18,18);
   const hasMole=team.some(c=>c.mole);
@@ -1195,7 +1232,7 @@ function startJob(job,opts){
   const pTw=a.margin>=10?0.25:0.08;
   if(!opts.noTwist&&!cr&&!job.final&&team.length>=2&&chance(rng,pTw))twist=makeTwist(job,team,rng);
   const P={jobId:job.id,job:Object.assign({},job),roll,leaked,teamIds:team.map(c=>c.id),pre:pre.lines,clock:pre.clock,postSeed:ri(rng,1,2000000000),twist,week:S.week,
-    crewId:cr?cr.id:null,crewName:cr?cr.name:null,memberIds:members?members.map(c=>c.id):null};
+    crewId:cr?cr.id:null,crewName:cr?cr.name:null,leadId:cr?cr.leadId||null:null,memberIds:members?members.map(c=>c.id):null};
   S.pendingJob=P;
   const d={id:job.id+"-w"+S.week+(cr?"-c"+cr.id:""),week:S.week,job:P.job,crew:P.crewName,narrative:pre.lines.slice(),revealed:0,done:false,twist:twist?{h:twist.h,s:twist.s,opts:twist.opts.map(o=>o.t)}:null,awaiting:false,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}};
   if(twist)d.narrative.push({t:"— —",x:"Then it goes wrong.",tone:"bad",twist:true});
@@ -1206,7 +1243,7 @@ function startJob(job,opts){
 function finishJob(P,choiceIdx,d){
   const rng=mulberry32(P.postSeed>>>0);
   const job=S.jobs.find(j=>j.id===P.jobId)||P.job;
-  const a=assessJob(job,P.memberIds?P.memberIds.map(byId).filter(Boolean):null);
+  const a=assessJob(job,P.memberIds?P.memberIds.map(byId).filter(Boolean):null,P.leadId||null);
   const team=a.team;
   let dm=0,twHurt=0,twJail=0,twHeat=0,twLose=0,twLine=null,twRank=null,twRec=null;
   if(P.twist&&choiceIdx!=null){
@@ -1542,7 +1579,9 @@ let draft=null;
 function render(){
   musicRoute();
   if(!S){root.innerHTML=screenTitle()+chrome();bind();return;}
-  // something happened between jobs: it waits for a decision before anything else
+  // a milestone reached is announced first; something that happened between jobs waits for a decision next
+  checkMilestones();
+  if(S.notices&&S.notices.length&&!S.modal&&!S.over){S.modal={type:"notice"};sfx("stamp");}
   if(S.event&&!S.modal&&!S.over)S.modal={type:"event"};
   if(S.over&&!(S.modal&&(S.modal.type==="result"||S.modal.type==="event"))){root.innerHTML=screenOver()+chrome();bind();return;}
   let body="";
@@ -1702,7 +1741,7 @@ function foundCrew(leadId,ids){
   if(picked.length!==EXTRA_CREW_SIZE-1)return;
   S.crews=S.crews||[];
   S.crewSeq=(S.crewSeq||1)+1;
-  const cr={id:S.crewSeq,name:lead.first+"'s crew",memberIds:[leadId].concat(picked.map(c=>c.id)),founded:S.week,jobWeek:0};
+  const cr={id:S.crewSeq,name:lead.first+"'s crew",leadId,memberIds:[leadId].concat(picked.map(c=>c.id)),founded:S.week,jobWeek:0};
   cr.memberIds.forEach(mid=>{S.crewIds=S.crewIds.filter(x=>x!==mid);});
   S.crews.push(cr);
   logMsg(cr.name+" founded — "+lead.n+" commanding "+picked.map(c=>c.first).join(", ")+". Its jobs, its take and its heat are yours.","good",true);
@@ -1939,7 +1978,7 @@ function jobPanel(j){
   const h='<div class="panel-h" style="align-items:center"><div><div class="kicker">'+esc(co.name)+' · '+cat.l+(j.final?' · Final score':'')+'</div>'
     +'<h2 style="font-size:20px;margin-top:4px;text-transform:none;letter-spacing:.02em">'+esc(j.title)+'</h2></div><button class="btn ghost sm" data-act="close-job">← All postings</button></div>';
   // a crew you founded can take it instead of you — its own reckoning, its own report
-  const others=crews().map(cr=>{const ac=assessJob(j,crewMembers(cr));const busy=cr.jobWeek===S.week;const lead=crewLeader(cr);
+  const others=crews().map(cr=>{const ac=assessJob(j,crewMembers(cr),cr.leadId||null);const busy=cr.jobWeek===S.week;const lead=crewLeader(cr);
     const fit=ac.canRun?(ac.margin>=10?'<span class="chip c-good">Good fit</span>':ac.margin>=-4?'<span class="chip c-warn">Risky</span>':'<span class="chip c-bad">Long odds</span>'):'<span class="chip c-bad">'+ac.team.length+' of '+j.need+' can go</span>';
     return '<div class="jobrow" style="cursor:default"><div class="code">'+(lead?esc(lead.first):'—')+'</div><div><div class="t">'+esc(cr.name)+' '+fit+'</div>'
       +'<div class="loc">'+ac.team.length+' of '+crewMembers(cr).length+' can go · crew '+ac.eff+' vs difficulty '+j.diff+' · '+(lead?'led by '+esc(lead.first):'<span style="color:var(--stamp)">leaderless (−10)</span>')+(busy?' · <span style="color:var(--stamp)">worked this week</span>':'')+(j.final?' · the final score is yours alone':'')+'</div></div>'
@@ -2051,6 +2090,7 @@ function renderModal(){
   if(m.type==="result")return modalResult(m.data);
   if(m.type==="event")return modalEvent();
   if(m.type==="found")return modalFound();
+  if(m.type==="notice")return modalNotice();
   return "";
 }
 function modalWrap(inner){return '<div class="scrim" data-act="scrim"><div class="modal" role="dialog" aria-modal="true">'+inner+'</div></div>';}
@@ -2186,6 +2226,16 @@ function modalResult(d){
     +nums+tw+rank+growth+ev+roster
     +'<hr class="rule"><div style="display:flex;justify-content:flex-end"><button class="btn" data-act="scrim">Continue →</button></div></div>');
 }
+// A milestone, announced in the middle of the screen. One at a time; Later keeps the rest waiting.
+function modalNotice(){
+  const n=S.notices&&S.notices[0];if(!n)return "";
+  return '<div class="scrim center" data-act="notice-close"><div class="modal notice" role="dialog" aria-modal="true">'
+    +'<div class="modal-h"><div><div class="kicker" style="color:var(--stamp)">'+esc(n.k||"Milestone")+'</div><h2 style="font-size:28px;margin-top:4px">'+esc(n.h)+'</h2></div><button class="x" data-act="notice-close" aria-label="Close">✕</button></div>'
+    +'<div class="modal-b"><p style="margin:0 0 16px;font-size:15.5px;line-height:1.6">'+esc(n.text)+'</p>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" data-act="notice-close">Later</button>'
+    +(n.go?'<button class="btn" data-act="notice-go" data-k="'+esc(n.go)+'">'+esc(n.goText||"Go →")+'</button>':'')+'</div></div></div></div>';
+}
+function noticeDone(){if(S&&S.notices)S.notices.shift();if(S)S.modal=null;save();}
 // Something between jobs: a decision, then what came of it.
 function modalEvent(){
   const ev=S.event;if(!ev)return "";
@@ -2399,6 +2449,9 @@ const INFO={
     "<b>Bonus</b> (three weeks' upkeep, $4K at least) buys +14 loyalty and three weeks <b>paid up</b>: +2 on every reckoning that member goes on, deaf to another crew's drinks, never the one who skims the split, and not the one trouble picks on. One at a time; the card says until when. It also settles any grumbling about small jobs.",
     "<b>Small money.</b> Every member has a price: a cut under two weeks of their own upkeep is a job done for you, not for them. The job file says who calls a posting small money before you take it. Three small jobs in a row and they <b>grumble</b> (−5 loyalty a job, −2 on the reckoning, a chip on the card); five, and they may walk out at the split — back on the roster, wanting more. A proper score, or a bonus, resets the count.",
     "<b>Seats.</b> Four to start. A <b>Respected</b> name (ranking 60) opens seats six and seven. <b>Other crews.</b> From week 104 (two years), Feared, with seven on your crew, you can found a second crew — a commander-type and four soldiers out of your seven, named after its commander — that takes a job of its own each week without you, from the same board, with its own reckoning and report; its take, heat and ranking are yours, and so is its payroll. A third crew at three years, a fourth at four, no more. Send and recall people between crews from their cards; dissolve a crew and its people come back as far as your seats allow."]},
+  notice:{h:"A milestone",t:[
+    "Announced once, in the middle of the screen, when the game reaches it: the two seats a Respected name opens; each year mark (weeks 104, 156, 208) when another crew is within reach, with what is still missing; and the moment a second, third or fourth crew can actually be founded, with a button straight into founding it.",
+    "<b>Later</b> closes it; nothing is lost — the Crew tab keeps the seats and the founding panel, and the case log keeps the record."]},
   found:{h:"Founding a crew",t:[
     "Pick the commander — a commander by nature, whose own command score runs the job — and four soldiers from your ready crew. They leave your seats; fill them again from the roster.",
     "The new crew is named after its commander, takes one job a week from the same board, and never faces a twist: you are not there to decide, so its report runs straight through."]},
@@ -2660,7 +2713,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 16 · 15 September 2026";
+const BUILD="build 17 · 15 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
@@ -2755,6 +2808,8 @@ document.addEventListener("click",e=>{
     case "crew-recall": crewRecall(id); break;
     case "crew-dissolve": { const cid=+t.getAttribute("data-crew"); if(UI.confirmDissolve===cid)crewDissolve(cid); else {UI.confirmDissolve=cid;render();} break; }
     case "found-open": UI.found={lead:null,ids:[]}; S.modal={type:"found"}; render(); break;
+    case "notice-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){noticeDone();render();} break;
+    case "notice-go": noticeDone(); if(k==="found"){UI.found={lead:null,ids:[]};S.modal={type:"found"};} else if(k){S.tab=k;S.jobOpen=null;} render(); window.scrollTo(0,0); break;
     case "found-lead": if(UI.found){UI.found.lead=UI.found.lead===id?null:id;UI.found.ids=UI.found.ids.filter(x=>x!==id);} render(); break;
     case "found-pick": if(UI.found){const f=UI.found;if(f.ids.includes(id))f.ids=f.ids.filter(x=>x!==id);else if(f.ids.length<4)f.ids.push(id);} render(); break;
     case "found-go": if(UI.found)foundCrew(UI.found.lead,UI.found.ids); render(); break;
@@ -2775,6 +2830,7 @@ document.addEventListener("keydown",e=>{
     else if(UI.office){UI.office=false;render();}
     else if(S&&S.modal){
       if(S.modal.type==="event"){if(S.event&&S.event.outcome){S.event=null;S.modal=null;save();render();}}
+      else if(S.modal.type==="notice"){noticeDone();render();}
       else if(S.modal.type==="result"&&S.modal.data.awaiting){}
       else if(S.modal.type==="result"&&!S.modal.data.done)tickerFinish();
       else{S.modal=null;render();}
@@ -2828,7 +2884,7 @@ function doExecute(id,crewId){
   const cr=crewId?crewById(crewId):null;
   if(crewId&&!cr)return;
   if(cr&&(cr.jobWeek===S.week||j.final))return;
-  if(!assessJob(j,cr?crewMembers(cr):null).canRun)return;
+  if(!assessJob(j,cr?crewMembers(cr):null,cr?cr.leadId||null:null).canRun)return;
   const ti=(S.trackIdx||0)%TRACKS.report.length;S.trackIdx=ti+1;
   musicPlay(TRACKS.report[ti],"report track "+(ti+1)+" of "+TRACKS.report.length,false);
   const res=startJob(j,cr?{crew:cr,noTwist:true}:{});
