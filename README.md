@@ -166,6 +166,20 @@ decisions at the end.
   usually the one it happens to. Each asks for a decision with a price and a consequence —
   money, loyalty, a place, heat, sometimes a gamble the text is honest about — and the hard
   answers need an Enforcer on the crew.
+- **You are told who you are deciding about.** Wherever the question names somebody, **their file
+  opens under it** — face, trade, experience, the five attributes, schooling, jail and street
+  years, knowledge, languages, temperament and limits, and then the four that decide this one:
+  loyalty, what they take of every score and cost a week, how many jobs they have run with you,
+  and how much of your business they know. *Let them go* is a different decision about a Veteran
+  safecracker who knows where everything is than about a rookie who has been on two jobs. The
+  three questions that name nobody — a sit-down, a tip-off, a detective — show nobody.
+- **And one who wants out can be let go, and settled afterwards.** Beside paying them to stay and
+  letting them walk, there is *let them go — and settle it in forty-eight hours*. The two days are
+  the point: the crew watched you shake his hand, so nobody joins the two up. **Roughly two times
+  in three** it is quiet, and there is no loose end left at all — which is what the delay buys,
+  since letting somebody walk normally leaves a person who can talk. The other third is done badly
+  and in front of a witness: **+30 heat** and a name and a date in the detective's file. It takes
+  an **Enforcer or a Cleaner** on the crew; without either it is closed and says so.
 - **Ranking, with consequences.** The crew's standing — Nobody, Small time, Known, Respected,
   Feared, The Crew — rises with clean and successful jobs (more for a bigger job, a little
   more if nobody was hurt) and **falls** with messy, botched or disastrous work, a leak, an
@@ -393,7 +407,7 @@ computers that must not be stopped.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 32 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 33 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

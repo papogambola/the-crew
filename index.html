@@ -195,6 +195,10 @@
   .benchdelta .up{color:var(--good)}
   .benchdelta .dn{color:var(--stamp)}
   .benchdelta .small{color:var(--muted);font-size:10.5px;line-height:1.55;display:inline-block;margin-top:3px}
+  /* the file of whoever the between-jobs question is about — a crew card, under the question */
+  .evwho{margin:6px 0 4px;padding-bottom:9px}
+  .evfacts{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--f-mono);font-size:11px;padding:4px 11px 0;border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
+  .evfacts .k{color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-size:9.5px}
   .factors .k{color:var(--muted)}
   .factors .plus{color:var(--good)}
   .factors .minus{color:var(--stamp)}
@@ -2222,6 +2226,9 @@ const WEEKLY=[
    opts:[{t:"A retention bonus — $12K",money:-12000,roll:[{p:0.75,out:"{M} stays, and means it.",set:"stay",loy:20},{p:0.25,out:"{M} takes the money and quits anyway.",set:"gone"}]},
          {t:"Promise a bigger cut (+5% of every score)",cut:0.05,out:"{M} stays; the split gets thinner.",set:"stay",loy:10},
          {t:"Let {M} go",out:"{M} leaves. Cleanly, at least.",set:"gone",loyAll:-3},
+         {t:"Let {M} go — and settle it in forty-eight hours",req:"quiet",fortyeight:true,
+          roll:[{p:0.68,out:"{M} shakes hands on the Tuesday and is not anywhere by the Thursday. Nobody joins the two up, and there is nothing left to say to anyone.",set:"gone",noLoose:true,loyAll:-4,heat:3},
+                {p:0.32,out:"Two days is two days, and {M} spends them talking. It is done badly and in front of a witness. Heat +30, and the detective has a name and a date.",set:"gone",noLoose:true,loyAll:-12,heat:30,detUp:14}]},
          {t:"Have the enforcer explain why leaving is a bad idea",req:"enforcer",roll:[{p:0.5,out:"{M} stays, and never forgets it.",set:"stay",loy:-20},{p:0.5,out:"{M} leaves that night and takes a grudge. Heat +6.",set:"gone",heat:6}]}]},
   {k:"poach",h:"{M} has a new crew",text:"{M} has gone to another crew — and is buying drinks for yours. Every week {M} is out there, somebody listens.",lowest:true,gone:true,
    opts:[{t:"Bonuses all round — $5K each",moneyPer:-5000,loyAll:12,out:"Nobody leaves. Nobody forgets who paid."},
@@ -2271,9 +2278,21 @@ function makeEvent(rng){
     R:rival()?cap(rival().name):"another crew",B:rival()?rival().boss:"their boss",D:detective()?detective().name:"a detective"};
   return {k,h:fill2(W.h,v),text:fill2(W.text,v),mId:M?M.id:null,lId:L?L.id:null,opts:W.opts.map(o=>({t:fill2(o.t,v),req:o.req||null})),v,outcome:null,week:S.week};
 }
+// Who a choice needs on the crew. "quiet" is either of the two trades that can end something
+// without it becoming a story — an enforcer to do it or a cleaner to make it read as nothing.
+function eventCan(o){
+  if(!o||!o.req)return true;
+  const has=k=>recruits().some(c=>c.status==="crew"&&c.tech===k);
+  if(o.req==="quiet")return has("enforcer")||has("cleaner");
+  return has(o.req);
+}
+function eventNeedWord(o){
+  if(!o||!o.req)return "";
+  return o.req==="quiet"?"needs an Enforcer or a Cleaner":"needs a"+(/^[aeiou]/i.test(o.req)?"n ":" ")+cap(o.req);
+}
 function eventApply(ev,i){
   const W=WEEKLY.find(w=>w.k===ev.k);const o=W.opts[i];if(!o)return;const rng=freshRng();
-  if(o.req==="enforcer"&&!recruits().some(c=>c.status==="crew"&&c.tech==="enforcer"))return;
+  if(!eventCan(o))return;
   const M=ev.mId?byId(ev.mId):null,L=ev.lId?byId(ev.lId):null;
   const rc=()=>recruits().filter(c=>c.status==="crew");
   let eff=o;let out=o.out||"";
@@ -2285,7 +2304,7 @@ function eventApply(ev,i){
   if(eff.loyAll){rc().forEach(c=>{if(!M||c.id!==M.id)c.loyalty=clamp(c.loyalty+eff.loyAll,0,100);});lines.push("Crew loyalty "+(eff.loyAll>0?"+":"")+eff.loyAll+".");}
   if(M&&eff.loy!=null){M.loyalty=clamp(M.loyalty+eff.loy,0,100);}
   if(M&&eff.cut){M.cut=Math.round((M.cut+eff.cut)*100)/100;}
-  if(M&&eff.set==="gone"){M.status="gone";M._touched=true;leaveCrew(M);looseAdd(M,"resign");}
+  if(M&&eff.set==="gone"){M.status="gone";M._touched=true;leaveCrew(M);if(!eff.noLoose)looseAdd(M,"resign");}
   if(M&&eff.set==="jailed"){M.status="jailed";M.out=S.week+(eff.weeks||3);M._touched=true;leaveCrew(M);}
   if(M&&W.kill){M.status="gone";M._touched=true;leaveCrew(M);}
   if(M&&W.gone&&M.status==="crew"){M.status="gone";M._touched=true;leaveCrew(M);looseAdd(M,"resign");}
@@ -3378,19 +3397,41 @@ function noticeDone(){if(S&&S.notices)S.notices.shift();if(S)S.modal=null;save()
 // Something between jobs: a decision, then what came of it.
 function modalEvent(){
   const ev=S.event;if(!ev)return "";
-  const letters="ABCD";
-  const enf=recruits().some(c=>c.status==="crew"&&c.tech==="enforcer");
+  const letters="ABCDEF";
   const h='<div class="modal-h"><div><div class="kicker" style="color:var(--stamp)">Between jobs · week '+ev.week+'</div><h2 style="font-size:22px;margin-top:4px">'+esc(ev.h)+'</h2></div></div>';
   let b='<div class="modal-b"><p style="margin:0 0 12px;font-size:15px;line-height:1.6">'+esc(ev.text)+'</p>';
   if(ev.outcome){
     b+='<div class="brief" style="border-left-color:var(--stamp)">'+esc(ev.outcome)+'</div>'
       +'<div style="display:flex;justify-content:flex-end"><button class="btn" data-act="event-close">Continue →</button></div>';
   } else {
-    b+='<div class="twist-opts">'+ev.opts.map((o,i)=>{const can=!o.req||(o.req==="enforcer"&&enf);
-      return '<button class="twist-opt" data-act="event" data-i="'+i+'" '+(can?"":'disabled title="Needs an Enforcer on the crew"')+'><b>'+letters[i]+'</b> '+esc(o.t)+(can?'':' <span class="mono" style="color:var(--muted)">(needs an Enforcer)</span>')+'</button>';}).join("")+'</div>'
-      +'<div class="sel-help">Every choice has a cost and a consequence. The crew will remember it.</div>';
+    b+='<div class="twist-opts">'+ev.opts.map((o,i)=>{const can=eventCan(o);const need=eventNeedWord(o);
+      return '<button class="twist-opt" data-act="event" data-i="'+i+'" '+(can?"":'disabled title="'+esc(cap(need))+' on the crew"')+'><b>'+letters[i]+'</b> '+esc(o.t)+(can?'':' <span class="mono" style="color:var(--muted)">('+esc(need)+')</span>')+'</button>';}).join("")+'</div>'
+      +'<div class="sel-help">Every choice has a cost and a consequence. The crew will remember it.</div>'
+      +eventWho(ev);
   }
   return '<div class="scrim"><div class="modal" role="dialog" aria-modal="true">'+h+b+'</div></div></div>';
+}
+
+// The file of whoever the question is about, under the question. Built from the same card pieces
+// the crew screen uses, so it cannot drift from what the rest of the game says about them.
+function eventWho(ev){
+  const c=ev&&ev.mId?byId(ev.mId):null;
+  if(!c)return "";
+  // makeEvent picks somebody for every event, including the three that are about a sit-down, a
+  // tip-off or a detective and name nobody. Show the file only where the question is about them.
+  const W=WEEKLY.find(w=>w.k===ev.k);
+  if(!W||!/\{M\}|\{G\}/.test(W.h+" "+W.text))return "";
+  const kn=looseKnows(c);
+  const weeks=c.ranWith||0;
+  return '<hr class="rule"><div class="kicker">Who you are deciding about</div>'
+    +'<div class="id evwho">'+idCardTop(c)
+    +'<div class="attrs">'+attrRow(c)+'</div>'+xpLine(c)+profLine(c)
+    +'<div class="evfacts">'
+      +'<span class="k">Loyalty</span><span class="num">'+c.loyalty+' / 100'+(c.loyalty<35?' — thin':'')+'</span>'
+      +'<span class="k">Takes</span><span class="num">'+Math.round(c.cut*100)+'% of each score · '+money(c.upkeep)+' a week</span>'
+      +'<span class="k">Jobs with you</span><span class="num">'+weeks+'</span>'
+      +'<span class="k">Knows</span><span>'+kn+' of your business — '+(kn<=3?"not much":kn<=7?"enough to be a problem":"most of it")+'</span>'
+    +'</div></div>';
 }
 
 /* ----------------------------- SETTINGS ------------------------------- */
@@ -3956,7 +3997,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 32 · 15 September 2026";
+const BUILD="build 33 · 15 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
