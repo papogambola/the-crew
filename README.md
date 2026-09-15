@@ -3,8 +3,8 @@
 A black-ink-on-white-paper game of global crime. You are the criminals. One file, no dependencies.
 
 You are the name at the top of the police's chart, and the commander of the crew. Fill the
-other four seats from **5,000 operatives**, then take the jobs clients post online —
-country by country, each with its own language, money, politics, religion, terrain and job
+other four seats from **5,000 operatives**, then take the jobs clients post online — country
+by country, each with its own language, money, politics, religion, terrain and job
 categories. Everyone on the crew goes on every job, if the border lets them in and the job
 doesn't hit one of their limits.
 
@@ -30,39 +30,53 @@ decisions at the end.
   job categories** — interception, recovery, extraction, escort, surveillance, infiltration,
   cyber, smuggling, papers, negotiation, sabotage, vault. Countries share categories, but no
   two offer the same list.
-- **Online.** Seven or so postings a week from named clients, each with a fee (scaled
-  by the local economy), difficulty, heat, wanted techniques and knowledge, and the tags
-  that trip a crew member's limits. Postings expire.
+- **Online.** Seven or so postings a week from named clients, each with a fee (scaled by the
+  local economy), difficulty, heat, wanted techniques and knowledge, and the tags that trip
+  a crew member's limits. Postings expire.
 - **The reckoning.** Before you take a job, the file shows who can go and why not (border,
   conviction, a limit the job hits, injury), then every factor with its number: crew size,
   who commands, language, local national, knowledge (double if studied), techniques, heat.
+- **The live report.** Take the job and it plays out minute by minute, manager-game style:
+  the crew arriving, who got in and who didn't, who does the talking, what each technique
+  buys, what goes right and wrong for that kind of job, the exit, the police by morning, the
+  split — then the verdict stamp. Skip to the end if you'd rather.
+- **Ranking.** The crew's standing — Nobody, Small time, Known, Respected, Feared, The Crew —
+  rises with clean and successful jobs (more for a bigger job, a little more if nobody was
+  hurt) and **falls** with messy, botched or disastrous work, a leak, an arrest, or a member
+  walking with the money. Every end-of-job screen lists the reasons. At 100 the final score
+  appears.
+- **A crew that grows.** Everyone who goes on a job gains experience; ranks — Rookie,
+  Operator, Professional, Veteran, Legend — are earned at 40, 110, 220 and 400 xp, and good
+  work adds a point to the attributes the job leaned on. You included.
+- **Continue.** The game saves itself after every move, in the browser you play in. The title
+  screen offers the saved crew first — name, week, ranking, money — and warns if the browser
+  is refusing to keep saves (a private window, or site data blocked).
 - **The office.** Esc, or the three-line button top right, opens the boss's office — the
-  pause and settings screen, drawn as line art you can click. The radio's SOUND switch and
-  VOLUME knob, the DISPLAY monitor's brightness slider, the LANGUAGE paper, the CONTROLS
-  book, the EXIT door, and your hat on the hook (your own file). Settings are kept separately
-  from the game and survive a new game.
+  pause and settings screen, drawn as line art you can click. The radio's SOUND switch, MUSIC
+  switch and VOLUME knob, the DISPLAY monitor's brightness slider, the LANGUAGE paper, the
+  CONTROLS book, the EXIT door, and your hat on the hook (your own file). Settings are kept
+  separately from the game and survive a new game.
 - **Music.** *A Name Worth Keeping* — the creator's own track, eight minutes, looped — plays
-  from the radio in the office. MUSIC on the radio switches it; SOUND is the master; VOLUME
-  turns both. Browsers only allow audio after the first click, so it starts on your first press.
-  Shipped as `a-name-worth-keeping.mp3`, re-encoded to 128 kbps for the web.
+  from the radio in the office. Browsers only allow audio after the first click, so it starts
+  on your first press; the radio shows its state ("Now playing", "Standby", or the reason it
+  is silent) and has a **Start the radio** button. Shipped as `a-name-worth-keeping.mp3`,
+  re-encoded to 128 kbps for the web.
 - **Sound.** A small set of synthesised effects — clicks, the verdict stamp, a coin on a
   hire, a siren on a raid. No files; the office switch turns it off.
-- **Tutorial.** On the first game, ten steps walk through the screens — the top line, your
-  file, the seats, the roster, a file, the online board, who can go, the reckoning, the log, the
-  office — highlighting each thing as it goes. Skip it, or run it again from the **i** button
-  or the controls book.
+- **Tutorial.** On the first game, ten steps walk through the screens, highlighting each
+  thing as it goes. Skip it, or run it again from the **i** button or the controls book.
 - **The i button.** Beside the menu button on every screen (or press **i**): what this screen
-  is and how each part works, in plain words — title, creation, crew, roster, online board, log, a
-  job file, a personnel file, the verdict, the office, and the end.
+  is and how each part works, in plain words.
 - **Deception.** About one file in fourteen is a police informant. Vetting costs $6K and a
-  dull crew misses one in three. After a big score, low-loyalty members can skim and vanish.
+  dull crew misses one in three. After a big score a disloyal, greedy or informant member
+  may skim the split and vanish; a loyal one stays.
 - **Pressure.** Heat penalises every job and triggers a raid at 100; laying low cools it.
-  Botched jobs get people hurt or held. Reach 100 notoriety and the final score appears.
+  Botched jobs get people hurt or held.
 
 ## Decided
 
-- **The crew are criminals, not police** (15 September 2026). Clients online are
-  the buyers; the police are the heat.
+- **The crew are criminals, not police** (15 September 2026). Clients online are the buyers;
+  the police are the heat.
 - **The player is always the commander, for now** (15 September 2026). Commander/soldier
   stays a quality on every roster file: a commander-type recruit takes your orders badly
   (−3 each on a job you lead) but can run the crew on a job you can't get into (their command
@@ -70,6 +84,8 @@ decisions at the end.
   users with their own avatars choosing commander or soldier and growing over time — is
   recorded in `CONCEPT.md` as direction.
 - **Pause, settings and a sound switch** (15 September 2026), as the office above.
+- **No "dark web"** (15 September 2026). Jobs are posted online.
+- **Ranking rises and falls per job, and the crew grows** (15 September 2026), as above.
 
 ## Provisional choices — easy to change
 
@@ -78,12 +94,13 @@ smallest one; none is a decision.
 
 - **Missions** resolve in one roll: crew power (weighted attributes × experience, plus the
   factors above) against difficulty, ±18. Five verdicts: Clean, Success, Messy, Botched,
-  Disaster.
+  Disaster. The live report narrates that outcome; it does not change it.
 - **"Very basic"** is read as: four tabs, no map, no per-job assignment — the whole crew
   goes, and the game is choosing who sits in the seats and which postings to take.
 - **Recruitment** is a one-off fee plus weekly upkeep and a cut of each score, with four
   seats and the option to cut anyone loose.
-- **Attribute values** run 12–98 and are rolled from experience, technique and role.
+- **Attribute values** run 12–98 and are rolled from experience, technique and role, then
+  grow a point at a time with good work.
 - **Language** is English only; the paper on the desk is where more will go.
 
 ## Design
