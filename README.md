@@ -41,8 +41,19 @@ decisions at the end.
   VOLUME knob, the DISPLAY monitor's brightness slider, the LANGUAGE paper, the CONTROLS
   book, the EXIT door, and your hat on the hook (your own file). Settings are kept separately
   from the game and survive a new game.
+- **Music.** *A Name Worth Keeping* — the creator's own track, eight minutes, looped — plays
+  from the radio in the office. MUSIC on the radio switches it; SOUND is the master; VOLUME
+  turns both. Browsers only allow audio after the first click, so it starts on your first press.
+  Shipped as `a-name-worth-keeping.mp3`, re-encoded to 128 kbps for the web.
 - **Sound.** A small set of synthesised effects — clicks, the verdict stamp, a coin on a
   hire, a siren on a raid. No files; the office switch turns it off.
+- **Tutorial.** On the first game, ten steps walk through the screens — the top line, your
+  file, the seats, the roster, a file, the dark web, who can go, the reckoning, the log, the
+  office — highlighting each thing as it goes. Skip it, or run it again from the **i** button
+  or the controls book.
+- **The i button.** Beside the menu button on every screen (or press **i**): what this screen
+  is and how each part works, in plain words — title, creation, crew, roster, dark web, log, a
+  job file, a personnel file, the verdict, the office, and the end.
 - **Deception.** About one file in fourteen is a police informant. Vetting costs $6K and a
   dull crew misses one in three. After a big score, low-loyalty members can skim and vanish.
 - **Pressure.** Heat penalises every job and triggers a raid at 100; laying low cools it.

@@ -41,7 +41,7 @@
   .kicker{font-family:var(--f-mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
 
   .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:var(--paper);border-bottom:2px solid var(--ink)}
-  .topbar-in{max-width:1060px;margin:0 auto;padding:8px 64px 8px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .topbar-in{max-width:1060px;margin:0 auto;padding:8px 112px 8px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   .brand{font-family:var(--f-logo);font-weight:400;font-size:24px;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;line-height:1}
   .stat{display:flex;flex-direction:column;line-height:1;gap:3px;min-width:72px}
   .stat .l{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
@@ -211,7 +211,7 @@
   .burger:hover{background:var(--paper-2)}
   .office{position:fixed;inset:0;z-index:70;background:var(--paper);overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 24px)}
   .office-in{max-width:1100px;margin:0 auto}
-  .office-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:4px 56px 10px 0;border-bottom:2px solid var(--ink);margin-bottom:12px}
+  .office-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:4px 104px 10px 0;border-bottom:2px solid var(--ink);margin-bottom:12px}
   .office-head h2{font-family:var(--f-logo);font-size:28px;letter-spacing:.03em;text-transform:uppercase;font-weight:400}
   .office-svg{width:100%;height:auto;display:block;border:1px solid var(--line-2);background:#fff}
   .office-svg :is(path,rect,line,polygon,polyline,ellipse,circle):not(.ns){stroke:var(--ink);stroke-width:2.2px;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
@@ -224,6 +224,18 @@
   .office-words .grp{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)}
   .office-words .grp button{appearance:none;border:1px solid var(--ink);background:var(--paper);width:24px;height:24px;font-family:var(--f-mono);padding:0}
   .above .scrim{z-index:80}
+
+  /* ---- the i button, the tutorial ---- */
+  .ibtn{position:fixed;top:calc(env(safe-area-inset-top,0px) + 9px);right:64px;z-index:75;width:36px;height:36px;border:1px solid var(--ink);border-radius:50%;background:var(--paper);font-family:var(--f-body);font-style:italic;font-weight:600;font-size:19px;line-height:1;padding:0 0 2px}
+  .ibtn:hover{background:var(--paper-2)}
+  .info-b p{margin:0 0 10px;font-size:14px;line-height:1.6}
+  .info-b p:last-of-type{margin-bottom:0}
+  .tut{position:fixed;left:0;right:0;bottom:0;z-index:90;padding:0 16px calc(env(safe-area-inset-bottom,0px) + 16px);pointer-events:none}
+  .tut-card{pointer-events:auto;max-width:560px;margin:0 auto;background:var(--paper);border:2px solid var(--ink);box-shadow:0 20px 50px -20px rgba(0,0,0,.6);padding:12px 16px 14px}
+  .tut-card h3{font-size:18px;margin:4px 0 6px;text-transform:uppercase;letter-spacing:.06em}
+  .tut-card p{margin:0;font-size:14px;line-height:1.55}
+  .tut-btns{display:flex;gap:8px;align-items:center;margin-top:12px}
+  .tut-target{outline:3px solid var(--stamp);outline-offset:4px;box-shadow:0 0 0 8px rgba(154,43,30,.14)}
 </style>
 
 <div id="root"></div>
@@ -618,7 +630,8 @@ function newGame(player){
     jobs:[],log:[],finalDone:false,over:null,seenFinal:false,
   };
   refreshJobs(true);
-  logMsg("File opened. You are "+player.n+", "+player.nat+" passport, "+(player.role==="commander"?"commander":"soldier")+". Four seats to fill.","big");
+  if(!SET.tutorialDone){TUT.on=true;TUT.step=0;}
+  logMsg("File opened. You are "+player.n+", "+player.nat+" passport, commander. Four seats to fill.","big");
   logMsg("Float: "+money(S.money)+". The dark web has "+S.jobs.length+" postings.","");
   save();
 }
@@ -898,6 +911,7 @@ function render(){
   else if(S.tab==="log")body=tabLog();
   root.innerHTML=topbar()+'<div class="wrap">'+tabsBar()+body+footNote()+"</div>"+(S.modal?renderModal():"")+chrome();
   bind();
+  tutMark();
 }
 function topbar(){
   const hot=S.heat>=70;
@@ -1158,7 +1172,7 @@ function modalResult(d){
 /* ----------------------------- SETTINGS ------------------------------- */
 // Settings live outside the game save, so they survive a new game.
 const SET_KEY="thecrew_settings_v1";
-const SET={sound:true,volume:0.6,bright:100,lang:"en"};
+const SET={sound:true,music:true,volume:0.6,bright:100,lang:"en",tutorialDone:false};
 function loadSettings(){try{const r=localStorage.getItem(SET_KEY);if(r)Object.assign(SET,JSON.parse(r));}catch(e){}}
 function saveSettings(){try{localStorage.setItem(SET_KEY,JSON.stringify(SET));}catch(e){}}
 function applySettings(){
@@ -1167,7 +1181,7 @@ function applySettings(){
   const st=document.documentElement.style;
   st.setProperty("--paper",dim("#f6f4ee"));st.setProperty("--paper-2",dim("#efece3"));st.setProperty("--card",dim("#fbfaf6"));st.setProperty("--line",dim("#d9d5c8"));
 }
-function setVolume(v){SET.volume=clamp(Math.round(v*100)/100,0,1);saveSettings();sfx("click");render();}
+function setVolume(v){SET.volume=clamp(Math.round(v*100)/100,0,1);saveSettings();sfx("click");musicSync();render();}
 function setBright(b){SET.bright=clamp(Math.round(b),55,100);saveSettings();applySettings();render();}
 
 /* ------------------------------ SOUND --------------------------------- */
@@ -1204,20 +1218,137 @@ function sfx(name){
   }catch(e){}
 }
 
+/* ------------------------------ MUSIC --------------------------------- */
+// "A Name Worth Keeping" — the radio in the office. Browsers allow it only after the first click.
+const MUSIC_SRC="a-name-worth-keeping.mp3";
+let MUSIC=null,userGestured=false;
+function musicEl(){
+  if(!MUSIC){try{MUSIC=new Audio(MUSIC_SRC);MUSIC.loop=true;MUSIC.preload="auto";}catch(e){MUSIC=null;}}
+  return MUSIC;
+}
+function musicSync(){
+  const m=musicEl();if(!m)return;
+  try{
+    m.volume=clamp(SET.volume*0.45,0,1);
+    const want=SET.sound&&SET.music&&SET.volume>0&&userGestured&&!document.hidden;
+    if(want){if(m.paused){const p=m.play();if(p&&p.catch)p.catch(()=>{});}}
+    else if(!m.paused)m.pause();
+  }catch(e){}
+}
+
+/* ----------------------------- TUTORIAL ------------------------------- */
+// Runs once on a new game; can be run again from the i button or the controls book.
+const TUT={on:false,step:0};
+const TUT_STEPS=[
+  {tab:"crew",sel:".topbar",h:"The top line",t:"Balance is your money — hires, upkeep and vetting come out of it. Week counts time: every job or lay-low is a week. Notoriety climbs with scores; at 100 the final job appears. Heat is how hard the police are looking: every job pays a heat penalty, and at 100 there is a raid."},
+  {tab:"crew",sel:".id.you",h:"This is you",t:"The commander. Your file goes on every job: five attributes, a technique, education, time in jail and on the streets, knowledge, languages, and anything you won't do. If a border keeps you out, the crew goes without you."},
+  {tab:"crew",sel:".id.slot",h:"Four empty seats",t:"Fill them from the Roster. Everyone you hire goes on every job, takes a cut of every score, and costs upkeep each week."},
+  {tab:"roster",sel:".rosterbar",h:"Five thousand files",t:"Search by name, country, language or knowledge. Filter by technique, role and nationality. Sort by fee, experience or raw skill."},
+  {tab:"roster",sel:".cards .id",h:"A file",t:"Flag and passport tier (P1 strong, P4 weak), technique and rank, the five attributes, then education, jail, streets, knowledge, languages — and in red, what this one will not do. File opens the whole thing and lets you vet for informants. Hire pays the fee."},
+  {tab:"jobs",sel:".jobrow",h:"The dark web",t:"Clients post jobs by country. Each row: category, the techniques it wants, city, crew needed, fee, heat, when it expires — and a chip saying how your crew fits. Open one."},
+  {tab:"jobs",openJob:true,sel:".check",h:"Who can go",t:"Every crew member, ✓ or ✗, with the reason: the border and their passport, a conviction, a limit the job trips, an injury. A forger on the crew gets weak passports through."},
+  {tab:"jobs",openJob:true,sel:".factors",h:"The reckoning",t:"Every factor with its number — crew size, who commands, language, a local national, knowledge, techniques, heat — then the odds. Take the job and the whole eligible crew goes; a week passes."},
+  {tab:"log",sel:".log",h:"The case log",t:"Everything that happened, week by week. Lay low a week here or on the dark web: −15 heat, upkeep still due, fresh postings."},
+  {tab:"log",sel:".burger",h:"The office",t:"Esc, or this button, on any screen: pause, sound, music, brightness, the controls book, your file, and the door out. The i button beside it explains whatever is on screen."},
+];
+function tutStart(){TUT.on=true;tutGo(0);}
+function tutGo(i){
+  TUT.step=clamp(i,0,TUT_STEPS.length-1);
+  const st=TUT_STEPS[TUT.step];
+  if(S){S.tab=st.tab;if(st.openJob){const j=S.jobs[0];S.modal=j?{type:"job",id:j.id}:null;}else S.modal=null;}
+  render();
+}
+function tutEnd(){TUT.on=false;if(S)S.modal=null;SET.tutorialDone=true;saveSettings();render();}
+function tutHTML(){
+  const st=TUT_STEPS[TUT.step],n=TUT_STEPS.length,last=TUT.step===n-1;
+  return '<div class="tut"><div class="tut-card"><div class="kicker">Tutorial · '+(TUT.step+1)+' of '+n+'</div>'
+    +'<h3>'+esc(st.h)+'</h3><p>'+esc(st.t)+'</p>'
+    +'<div class="tut-btns"><button class="btn ghost sm" data-act="tut-skip">Skip</button><span class="spacer"></span>'
+    +'<button class="btn ghost sm" data-act="tut-back" '+(TUT.step?"":"disabled")+'>← Back</button>'
+    +'<button class="btn sm" data-act="tut-next">'+(last?"Finish":"Next →")+'</button></div></div></div>';
+}
+function tutMark(){
+  if(!TUT.on||!S||S.over)return;
+  const el=document.querySelector(TUT_STEPS[TUT.step].sel);
+  if(el){el.classList.add("tut-target");try{el.scrollIntoView({block:"center",behavior:"smooth"});}catch(e){}}
+}
+
+/* ------------------------------- INFO --------------------------------- */
+// The i button: what is on this screen, in plain words.
+function infoContext(){
+  if(UI.office)return "office";
+  if(!S)return draft?"create":"title";
+  if(S.over)return "over";
+  if(S.modal)return S.modal.type;
+  return S.tab;
+}
+const INFO={
+  title:{h:"The Crew",t:[
+    "A game of global crime. <b>You are the criminals.</b> You command a crew of five — you and four seats to fill from 5,000 files — and take the jobs clients post on the dark web, country by country.",
+    "<b>New game</b> opens a dossier for you. <b>Continue</b> picks up the last game saved in this browser. Progress saves itself after every move.",
+    "<b>Esc</b> or the three-line button opens the office: pause, sound, music, brightness, controls, and the door out. This <b>i</b> button explains whatever is on screen."]},
+  create:{h:"Who are you",t:[
+    "<b>Alias</b> — any name. <b>Sex</b> — male or female. <b>Nationality</b> — your passport, and the languages you speak. A strong passport (P1–P2) walks into more countries; a weak one needs a visa, or a forger on the crew.",
+    "<b>Technique</b> — your specialty. A job that wants it pays +14 on the reckoning.",
+    "<b>Your file</b> — five attributes, education, time in jail, time on the streets, knowledge, languages, and anything you will not do — is rolled. <b>Another life</b> rolls it again. You are always the commander."]},
+  crew:{h:"The Crew",t:[
+    "Five seats. You are the first. Each card: flag and passport tier, technique and rank (the pips), the five attributes — Muscle, Brains, Tech, Charm, Nerve — then education, jail, streets, knowledge, languages, and in red what this one will <b>not</b> do.",
+    "<b>Loyalty</b> rises with success and bonuses, falls with failure and missed payroll. Under 35, after a big score, a member may skim the split and vanish. <b>Upkeep</b> is charged every week. <b>Cut loose</b> frees the seat.",
+    "Everyone on the crew goes on every job — if the border lets them in and the job doesn't trip one of their limits. A commander-type recruit takes your orders badly (−3 on a job you lead) but can run the crew on a job you can't get into."]},
+  roster:{h:"The Roster",t:[
+    "5,000 files. <b>Search</b> by name, country, language or knowledge. Filter by <b>technique</b>, <b>role</b> and <b>nationality</b>; sort by fee, experience, raw skill or name. Show 30 more at the bottom.",
+    "<b>Fee</b> is paid once. <b>Cut</b> is their share of every score. <b>Upkeep</b> is weekly. <b>File</b> opens the whole profile; <b>Hire</b> needs an open seat and the fee.",
+    "About one file in fourteen is a <b>police informant</b>: they leak jobs and leak heat. <b>Vet</b> a file for $6K — a dull crew misses one in three, so a clean stamp is a guess with money behind it."]},
+  jobs:{h:"The Dark Web",t:[
+    "Postings from clients, by country. Each row: category, the techniques it wants, city and country, crew needed, fee, heat, when it expires — and a chip: <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go.",
+    "The bars are difficulty; red means high heat. Open a posting to see the reckoning before you commit.",
+    "<b>Lay low a week</b>: −15 heat, upkeep still due, postings refresh. Reach 100 notoriety and the final score appears at the top of the board."]},
+  log:{h:"The Log",t:[
+    "The case log, week by week — every hire, job, injury, arrest, leak and betrayal. The operation panel counts seats, who is ready, who is hurt or held, weekly upkeep and open postings.",
+    "The bar is notoriety towards the final score. Lay low from here too."]},
+  job:{h:"A job file",t:[
+    "<b>The brief</b>: who posted it, and the country — language, money, politics, religion, terrain, and the border rule. Chips: the category, techniques and knowledge wanted, and tags such as <i>on the water</i> or <i>at night</i> that trip a crew member's limits.",
+    "<b>Who can go</b>: every crew member, ✓ or ✗, with the reason — the border against their passport, a conviction at a strict border, a limit the job hits, an injury. A forger on the crew gets weak passports through.",
+    "<b>The reckoning</b>: every factor with its number — crew size, who commands, language, a local national, knowledge (double if studied), techniques, heat — then the odds. <b>Take the job</b>: the whole eligible crew goes and a week passes. <b>Walk away</b> costs nothing."]},
+  recruit:{h:"A personnel file",t:[
+    "Everything on record: role, technique, experience, education, knowledge, languages, time in jail, time on the streets, passport, sex, what they will not do, and the price — fee once, a cut of each score, upkeep weekly.",
+    "<b>Vet</b> reads the file for informant ties against your crew's instincts. <b>Hire</b> needs an open seat and the fee."]},
+  result:{h:"The verdict",t:[
+    "<b>Clean</b>, <b>Success</b>, <b>Messy</b>, <b>Botched</b> or <b>Disaster</b> — crew power against difficulty, plus the roll. Gross is the fee earned, cuts go to the crew, the net is yours. Heat and notoriety follow.",
+    "<b>Fallout</b>: injuries (out two weeks), arrests (held for weeks, then back on the roster), leaks (an informant talked), and betrayals (someone skimmed the split and vanished)."]},
+  office:{h:"The office",t:[
+    "Pause and settings, drawn as the boss's office. The <b>radio</b>: SOUND is the master switch, MUSIC switches the track, VOLUME turns both — click the knob's left to lower, right to raise. The <b>monitor</b>: brightness. The <b>paper</b>: language. The <b>book</b>: controls and how the game works. The <b>door</b>: back to the game, or burn the file. Your <b>hat</b>: your own file.",
+    "Settings are kept apart from the game and survive a new game. Esc closes the office."]},
+  over:{h:"The end",t:[
+    "You win when the final score — the job that appears at 100 notoriety — comes back Clean or a Success. You lose when there is no crew left and no money to hire one.",
+    "<b>Run it again</b> starts a new file; settings stay."]},
+};
+function infoHTML(){
+  const it=INFO[infoContext()]||INFO.title;
+  const tut=(S&&!S.over)?'<button class="btn ghost sm" data-act="tut-start">Run the tutorial</button>':'';
+  return '<div class="above"><div class="scrim" data-act="info-close"><div class="modal" role="dialog" aria-modal="true" style="max-width:600px">'
+    +'<div class="modal-h"><div><div class="kicker">What is this screen</div><h2 style="font-size:20px;margin-top:4px">'+esc(it.h)+'</h2></div><button class="x" data-act="info-close" aria-label="Close">✕</button></div>'
+    +'<div class="modal-b info-b">'+it.t.map(p=>'<p>'+p+'</p>').join("")
+    +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">'+tut+'<button class="btn sm" data-act="info-close">Got it</button></div></div></div></div></div>';
+}
+
 /* ------------------------------ THE OFFICE ---------------------------- */
 // Pause and settings, drawn as the boss's office. Every object on the desk does something.
-const UI={office:false,panel:null,confirmNew:false};
+const UI={office:false,panel:null,confirmNew:false,info:false};
 function chrome(){
-  return '<button class="burger" data-act="office" aria-label="The office — pause and settings (Esc)" title="The office (Esc)"><span></span><span></span><span></span></button>'
-    +(UI.office?officeHTML():"");
+  return '<button class="ibtn" data-act="info" aria-label="What is this screen? (i)" title="What is this screen? (i)">i</button>'
+    +'<button class="burger" data-act="office" aria-label="The office — pause and settings (Esc)" title="The office (Esc)"><span></span><span></span><span></span></button>'
+    +(UI.office?officeHTML():"")
+    +(UI.info?infoHTML():"")
+    +(TUT.on&&S&&!S.over?tutHTML():"");
 }
 function officeSVG(){
   const K="#111010";
   const on=SET.sound, vol=SET.volume;
   const ang=(-135+270*vol-90)*Math.PI/180;
   const bx=1035+135*((clamp(SET.bright,55,100)-55)/45);
-  let dots="";for(let y=580;y<=634;y+=9)for(let x=128;x<=194;x+=9)dots+='<circle class="ns" cx="'+x+'" cy="'+y+'" r="2.2" fill="'+K+'"/>';
-  let ticks="";for(let i=0;i<=8;i++){const a=(-135+i*33.75-90)*Math.PI/180;ticks+='<line x1="'+(320+27*Math.cos(a)).toFixed(1)+'" y1="'+(614+27*Math.sin(a)).toFixed(1)+'" x2="'+(320+31*Math.cos(a)).toFixed(1)+'" y2="'+(614+31*Math.sin(a)).toFixed(1)+'"/>';}
+  let dots="";for(let y=580;y<=626;y+=9)for(let x=128;x<=194;x+=9)dots+='<circle class="ns" cx="'+x+'" cy="'+y+'" r="2.2" fill="'+K+'"/>';
+  let ticks="";for(let i=0;i<=8;i++){const a=(-135+i*33.75-90)*Math.PI/180;ticks+='<line x1="'+(375+25*Math.cos(a)).toFixed(1)+'" y1="'+(614+25*Math.sin(a)).toFixed(1)+'" x2="'+(375+29*Math.cos(a)).toFixed(1)+'" y2="'+(614+29*Math.sin(a)).toFixed(1)+'"/>';}
   let rays="";for(let d=0;d<360;d+=45){const a=d*Math.PI/180;rays+='<line x1="'+(1005+10*Math.cos(a)).toFixed(1)+'" y1="'+(474+10*Math.sin(a)).toFixed(1)+'" x2="'+(1005+13*Math.cos(a)).toFixed(1)+'" y2="'+(474+13*Math.sin(a)).toFixed(1)+'"/>';}
   return '<svg class="office-svg" viewBox="0 0 1700 900" role="img" aria-label="The boss\'s office: a window, a chair, a radio with a sound switch and volume knob, a language paper, a display monitor, a controls book, the exit door, and your hat on the hook">'
     +'<rect class="ns" x="0" y="0" width="1700" height="900" fill="#ffffff"/>'
@@ -1246,19 +1377,28 @@ function officeSVG(){
     +'<g><polygon points="30,700 1520,700 1300,590 300,590" fill="#fff"/><rect x="30" y="700" width="1490" height="26" fill="#fff"/>'
     +'<line x1="62" y1="726" x2="62" y2="900"/><line x1="1490" y1="726" x2="1490" y2="900"/></g>'
     // the lamp
-    +'<g><ellipse cx="412" cy="628" rx="44" ry="11" fill="#fff"/><line x1="412" y1="617" x2="402" y2="470"/><path d="M398 472 Q470 410 548 466 Z" fill="#fff"/></g>'
-    // the radio: sound switch
+    +'<g><ellipse cx="475" cy="628" rx="44" ry="11" fill="#fff"/><line x1="475" y1="617" x2="462" y2="470"/><path d="M456 472 Q530 410 606 466 Z" fill="#fff"/></g>'
+    // the radio
+    +'<g><polyline fill="none" points="100,548 118,534 427,520 410,548"/><rect x="100" y="548" width="310" height="112" rx="6" fill="#fff"/>'
+    +'<rect x="120" y="572" width="82" height="60" rx="4" fill="#fff"/>'+dots
+    +'<text x="161" y="652" text-anchor="middle" class="office-small">'+(on&&SET.music?"♪ NOW PLAYING":"RADIO OFF")+'</text></g>'
+    // the radio: sound switch (master)
     +'<g class="hot" data-act="off-sound"><title>Sound '+(on?"on — click to switch off":"off — click to switch on")+'</title>'
-    +'<polyline fill="none" points="100,548 118,534 372,520 355,548"/><rect x="100" y="548" width="255" height="112" rx="6" fill="#fff"/>'
-    +'<rect x="120" y="572" width="82" height="70" rx="4" fill="#fff"/>'+dots
-    +'<text x="250" y="580" text-anchor="middle" class="office-label">SOUND</text>'
+    +'<rect class="ns" x="218" y="562" width="70" height="76" fill="transparent"/>'
+    +'<text x="253" y="580" text-anchor="middle" class="office-label">SOUND</text>'
     +'<rect x="236" y="590" width="14" height="34" rx="7" fill="#fff"/><circle class="ns" cx="243" cy="'+(on?599:615)+'" r="5" fill="'+K+'"/>'
     +'<text x="258" y="603" class="office-small">ON</text><text x="258" y="627" class="office-small">OFF</text></g>'
+    // the radio: music switch
+    +'<g class="hot" data-act="off-music"><title>Music — "A Name Worth Keeping" — '+(SET.music?"on, click to switch off":"off, click to switch on")+'</title>'
+    +'<rect class="ns" x="290" y="562" width="66" height="76" fill="transparent"/>'
+    +'<text x="322" y="580" text-anchor="middle" class="office-label">MUSIC</text>'
+    +'<rect x="305" y="590" width="14" height="34" rx="7" fill="#fff"/><circle class="ns" cx="312" cy="'+(SET.music?599:615)+'" r="5" fill="'+K+'"/>'
+    +'<text x="327" y="603" class="office-small">ON</text><text x="327" y="627" class="office-small">OFF</text></g>'
     // the radio: volume knob
     +'<g class="hot" data-act="off-vol" id="volKnob"><title>Volume '+Math.round(vol*100)+'% — click the left of the knob to lower, the right to raise</title>'
-    +'<text x="320" y="578" text-anchor="middle" class="office-label">VOLUME</text>'
-    +'<circle cx="320" cy="614" r="23" fill="#fff"/>'+ticks
-    +'<line x1="320" y1="614" x2="'+(320+18*Math.cos(ang)).toFixed(1)+'" y2="'+(614+18*Math.sin(ang)).toFixed(1)+'" style="stroke-width:4px"/></g>'
+    +'<text x="375" y="578" text-anchor="middle" class="office-label">VOLUME</text>'
+    +'<circle cx="375" cy="614" r="21" fill="#fff"/>'+ticks
+    +'<line x1="375" y1="614" x2="'+(375+16*Math.cos(ang)).toFixed(1)+'" y2="'+(614+16*Math.sin(ang)).toFixed(1)+'" style="stroke-width:4px"/></g>'
     // the paper: language
     +'<g class="hot" data-act="off-lang"><title>Language</title>'
     +'<polygon points="672,618 842,610 852,662 682,670" fill="#fff"/><text x="762" y="640" text-anchor="middle" class="office-label">LANGUAGE</text>'
@@ -1279,6 +1419,7 @@ function officeSVG(){
 function officeHTML(){
   const words='<div class="office-words">'
     +'<button class="btn ghost sm" data-act="off-sound">Sound '+(SET.sound?"on":"off")+'</button>'
+    +'<button class="btn ghost sm" data-act="off-music" title="A Name Worth Keeping">Music '+(SET.music?"on":"off")+'</button>'
     +'<span class="grp">Volume <button data-act="off-vol-down" aria-label="Lower volume">−</button><span class="num" style="width:38px;text-align:center">'+Math.round(SET.volume*100)+'%</span><button data-act="off-vol-up" aria-label="Raise volume">+</button></span>'
     +'<span class="grp">Brightness <button data-act="off-bright-down" aria-label="Dimmer">−</button><span class="num" style="width:38px;text-align:center">'+SET.bright+'%</span><button data-act="off-bright-up" aria-label="Brighter">+</button></span>'
     +'<button class="btn ghost sm" data-act="off-lang">Language</button>'
@@ -1309,7 +1450,8 @@ function officePanel(){
       +'<span class="k">Saving</span><span>Automatic, in this browser. Settings are kept separately and survive a new game.</span></div>'
       +'<hr class="rule"><div class="mono" style="font-size:12px;line-height:1.8"><b>How it works.</b> You are the commander. Fill four seats from 5,000 files — each has a passport, five attributes, a technique, knowledge, education, time in jail, time on the streets, and things they will not do. '
       +'Clients post jobs on the dark web by country; each country has its own categories, language, money, politics and terrain. Everyone on the crew goes on every job, if they can get in and the job doesn\'t hit one of their limits. '
-      +'Success pays and builds notoriety; failure adds heat and gets people hurt or held. Reach 100 notoriety and the final score appears.</div>';
+      +'Success pays and builds notoriety; failure adds heat and gets people hurt or held. Reach 100 notoriety and the final score appears.</div>'
+      +(S&&!S.over?'<hr class="rule"><button class="btn ghost sm" data-act="tut-start">Run the tutorial again</button>':'');
   } else if(UI.panel==="exit"){
     h="The door";
     b=UI.confirmNew
@@ -1398,14 +1540,22 @@ function bind(){
 function showCreate(){root.innerHTML=screenCreate()+chrome();bind();}
 
 document.addEventListener("click",e=>{
+  userGestured=true;musicSync();
   const t=e.target.closest("[data-act]");if(!t)return;
   const act=t.getAttribute("data-act"),id=t.getAttribute("data-id"),k=t.getAttribute("data-k"),v=t.getAttribute("data-v");
   const cl=t.classList;
   if(cl.contains("btn")||cl.contains("tab")||cl.contains("jobrow")||cl.contains("genbtn")||cl.contains("burger"))sfx("click");
   switch(act){
-    case "office": UI.office=!UI.office; UI.panel=null; render(); break;
+    case "info": UI.info=!UI.info; render(); break;
+    case "info-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){UI.info=false;render();} break;
+    case "tut-start": UI.info=false; UI.office=false; UI.panel=null; tutStart(); break;
+    case "tut-next": if(TUT.step>=TUT_STEPS.length-1)tutEnd(); else tutGo(TUT.step+1); break;
+    case "tut-back": tutGo(TUT.step-1); break;
+    case "tut-skip": tutEnd(); break;
+    case "office": UI.office=!UI.office; UI.panel=null; UI.info=false; render(); break;
     case "off-close": UI.office=false; UI.panel=null; render(); break;
-    case "off-sound": SET.sound=!SET.sound; saveSettings(); if(SET.sound)sfx("open"); render(); break;
+    case "off-sound": SET.sound=!SET.sound; saveSettings(); if(SET.sound)sfx("open"); musicSync(); render(); break;
+    case "off-music": SET.music=!SET.music; saveSettings(); musicSync(); render(); break;
     case "off-vol": { const r=t.getBoundingClientRect(); setVolume(SET.volume+((e.clientX<r.left+r.width/2)?-0.2:0.2)); break; }
     case "off-vol-down": setVolume(SET.volume-0.2); break;
     case "off-vol-up": setVolume(SET.volume+0.2); break;
@@ -1445,8 +1595,14 @@ document.addEventListener("click",e=>{
   }
 });
 document.addEventListener("keydown",e=>{
+  userGestured=true;musicSync();
+  const tag=e.target&&e.target.tagName;
+  const typing=tag==="INPUT"||tag==="SELECT"||tag==="TEXTAREA";
+  if(!typing&&(e.key==="i"||e.key==="I")&&!e.ctrlKey&&!e.metaKey&&!e.altKey){UI.info=!UI.info;render();return;}
   if(e.key==="Escape"){
-    if(UI.panel){UI.panel=null;render();}
+    if(UI.info){UI.info=false;render();}
+    else if(TUT.on){tutEnd();}
+    else if(UI.panel){UI.panel=null;render();}
     else if(UI.office){UI.office=false;render();}
     else if(S&&S.modal){S.modal=null;render();}
     else{UI.office=true;UI.panel=null;render();}
@@ -1505,6 +1661,7 @@ function layLow(){
 function note(msg){logMsg(msg,"warn");render();}
 
 /* ------------------------------ BOOT ---------------------------------- */
+document.addEventListener("visibilitychange",()=>{musicSync();});
 (function boot(){
   loadSettings();applySettings();
   try{
