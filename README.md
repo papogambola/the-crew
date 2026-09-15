@@ -3,7 +3,7 @@
 A black-ink-on-white-paper game of global crime. You are the criminals. One file, no dependencies.
 
 You are the name at the top of the police's chart, and the commander of the crew. Fill the
-other four seats from **5,000 operatives**, then take the jobs clients post on the dark web —
+other four seats from **5,000 operatives**, then take the jobs clients post online —
 country by country, each with its own language, money, politics, religion, terrain and job
 categories. Everyone on the crew goes on every job, if the border lets them in and the job
 doesn't hit one of their limits.
@@ -30,7 +30,7 @@ decisions at the end.
   job categories** — interception, recovery, extraction, escort, surveillance, infiltration,
   cyber, smuggling, papers, negotiation, sabotage, vault. Countries share categories, but no
   two offer the same list.
-- **The dark web.** Seven or so postings a week from named clients, each with a fee (scaled
+- **Online.** Seven or so postings a week from named clients, each with a fee (scaled
   by the local economy), difficulty, heat, wanted techniques and knowledge, and the tags
   that trip a crew member's limits. Postings expire.
 - **The reckoning.** Before you take a job, the file shows who can go and why not (border,
@@ -48,11 +48,11 @@ decisions at the end.
 - **Sound.** A small set of synthesised effects — clicks, the verdict stamp, a coin on a
   hire, a siren on a raid. No files; the office switch turns it off.
 - **Tutorial.** On the first game, ten steps walk through the screens — the top line, your
-  file, the seats, the roster, a file, the dark web, who can go, the reckoning, the log, the
+  file, the seats, the roster, a file, the online board, who can go, the reckoning, the log, the
   office — highlighting each thing as it goes. Skip it, or run it again from the **i** button
   or the controls book.
 - **The i button.** Beside the menu button on every screen (or press **i**): what this screen
-  is and how each part works, in plain words — title, creation, crew, roster, dark web, log, a
+  is and how each part works, in plain words — title, creation, crew, roster, online board, log, a
   job file, a personnel file, the verdict, the office, and the end.
 - **Deception.** About one file in fourteen is a police informant. Vetting costs $6K and a
   dull crew misses one in three. After a big score, low-loyalty members can skim and vanish.
@@ -61,7 +61,7 @@ decisions at the end.
 
 ## Decided
 
-- **The crew are criminals, not police** (15 September 2026). Clients on the dark web are
+- **The crew are criminals, not police** (15 September 2026). Clients online are
   the buyers; the police are the heat.
 - **The player is always the commander, for now** (15 September 2026). Commander/soldier
   stays a quality on every roster file: a commander-type recruit takes your orders badly

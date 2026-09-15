@@ -632,7 +632,7 @@ function newGame(player){
   refreshJobs(true);
   if(!SET.tutorialDone){TUT.on=true;TUT.step=0;}
   logMsg("File opened. You are "+player.n+", "+player.nat+" passport, commander. Four seats to fill.","big");
-  logMsg("Float: "+money(S.money)+". The dark web has "+S.jobs.length+" postings.","");
+  logMsg("Float: "+money(S.money)+". "+S.jobs.length+" postings online.","");
   save();
 }
 function byId(id){if(id==="YOU")return S.player;return S.roster.find(c=>c.id===id);}
@@ -927,7 +927,7 @@ function topbar(){
 }
 function tabsBar(){
   const t=(k,l,b)=>'<button class="tab'+(S.tab===k?" on":"")+'" data-act="tab" data-k="'+k+'" role="tab">'+l+(b!=null?'<span class="b num">'+b+'</span>':"")+'</button>';
-  return '<div class="tabs" role="tablist">'+t("crew","Crew",(1+recruits().length)+"/5")+t("jobs","Dark Web",S.jobs.length)+t("roster","Roster")+t("log","Log")+'</div>';
+  return '<div class="tabs" role="tablist">'+t("crew","Crew",(1+recruits().length)+"/5")+t("jobs","Online",S.jobs.length)+t("roster","Roster")+t("log","Log")+'</div>';
 }
 
 /* ---- shared card pieces ---- */
@@ -977,9 +977,9 @@ function tabCrew(){
 }
 function bonusCostFor(c){return Math.max(4000,Math.round(c.upkeep*3/1000)*1000);}
 
-/* ---- DARK WEB ---- */
+/* ---- ONLINE ---- */
 function tabJobs(){
-  const head='<div class="panel-h"><h2>Dark Web · Postings</h2><span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="kicker">Week '+S.week+' · postings expire</span><button class="btn ghost sm" data-act="laylow">Lay low a week</button></span></div>';
+  const head='<div class="panel-h"><h2>Online · Postings</h2><span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="kicker">Week '+S.week+' · postings expire</span><button class="btn ghost sm" data-act="laylow">Lay low a week</button></span></div>';
   if(!S.jobs.length)return '<div class="panel">'+head+'<div class="empty">The board is quiet. Lay low a week and check again.</div></div>';
   const rows=S.jobs.slice().sort((a,b)=>(b.final?1:0)-(a.final?1:0)||a.tier-b.tier).map(j=>{
     const co=COUNTRY_BY_NAME[j.country];
@@ -1045,8 +1045,8 @@ function tabLog(){
     +'<div class="kv">'+status.map(r=>'<span class="k">'+r[0]+'</span><span class="num">'+r[1]+'</span>').join("")+'</div>'
     +'<hr class="rule"><div class="kicker">Notoriety to the final score</div>'
     +'<div class="loy" style="height:9px;margin-top:6px"><i style="width:'+clamp(S.rep,0,100)+'%"></i></div>'
-    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px">'+(S.finalDone?"It's done.":finalUp?"The final score is live on the dark web.":S.rep+" / 100 — bigger jobs, bigger name.")+'</div>'
-    +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="tab" data-k="jobs">Dark web →</button><button class="btn ghost" data-act="laylow">Lay low a week</button></div>'
+    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px">'+(S.finalDone?"It's done.":finalUp?"The final score is live online.":S.rep+" / 100 — bigger jobs, bigger name.")+'</div>'
+    +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="tab" data-k="jobs">Online →</button><button class="btn ghost" data-act="laylow">Lay low a week</button></div>'
     +'</div></div>';
   return '<div class="grid g-hq">'+left+right+'</div>';
 }
@@ -1245,10 +1245,10 @@ const TUT_STEPS=[
   {tab:"crew",sel:".id.slot",h:"Four empty seats",t:"Fill them from the Roster. Everyone you hire goes on every job, takes a cut of every score, and costs upkeep each week."},
   {tab:"roster",sel:".rosterbar",h:"Five thousand files",t:"Search by name, country, language or knowledge. Filter by technique, role and nationality. Sort by fee, experience or raw skill."},
   {tab:"roster",sel:".cards .id",h:"A file",t:"Flag and passport tier (P1 strong, P4 weak), technique and rank, the five attributes, then education, jail, streets, knowledge, languages — and in red, what this one will not do. File opens the whole thing and lets you vet for informants. Hire pays the fee."},
-  {tab:"jobs",sel:".jobrow",h:"The dark web",t:"Clients post jobs by country. Each row: category, the techniques it wants, city, crew needed, fee, heat, when it expires — and a chip saying how your crew fits. Open one."},
+  {tab:"jobs",sel:".jobrow",h:"Online",t:"Clients post jobs by country. Each row: category, the techniques it wants, city, crew needed, fee, heat, when it expires — and a chip saying how your crew fits. Open one."},
   {tab:"jobs",openJob:true,sel:".check",h:"Who can go",t:"Every crew member, ✓ or ✗, with the reason: the border and their passport, a conviction, a limit the job trips, an injury. A forger on the crew gets weak passports through."},
   {tab:"jobs",openJob:true,sel:".factors",h:"The reckoning",t:"Every factor with its number — crew size, who commands, language, a local national, knowledge, techniques, heat — then the odds. Take the job and the whole eligible crew goes; a week passes."},
-  {tab:"log",sel:".log",h:"The case log",t:"Everything that happened, week by week. Lay low a week here or on the dark web: −15 heat, upkeep still due, fresh postings."},
+  {tab:"log",sel:".log",h:"The case log",t:"Everything that happened, week by week. Lay low a week here or on the Online board: −15 heat, upkeep still due, fresh postings."},
   {tab:"log",sel:".burger",h:"The office",t:"Esc, or this button, on any screen: pause, sound, music, brightness, the controls book, your file, and the door out. The i button beside it explains whatever is on screen."},
 ];
 function tutStart(){TUT.on=true;tutGo(0);}
@@ -1284,7 +1284,7 @@ function infoContext(){
 }
 const INFO={
   title:{h:"The Crew",t:[
-    "A game of global crime. <b>You are the criminals.</b> You command a crew of five — you and four seats to fill from 5,000 files — and take the jobs clients post on the dark web, country by country.",
+    "A game of global crime. <b>You are the criminals.</b> You command a crew of five — you and four seats to fill from 5,000 files — and take the jobs clients post online, country by country.",
     "<b>New game</b> opens a dossier for you. <b>Continue</b> picks up the last game saved in this browser. Progress saves itself after every move.",
     "<b>Esc</b> or the three-line button opens the office: pause, sound, music, brightness, controls, and the door out. This <b>i</b> button explains whatever is on screen."]},
   create:{h:"Who are you",t:[
@@ -1299,7 +1299,7 @@ const INFO={
     "5,000 files. <b>Search</b> by name, country, language or knowledge. Filter by <b>technique</b>, <b>role</b> and <b>nationality</b>; sort by fee, experience, raw skill or name. Show 30 more at the bottom.",
     "<b>Fee</b> is paid once. <b>Cut</b> is their share of every score. <b>Upkeep</b> is weekly. <b>File</b> opens the whole profile; <b>Hire</b> needs an open seat and the fee.",
     "About one file in fourteen is a <b>police informant</b>: they leak jobs and leak heat. <b>Vet</b> a file for $6K — a dull crew misses one in three, so a clean stamp is a guess with money behind it."]},
-  jobs:{h:"The Dark Web",t:[
+  jobs:{h:"Online",t:[
     "Postings from clients, by country. Each row: category, the techniques it wants, city and country, crew needed, fee, heat, when it expires — and a chip: <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go.",
     "The bars are difficulty; red means high heat. Open a posting to see the reckoning before you commit.",
     "<b>Lay low a week</b>: −15 heat, upkeep still due, postings refresh. Reach 100 notoriety and the final score appears at the top of the board."]},
@@ -1444,12 +1444,12 @@ function officePanel(){
     b='<div class="kv" style="font-size:12.5px;line-height:1.7">'
       +'<span class="k">Esc</span><span>The office — pause and settings. Also closes whatever is open.</span>'
       +'<span class="k">≡ top right</span><span>The same.</span>'
-      +'<span class="k">Crew · Dark Web · Roster · Log</span><span>The four tabs.</span>'
+      +'<span class="k">Crew · Online · Roster · Log</span><span>The four tabs.</span>'
       +'<span class="k">Enter / Space</span><span>Open the posting you have selected.</span>'
       +'<span class="k">✓ / ✗</span><span>On a job file: who can go, and why not.</span>'
       +'<span class="k">Saving</span><span>Automatic, in this browser. Settings are kept separately and survive a new game.</span></div>'
       +'<hr class="rule"><div class="mono" style="font-size:12px;line-height:1.8"><b>How it works.</b> You are the commander. Fill four seats from 5,000 files — each has a passport, five attributes, a technique, knowledge, education, time in jail, time on the streets, and things they will not do. '
-      +'Clients post jobs on the dark web by country; each country has its own categories, language, money, politics and terrain. Everyone on the crew goes on every job, if they can get in and the job doesn\'t hit one of their limits. '
+      +'Clients post jobs online by country; each country has its own categories, language, money, politics and terrain. Everyone on the crew goes on every job, if they can get in and the job doesn\'t hit one of their limits. '
       +'Success pays and builds notoriety; failure adds heat and gets people hurt or held. Reach 100 notoriety and the final score appears.</div>'
       +(S&&!S.over?'<hr class="rule"><button class="btn ghost sm" data-act="tut-start">Run the tutorial again</button>':'');
   } else if(UI.panel==="exit"){
@@ -1467,7 +1467,7 @@ function screenTitle(){
   const redact=w=>'<span class="redacted">'+"█".repeat(w)+'</span>';
   return '<div class="wrap"><div class="hero">'
     +'<div class="eyebrow">Case file · Classified</div><h1>The Crew</h1>'
-    +'<p class="tagline">Five seats. Five thousand files. You are the criminals — the clients on the dark web are worse. A job in every country, a border in front of each one. Know your crew, or the job will teach you.</p></div>'
+    +'<p class="tagline">Five seats. Five thousand files. You are the criminals — the clients online are worse. A job in every country, a border in front of each one. Know your crew, or the job will teach you.</p></div>'
     +'<div class="filecard panel"><div class="panel-h"><h2>Open a Dossier</h2><span class="kicker">5,000 operatives on file</span></div>'
     +'<div class="panel-b"><div class="mono" style="font-size:13px;line-height:1.7;color:var(--ink-2)">'
       +'You are the name at the top of the police\'s chart. Everyone below is '+redact(6)+' — a passport, a set of hands, a record, a price, and a secret. '

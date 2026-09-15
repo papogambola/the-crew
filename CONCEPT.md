@@ -6,7 +6,7 @@ Working foundation, saved September 14, 2026. This document records the creator'
 
 THE CREW is a PC game in which the player chooses from a roster of **5,000 characters** to build a **five-person crew, including the player character**: the player plus four other members.
 
-The crew is described as a **global crime interception team**. Clients publish jobs on an in-game dark web, and the player chooses which jobs to accept around the world.
+The crew is described as a **global crime interception team**. Clients publish jobs online (in-game), and the player chooses which jobs to accept around the world.
 
 The central challenge is understanding the crew and choosing suitable jobs. Each member's strengths, limitations, history, and role affect the job.
 
@@ -65,7 +65,8 @@ The following is preserved verbatim from the creator's message:
 
 The text above is kept as written. Decisions that close one of its open details are logged here, dated.
 
-- **15 September 2026 — The crew are criminals, not police.** Closes the first item under "Details still open". The crew is a criminal crew for hire; the clients on the dark web are the buyers. The game's copy, the README and the *notoriety* measure follow from it.
+- **15 September 2026 — The crew are criminals, not police.** Closes the first item under "Details still open". The crew is a criminal crew for hire; the clients online are the buyers. The game's copy, the README and the *notoriety* measure follow from it.
 - **15 September 2026 — The player is always the commander, for now.** Closes the second item under "Details still open" for the single-player game. Commander/soldier stays a quality on every roster file: a commander-type recruit takes the player's orders badly, but can run the crew on a job the player cannot get into. *Direction, not yet a mechanic:* the creator wants the game to become one of real users with their own avatars, each choosing to be a commander or a soldier and gaining power and experience over a long play — not a ten-minute game.
 - **15 September 2026 — Three things the game must have.** A pause/menu button (three lines in the top corner, or the Esc key); settings behind it; and an on/off switch for sound. The settings menu is designed as a crime boss's office, from the creator's drawing: a radio with the sound switch and volume knob, a language paper, a display monitor, a controls book, the exit door, and a hat on the hook.
 - **15 September 2026 — Music, a tutorial, and an i button on every screen.** The creator's track *"A Name Worth Keeping"* (8:00) plays in the background, looped, switched from the radio in the office. A tutorial walks a new player through the screens on the first game and can be run again. An **i** button sits beside the menu button on every screen and explains whatever is on screen.
+- **15 September 2026 — No "dark web".** The term is retired; jobs are posted *online*. Applied everywhere in the game, the README and this summary. The original description above is kept as it was written.
