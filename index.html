@@ -838,76 +838,133 @@ function rankName(rep){for(const r of RANKS)if(rep>=r[0])return r[1];return "Nob
 // The job, minute by minute: who got in, who talked, what went right, what went wrong.
 const POLICE={"Italy":"the Carabinieri","France":"the gendarmes","Spain":"the Guardia Civil","Mexico":"the federales","Germany":"the Polizei","Russia":"the OMON","Brazil":"the Polícia Federal","Israel":"the Mishtara","India":"the CBI","South Africa":"the Hawks","United Kingdom":"the Met","United States":"the FBI","Netherlands":"the Marechaussee","Switzerland":"the Kantonspolizei","China":"the Public Security Bureau","Japan":"the Keisatsu","Turkey":"the Emniyet","Colombia":"the DIJIN"};
 function police(co){return POLICE[co.name]||"the police";}
+// Every line with a person in it comes as a pair: [about someone else, about you].
 const TECH_BEAT={
-  safecracker:"has the vault's make and model on a napkin before lunch",
-  hacker:"owns the cameras by the second coffee",
-  wheelman:"walks the exit route twice, then a third time after dark",
-  grifter:"is already a very convincing auditor",
-  forger:"papers everyone who needs papering",
-  enforcer:"makes the night guard's shift feel long",
-  fixer:"buys the right silence from the right cousin",
-  infiltrator:"has a staff lanyard by the second day",
-  demolitions:"measures the wall twice and says nothing",
-  pickpocket:"lifts the key card on the tram and puts it back on the way out",
-  lookout:"counts the patrol cars — two, then one, then none",
-  launderer:"has an account waiting three borders away",
-  overwatch:"finds a window with a view of everything",
-  cleaner:"brings bleach, gloves and patience",
-  face:"has the manager's private number by evening",
-  smuggler:"knows a man with a boat, and the man's brother with a truck",
+  safecracker:[["has the vault's make and model on a napkin before lunch","have the vault's make and model on a napkin before lunch"],["listens to the door for an hour and says 'fine'","listen to the door for an hour and say 'fine'"],["buys the same lock from a shop across town and takes it apart","buy the same lock from a shop across town and take it apart"]],
+  hacker:[["owns the cameras by the second coffee","own the cameras by the second coffee"],["reads the building's Wi-Fi password off a sticky note, through a window","read the building's Wi-Fi password off a sticky note, through a window"],["has the alarm company's night roster by Tuesday","have the alarm company's night roster by Tuesday"]],
+  wheelman:[["walks the exit route twice, then a third time after dark","walk the exit route twice, then a third time after dark"],["buys a car that nobody will miss","buy a car that nobody will miss"],["times the lights on the boulevard and writes the numbers on a wrist","time the lights on the boulevard and write the numbers on a wrist"]],
+  grifter:[["is already a very convincing auditor","are already a very convincing auditor"],["has lunch with the deputy manager, who pays","have lunch with the deputy manager, who pays"],["orders business cards for a company that will exist by Friday","order business cards for a company that will exist by Friday"]],
+  forger:[["papers everyone who needs papering","paper everyone who needs papering"],["ages a passport in a shoebox under a lamp","age a passport in a shoebox under a lamp"],["needs one more photograph and gets it from a booth at the station","need one more photograph and get it from a booth at the station"]],
+  enforcer:[["makes the night guard's shift feel long","make the night guard's shift feel long"],["stands where the doorman can see, and that is enough","stand where the doorman can see, and that is enough"],["has a quiet word in a car park; the word lands","have a quiet word in a car park; the word lands"]],
+  fixer:[["buys the right silence from the right cousin","buy the right silence from the right cousin"],["knows which sergeant has a boat to pay for","know which sergeant has a boat to pay for"],["gets the van, the plates and a lock-up in one phone call","get the van, the plates and a lock-up in one phone call"]],
+  infiltrator:[["has a staff lanyard by the second day","have a staff lanyard by the second day"],["is on first-name terms with the receptionist by lunch","are on first-name terms with the receptionist by lunch"],["walks in behind a delivery and is not asked anything","walk in behind a delivery and are not asked anything"]],
+  demolitions:[["measures the wall twice and says nothing","measure the wall twice and say nothing"],["wants two more metres of wire and gets them","want two more metres of wire and get them"],["tests a charge in a quarry and drives back smiling","test a charge in a quarry and drive back smiling"]],
+  pickpocket:[["lifts the key card on the tram and puts it back on the way out","lift the key card on the tram and put it back on the way out"],["has the manager's phone for the eleven minutes that matter","have the manager's phone for the eleven minutes that matter"],["bumps into the courier, apologises, and has the badge","bump into the courier, apologise, and have the badge"]],
+  lookout:[["counts the patrol cars — two, then one, then none","count the patrol cars — two, then one, then none"],["sits in a café for nine hours and knows the street by heart","sit in a café for nine hours and know the street by heart"],["spots the plain car on the corner, and everyone waits","spot the plain car on the corner, and everyone waits"]],
+  launderer:[["has an account waiting three borders away","have an account waiting three borders away"],["turns the fee into a shipment of olive oil, on paper","turn the fee into a shipment of olive oil, on paper"],["knows a lawyer who will not remember the meeting","know a lawyer who will not remember the meeting"]],
+  overwatch:[["finds a window with a view of everything","find a window with a view of everything"],["is on a roof by four, with a flask","are on a roof by four, with a flask"],["watches the street until the street looks back, then moves","watch the street until the street looks back, then move"]],
+  cleaner:[["brings bleach, gloves and patience","bring bleach, gloves and patience"],["books three hotel rooms under three names, all cleaned before checkout","book three hotel rooms under three names, all cleaned before checkout"],["makes a car disappear by lunch","make a car disappear by lunch"]],
+  face:[["has the manager's private number by evening","have the manager's private number by evening"],["is invited to the reception without asking to be","are invited to the reception without asking to be"],["talks a way past the desk and leaves them smiling","talk a way past the desk and leave them smiling"]],
+  smuggler:[["knows a man with a boat, and the man's brother with a truck","know a man with a boat, and the man's brother with a truck"],["has a container that clears every port in the region","have a container that clears every port in the region"],["knows which crossing the dogs are asleep at","know which crossing the dogs are asleep at"]],
 };
 const KNOW_BEAT={Finance:"the money trail",Law:"the paperwork",Networks:"the wiring",Logistics:"the timetable",Art:"the provenance",Politics:"who to call",Medicine:"the medical side",Weapons:"the hardware",Maritime:"the water",Aviation:"the air side"};
+const KNOW_HAS=[["{X} knows {k}: {y} is no mystery.","You know {k}: {y} is no mystery."],["{X} has done {k} before; {y} takes an afternoon.","You have done {k} before; {y} takes an afternoon."],["{X} reads {y} like a menu.","You read {y} like a menu."]];
+const KNOW_NONE=["Nobody knows {k}. {Y} is guesswork.","Without {k}, {y} is a coin toss.","Nobody on the crew has touched {k}; {y} costs an extra day."];
 const CAT_BEATS={
-  interception:{go:["The convoy slows for roadworks that weren't there yesterday.","The manifest says twelve pallets; there are twelve pallets.","The handover takes ninety seconds, as drawn."],hitch:["The escort is two cars, not one.","The driver has a radio, and uses it.","A second truck nobody mentioned."],blow:["The escort was waiting for you.","The cargo was a decoy. The real one is elsewhere, and so are the police.","Gunfire. Then more of it."]},
-  recovery:{go:["The crate is where the ledger said it would be.","The seals are intact.","Nobody has moved it in a year — the dust says so."],hitch:["It has been moved. Twice.","The lock is not the lock in the photograph.","A caretaker with a dog and a routine."],blow:["It isn't there. Somebody got here first.","The room is wired; you find out how."]},
-  extraction:{go:["The door opens on the second knock.","The van is where the van should be.","The target walks; nobody runs."],hitch:["The target won't leave without the dog.","A checkpoint on the only road out.","Somebody is filming with a phone."],blow:["The target was bait.","The room is empty and the hallway isn't."]},
-  escort:{go:["Three checkpoints; three waves through.","The client sleeps in the back seat.","The route holds."],hitch:["A tail from the second roundabout.","The client wants to stop for lunch. In public.","A roadblock that wasn't on any map."],blow:["The tail wasn't a tail. It was the whole unit.","Somebody sold the route."]},
-  surveillance:{go:["The camera in the fire alarm works.","Forty hours of tape; the six minutes you need are in it.","The target keeps a very tidy diary."],hitch:["A curtain closes at the wrong moment.","The building manager has questions.","The recording skips."],blow:["The target is watching you back.","The apartment is empty. The tape was bait."]},
-  infiltration:{go:["The lanyard works on every door.","Nobody asks which department you're from.","The files come out in a lunchbox."],hitch:["A colleague remembers a face from somewhere.","The badge photo doesn't match. Almost.","An audit lands on a Tuesday."],blow:["Security has your name — the real one.","The meeting room is full of people who aren't in the meeting."]},
-  cyber:{go:["The wallet opens.","The transfer clears before the alarm can think.","The logs are clean, because someone made them clean."],hitch:["Two-factor. Somebody's phone.","The exchange freezes withdrawals for an hour.","A sysadmin working late."],blow:["Honeypot. Everything you touched was watched.","The money bounces back, and brings a trace with it."]},
-  smuggling:{go:["The container clears on the first stamp.","The boat is on time; the tide is on time.","The dog walks past."],hitch:["The dog stops.","A new inspector on the shift.","The tide is early."],blow:["The container is opened on the quay.","The boat doesn't come. Somebody else does."]},
-  forgery:{go:["The paper takes the ink like it was born to.","The notary doesn't look twice.","The certificate passes the light."],hitch:["A watermark nobody knew about.","The registry has a new format since March.","The buyer wants a second opinion."],blow:["The expert spots the seal from across the room.","The documents were photographed on the way in."]},
-  negotiation:{go:["They ask for double. They take half.","The exchange is quiet: a car park, two envelopes.","The witness remembers nothing, for a price."],hitch:["A lawyer joins the call.","The other side brings a friend.","The number changes in the middle of the night."],blow:["The other side was wearing a wire.","The exchange is a trap, and the car park has one exit."]},
-  sabotage:{go:["The cranes stop at 03:10, as planned.","The night shift blames the weather.","The clearing house is dark until Monday."],hitch:["A generator nobody mapped.","The night shift is bigger than the day shift.","The charge is placed; the timer isn't."],blow:["The fire finds a fuel line.","The radar goes down, and so does the wall, and so does the alarm — early."]},
-  vault:{go:["The door gives on the third combination.","The deposit boxes open like a book.","The silent alarm stays silent."],hitch:["A time lock nobody mentioned.","The drill bit snaps.","A cleaner's trolley in the corridor at 02:00."],blow:["The vault is empty. It was emptied yesterday.","Every alarm at once."]},
+  interception:{go:["The convoy slows for roadworks that weren't there yesterday.","The manifest says twelve pallets; there are twelve pallets.","The handover takes ninety seconds, as drawn.","The driver stops for coffee. He always stops for coffee.","The escort turns back at the county line, as promised."],hitch:["The escort is two cars, not one.","The driver has a radio, and uses it.","A second truck nobody mentioned.","The road is closed; the detour adds an hour and a checkpoint.","The cargo is heavier than the paperwork."],blow:["The escort was waiting for you.","The cargo was a decoy. The real one is elsewhere, and so are the police.","Gunfire. Then more of it.","The truck never comes. Something else does."]},
+  recovery:{go:["The crate is where the ledger said it would be.","The seals are intact.","Nobody has moved it in a year — the dust says so.","The caretaker takes the afternoon off, as arranged.","It fits in the boot. Just."],hitch:["It has been moved. Twice.","The lock is not the lock in the photograph.","A caretaker with a dog and a routine.","The crate is the right crate; the contents are not all there.","The buyer's man turns up early, and nervous."],blow:["It isn't there. Somebody got here first.","The room is wired; you find out how.","The 'owner' is a policeman with a very good tailor."]},
+  extraction:{go:["The door opens on the second knock.","The van is where the van should be.","The target walks; nobody runs.","The guard is asleep, genuinely.","Nobody at the border looks in the back."],hitch:["The target won't leave without the dog.","A checkpoint on the only road out.","Somebody is filming with a phone.","The target has a bag. The bag has a tracker.","A neighbour who takes an interest."],blow:["The target was bait.","The room is empty and the hallway isn't.","The target talks. Loudly. To the wrong people."]},
+  escort:{go:["Three checkpoints; three waves through.","The client sleeps in the back seat.","The route holds.","The second car is never needed.","The handover is a handshake in a hotel lobby."],hitch:["A tail from the second roundabout.","The client wants to stop for lunch. In public.","A roadblock that wasn't on any map.","The client's phone is on. It was on the whole time.","A flat tyre on the one stretch with no cover."],blow:["The tail wasn't a tail. It was the whole unit.","Somebody sold the route.","The client runs. In the wrong direction."]},
+  surveillance:{go:["The camera in the fire alarm works.","Forty hours of tape; the six minutes you need are in it.","The target keeps a very tidy diary.","The building manager likes the new 'electricians'.","The microphone in the plant pot outlasts the plant."],hitch:["A curtain closes at the wrong moment.","The building manager has questions.","The recording skips.","The target changes hotels on a whim.","A cleaner finds the camera and puts it in a drawer."],blow:["The target is watching you back.","The apartment is empty. The tape was bait.","The van is photographed by someone who knows what it is."]},
+  infiltration:{go:["The lanyard works on every door.","Nobody asks which department you're from.","The files come out in a lunchbox.","The Friday drinks are the best hour of the whole job.","The server-room key is on a hook. It is labelled."],hitch:["A colleague remembers a face from somewhere.","The badge photo doesn't match. Almost.","An audit lands on a Tuesday.","HR wants a second reference.","The man at the next desk is also not who he says."],blow:["Security has your name — the real one.","The meeting room is full of people who aren't in the meeting.","The 'files' were prepared for you to find."]},
+  cyber:{go:["The wallet opens.","The transfer clears before the alarm can think.","The logs are clean, because someone made them clean.","The admin's password is the admin's dog's name.","Two hops, one exit, no trace."],hitch:["Two-factor. Somebody's phone.","The exchange freezes withdrawals for an hour.","A sysadmin working late.","A patch lands the night before.","The backup ledger disagrees with the live one."],blow:["Honeypot. Everything you touched was watched.","The money bounces back, and brings a trace with it.","The exit node was theirs."]},
+  smuggling:{go:["The container clears on the first stamp.","The boat is on time; the tide is on time.","The dog walks past.","The customs man is the fixer's cousin.","It sits in a warehouse for a week, and nobody asks."],hitch:["The dog stops.","A new inspector on the shift.","The tide is early.","The truck breaks down within sight of the border.","The paperwork is right; the stamp is the wrong colour."],blow:["The container is opened on the quay.","The boat doesn't come. Somebody else does.","The buyer is a customs officer with a good memory."]},
+  forgery:{go:["The paper takes the ink like it was born to.","The notary doesn't look twice.","The certificate passes the light.","The registry clerk stamps it while talking about football.","The buyer frames it."],hitch:["A watermark nobody knew about.","The registry has a new format since March.","The buyer wants a second opinion.","The signature is right; the pen is from the wrong decade.","The printer runs out of the one ink that matters."],blow:["The expert spots the seal from across the room.","The documents were photographed on the way in.","The buyer's 'expert' is from the ministry."]},
+  negotiation:{go:["They ask for double. They take half.","The exchange is quiet: a car park, two envelopes.","The witness remembers nothing, for a price.","Coffee, then terms, then more coffee.","The other side's lawyer is the one who wants it over."],hitch:["A lawyer joins the call.","The other side brings a friend.","The number changes in the middle of the night.","Somebody is recording; everyone pretends not to know.","The venue moves twice."],blow:["The other side was wearing a wire.","The exchange is a trap, and the car park has one exit.","The witness has already talked. To everyone."]},
+  sabotage:{go:["The cranes stop at 03:10, as planned.","The night shift blames the weather.","The clearing house is dark until Monday.","The generator coughs once and dies, like it should.","By morning it looks like a maintenance failure. Technically, it is one."],hitch:["A generator nobody mapped.","The night shift is bigger than the day shift.","The charge is placed; the timer isn't.","A watchman with a torch and insomnia.","The gate has a new lock since last week."],blow:["The fire finds a fuel line.","The radar goes down, and so does the wall, and so does the alarm — early.","The wrong building."]},
+  vault:{go:["The door gives on the third combination.","The deposit boxes open like a book.","The silent alarm stays silent.","The night manager's keys are exactly where the file said.","Forty minutes inside; twelve were needed."],hitch:["A time lock nobody mentioned.","The drill bit snaps.","A cleaner's trolley in the corridor at 02:00.","The floor plan is last year's.","Box 44 is empty; box 45 is very much not."],blow:["The vault is empty. It was emptied yesterday.","Every alarm at once.","The manager was expecting you. So was everyone else."]},
 };
+const HOW={water:["off the ferry","on a fishing boat that isn't fishing","in a container marked 'textiles'"],city:["on separate flights, two days apart","through three airports and a train","in a hire car from the next city over"],mountain:["up the pass in a hired van","over the border on foot, then a bus"],road:["by road, at night","in two cars, a day apart","on the overnight coach"]};
+const ARRIVE=["{city}, {country}. The crew arrives {how}.","{city}. {How}. Three hotels, three names.","{country}. The crew arrives {how}, and the safe house smells of paint.","{city}, {country}. {How}, one at a time, nobody together."];
+const WEATHER=["It rains for two days; nobody minds.","Heat like a wall.","Cold enough that nobody lingers outside.","A public holiday — the streets are empty, which cuts both ways.","Fog off the water until noon.","A football match on every screen in town. Useful."];
+const LOCAL=[["{X} is home — the taxi driver knows a cousin.","You're home — the taxi driver knows your cousin."],["{X} is home; nobody asks for papers.","You're home; nobody asks for your papers."]];
+const PAPERS=[["{X}'s new passport gets a second look, then a stamp.","Your new passport gets a second look, then a stamp."],["{X} crosses on the forger's paper and doesn't blink.","You cross on the forger's paper and don't blink."]];
+const OUT=[["{X} doesn't come: {why}.","You can't get in: {why}."],["{X} stays behind — {why}.","You stay behind — {why}."]];
+const SPEAKS=[["{X} does the talking, in {L}.","You do the talking, in {L}."],["{X} orders for everyone, in {L}, and nobody laughs.","You order for everyone, in {L}, and nobody laughs."],["{X} handles the landlord, the taxi and the man at the desk — in {L}.","You handle the landlord, the taxi and the man at the desk — in {L}."]];
+const NOSPEAK=[["Nobody speaks {L}. {X} points and pays.","Nobody speaks {L}. You point and pay."],["Nobody speaks {L}. Everything takes twice as long and costs half again.","Nobody speaks {L}. Everything takes twice as long and costs half again."],["Nobody speaks {L}; {X} smiles a lot, and it mostly works.","Nobody speaks {L}; you smile a lot, and it mostly works."]];
+const PLACES=["the back seat of a rented car","a hotel room with the curtains drawn","a café across the street","a rooftop with a thermos","a parked taxi with the meter running","the harbour wall, pretending to fish","a laundrette with a view of the door","a borrowed office on the ninth floor"];
+const YOU_RUN=["You run it from {place}.","You keep to {place} and the phone.","Your seat is {place}; nobody sees you near the job."];
+const STANDIN=["{X} runs it while you wait across the border.","{X} takes the lead; you take the calls from two countries away.","{X} runs the day. You hear about it afterwards."];
+const LEADERLESS=["Nobody is running it, and it shows.","No commander in the field. Everyone has a plan; nobody has the same one."];
+const NOTECH=[["No {T} on the crew. {X} improvises.","No {T} on the crew. You improvise."],["Nobody here is a {T}; {X} watches a video about it.","Nobody here is a {T}; you watch a video about it."]];
+const TEXTURE=[["{X} plays cards badly and wins.","You play cards badly and win."],["{X} sleeps in the van.","You sleep in the van."],["{X} finds the one restaurant open after midnight.","You find the one restaurant open after midnight."],["{X} keeps checking a phone that never rings.","You keep checking a phone that never rings."],["{X} buys a hat. It helps, somehow.","You buy a hat. It helps, somehow."],["{X} argues with a parking attendant and loses.","You argue with a parking attendant and lose."],["Nobody sleeps much.","Nobody sleeps much."],["The radio in the safe house gets one station.","The radio in the safe house gets one station."],["{X} learns the word for 'receipt'.","You learn the word for 'receipt'."],["Two days of waiting. Waiting is the job.","Two days of waiting. Waiting is the job."],["A dog adopts {X} for the week.","A dog adopts you for the week."],["{X} wins the argument about the route by not having it.","You win the argument about the route by not having it."]];
+const FIXED=["It costs twenty minutes and a favour.","Handled. Nobody outside the crew ever knows.","It's tight, and then it isn't.","A phone call fixes it; the call costs.","Somebody improvises and, for once, it works.","Twenty minutes of nobody breathing."];
+const EXIT_OK=[["{W} has the engine running. Nobody runs.","You have the engine running. Nobody runs."],["{W} takes the long way out, and it's the right way.","You take the long way out, and it's the right way."],["The van is gone before the lights change.","The van is gone before the lights change."],["By the time anyone counts, the crew is three towns away.","By the time anyone counts, the crew is three towns away."]];
+const EXIT_NOWHEEL=["Out the way you came in, one at a time.","Everyone walks. Nobody looks back, which is the hard part.","Taxis, in four directions."];
+const POLICE_COME=["{P} arrive {where}.","Blue lights in the mirror.","Sirens, two streets over, then one."];
+const WHERE=["two streets away","at the door","from both ends of the road","before the last bag is in the car"];
+const GAP_WHEEL=[["{W} makes a gap nobody else saw.","You make a gap nobody else saw."],["{W} drives like the car is stolen. It is.","You drive like the car is stolen. It is."]];
+const GAP_NONE=["There is no plan for this part.","Everybody runs. Not everybody gets far."];
+const MORNING=["By morning {P} have {thing}. Heat +{n}.","The morning paper has nothing. {P} have {thing}. Heat +{n}.","A statement on the news: no arrests. {P} have {thing}, though. Heat +{n}."];
+const THINGS=["a partial plate","a description","a name that isn't yours, yet","footage of somebody's back","a witness who saw 'foreigners'","a receipt from the wrong café","two sets of gloved fingerprints — so, nothing much"];
+const QUIET=["By morning, nothing. Not a line in the paper.","Nobody reports anything, because nobody wants to explain what was taken."];
+const SPLIT=["The split: {g} gross, {c} to the crew, {n} to you.","The client pays in full: {g}. The crew takes {c}; {n} is yours.","{g} lands. After the crew's {c}, you keep {n}."];
+const NOPAY=["No payment. The client doesn't return the call.","The client's number is dead by morning. No fee.","No fee — the client says 'next time', which means never."];
 function narrate(job,a,tier,rng,x){
   const co=COUNTRY_BY_NAME[job.country];
   const team=a.team;
-  let h=job.tags.includes("night")?22:ri(rng,8,15),m=ri(rng,0,59);
+  let h=job.tags.includes("night")?ri(rng,20,23):ri(rng,7,15),m=ri(rng,0,59);
   const lines=[];
   const push=(t,tone)=>{m+=ri(rng,4,26);if(m>=60){m-=60;h=(h+1)%24;}lines.push({t:String(h).padStart(2,"0")+":"+String(m).padStart(2,"0"),x:t,tone:tone||""});};
-  const how=co.terrain.some(t=>["islands","coast","port","fjords","canal"].includes(t))&&chance(rng,0.5)?"off the ferry":co.terrain.includes("megacity")?"on separate flights, two days apart":co.terrain.includes("mountains")?"up the pass in a hired van":"by road, at night";
-  push(job.city+", "+job.country+". The crew comes in "+how+".");
+  S.recent=S.recent||[];
+  const key=p=>typeof p==="string"?p:p[0];
+  const fresh=pool=>{let cand=pool.filter(p=>!S.recent.includes(key(p)));if(!cand.length)cand=pool;const pk=pick(rng,cand);S.recent.push(key(pk));if(S.recent.length>60)S.recent.shift();return pk;};
+  const pair=(p,c)=>typeof p==="string"?p:(c&&c.isPlayer?p[1]:p[0]);
+  const nm=c=>c.isPlayer?"You":c.first;
+  const fill=(s,v)=>s.replace(/\{(\w+)\}/g,(_,k)=>v[k]!==undefined?v[k]:"{"+k+"}");
+  const say=(pool,c,vars,tone)=>push(fill(pair(fresh(pool),c),Object.assign({X:c?nm(c):"",P:cap(police(co))},vars||{})),tone);
+  const someone=()=>team.length?pick(rng,team):null;
+  // arrival
+  const kind=co.terrain.some(t=>["islands","coast","port","fjords","canal"].includes(t))&&chance(rng,0.5)?"water":co.terrain.includes("megacity")?"city":co.terrain.includes("mountains")?"mountain":"road";
+  const how=fresh(HOW[kind]);
+  push(fill(fresh(ARRIVE),{city:job.city,country:job.country,how,How:cap(how)}));
+  if(chance(rng,0.5))push(fresh(WEATHER));
+  // borders
   a.checks.forEach(c=>{
     if(c.ok){
-      if(c.why==="local national")push(c.c.first+" is home — the taxi driver knows a cousin.");
-      else if(c.why.indexOf("papers")===0)push(c.c.first+"'s new passport gets a second look, then a stamp.");
-    } else push(c.c.first+" doesn't come: "+c.why+".","warn");
+      if(c.why==="local national")say(LOCAL,c.c);
+      else if(c.why.indexOf("papers")===0)say(PAPERS,c.c);
+    } else say(OUT,c.c,{why:c.why},"warn");
   });
+  // language
   const speaker=team.find(c=>c.langs.some(l=>co.langs.includes(l)));
-  if(speaker)push(speaker.first+" does the talking, in "+co.langs.find(l=>speaker.langs.includes(l))+".");
-  else if(team.length)push("Nobody speaks "+co.langs[0]+". "+team[0].first+" points and pays.","warn");
-  if(team.some(c=>c.isPlayer))push("You run it from "+pick(rng,["the back seat of a rented car","a hotel room with the curtains drawn","a café across the street","a rooftop with a thermos"])+".");
-  else if(team.length){const lead=team.filter(c=>c.role==="commander").sort((p,q)=>q.cmd-p.cmd)[0];push(lead?lead.first+" runs it while you wait across the border.":"Nobody is running it, and it shows.","warn");}
+  if(speaker)say(SPEAKS,speaker,{L:co.langs.find(l=>speaker.langs.includes(l))});
+  else if(team.length)say(NOSPEAK,someone(),{L:co.langs[0]},"warn");
+  // who runs it
+  if(team.some(c=>c.isPlayer))push(fill(fresh(YOU_RUN),{place:fresh(PLACES)}));
+  else if(team.length){const lead=team.filter(c=>c.role==="commander").sort((p,q)=>q.cmd-p.cmd)[0];if(lead)say(STANDIN,lead);else push(fresh(LEADERLESS),"warn");}
+  // techniques and knowledge
   let tb=0;
-  job.techs.forEach(t=>{const c=team.find(y=>y.tech===t);if(c){if(tb<2){push(c.first+" ("+TECH_BY_K[t].l+") "+TECH_BEAT[t]+".");tb++;}}else push("No "+TECH_BY_K[t].l+" on the crew. "+(team.length?pick(rng,team).first+" improvises.":"Nobody improvises."),"warn");});
-  job.know.forEach(k=>{const c=team.find(y=>y.know.includes(k));if(c)push(c.first+" knows "+k+": "+KNOW_BEAT[k]+" is no mystery.");else push("Nobody knows "+k+". "+cap(KNOW_BEAT[k])+" is guesswork.","warn");});
+  job.techs.forEach(t=>{const c=team.find(y=>y.tech===t);
+    if(c){if(tb<2){push(nm(c)+" ("+TECH_BY_K[t].l+") "+pair(fresh(TECH_BEAT[t]),c)+".");tb++;}}
+    else say(NOTECH,someone(),{T:TECH_BY_K[t].l},"warn");});
+  job.know.forEach(k=>{const c=team.find(y=>y.know.includes(k));
+    if(c)say(KNOW_HAS,c,{k,y:KNOW_BEAT[k]});
+    else push(fill(fresh(KNOW_NONE),{k,y:KNOW_BEAT[k],Y:cap(KNOW_BEAT[k])}),"warn");});
+  if(team.length&&chance(rng,0.7))say(TEXTURE,someone());
+  // the work
   const B=CAT_BEATS[job.cat]||CAT_BEATS.vault;
-  const take=(arr,n,tone)=>{const pool=arr.slice();for(let i=0;i<n&&pool.length;i++)push(pool.splice(Math.floor(rng()*pool.length),1)[0],tone);};
+  const take=(arr,n,tone)=>{for(let i=0;i<n;i++)push(fresh(arr),tone);};
   if(tier===4)take(B.go,2,"good");
-  else if(tier===3){take(B.go,1,"good");take(B.hitch,1,"warn");push(pick(rng,["It costs twenty minutes and a favour.","Handled. Nobody outside the crew ever knows.","It's tight, and then it isn't."]),"good");}
+  else if(tier===3){take(B.go,1,"good");take(B.hitch,1,"warn");push(fresh(FIXED),"good");}
   else if(tier===2){take(B.hitch,2,"warn");take(B.go,1,"good");}
   else if(tier===1){take(B.hitch,1,"warn");take(B.blow,1,"bad");}
   else take(B.blow,2,"bad");
+  if(team.length&&chance(rng,0.3))say(TEXTURE,someone());
+  // the exit
   const wheel=team.find(c=>c.tech==="wheelman");
-  if(tier>=2)push(wheel?wheel.first+" has the engine running. Nobody runs.":"Out the way you came in, one at a time.");
-  else push(cap(police(co))+" arrive "+pick(rng,["two streets away","at the door","from both ends of the road"])+". "+(wheel?wheel.first+" makes a gap nobody else saw.":"There is no plan for this part."),"bad");
+  if(tier>=2){if(wheel)say(EXIT_OK,wheel,{W:nm(wheel)});else push(fresh(EXIT_NOWHEEL));}
+  else{
+    let s=fill(fresh(POLICE_COME),{P:cap(police(co)),where:fresh(WHERE)});
+    s+=" "+(wheel?fill(pair(fresh(GAP_WHEEL),wheel),{W:nm(wheel)}):fresh(GAP_NONE));
+    push(s,"bad");
+  }
   if(x.leaked)push("Someone talked. "+cap(police(co))+" were waiting two streets away.","bad");
   x.fallout.forEach(e=>push(e,"bad"));
-  if(x.heatGain>0)push("By morning "+police(co)+" have "+pick(rng,["a partial plate","a description","a name that isn't yours, yet","footage of somebody's back"])+". Heat +"+x.heatGain+".",x.heatGain>=20?"warn":"");
-  if(x.take>0)push("The split: "+money(x.take)+" gross, "+money(x.cuts)+" to the crew, "+money(x.net)+" to you.","good");
-  else push("No payment. The client doesn't return the call.","bad");
+  if(x.heatGain>0)push(fill(fresh(MORNING),{P:cap(police(co)),thing:fresh(THINGS),n:x.heatGain}),x.heatGain>=20?"warn":"");
+  else if(chance(rng,0.5))push(fresh(QUIET));
+  if(x.take>0)push(fill(fresh(SPLIT),{g:money(x.take),c:money(x.cuts),n:money(x.net)}),"good");
+  else push(fresh(NOPAY),"bad");
   x.betrayals.forEach(b=>push(b,"bad"));
   return lines;
 }
@@ -989,10 +1046,10 @@ function executeJob(job){
   const cat=CAT_BY_K[job.cat];
   const weighted=Object.keys(cat.w).sort((p,q)=>cat.w[q]-cat.w[p]);
   team.forEach(c=>{
-    const g={first:c.first,xp:Math.round(xpBase*xpMul),up:[],rank:null};
+    const g={first:c.isPlayer?"You":c.first,xp:Math.round(xpBase*xpMul),up:[],rank:null};
     c.xp=(c.xp||0)+g.xp;c._touched=true;
     const need=xpNeeded(c.exp);
-    if(need!==null&&c.xp>=need){c.exp=Math.min(5,c.exp+1);g.rank=EXP[c.exp-1];logMsg(c.first+" is now a "+g.rank+".","good");}
+    if(need!==null&&c.xp>=need){c.exp=Math.min(5,c.exp+1);g.rank=EXP[c.exp-1];logMsg((c.isPlayer?"You are":c.first+" is")+" now a "+g.rank+".","good");}
     const n=tier>=3?(chance(rng,0.5)?2:1):(tier===2&&chance(rng,0.5)?1:0);
     for(let i=0;i<n;i++){const at=weighted[Math.min(i,weighted.length-1)];if(c.attrs[at]<98){c.attrs[at]+=1;g.up.push(at);}}
     growth.push(g);
@@ -1568,7 +1625,7 @@ function modalResult(d){
   const roster='<hr class="rule"><div class="kicker">In the field</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'
     +team.map(c=>{const mk=d.marks&&d.marks[c.id];
       return '<div class="fld'+(mk?' mk-'+mk:'')+'"><div class="fld-av">'+avatar(c.avseed,c.gender)+'</div>'+(mk?'<span class="fld-stamp">'+MARK[mk]+'</span>':'')
-        +'<div class="fld-n">'+esc(c.first)+'</div>'+(mk==="gone"?'<div class="fld-w">wanted</div>':'')+'</div>';}).join("")+'</div>';
+        +'<div class="fld-n">'+(c.isPlayer?"You":esc(c.first))+'</div>'+(mk==="gone"?'<div class="fld-w">wanted</div>':'')+'</div>';}).join("")+'</div>';
   return modalWrap(h+'<div class="modal-b"><details open><summary class="kicker" style="cursor:pointer">The job, minute by minute</summary>'+ticker+'</details>'
     +nums+rank+growth+ev+roster
     +'<hr class="rule"><div style="display:flex;justify-content:flex-end"><button class="btn" data-act="scrim">Continue →</button></div></div>');
@@ -2010,7 +2067,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 11 · 15 September 2026";
+const BUILD="build 12 · 15 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */

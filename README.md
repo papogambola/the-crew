@@ -49,7 +49,7 @@ decisions at the end.
 - **The live report.** Take the job and it plays out minute by minute, manager-game style:
   the crew arriving, who got in and who didn't, who does the talking, what each technique
   buys, what goes right and wrong for that kind of job, the exit, the police by morning, the
-  split — then the verdict stamp. Skip to the end if you'd rather, or set the pace: five
+  split — then the verdict stamp. You are "you" throughout, never named in the third person. Skip to the end if you'd rather, or set the pace: five
   speeds, Slowest to Fastest, on the report itself and in the office. The field
   roster marks who came back: **GONE** in red on anyone who walked with the money, **TAKEN** on
   anyone the police held, **HURT** on the injured.
@@ -123,7 +123,7 @@ smallest one; none is a decision.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 11 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 12 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
