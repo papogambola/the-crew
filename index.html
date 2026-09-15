@@ -252,6 +252,30 @@
   details summary{list-style:none}
   details summary::before{content:"▸ ";}
   details[open] summary::before{content:"▾ ";}
+
+  /* ---- who came back: marks on the field roster ---- */
+  .fld{width:58px;text-align:center;position:relative}
+  .fld-av{width:58px;height:68px;border:1px solid var(--ink);background:#fff}
+  .fld-n{font-family:var(--f-mono);font-size:9.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fld-w{font-family:var(--f-mono);font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--stamp)}
+  .fld-stamp{position:absolute;top:24px;left:-8px;right:-8px;font-family:var(--f-logo);font-size:15px;letter-spacing:.12em;color:var(--stamp);border:2px solid var(--stamp);background:rgba(255,255,255,.88);transform:rotate(-14deg);padding:0 2px;line-height:1.25}
+  .fld.mk-gone .fld-av,.fld.mk-taken .fld-av{border:2px solid var(--stamp);box-shadow:inset 0 0 0 2px #fff,inset 0 0 0 3px var(--stamp)}
+  .fld.mk-gone .fld-av svg{filter:grayscale(1) contrast(1.1)}
+  .fld.mk-gone .fld-n,.fld.mk-taken .fld-n{color:var(--stamp);font-weight:500}
+  .fld.mk-hurt .fld-stamp{color:var(--warn);border-color:var(--warn)}
+  .fld.mk-hurt .fld-av{border-color:var(--warn)}
+
+  /* ---- the crew strip on the postings board ---- */
+  .strip{border:1px solid var(--line-2);background:var(--card);margin-bottom:14px;box-shadow:var(--shadow)}
+  .strip-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .strip-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;padding:10px 12px}
+  .sm{display:flex;gap:8px;align-items:flex-start;padding:6px;border:1px solid var(--line);background:var(--paper)}
+  .sm.out{opacity:.55}
+  .sm-av{width:34px;height:41px;flex:none;border:1px solid var(--ink);background:#fff}
+  .sm-b{min-width:0;flex:1;font-family:var(--f-mono);font-size:10.5px;line-height:1.45;color:var(--ink-2)}
+  .sm-n{font-family:var(--f-disp);font-size:14px;color:var(--ink);letter-spacing:.02em;line-height:1.1;margin-bottom:2px}
+  .sm-a{color:var(--ink)}
+  .sm-l{color:var(--muted)}
 </style>
 
 <div id="root"></div>
@@ -915,6 +939,9 @@ function executeJob(job){
       }
     });
   }
+  // who came back, and who didn't
+  const marks={};
+  team.forEach(c=>{if(c.status==="gone")marks[c.id]="gone";else if(c.status==="jailed")marks[c.id]="taken";else if(c.status==="injured")marks[c.id]="hurt";});
   // ranking: up for the job and how it went, down when it goes wrong
   const rk=[];
   const addR=(k,v)=>rk.push({k,v});
@@ -953,7 +980,7 @@ function executeJob(job){
   weekTick(rng);
   refreshJobs(false);
   save();
-  return {tier,verdictName,take,cuts,net,heatGain,repDelta,repBefore,repAfter:S.rep,rankBefore,rankAfter,rk,growth,events:fallout.concat(betrayals),leaked,job,teamIds:team.map(t=>t.id),narrative,revealed:0,done:false};
+  return {tier,verdictName,take,cuts,net,heatGain,repDelta,repBefore,repAfter:S.rep,rankBefore,rankAfter,rk,growth,marks,events:fallout.concat(betrayals),leaked,job,teamIds:team.map(t=>t.id),narrative,revealed:0,done:false};
 }
 function weekTick(rng){
   S.week++;
@@ -1114,20 +1141,57 @@ function xpLine(c){
 
 /* ---- ONLINE ---- */
 function tabJobs(){
-  const head='<div class="panel-h"><h2>Online · Postings</h2><span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="kicker">Week '+S.week+' · postings expire</span><button class="btn ghost sm" data-act="laylow">Lay low a week</button></span></div>';
-  if(!S.jobs.length)return '<div class="panel">'+head+'<div class="empty">The board is quiet. Lay low a week and check again.</div></div>';
-  const rows=S.jobs.slice().sort((a,b)=>(b.final?1:0)-(a.final?1:0)||a.tier-b.tier).map(j=>{
+  const inField=field();
+  const has=t=>inField.some(c=>c.tech===t);
+  const knows=k=>inField.some(c=>c.know.includes(k));
+  const sortOpts=[["fit","Best fit first"],["need","Crew needed"],["tech","Technique wanted"],["pay","Fee, high first"],["heat","Heat, low first"],["diff","Difficulty, low first"],["country","Country"],["expires","Expiring soonest"]];
+  const cur=S.jobSort||"fit";
+  const sortSel='<span class="field" style="gap:2px"><label for="jsort">Sort</label><select id="jsort">'+sortOpts.map(o=>'<option value="'+o[0]+'"'+(cur===o[0]?" selected":"")+'>'+o[1]+'</option>').join("")+'</select></span>';
+  const head='<div class="panel-h"><h2>Online · Postings</h2><span style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap"><span class="kicker" style="padding-bottom:8px">Week '+S.week+' · postings expire</span>'+sortSel+'<button class="btn ghost sm" data-act="laylow" style="margin-bottom:2px">Lay low a week</button></span></div>';
+  const strip=crewStrip();
+  if(!S.jobs.length)return strip+'<div class="panel">'+head+'<div class="empty">The board is quiet. Lay low a week and check again.</div></div>';
+  const items=S.jobs.map(j=>({j,a:assessJob(j)}));
+  const cmp={
+    fit:(x,y)=>(y.j.final?1:0)-(x.j.final?1:0)||(y.a.canRun?1:0)-(x.a.canRun?1:0)||y.a.margin-x.a.margin,
+    need:(x,y)=>x.j.need-y.j.need||y.a.margin-x.a.margin,
+    tech:(x,y)=>TECH_BY_K[x.j.techs[0]].l.localeCompare(TECH_BY_K[y.j.techs[0]].l)||y.a.margin-x.a.margin,
+    pay:(x,y)=>y.j.payout-x.j.payout,
+    heat:(x,y)=>x.j.heat-y.j.heat||y.a.margin-x.a.margin,
+    diff:(x,y)=>x.j.diff-y.j.diff,
+    country:(x,y)=>x.j.country.localeCompare(y.j.country)||x.j.city.localeCompare(y.j.city),
+    expires:(x,y)=>x.j.expires-y.j.expires||y.a.margin-x.a.margin,
+  }[cur]||(()=>0);
+  items.sort(cmp);
+  const rows=items.map(({j,a})=>{
     const co=COUNTRY_BY_NAME[j.country];
-    const a=assessJob(j);
     const fit=a.canRun?(a.margin>=10?'<span class="chip c-good">Good fit</span>':a.margin>=-4?'<span class="chip c-warn">Risky</span>':'<span class="chip c-bad">Long odds</span>'):'<span class="chip c-bad">'+a.team.length+' of '+j.need+' can go</span>';
+    const techs=j.techs.map(t=>'<span class="tag spec '+(has(t)?"ok":"no")+'" title="'+(has(t)?"on your crew":"nobody on your crew has it")+'">'+TECH_BY_K[t].l+'</span>').join(" ");
+    const kn=j.know.map(x=>'<span class="tag '+(knows(x)?"ok":"no")+'" title="'+(knows(x)?"someone on the crew knows it":"nobody on the crew knows it")+'">knows '+x+'</span>').join(" ");
     return '<div class="jobrow" data-act="open-job" data-id="'+j.id+'" role="button" tabindex="0">'
       +'<div class="code">'+(j.final?"—":"№"+j.id.slice(1).padStart(3,"0"))+'<br>'+diffbar(j.diff,j.heat>22)+'</div>'
       +'<div><div class="t">'+(j.final?'<span class="chip c-bad">Final score</span> ':'')+esc(j.title)+'</div>'
-        +'<div class="loc">'+co.flag+' '+esc(j.city)+', '+esc(j.country)+' · crew of '+j.need+' · from '+esc(j.client)+(j.final?'':' · expires wk '+j.expires)+'</div>'
-        +'<div class="meta"><span class="tag">'+CAT_BY_K[j.cat].l+'</span>'+j.techs.map(t=>'<span class="tag spec">'+TECH_BY_K[t].l+'</span>').join(" ")+' '+fit+'</div></div>'
+        +'<div class="loc">'+co.flag+' '+esc(j.city)+', '+esc(j.country)+' · crew of '+j.need+' · '+esc(co.langs[0])+' · from '+esc(j.client)+(j.final?'':' · expires wk '+j.expires)+'</div>'
+        +'<div class="meta"><span class="tag">'+CAT_BY_K[j.cat].l+'</span>'+techs+' '+kn+' '+fit+'</div></div>'
       +'<div class="pay num">'+money(j.payout)+'<div class="loc" style="text-align:right">+'+j.heat+' heat</div></div></div>';
   }).join("");
-  return '<div class="panel">'+head+rows+'</div>';
+  return strip+'<div class="panel">'+head+rows+'</div>';
+}
+// Your crew, compact, above the postings — so a job can be judged without leaving the board.
+function crewStrip(){
+  const hidden=!!S.stripHidden;
+  const head='<div class="strip-h"><span class="kicker">Your crew · '+field().length+' ready · green tags below are techniques and knowledge you have, red are missing</span>'
+    +'<span style="display:flex;gap:6px"><button class="btn ghost sm" data-act="tab" data-k="crew">Open crew</button><button class="btn ghost sm" data-act="strip-toggle">'+(hidden?"Show crew":"Hide")+'</button></span></div>';
+  if(hidden)return '<div class="strip">'+head+'</div>';
+  const cards=crewAll().map(c=>{
+    const nat=natOf(c);
+    return '<div class="sm'+(c.status!=="crew"?" out":"")+'"><div class="sm-av">'+avatar(c.avseed,c.gender)+'</div><div class="sm-b">'
+      +'<div class="sm-n">'+esc(c.first)+(c.isPlayer?' <span class="chip c-bad">you</span>':'')+(c.status==="injured"?' <span class="chip c-warn">hurt</span>':'')+'</div>'
+      +'<div class="sm-l">'+nat.flag+' P'+nat.tier+' · <b>'+TECH_BY_K[c.tech].l+'</b> · '+EXP[c.exp-1]+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</div>'
+      +'<div class="sm-a num">'+ATTRS.map(a=>ATTR_ABBR[a]+' '+c.attrs[a]).join(' · ')+'</div>'
+      +'<div class="sm-l">'+c.langs.join(", ")+' · knows '+c.know.join(", ")+(c.limits.length?' · <span style="color:var(--stamp)">'+c.limits.map(k=>LIMIT_BY_K[k].l).join(", ")+'</span>':'')+'</div>'
+      +'</div></div>';
+  }).join("");
+  return '<div class="strip">'+head+'<div class="strip-row">'+cards+'</div></div>';
 }
 
 /* ---- ROSTER ---- */
@@ -1336,8 +1400,11 @@ function modalResult(d){
   const growth=d.growth.length?'<hr class="rule"><div class="kicker">What they learned</div>'
     +d.growth.map(g=>'<div class="mono" style="font-size:12px;padding:2px 0">'+esc(g.first)+': +'+g.xp+' xp'+(g.up.length?', '+g.up.map(at=>'+1 '+ATTR_ABBR[at]).join(', '):'')+(g.rank?' — <b>now a '+esc(g.rank)+'</b>':'')+'</div>').join(""):"";
   const ev=d.events.length?'<hr class="rule"><div class="kicker">Fallout</div>'+d.events.map(e=>'<div class="mono" style="font-size:12px;color:var(--stamp);padding:3px 0">— '+esc(e)+'</div>').join(""):"";
-  const roster='<hr class="rule"><div class="kicker">In the field</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
-    +team.map(c=>'<div style="width:44px;text-align:center"><div style="width:44px;height:52px;border:1px solid var(--ink);background:#fff">'+avatar(c.avseed,c.gender)+'</div><div class="mono" style="font-size:9px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(c.first)+'</div></div>').join("")+'</div>';
+  const MARK={gone:"GONE",taken:"TAKEN",hurt:"HURT"};
+  const roster='<hr class="rule"><div class="kicker">In the field</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'
+    +team.map(c=>{const mk=d.marks&&d.marks[c.id];
+      return '<div class="fld'+(mk?' mk-'+mk:'')+'"><div class="fld-av">'+avatar(c.avseed,c.gender)+'</div>'+(mk?'<span class="fld-stamp">'+MARK[mk]+'</span>':'')
+        +'<div class="fld-n">'+esc(c.first)+'</div>'+(mk==="gone"?'<div class="fld-w">wanted</div>':'')+'</div>';}).join("")+'</div>';
   return modalWrap(h+'<div class="modal-b"><details open><summary class="kicker" style="cursor:pointer">The job, minute by minute</summary>'+ticker+'</details>'
     +nums+rank+growth+ev+roster
     +'<hr class="rule"><div style="display:flex;justify-content:flex-end"><button class="btn" data-act="scrim">Continue →</button></div></div>');
@@ -1519,7 +1586,8 @@ const INFO={
     "<b>Fee</b> is paid once. <b>Cut</b> is their share of every score. <b>Upkeep</b> is weekly. <b>File</b> opens the whole profile; <b>Hire</b> needs an open seat and the fee.",
     "About one file in fourteen is a <b>police informant</b>: they leak jobs and leak heat. <b>Vet</b> a file for $6K — a dull crew misses one in three, so a clean stamp is a guess with money behind it."]},
   jobs:{h:"Online",t:[
-    "Postings from clients, by country. Each row: category, the techniques it wants, city and country, crew needed, fee, heat, when it expires — and a chip: <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go.",
+    "Postings from clients, by country. Each row: category, the techniques and knowledge it wants — <b>green</b> if someone on your crew has it, <b>red</b> if nobody does — city, country and language, crew needed, fee, heat, when it expires, and a chip: <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go.",
+    "<b>Sort</b> the board by best fit, crew needed, technique wanted, fee, heat, difficulty, country or expiry. <b>Your crew</b> sits above the board — passport, technique, attributes, languages, knowledge, limits — so a posting can be judged without leaving; hide it if you know them by heart. Keys <b>1–4</b> jump between the tabs.",
     "The bars are difficulty; red means high heat. Open a posting to see the reckoning before you commit.",
     "<b>Lay low a week</b>: −15 heat, upkeep still due, postings refresh. Reach 100 ranking and the final score appears at the top of the board."]},
   log:{h:"The Log",t:[
@@ -1653,7 +1721,7 @@ function officeHTML(){
     +'<button class="btn ghost sm" data-act="off-exit">Exit door</button>'
     +'</div>';
   return '<div class="office" role="dialog" aria-modal="true" aria-label="The office"><div class="office-in">'
-    +'<div class="office-head"><div><h2>The Office</h2><div class="kicker">'+(S&&!S.over?'Paused · week '+S.week:'Settings')+' · everything on the desk does something · Esc to leave</div></div></div>'
+    +'<div class="office-head"><div><h2>The Office</h2><div class="kicker">'+(S&&!S.over?'Paused · week '+S.week:'Settings')+' · everything on the desk does something · Esc to leave · '+BUILD+'</div></div></div>'
     +officeSVG()+words+'</div></div>'+officePanel();
 }
 function officePanel(){
@@ -1669,6 +1737,7 @@ function officePanel(){
       +'<span class="k">Esc</span><span>The office — pause and settings. Also closes whatever is open.</span>'
       +'<span class="k">≡ top right</span><span>The same.</span>'
       +'<span class="k">Crew · Online · Roster · Log</span><span>The four tabs.</span>'
+      +'<span class="k">1 · 2 · 3 · 4</span><span>Jump to Crew, Online, Roster, Log.</span>'
       +'<span class="k">Enter / Space</span><span>Open the posting you have selected.</span>'
       +'<span class="k">✓ / ✗</span><span>On a job file: who can go, and why not.</span>'
       +'<span class="k">Saving</span><span>Automatic, in this browser. Settings are kept separately and survive a new game.</span></div>'
@@ -1759,7 +1828,8 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve.</div>';}
+const BUILD="build 9 · 15 September 2026";
+function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
 function bind(){
@@ -1767,6 +1837,7 @@ function bind(){
   if(q){q.oninput=()=>{S.filter.q=q.value;S.shown=30;const v=q.value;render();const q2=document.getElementById("q");if(q2){q2.focus();q2.setSelectionRange(v.length,v.length);}};}
   const sel=(id,key)=>{const el=document.getElementById(id);if(el)el.onchange=()=>{S.filter[key]=el.value;S.shown=30;render();};};
   sel("ftech","tech");sel("frole","role");sel("fnat","nat");sel("fsort","sort");
+  const js=document.getElementById("jsort");if(js)js.onchange=()=>{S.jobSort=js.value;save();render();};
   const pn=document.getElementById("pname");if(pn)pn.oninput=()=>{draft.name=pn.value;const btn=document.querySelector('[data-act=confirm-create]');if(btn)btn.disabled=!draft.name.trim();};
   const pnat=document.getElementById("pnat");if(pnat)pnat.onchange=()=>{draft.nat=pnat.value;rollDraftProfile();showCreate();};
   const pt=document.getElementById("ptech");if(pt)pt.onchange=()=>{draft.tech=pt.value;rollDraftProfile();showCreate();};
@@ -1826,6 +1897,7 @@ document.addEventListener("click",e=>{
     case "open-recruit": S.modal={type:"recruit",id}; render(); break;
     case "open-job": S.modal={type:"job",id}; render(); break;
     case "more": S.shown+=30; render(); break;
+    case "strip-toggle": S.stripHidden=!S.stripHidden; save(); render(); break;
     case "hire": hire(id); break;
     case "vet": vet(id); break;
     case "bonus": bonus(id); break;
@@ -1840,6 +1912,7 @@ document.addEventListener("keydown",e=>{
   const tag=e.target&&e.target.tagName;
   const typing=tag==="INPUT"||tag==="SELECT"||tag==="TEXTAREA";
   if(!typing&&(e.key==="i"||e.key==="I")&&!e.ctrlKey&&!e.metaKey&&!e.altKey){UI.info=!UI.info;render();return;}
+  if(!typing&&!UI.office&&!UI.info&&S&&!S.over&&!S.modal&&"1234".includes(e.key)&&e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){S.tab=["crew","jobs","roster","log"][+e.key-1];render();window.scrollTo(0,0);return;}
   if(e.key==="Escape"){
     if(UI.info){UI.info=false;render();}
     else if(TUT.on){tutEnd();}

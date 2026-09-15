@@ -31,15 +31,21 @@ decisions at the end.
   cyber, smuggling, papers, negotiation, sabotage, vault. Countries share categories, but no
   two offer the same list.
 - **Online.** Seven or so postings a week from named clients, each with a fee (scaled by the
-  local economy), difficulty, heat, wanted techniques and knowledge, and the tags that trip
-  a crew member's limits. Postings expire.
+  local economy), difficulty, heat, wanted techniques and knowledge — coloured green if your
+  crew has them, red if not — and the tags that trip a crew member's limits. Postings expire.
+  Sort the board by best fit, crew needed, technique wanted, fee, heat, difficulty, country or
+  expiry. Your crew sits above the board in a strip — passport, technique, attributes,
+  languages, knowledge, limits — so a posting can be judged without leaving; keys 1–4 jump
+  between the tabs.
 - **The reckoning.** Before you take a job, the file shows who can go and why not (border,
   conviction, a limit the job hits, injury), then every factor with its number: crew size,
   who commands, language, local national, knowledge (double if studied), techniques, heat.
 - **The live report.** Take the job and it plays out minute by minute, manager-game style:
   the crew arriving, who got in and who didn't, who does the talking, what each technique
   buys, what goes right and wrong for that kind of job, the exit, the police by morning, the
-  split — then the verdict stamp. Skip to the end if you'd rather.
+  split — then the verdict stamp. Skip to the end if you'd rather. The field
+  roster marks who came back: **GONE** in red on anyone who walked with the money, **TAKEN** on
+  anyone the police held, **HURT** on the injured.
 - **Ranking.** The crew's standing — Nobody, Small time, Known, Respected, Feared, The Crew —
   rises with clean and successful jobs (more for a bigger job, a little more if nobody was
   hurt) and **falls** with messy, botched or disastrous work, a leak, an arrest, or a member
@@ -102,6 +108,12 @@ smallest one; none is a decision.
 - **Attribute values** run 12–98 and are rolled from experience, technique and role, then
   grow a point at a time with good work.
 - **Language** is English only; the paper on the desk is where more will go.
+
+## Which build am I on?
+
+The footer of every screen, and the office header, carry a build stamp (`build 9 · 15 September
+2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
+hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
 ## Design
 
