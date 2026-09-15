@@ -85,6 +85,10 @@ decisions at the end.
   thing as it goes. Skip it, or run it again from the **i** button or the controls book.
 - **The i button.** Beside the menu button on every screen (or press **i**): what this screen
   is and how each part works, in plain words.
+- **Hover briefs.** Hover a technique — on the roster, a crew card, the crew strip, or a "wants
+  X" tag on a posting or job file — for a small card saying what it is, which attribute it
+  leans on, what knowledge it comes with, and which jobs want it. The same on knowledge tags
+  and on MUS / BRN / TCH / CHM / NRV. Keyboard focus or a tap on a phone shows it too.
 - **Deception.** About one file in fourteen is a police informant. Vetting costs $6K and a
   dull crew misses one in three. After a big score a disloyal, greedy or informant member
   may skim the split and vanish; a loyal one stays.
@@ -123,7 +127,7 @@ smallest one; none is a decision.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 12 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 13 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
