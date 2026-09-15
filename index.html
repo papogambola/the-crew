@@ -276,6 +276,30 @@
   .sm-n{font-family:var(--f-disp);font-size:14px;color:var(--ink);letter-spacing:.02em;line-height:1.1;margin-bottom:2px}
   .sm-a{color:var(--ink)}
   .sm-l{color:var(--muted)}
+
+  /* ---- the jobs board: postings left, the map right ---- */
+  .jobs-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,1fr);gap:14px;align-items:start}
+  @media(max-width:900px){.jobs-grid{grid-template-columns:1fr}.jobs-right{order:-1}.map-panel{position:static}}
+  .map-panel{position:sticky;top:calc(env(safe-area-inset-top,0px) + 72px)}
+  .map-svg{width:100%;height:auto;display:block;background:var(--card);overflow:hidden}
+  .map-land{fill:var(--paper-2);stroke:var(--ink);stroke-width:1.1px;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+  .map-water{fill:var(--card);stroke:var(--ink);stroke-width:.8px;vector-effect:non-scaling-stroke}
+  .map-grid{stroke:var(--line);stroke-width:.6px;vector-effect:non-scaling-stroke}
+  .mk-dot{fill:var(--line-2)}
+  .mk{cursor:pointer}
+  .mk-lit{fill:var(--stamp)}
+  .mk-halo{fill:var(--stamp);opacity:.18;transform-box:fill-box;transform-origin:center;animation:pulse 1.8s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.12;transform:scale(1)}50%{opacity:.32;transform:scale(1.4)}}
+  .mk-n{font-family:var(--f-mono);font-size:9px;fill:var(--stamp);font-weight:500}
+  .mk.hov .mk-lit,.mk:hover .mk-lit,.mk.focus .mk-lit{fill:var(--ink)}
+  .mk.hov .mk-halo,.mk:hover .mk-halo{opacity:.4}
+  #mapg{transform-box:view-box;transform-origin:0 0;transition:transform .75s cubic-bezier(.2,.7,.2,1)}
+  .map-dim{fill:var(--paper);opacity:.78}
+  .map-ring{fill:none;stroke:var(--stamp);stroke-width:2px;vector-effect:non-scaling-stroke}
+  .map-label{font-family:var(--f-logo);font-size:26px;fill:var(--ink);letter-spacing:.06em}
+  .map-sub{font-family:var(--f-mono);font-size:11px;fill:var(--muted)}
+  .map-cap{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);padding:6px 10px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  @media(prefers-reduced-motion:reduce){#mapg{transition:none}.mk-halo{animation:none}}
 </style>
 
 <div id="root"></div>
@@ -1070,6 +1094,7 @@ function render(){
   bind();
   tutMark();
   tickerArm();
+  mapArm();
 }
 function topbar(){
   const hot=S.heat>=70;
@@ -1085,7 +1110,7 @@ function topbar(){
 }
 function tabsBar(){
   const t=(k,l,b)=>'<button class="tab'+(S.tab===k?" on":"")+'" data-act="tab" data-k="'+k+'" role="tab">'+l+(b!=null?'<span class="b num">'+b+'</span>':"")+'</button>';
-  return '<div class="tabs" role="tablist">'+t("crew","Crew",(1+recruits().length)+"/5")+t("jobs","Online",S.jobs.length)+t("roster","Roster")+t("log","Log")+'</div>';
+  return '<div class="tabs" role="tablist">'+t("crew","Crew",(1+recruits().length)+"/5")+t("jobs","Jobs",S.jobs.length)+t("roster","Roster")+t("log","Log")+'</div>';
 }
 
 /* ---- shared card pieces ---- */
@@ -1140,17 +1165,143 @@ function xpLine(c){
 }
 
 /* ---- ONLINE ---- */
+/* ------------------------------- MAP ---------------------------------- */
+// A schematic world in ink: continents as simple polygons on an equirectangular grid,
+// one point per country. Lit points have postings. No borders — this is a dossier map.
+const LAND=[
+  // North America
+  [[-168,66],[-162,70],[-141,70],[-128,70],[-110,73],[-95,74],[-85,71],[-80,66],[-78,62],[-70,63],[-64,60],[-56,52],[-60,47],[-66,44],[-70,42],[-74,40],[-76,35],[-80,32],[-81,25],[-84,30],[-90,29],[-97,27],[-97,21],[-92,18],[-87,21],[-88,15],[-84,10],[-80,8],[-77,8],[-85,12],[-92,15],[-105,20],[-110,24],[-117,32],[-124,40],[-124,48],[-130,54],[-137,58],[-152,60],[-165,62]],
+  // Greenland
+  [[-52,60],[-44,60],[-22,70],[-20,76],[-30,83],[-60,82],[-70,77],[-55,70]],
+  // South America
+  [[-77,8],[-72,11],[-62,10],[-52,4],[-50,0],[-45,-2],[-35,-6],[-38,-13],[-40,-22],[-48,-27],[-53,-34],[-58,-39],[-65,-45],[-68,-53],[-75,-52],[-73,-45],[-72,-35],[-70,-25],[-76,-14],[-81,-5],[-79,1]],
+  // Eurasia
+  [[-9,43],[-2,43],[-1,46],[-5,48],[-2,49],[1,51],[4,51],[5,53],[8,53],[8,55],[9,57],[10,54],[14,54],[18,54],[21,55],[21,57],[24,59],[30,60],[24,60],[22,61],[24,64],[21,65],[17,62],[18,59],[16,56],[12,56],[10,58],[5,59],[5,62],[10,64],[14,68],[20,70],[30,70],[40,66],[45,68],[60,69],[70,73],[80,73],[100,77],[120,74],[140,73],[160,70],[180,71],[180,68],[163,60],[156,60],[142,58],[140,52],[135,44],[130,42],[129,36],[126,35],[122,37],[121,30],[118,25],[112,22],[107,20],[109,12],[105,10],[100,13],[102,6],[104,1],[100,3],[98,10],[95,16],[92,21],[89,22],[85,20],[80,16],[80,13],[77,8],[73,15],[72,20],[67,24],[61,25],[57,26],[53,27],[50,30],[48,29],[51,25],[53,25],[56,26],[60,24],[58,21],[55,18],[50,15],[45,12],[43,13],[39,21],[36,26],[35,29],[34,31],[35,33],[36,36],[30,36],[27,37],[29,41],[26,40],[24,40],[24,38],[22,37],[20,39],[19.5,41.5],[15,44],[13,45.5],[14,42],[16,41],[18,40],[16,38],[15,40],[13,41],[12,42],[10,44],[8,44],[3,43],[0,40],[-2,37],[-6,36],[-9,37]],
+  // Africa
+  [[-6,35],[0,36],[10,37],[11,33],[15,32],[20,31],[25,32],[30,31],[32,31],[34,29],[33,28],[37,22],[39,15],[43,12],[51,12],[48,5],[41,-2],[39,-7],[40,-15],[35,-24],[33,-29],[29,-33],[25,-34],[20,-34],[17,-29],[12,-17],[13,-10],[9,-2],[9,4],[5,5],[-2,5],[-8,5],[-13,8],[-17,14],[-17,21],[-13,27],[-10,31]],
+  // Madagascar, Australia, New Zealand
+  [[44,-25],[47,-25],[50,-16],[49,-12],[45,-16],[44,-20]],
+  [[114,-22],[114,-34],[118,-35],[124,-33],[130,-31],[138,-35],[140,-38],[147,-39],[150,-37],[153,-30],[153,-25],[146,-18],[143,-11],[136,-12],[131,-11],[126,-14],[122,-17]],
+  [[167,-46],[170,-46],[173,-43],[174,-41],[178,-38],[174,-36],[173,-41],[170,-44]],
+  // British Isles, Iceland
+  [[-5,50],[1,51],[2,53],[-1,55],[-2,58],[-6,58],[-5,56],[-3,54],[-5,52]],
+  [[-10,52],[-6,52],[-6,55],[-8,55],[-10,54]],
+  [[-24,65],[-14,65],[-14,66],[-22,66]],
+  // Japan, Taiwan, Sri Lanka
+  [[130,31],[132,34],[135,34],[140,35],[141,38],[141,41],[140,44],[145,44],[144,42],[142,40],[140,36],[137,34],[131,31]],
+  [[120,22],[122,25],[121,22]],
+  [[80,10],[82,8],[81,6],[80,8]],
+  // Indonesia, New Guinea, Philippines
+  [[95,5],[106,-6],[104,-3],[98,3]],
+  [[105,-6],[114,-8],[113,-8],[106,-7]],
+  [[109,1],[117,6],[119,1],[116,-4],[110,-3]],
+  [[120,1],[123,1],[121,-5],[119,-3]],
+  [[131,-1],[141,-3],[150,-10],[140,-8],[134,-4]],
+  [[120,18],[122,18],[124,13],[121,14],[120,16]],
+  [[122,9],[126,9],[126,6],[122,7]],
+  // Cuba
+  [[-85,22],[-75,20],[-77,20],[-84,23]],
+];
+const WATER=[
+  [[28,41],[28,45],[30,46.5],[33,46],[37,47],[41,42],[41,41],[35,42],[31,41]],
+  [[47,41],[47,45],[49,47],[52,47],[54,42],[52,37],[49,38]],
+];
+// [lat, lon, size] — size sets how far the map zooms in: 3 big, 2 medium, 1 small
+const GEO={
+  "United States":[39,-98,3],"United Kingdom":[54,-2,1],"Canada":[58,-104,3],"Australia":[-25,134,3],"Ireland":[53,-8,1],
+  "Germany":[51,10,1],"Netherlands":[52.3,5.5,1],"Switzerland":[46.8,8.2,1],"Sweden":[62,15,2],"Norway":[63,9,2],"Denmark":[56,10,1],"Finland":[64,26,2],
+  "France":[46.5,2.5,1],"Italy":[42.5,12.5,1],"Spain":[40,-3.7,1],"Portugal":[39.5,-8,1],"Greece":[39,22,1],"Poland":[52,19,1],"Czechia":[49.8,15.5,1],
+  "Russia":[60,90,3],"Ukraine":[49,32,2],"Serbia":[44,21,1],"Mexico":[23,-102,2],"Colombia":[4,-73,2],"Argentina":[-34,-64,3],"Chile":[-33,-71,2],"Panama":[8.5,-80,1],"Brazil":[-10,-53,3],
+  "Nigeria":[9,8,2],"Ghana":[8,-1,1],"Kenya":[0.5,37.5,2],"South Africa":[-29,25,2],"Morocco":[32,-6,2],"Egypt":[27,30,2],"Lebanon":[33.9,35.8,1],"U.A.E.":[24,54,1],"Saudi Arabia":[24,45,3],"Turkey":[39,35,2],"Israel":[31.5,35,1],
+  "China":[35,103,3],"Japan":[36,138,2],"South Korea":[36.5,128,1],"Singapore":[1.3,103.8,1],"India":[21,78,3],"Pakistan":[30,69,2],"Thailand":[15,101,2],"Vietnam":[16,107,2],"Philippines":[12,122,2],"Indonesia":[-2,118,3],
+};
+const MAP={prev:null};
+function proj(lat,lon){return [(lon+180)/360*1000,(90-lat)/180*500];}
+function mapFocusCountry(){
+  if(S.jobOpen){const j=S.jobs.find(x=>x.id===S.jobOpen);if(j)return j.country;}
+  return S.jobCountry||null;
+}
+function mapTransform(){
+  const cn=mapFocusCountry();
+  if(!cn||!GEO[cn])return "translate(0px, 0px) scale(1)";
+  const g=GEO[cn],z=g[2]===3?2.8:g[2]===2?4.2:6,p=proj(g[0],g[1]);
+  return "translate("+(500-p[0]*z).toFixed(1)+"px, "+(220-p[1]*z).toFixed(1)+"px) scale("+z+")";
+}
+function mapSVG(){
+  const counts={};S.jobs.forEach(j=>{counts[j.country]=(counts[j.country]||0)+1;});
+  const cn=mapFocusCountry();
+  const pts=poly=>poly.map(p=>{const q=proj(p[1],p[0]);return q[0].toFixed(1)+","+q[1].toFixed(1);}).join(" ");
+  const land=LAND.map(p=>'<polygon class="map-land" points="'+pts(p)+'"/>').join("");
+  const water=WATER.map(p=>'<polygon class="map-water" points="'+pts(p)+'"/>').join("");
+  let grid="";
+  for(let lon=-150;lon<=150;lon+=30){const x=(lon+180)/360*1000;grid+='<line class="map-grid" x1="'+x+'" y1="20" x2="'+x+'" y2="420"/>';}
+  for(let lat=-60;lat<=60;lat+=30){const y=(90-lat)/180*500;grid+='<line class="map-grid" x1="0" y1="'+y+'" x2="1000" y2="'+y+'"/>';}
+  let marks="",lit=0;
+  Object.keys(GEO).forEach(name=>{
+    const g=GEO[name],p=proj(g[0],g[1]),n=counts[name]||0;
+    if(!n){marks+='<circle class="mk-dot" cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="1.6"/>';return;}
+    lit++;
+    marks+='<g class="mk'+(name===cn?" focus":"")+'" data-act="map-country" data-cn="'+esc(name)+'" transform="translate('+p[0].toFixed(1)+','+p[1].toFixed(1)+')"><title>'+esc(name)+' · '+n+' posting'+(n>1?'s':'')+' — click to show only these</title>'
+      +'<circle class="mk-halo" r="11"/><circle class="mk-lit" r="4.2"/>'+(n>1?'<text class="mk-n" x="6" y="-5">'+n+'</text>':'')+'</g>';
+  });
+  let focus="";
+  if(cn){
+    const n=counts[cn]||0;
+    const j=S.jobOpen?S.jobs.find(x=>x.id===S.jobOpen):null;
+    const sub=j?esc(j.city)+' · '+n+' posting'+(n>1?'s':'')+' here':n+' posting'+(n>1?'s':'')+' · showing only these';
+    focus='<defs><radialGradient id="hole"><stop offset="52%" stop-color="#000"/><stop offset="100%" stop-color="#fff"/></radialGradient>'
+      +'<mask id="dimmask"><rect x="0" y="20" width="1000" height="400" fill="#fff"/><circle cx="500" cy="220" r="110" fill="url(#hole)"/></mask></defs>'
+      +'<rect x="0" y="20" width="1000" height="400" class="map-dim" mask="url(#dimmask)"/>'
+      +'<circle cx="500" cy="220" r="46" class="map-ring"/>'
+      +'<text x="500" y="308" text-anchor="middle" class="map-label">'+esc(cn.toUpperCase())+'</text>'
+      +'<text x="500" y="328" text-anchor="middle" class="map-sub">'+sub+'</text>';
+  }
+  const start=MAP.prev||"translate(0px, 0px) scale(1)";
+  return '<svg class="map-svg" viewBox="0 20 1000 400" role="img" aria-label="World map. Lit countries have postings.'+(cn?' Focused on '+esc(cn)+'.':'')+'">'
+    +'<rect x="0" y="20" width="1000" height="400" fill="var(--card)"/>'
+    +'<g id="mapg" style="transform:'+start+'">'+grid+land+water+marks+'</g>'+focus+'</svg>';
+}
+// Animate the map from where it was to where it should be, once the new page is in place.
+function mapArm(){
+  const g=document.getElementById("mapg");
+  if(!g||!g.style)return;
+  const target=mapTransform();
+  const from=MAP.prev;
+  MAP.prev=target;
+  if(from&&from!==target&&typeof requestAnimationFrame==="function"){
+    g.style.transition="none";g.style.transform=from;
+    if(typeof g.getBoundingClientRect==="function")g.getBoundingClientRect();
+    requestAnimationFrame(()=>{g.style.transition="";g.style.transform=target;});
+  } else g.style.transform=target;
+}
+
+/* ------------------------------- JOBS --------------------------------- */
 function tabJobs(){
+  if(S.jobOpen&&!S.jobs.find(x=>x.id===S.jobOpen))S.jobOpen=null;
+  const strip=crewStrip();
+  const openJob=S.jobOpen?S.jobs.find(x=>x.id===S.jobOpen):null;
+  const left=openJob?jobPanel(openJob):jobsList();
+  const cn=mapFocusCountry();
+  const nLit=new Set(S.jobs.map(j=>j.country)).size;
+  const right='<div class="map-panel panel"><div class="panel-h" style="padding:8px 12px"><h2 style="font-size:13px">The map</h2>'
+    +(cn?'<button class="btn ghost sm" data-act="map-clear">Whole map</button>':'<span class="kicker">'+S.jobs.length+' postings · '+nLit+' countries lit</span>')+'</div>'
+    +mapSVG()
+    +'<div class="map-cap"><span>● a lit country has postings · click one to show only its jobs</span>'+(cn?'<span>Focused: '+esc(cn)+'</span>':'')+'</div></div>';
+  return strip+'<div class="jobs-grid"><div class="jobs-left">'+left+'</div><div class="jobs-right">'+right+'</div></div>';
+}
+function jobsList(){
   const inField=field();
   const has=t=>inField.some(c=>c.tech===t);
   const knows=k=>inField.some(c=>c.know.includes(k));
   const sortOpts=[["fit","Best fit first"],["need","Crew needed"],["tech","Technique wanted"],["pay","Fee, high first"],["heat","Heat, low first"],["diff","Difficulty, low first"],["country","Country"],["expires","Expiring soonest"]];
   const cur=S.jobSort||"fit";
   const sortSel='<span class="field" style="gap:2px"><label for="jsort">Sort</label><select id="jsort">'+sortOpts.map(o=>'<option value="'+o[0]+'"'+(cur===o[0]?" selected":"")+'>'+o[1]+'</option>').join("")+'</select></span>';
-  const head='<div class="panel-h"><h2>Online · Postings</h2><span style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap"><span class="kicker" style="padding-bottom:8px">Week '+S.week+' · postings expire</span>'+sortSel+'<button class="btn ghost sm" data-act="laylow" style="margin-bottom:2px">Lay low a week</button></span></div>';
-  const strip=crewStrip();
-  if(!S.jobs.length)return strip+'<div class="panel">'+head+'<div class="empty">The board is quiet. Lay low a week and check again.</div></div>';
-  const items=S.jobs.map(j=>({j,a:assessJob(j)}));
+  const head='<div class="panel-h"><h2>Jobs · Postings</h2><span style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap"><span class="kicker" style="padding-bottom:8px">Week '+S.week+' · postings expire</span>'+sortSel+'<button class="btn ghost sm" data-act="laylow" style="margin-bottom:2px">Lay low a week</button></span></div>';
+  const filt=S.jobCountry?'<div style="display:flex;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap"><span class="tag ok">Showing '+esc(S.jobCountry)+'</span><button class="btn ghost sm" data-act="map-clear">All countries</button></div>':'';
+  let jobs=S.jobs;
+  if(S.jobCountry)jobs=jobs.filter(j=>j.country===S.jobCountry);
+  if(!jobs.length)return '<div class="panel">'+head+filt+'<div class="empty">'+(S.jobCountry?'No postings in '+esc(S.jobCountry)+' this week.':'The board is quiet. Lay low a week and check again.')+'</div></div>';
+  const items=jobs.map(j=>({j,a:assessJob(j)}));
   const cmp={
     fit:(x,y)=>(y.j.final?1:0)-(x.j.final?1:0)||(y.a.canRun?1:0)-(x.a.canRun?1:0)||y.a.margin-x.a.margin,
     need:(x,y)=>x.j.need-y.j.need||y.a.margin-x.a.margin,
@@ -1167,14 +1318,51 @@ function tabJobs(){
     const fit=a.canRun?(a.margin>=10?'<span class="chip c-good">Good fit</span>':a.margin>=-4?'<span class="chip c-warn">Risky</span>':'<span class="chip c-bad">Long odds</span>'):'<span class="chip c-bad">'+a.team.length+' of '+j.need+' can go</span>';
     const techs=j.techs.map(t=>'<span class="tag spec '+(has(t)?"ok":"no")+'" title="'+(has(t)?"on your crew":"nobody on your crew has it")+'">'+TECH_BY_K[t].l+'</span>').join(" ");
     const kn=j.know.map(x=>'<span class="tag '+(knows(x)?"ok":"no")+'" title="'+(knows(x)?"someone on the crew knows it":"nobody on the crew knows it")+'">knows '+x+'</span>').join(" ");
-    return '<div class="jobrow" data-act="open-job" data-id="'+j.id+'" role="button" tabindex="0">'
+    return '<div class="jobrow" data-act="open-job" data-id="'+j.id+'" data-country="'+esc(j.country)+'" role="button" tabindex="0">'
       +'<div class="code">'+(j.final?"—":"№"+j.id.slice(1).padStart(3,"0"))+'<br>'+diffbar(j.diff,j.heat>22)+'</div>'
       +'<div><div class="t">'+(j.final?'<span class="chip c-bad">Final score</span> ':'')+esc(j.title)+'</div>'
         +'<div class="loc">'+co.flag+' '+esc(j.city)+', '+esc(j.country)+' · crew of '+j.need+' · '+esc(co.langs[0])+' · from '+esc(j.client)+(j.final?'':' · expires wk '+j.expires)+'</div>'
         +'<div class="meta"><span class="tag">'+CAT_BY_K[j.cat].l+'</span>'+techs+' '+kn+' '+fit+'</div></div>'
       +'<div class="pay num">'+money(j.payout)+'<div class="loc" style="text-align:right">+'+j.heat+' heat</div></div></div>';
   }).join("");
-  return strip+'<div class="panel">'+head+rows+'</div>';
+  return '<div class="panel">'+head+filt+rows+'</div>';
+}
+// The job file, in the left column beside the map.
+function jobPanel(j){
+  const co=COUNTRY_BY_NAME[j.country];
+  const cat=CAT_BY_K[j.cat];
+  const a=assessJob(j);
+  const wtxt=Object.entries(cat.w).map(([k,v])=>ATTR_ABBR[k]+'×'+v).join("  ");
+  const brief='<div class="brief"><span class="client">Posted by '+esc(j.client)+'.</span> '
+    +co.flag+' '+esc(j.city)+', '+esc(j.country)+' — '+esc(co.langs.join(" / "))+' spoken; pays in '+esc(co.cur)+'. '
+    +esc(co.pol)+'; '+esc(co.rel.toLowerCase())+'. Terrain: '+co.terrain.join(", ")+'. '
+    +(co.gate===2?'Strict border — weak passports and old convictions get turned back without papers. ':co.gate===1?'Visa border — limited passports need a forger aboard. ':'Open border. ')
+    +(co.eco===1?'Money goes far here, but the fee is lower.':co.eco===3?'Rich ground; expect the client to pay well and the police to be well funded.':'')
+    +'</div>';
+  const chips='<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"><span class="tag">'+cat.l+'</span>'
+    +j.techs.map(t=>'<span class="tag spec">wants '+TECH_BY_K[t].l+'</span>').join("")
+    +j.know.map(k=>'<span class="tag">knows '+k+'</span>').join("")
+    +j.tags.map(t=>'<span class="tag pass">'+TAG_LABEL[t]+'</span>').join("")+'</div>';
+  const checks=a.checks.map(x=>{const c=x.c;
+    return '<div class="check'+(x.ok?"":" out")+'"><div class="av">'+avatar(c.avseed,c.gender)+'</div>'
+      +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12.5px">'+esc(c.n)+' '+natOf(c).flag+' <span class="mono" style="color:var(--muted);font-size:10.5px">'+TECH_BY_K[c.tech].l+(c.role==="commander"?' · cmdr':'')+'</span></div>'
+      +'<div class="why">'+esc(x.why)+'</div></div><div class="mark">'+(x.ok?"✓":"✗")+'</div></div>';}).join("");
+  const factors='<div class="factors">'+a.factors.map(f=>'<span class="k">'+esc(f.k)+'</span><span><span class="'+(f.v>=0?"plus":"minus")+' num">'+(f.v>=0?"+":"")+f.v+'</span> · '+esc(f.note)+'</span>').join("")+'</div>';
+  const odds=a.team.length?('<div class="odds" title="estimated outcome spread"><i class="o-good" style="width:'+a.pClean+'%"></i><i class="o-mid" style="width:'+a.pOk+'%"></i><i class="o-bad" style="width:'+(a.pFail+a.pDis)+'%"></i></div>'
+    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span style="color:var(--good)">Clean ~'+a.pClean+'%</span><span style="color:var(--warn)">Messy ~'+a.pOk+'%</span><span style="color:var(--stamp)">Blown ~'+(a.pFail+a.pDis)+'%</span></div>'
+    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">Crew '+a.eff+' vs difficulty '+j.diff+'</div>'):'';
+  const reqs='<div class="req"><div class="b"><div class="k">Fee</div><div class="v num">'+money(j.payout)+'</div></div>'
+    +'<div class="b"><div class="k">Crew</div><div class="v num">'+a.team.length+' / '+j.need+'</div></div>'
+    +'<div class="b"><div class="k">Difficulty</div><div class="v">'+diffbar(j.diff,j.heat>22)+'</div></div>'
+    +'<div class="b"><div class="k">Heat</div><div class="v num">+'+j.heat+'</div></div></div>';
+  const h='<div class="panel-h" style="align-items:center"><div><div class="kicker">'+esc(co.name)+' · '+cat.l+(j.final?' · Final score':'')+'</div>'
+    +'<h2 style="font-size:20px;margin-top:4px;text-transform:none;letter-spacing:.02em">'+esc(j.title)+'</h2></div><button class="btn ghost sm" data-act="close-job">← All postings</button></div>';
+  const b='<div class="panel-b">'+brief+'<div class="mono" style="font-size:12px;color:var(--muted)">The plan leans on '+wtxt+'.</div>'+chips+reqs
+    +'<hr class="rule"><div class="kicker">Who can go</div><div class="sel-help">Everyone on the crew goes — if the border, the job and their own limits let them.</div>'+checks
+    +'<hr class="rule"><div class="kicker">The reckoning</div>'+factors+'<div style="margin-top:10px">'+odds+'</div>'
+    +'<hr class="rule"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" data-act="close-job">Walk away</button>'
+    +'<button class="btn stamp" data-act="execute" data-id="'+j.id+'" '+(a.canRun?"":"disabled")+'>'+(a.canRun?"Take the job →":"Needs "+j.need+" in the field")+'</button></div></div>';
+  return '<div class="panel">'+h+b+'</div>';
 }
 // Your crew, compact, above the postings — so a job can be judged without leaving the board.
 function crewStrip(){
@@ -1245,7 +1433,7 @@ function tabLog(){
     +'<hr class="rule"><div class="kicker">Ranking to the final score</div>'
     +'<div class="loy" style="height:9px;margin-top:6px"><i style="width:'+clamp(S.rep,0,100)+'%"></i></div>'
     +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px">'+(S.finalDone?"It's done.":finalUp?"The final score is live online.":S.rep+" / 100 — bigger jobs, bigger name.")+'</div>'
-    +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="tab" data-k="jobs">Online →</button><button class="btn ghost" data-act="laylow">Lay low a week</button></div>'
+    +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="tab" data-k="jobs">Jobs →</button><button class="btn ghost" data-act="laylow">Lay low a week</button></div>'
     +'</div></div>';
   return '<div class="grid g-hq">'+left+right+'</div>';
 }
@@ -1253,63 +1441,11 @@ function tabLog(){
 /* ------------------------------ MODALS -------------------------------- */
 function renderModal(){
   const m=S.modal;
-  if(m.type==="job")return modalJob(m.id);
   if(m.type==="recruit")return modalRecruit(m.id);
   if(m.type==="result")return modalResult(m.data);
   return "";
 }
 function modalWrap(inner){return '<div class="scrim" data-act="scrim"><div class="modal" role="dialog" aria-modal="true">'+inner+'</div></div>';}
-
-function modalJob(id){
-  const j=S.jobs.find(x=>x.id===id);if(!j)return "";
-  const co=COUNTRY_BY_NAME[j.country];
-  const cat=CAT_BY_K[j.cat];
-  const a=assessJob(j);
-  const wtxt=Object.entries(cat.w).map(([k,v])=>ATTR_ABBR[k]+'×'+v).join("  ");
-  const local=Math.round(j.payout*[0,1,1,1][co.eco]);
-  const brief='<div class="brief"><span class="client">Posted by '+esc(j.client)+'.</span> '
-    +co.flag+' '+esc(j.city)+', '+esc(j.country)+' — '+esc(co.langs.join(" / "))+' spoken; pays in '+esc(co.cur)+'. '
-    +esc(co.pol)+'; '+esc(co.rel.toLowerCase())+'. Terrain: '+co.terrain.join(", ")+'. '
-    +(co.gate===2?'Strict border — weak passports and old convictions get turned back without papers. ':co.gate===1?'Visa border — limited passports need a forger aboard. ':'Open border. ')
-    +(co.eco===1?'Money goes far here, but the fee is lower.':co.eco===3?'Rich ground; expect the client to pay well and the police to be well funded.':'')
-    +'</div>';
-  const chips='<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">'
-    +'<span class="tag">'+cat.l+'</span>'
-    +j.techs.map(t=>'<span class="tag spec">wants '+TECH_BY_K[t].l+'</span>').join("")
-    +j.know.map(k=>'<span class="tag">knows '+k+'</span>').join("")
-    +j.tags.map(t=>'<span class="tag pass">'+TAG_LABEL[t]+'</span>').join("")
-    +'</div>';
-  const checks=a.checks.map(x=>{
-    const c=x.c;
-    return '<div class="check'+(x.ok?"":" out")+'"><div class="av">'+avatar(c.avseed,c.gender)+'</div>'
-      +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12.5px">'+esc(c.n)+' '+natOf(c).flag+' <span class="mono" style="color:var(--muted);font-size:10.5px">'+TECH_BY_K[c.tech].l+(c.role==="commander"?' · cmdr':'')+'</span></div>'
-      +'<div class="why">'+esc(x.why)+'</div></div>'
-      +'<div class="mark">'+(x.ok?"✓":"✗")+'</div></div>';
-  }).join("");
-  const factors='<div class="factors">'+a.factors.map(f=>'<span class="k">'+esc(f.k)+'</span><span><span class="'+(f.v>=0?"plus":"minus")+' num">'+(f.v>=0?"+":"")+f.v+'</span> · '+esc(f.note)+'</span>').join("")+'</div>';
-  const odds=a.team.length?('<div class="odds" title="estimated outcome spread">'
-    +'<i class="o-good" style="width:'+a.pClean+'%"></i><i class="o-mid" style="width:'+a.pOk+'%"></i><i class="o-bad" style="width:'+(a.pFail+a.pDis)+'%"></i></div>'
-    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">'
-    +'<span style="color:var(--good)">Clean ~'+a.pClean+'%</span><span style="color:var(--warn)">Messy ~'+a.pOk+'%</span><span style="color:var(--stamp)">Blown ~'+(a.pFail+a.pDis)+'%</span></div>'
-    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">Crew '+a.eff+' vs difficulty '+j.diff+'</div>'):'';
-  const h='<div class="modal-h"><div><div class="kicker">'+esc(co.name)+' · '+cat.l+(j.final?' · Final score':'')+'</div>'
-    +'<h2 style="font-size:22px;margin-top:4px">'+esc(j.title)+'</h2></div><button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
-  const reqs='<div class="req">'
-    +'<div class="b"><div class="k">Fee</div><div class="v num">'+money(j.payout)+'</div></div>'
-    +'<div class="b"><div class="k">Crew</div><div class="v num">'+a.team.length+' / '+j.need+'</div></div>'
-    +'<div class="b"><div class="k">Difficulty</div><div class="v">'+diffbar(j.diff,j.heat>22)+'</div></div>'
-    +'<div class="b"><div class="k">Heat</div><div class="v num">+'+j.heat+'</div></div></div>';
-  const b='<div class="modal-b">'+brief
-    +'<div class="mono" style="font-size:12px;color:var(--muted)">The plan leans on '+wtxt+'.</div>'+chips+reqs
-    +'<hr class="rule"><div class="kicker">Who can go</div><div class="sel-help">Everyone on the crew goes — if the border, the job and their own limits let them.</div>'
-    +checks
-    +'<hr class="rule"><div class="kicker">The reckoning</div>'+factors
-    +'<div style="margin-top:10px">'+odds+'</div>'
-    +'<hr class="rule"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">'
-      +'<button class="btn ghost" data-act="scrim">Walk away</button>'
-      +'<button class="btn stamp" data-act="execute" data-id="'+j.id+'" '+(a.canRun?"":"disabled")+'>'+(a.canRun?"Take the job →":"Needs "+j.need+" in the field")+'</button></div></div>';
-  return modalWrap(h+b);
-}
 
 function modalRecruit(id){
   const c=byId(id);if(!c)return "";
@@ -1531,20 +1667,20 @@ const TUT_STEPS=[
   {tab:"crew",sel:".id.slot",h:"Four empty seats",t:"Fill them from the Roster. Everyone you hire goes on every job, takes a cut of every score, and costs upkeep each week."},
   {tab:"roster",sel:".rosterbar",h:"Five thousand files",t:"Search by name, country, language or knowledge. Filter by technique, role and nationality. Sort by fee, experience or raw skill."},
   {tab:"roster",sel:".cards .id",h:"A file",t:"Flag and passport tier (P1 strong, P4 weak), technique and rank, the five attributes, then education, jail, streets, knowledge, languages — and in red, what this one will not do. File opens the whole thing and lets you vet for informants. Hire pays the fee."},
-  {tab:"jobs",sel:".jobrow",h:"Online",t:"Clients post jobs by country. Each row: category, the techniques it wants, city, crew needed, fee, heat, when it expires — and a chip saying how your crew fits. Open one."},
+  {tab:"jobs",sel:".jobrow",h:"Jobs",t:"Clients post jobs by country. Each row: category, the techniques it wants, city, crew needed, fee, heat, when it expires — and a chip saying how your crew fits. Open one."},
   {tab:"jobs",openJob:true,sel:".check",h:"Who can go",t:"Every crew member, ✓ or ✗, with the reason: the border and their passport, a conviction, a limit the job trips, an injury. A forger on the crew gets weak passports through."},
   {tab:"jobs",openJob:true,sel:".factors",h:"The reckoning",t:"Every factor with its number — crew size, who commands, language, a local national, knowledge, techniques, heat — then the odds. Take the job and the whole eligible crew goes; a week passes."},
-  {tab:"log",sel:".log",h:"The case log",t:"Everything that happened, week by week. Lay low a week here or on the Online board: −15 heat, upkeep still due, fresh postings."},
+  {tab:"log",sel:".log",h:"The case log",t:"Everything that happened, week by week. Lay low a week here or on the Jobs board: −15 heat, upkeep still due, fresh postings."},
   {tab:"log",sel:".burger",h:"The office",t:"Esc, or this button, on any screen: pause, sound, music, brightness, the controls book, your file, and the door out. The i button beside it explains whatever is on screen."},
 ];
 function tutStart(){TUT.on=true;tutGo(0);}
 function tutGo(i){
   TUT.step=clamp(i,0,TUT_STEPS.length-1);
   const st=TUT_STEPS[TUT.step];
-  if(S){S.tab=st.tab;if(st.openJob){const j=S.jobs[0];S.modal=j?{type:"job",id:j.id}:null;}else S.modal=null;}
+  if(S){S.tab=st.tab;S.modal=null;if(st.openJob){const j=S.jobs[0];S.jobOpen=j?j.id:null;S.jobCountry=null;}else S.jobOpen=null;}
   render();
 }
-function tutEnd(){TUT.on=false;if(S)S.modal=null;SET.tutorialDone=true;saveSettings();render();}
+function tutEnd(){TUT.on=false;if(S){S.modal=null;S.jobOpen=null;}SET.tutorialDone=true;saveSettings();render();}
 function tutHTML(){
   const st=TUT_STEPS[TUT.step],n=TUT_STEPS.length,last=TUT.step===n-1;
   return '<div class="tut"><div class="tut-card"><div class="kicker">Tutorial · '+(TUT.step+1)+' of '+n+'</div>'
@@ -1566,6 +1702,7 @@ function infoContext(){
   if(!S)return draft?"create":"title";
   if(S.over)return "over";
   if(S.modal)return S.modal.type;
+  if(S.tab==="jobs"&&S.jobOpen)return "job";
   return S.tab;
 }
 const INFO={
@@ -1585,7 +1722,7 @@ const INFO={
     "5,000 files. <b>Search</b> by name, country, language or knowledge. Filter by <b>technique</b>, <b>role</b> and <b>nationality</b>; sort by fee, experience, raw skill or name. Show 30 more at the bottom.",
     "<b>Fee</b> is paid once. <b>Cut</b> is their share of every score. <b>Upkeep</b> is weekly. <b>File</b> opens the whole profile; <b>Hire</b> needs an open seat and the fee.",
     "About one file in fourteen is a <b>police informant</b>: they leak jobs and leak heat. <b>Vet</b> a file for $6K — a dull crew misses one in three, so a clean stamp is a guess with money behind it."]},
-  jobs:{h:"Online",t:[
+  jobs:{h:"Jobs",t:[
     "Postings from clients, by country. Each row: category, the techniques and knowledge it wants — <b>green</b> if someone on your crew has it, <b>red</b> if nobody does — city, country and language, crew needed, fee, heat, when it expires, and a chip: <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go.",
     "<b>Sort</b> the board by best fit, crew needed, technique wanted, fee, heat, difficulty, country or expiry. <b>Your crew</b> sits above the board — passport, technique, attributes, languages, knowledge, limits — so a posting can be judged without leaving; hide it if you know them by heart. Keys <b>1–4</b> jump between the tabs.",
     "The bars are difficulty; red means high heat. Open a posting to see the reckoning before you commit.",
@@ -1736,8 +1873,8 @@ function officePanel(){
     b='<div class="kv" style="font-size:12.5px;line-height:1.7">'
       +'<span class="k">Esc</span><span>The office — pause and settings. Also closes whatever is open.</span>'
       +'<span class="k">≡ top right</span><span>The same.</span>'
-      +'<span class="k">Crew · Online · Roster · Log</span><span>The four tabs.</span>'
-      +'<span class="k">1 · 2 · 3 · 4</span><span>Jump to Crew, Online, Roster, Log.</span>'
+      +'<span class="k">Crew · Jobs · Roster · Log</span><span>The four tabs.</span>'
+      +'<span class="k">1 · 2 · 3 · 4</span><span>Jump to Crew, Jobs, Roster, Log.</span>'
       +'<span class="k">Enter / Space</span><span>Open the posting you have selected.</span>'
       +'<span class="k">✓ / ✗</span><span>On a job file: who can go, and why not.</span>'
       +'<span class="k">Saving</span><span>Automatic, in this browser. Settings are kept separately and survive a new game.</span></div>'
@@ -1828,7 +1965,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 9 · 15 September 2026";
+const BUILD="build 10 · 15 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
@@ -1895,7 +2032,10 @@ document.addEventListener("click",e=>{
       }
       break;
     case "open-recruit": S.modal={type:"recruit",id}; render(); break;
-    case "open-job": S.modal={type:"job",id}; render(); break;
+    case "open-job": S.tab="jobs"; S.jobOpen=id; S.modal=null; render(); window.scrollTo(0,0); break;
+    case "close-job": S.jobOpen=null; render(); break;
+    case "map-country": S.jobOpen=null; S.jobCountry=(S.jobCountry===t.getAttribute("data-cn"))?null:t.getAttribute("data-cn"); render(); break;
+    case "map-clear": S.jobOpen=null; S.jobCountry=null; render(); break;
     case "more": S.shown+=30; render(); break;
     case "strip-toggle": S.stripHidden=!S.stripHidden; save(); render(); break;
     case "hire": hire(id); break;
@@ -1919,6 +2059,7 @@ document.addEventListener("keydown",e=>{
     else if(UI.panel){UI.panel=null;render();}
     else if(UI.office){UI.office=false;render();}
     else if(S&&S.modal){if(S.modal.type==="result"&&!S.modal.data.done)tickerFinish();else{S.modal=null;render();}}
+    else if(S&&S.jobOpen){S.jobOpen=null;render();}
     else{UI.office=true;UI.panel=null;render();}
     return;
   }
@@ -1964,6 +2105,7 @@ function doExecute(id){
   if(!assessJob(j).canRun)return;
   const res=executeJob(j);
   sfx("open");
+  S.jobOpen=null;
   S.modal={type:"result",data:res};
   render();
 }
@@ -1976,6 +2118,17 @@ function note(msg){logMsg(msg,"warn");render();}
 
 /* ------------------------------ BOOT ---------------------------------- */
 document.addEventListener("visibilitychange",()=>{musicSync();});
+// hovering a posting lights its country on the map
+document.addEventListener("mouseover",e=>{
+  const row=e.target&&e.target.closest?e.target.closest(".jobrow"):null;if(!row)return;
+  document.querySelectorAll(".mk.hov").forEach(m=>m.classList.remove("hov"));
+  const cn=(row.getAttribute("data-country")||"").replace(/"/g,"");
+  const m=cn?document.querySelector('.mk[data-cn="'+cn+'"]'):null;if(m)m.classList.add("hov");
+});
+document.addEventListener("mouseout",e=>{
+  const row=e.target&&e.target.closest?e.target.closest(".jobrow"):null;if(!row)return;
+  document.querySelectorAll(".mk.hov").forEach(m=>m.classList.remove("hov"));
+});
 let STORAGE_OK=true;
 try{localStorage.setItem("thecrew_probe","1");localStorage.removeItem("thecrew_probe");}catch(e){STORAGE_OK=false;}
 (function boot(){

@@ -30,13 +30,17 @@ decisions at the end.
   job categories** — interception, recovery, extraction, escort, surveillance, infiltration,
   cyber, smuggling, papers, negotiation, sabotage, vault. Countries share categories, but no
   two offer the same list.
-- **Online.** Seven or so postings a week from named clients, each with a fee (scaled by the
+- **Jobs.** Seven or so postings a week from named clients, each with a fee (scaled by the
   local economy), difficulty, heat, wanted techniques and knowledge — coloured green if your
   crew has them, red if not — and the tags that trip a crew member's limits. Postings expire.
   Sort the board by best fit, crew needed, technique wanted, fee, heat, difficulty, country or
-  expiry. Your crew sits above the board in a strip — passport, technique, attributes,
-  languages, knowledge, limits — so a posting can be judged without leaving; keys 1–4 jump
-  between the tabs.
+  expiry. Your crew sits above the board in a strip so a posting can be judged without leaving;
+  keys 1–4 jump between the tabs.
+- **The map.** Beside the postings, a world map drawn in the same ink — continents and a
+  graticule, no borders — with a lit marker on every country that has a posting (and a count
+  when there are several). Choose a job and the map zooms to its country, centred and spotlit
+  with the rest dimmed, while the job file opens on the left. Click a lit country to show only
+  its postings; hover a posting to light its country.
 - **The reckoning.** Before you take a job, the file shows who can go and why not (border,
   conviction, a limit the job hits, injury), then every factor with its number: crew size,
   who commands, language, local national, knowledge (double if studied), techniques, heat.
@@ -111,7 +115,7 @@ smallest one; none is a decision.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 9 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 10 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
