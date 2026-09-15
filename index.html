@@ -156,6 +156,9 @@
   .req .b .k{font-family:var(--f-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
   .req .b .v{font-family:var(--f-disp);font-size:16px}
   .brief{font-family:var(--f-mono);font-size:12px;color:var(--ink-2);line-height:1.65;border-left:3px solid var(--ink);padding:4px 10px;margin:8px 0 10px;background:var(--card)}
+  /* ---- what the job actually is ---- */
+  .jobbrief{border:1px solid var(--line-2);background:var(--card);padding:9px 12px 11px;margin:2px 0 10px}
+  .jobbrief p{margin:5px 0 0;font-family:var(--f-body);font-size:14.5px;line-height:1.6;color:var(--ink)}
   .brief .client{color:var(--ink);font-weight:500}
   .factors{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-family:var(--f-mono);font-size:11px;margin-top:8px}
   .factors .k{color:var(--muted)}
@@ -1163,6 +1166,93 @@ function makeJob(rng,tierBias){
     expires:S.week+ri(rng,2,4),
   };
 }
+/* ------------------------------ THE BRIEF ----------------------------- */
+// What the job actually is, in four sentences. Built from the posting itself, so it reads
+// the same every time it is opened and survives a save without being stored.
+const BRIEF_OPEN={
+  interception:["A {noun} leaves {city} on a schedule somebody paid to keep. The client wants the schedule broken.",
+    "Something is moving out of {city} and the client wants it taken off the route before it arrives.",
+    "The {noun} is expected somewhere it must never reach. That is the whole of it."],
+  recovery:["The {noun} left its owner's hands. The client wants it put back in them.",
+    "Somebody in {city} is holding the {noun}, and the client would rather not ask twice.",
+    "The {noun} has changed hands twice since it left {city}. The client wants the last hand opened."],
+  extraction:["There is a person in {city} the client needs out, and a short list of people who want them kept.",
+    "The {noun}: a person, not a parcel. Out of {city} in one piece, before the wrong people count heads.",
+    "Somebody is being held, watched or waited for in {city}. The client wants them somewhere else by morning."],
+  escort:["Something has to cross {country} and arrive whole. You are the reason it arrives.",
+    "The client is moving the {noun} through {city} and does not trust the road.",
+    "A run across {country} with cargo other people want, and nobody official to call if it goes wrong."],
+  surveillance:["Eyes on the {noun} in {city}. No contact, no noise, nothing touched.",
+    "The client wants a record of the {noun} — times, faces, plates — and nothing more than that.",
+    "Watch, write it down, leave. The {noun} must never learn it was watched."],
+  infiltration:["Get inside the {noun} in {city} as somebody who belongs there.",
+    "The {noun} keeps its doors shut to strangers, so the client needs a stranger on the inside.",
+    "Days of being somebody else in {city} until a door opens from the other side."],
+  cyber:["The {noun} is a machine with money behind it, and the client wants it opened from a room far away.",
+    "No doors and no locks: the {noun} sits on a network in {city} and holds what the client is after.",
+    "Quiet work — get into the {noun}, take what the client says is owed, leave the logs boring."],
+  smuggling:["Freight that cannot be declared has to leave {city} and arrive with no stamp on it.",
+    "The client needs the {noun} moved, and none of it can exist on paper afterwards.",
+    "Cargo, a route out of {city}, and a set of official eyes that must be looking elsewhere."],
+  forgery:["Paper: the {noun}, good enough that a clerk in {city} signs without reading it twice.",
+    "The client needs documents that survive being checked — the {noun}, by the end of the week.",
+    "Nothing is stolen on this one. Something is made, and it has to look older than it is."],
+  negotiation:["A table in {city}, two sides of it, and a number the client can live with.",
+    "The {noun} is settled with words or it is not settled at all. You are doing the talking.",
+    "Somebody in {city} wants more than they are owed. Talk them back down to what they are owed."],
+  sabotage:["The {noun} in {city} has to stop working for a few hours, and it has to look like it stopped on its own.",
+    "The client is paying for downtime. The {noun}, dark, and nobody standing near it.",
+    "Break one specific thing in {city}, break nothing else, and be somewhere public when it breaks."],
+  vault:["The {noun} in {city} holds what the client says is theirs. Open it and prove them right.",
+    "Steel, a time lock and one night. The {noun} is the entire job.",
+    "The {noun} has never been opened by anybody who did not work there. The client would like that to change."],
+};
+const BRIEF_TIER=["",
+  "It is a small operation — one door, one shift, nobody expecting anybody.",
+  "It is watched, but not closely: a routine, a couple of people, and gaps you can time.",
+  "It is properly held — overlapping shifts, a schedule somebody thought about, and people paid to notice.",
+  "Everything about it is difficult on purpose, and whoever set it up has seen crews like yours before."];
+const BRIEF_TAG={water:"Part of it happens on the water.",air:"A leg of it is by air.",
+  heights:"Some of it is well above the ground.",underground:"It goes below street level, where phones stop.",
+  violence:"There will be people there who intend violence, whoever starts it.",night:"It happens after dark."};
+const BRIEF_PAY=["{client} pays on delivery and nothing at all if it goes wrong.",
+  "{client} is paying {fee}, and will not be answering questions afterwards.",
+  "{client} wants it done and forgotten; the money moves the same night.",
+  "{client} has paid for silence as much as for the work."];
+// a client whose name carries a comma cannot be the subject of a sentence without reading badly
+const BRIEF_PAY_ALT=["The money — {fee}, on delivery — comes from {client}.",
+  "It is posted by {client}, and paid the same night it is done.",
+  "The fee is {fee}, from {client}, and no questions come with it."];
+function anA(w){return /^[aeiou]/i.test(w)?"an "+w:"a "+w;}
+function jobSeed(job){
+  const s=(job.id||"")+"|"+(job.title||"")+"|"+(job.country||"");
+  let h=2166136261;
+  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}
+  return h>>>0;
+}
+function jobNoun(job){
+  const t=job.title||"";
+  const i=t.toLowerCase().indexOf(" the ");
+  return i<0?t.toLowerCase():t.slice(i+5);
+}
+function jobBrief(job){
+  if(job.final)return "Everything you have built, against the one room that has never been opened. There is no posting for this and no client to pay you — there is a name at the end of it, and the certainty that nobody gets a second run at it. Take the whole crew.";
+  const rng=mulberry32(jobSeed(job));
+  const v={noun:jobNoun(job),city:job.city,country:job.country,client:cap(job.client||"the client"),fee:money(job.payout)};
+  const open=fill2(pick(rng,BRIEF_OPEN[job.cat]||BRIEF_OPEN.vault),v);
+  const tier=BRIEF_TIER[clamp(job.tier,1,4)];
+  const tags=(job.tags||[]).filter(t=>BRIEF_TAG[t]);
+  const tag=tags.length?BRIEF_TAG[pick(rng,tags)]:"";
+  const techs=(job.techs||[]).map(t=>TECH_BY_K[t]&&TECH_BY_K[t].l).filter(Boolean);
+  const wants=techs.length
+    ? "The client asked for "+(techs.length>1?techs.slice(0,-1).map(anA).join(", ")+" and "+anA(techs[techs.length-1]):anA(techs[0]))
+      +((job.know||[]).length?", and somebody who knows "+job.know.join(" and ")+".":".")
+    : "";
+  const comma=/[,;]/.test(job.client||"");
+  const pay=fill2(pick(rng,comma?BRIEF_PAY_ALT:BRIEF_PAY),comma?Object.assign({},v,{client:job.client}):v);
+  return [open,tier,tag,wants,pay].filter(Boolean).join(" ");
+}
+
 function refreshJobs(fill){
   const rng=mulberry32((S.seed^(S.week*2654435761))>>>0);
   S.jobs=S.jobs.filter(j=>j.final||j.expires>=S.week);
@@ -2409,6 +2499,7 @@ function jobPanel(j){
   const bench=benchSet(j);
   const a=assessJob(j,jobPool(j));
   const wtxt=Object.entries(cat.w).map(([k,v])=>ATTR_ABBR[k]+'×'+v).join("  ");
+  const theJob='<div class="jobbrief"><div class="kicker">The job</div><p>'+esc(jobBrief(j))+'</p></div>';
   const brief='<div class="brief"><span class="client">Posted by '+esc(j.client)+'.</span> '
     +co.flag+' '+esc(j.city)+', '+esc(j.country)+' — '+esc(co.langs.join(" / "))+' spoken; pays in '+esc(co.cur)+'. '
     +esc(co.pol)+'; '+esc(co.rel.toLowerCase())+'. Terrain: '+co.terrain.join(", ")+'. '
@@ -2456,7 +2547,7 @@ function jobPanel(j){
       +'<div class="loc">'+ac.team.length+' of '+crewMembers(cr).length+' can go · crew '+ac.eff+' vs difficulty '+j.diff+' · '+(lead?'led by '+esc(lead.first):'<span style="color:var(--stamp)">leaderless (−10)</span>')+(busy?' · <span style="color:var(--stamp)">worked this week</span>':'')+(j.final?' · the final score is yours alone':'')+'</div></div>'
       +'<div><button class="btn sm" data-act="execute-crew" data-id="'+j.id+'" data-crew="'+cr.id+'" '+(ac.canRun&&!busy&&!j.final?"":"disabled")+'>Send →</button></div></div>';}).join("");
   const othersBlock=crews().length?'<hr class="rule"><div class="kicker">Other crews</div><div class="sel-help">A crew you founded can take this instead of you: its own reckoning, its own report, and your week stays yours. One job per crew per week. No twists — you are not there to decide.</div>'+others:'';
-  const b='<div class="panel-b">'+brief+'<div class="mono" style="font-size:12px;color:var(--muted)">The plan leans on '+wtxt+'.</div>'+chips+reqs
+  const b='<div class="panel-b">'+theJob+brief+'<div class="mono" style="font-size:12px;color:var(--muted)">The plan leans on '+wtxt+'.</div>'+chips+reqs
     +'<hr class="rule"><div class="kicker">Who goes</div>'+benchBar+checks
     +'<hr class="rule"><div class="kicker">The reckoning</div>'+factors+'<div style="margin-top:10px">'+odds+'</div>'+othersBlock
     +'<hr class="rule"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" data-act="close-job">Walk away</button>'
@@ -3032,6 +3123,7 @@ const INFO={
     "<b>Standing arrangements</b> is where money goes. Three people on a weekly retainer — a <b>lawyer</b> (anyone taken is held half as long), a <b>doctor</b> (a wound is one week, not two), a <b>fixer</b> (two more postings a week, and one written for the crew you actually have) — paid out of the same payroll as the crew, so a missed week loses them. A <b>safe house</b> is bought outright, in three moves: heat falls 7, then 9, then 11 a week, and the best one keeps most of the float through a raid. And a <b>desk</b> can be paid to lose a file: heat −20, priced by how hot you are.",
     "<b>Ranking — what the name buys.</b> The name decides everything a client, a recruit and a police force does with you. <b>Nobody</b> (0): jobs pay −20%, only tier 1–2 postings, nobody above Professional will sign, loyalty slips a point a week. <b>Small time</b> (20): pay −10%. <b>Known</b> (40): tier-3 postings, full pay, Veterans sign. <b>Respected</b> (60): tier-4 postings, pay +10%, Legends sign, loyalty +1 a week, heat +5%. <b>Feared</b> (80): pay +20%, heat +10%. <b>The Crew</b> (100): pay +35%, loyalty +2, heat +15%, and the final score appears. Clean and successful work raises it; messy work, leaks, arrests and walkouts lower it; a week laid low costs a point — a name unused is a name forgotten."]},
   job:{h:"A job file",t:[
+    "<b>The job</b>, at the top: what the client actually wants, in four sentences — the work itself, how well the thing is held, what the posting asks for, and the terms. It is written from the posting, so it reads the same every time you open it.",
     "<b>The brief</b>: who posted it, and the country — language, money, politics, religion, terrain, and the border rule. Chips: the category, techniques and knowledge wanted, and tags such as <i>on the water</i> or <i>at night</i> that trip a crew member's limits.",
     "<b>Who goes</b>: every crew member, ✓ or ✗, with the reason — the border against their passport, a conviction at a strict border, a limit the job hits, an injury. A forger on the crew gets weak passports through.",
     "<b>Bench</b> anyone you would rather keep out of it, yourself included. A bench seat takes no cut of the score, learns nothing from the job, and cannot be hurt, arrested or killed on it — and the crew that does go is smaller, which the reckoning counts. Bench yourself and a commander-type runs it in your place. <b>Send everyone</b> puts them all back.",
@@ -3320,7 +3412,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 21 · 15 September 2026";
+const BUILD="build 22 · 15 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */

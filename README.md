@@ -46,6 +46,11 @@ decisions at the end.
   when there are several). Choose a job and the map zooms to its country, centred and spotlit
   with the rest dimmed, while the job file opens on the left. Click a lit country to show only
   its postings; hover a posting to light its country.
+- **The brief.** Open a posting and it opens with what the job actually is, in four sentences:
+  the work itself in the words of its category, how well the thing is held (by tier), the one
+  condition that matters (on the water, at height, underground, after dark, or people who intend
+  violence), what the client asked for, and the terms. Written from the posting itself, so it
+  reads the same every time it is opened and after a save. The final score has its own words.
 - **Who goes.** Every eligible crew member goes by default, and you can **bench** any of them
   on the job file, yourself included. A bench seat takes no cut of the score, learns nothing,
   and cannot be hurt, arrested or killed — and the crew that does go is smaller, which the
@@ -234,7 +239,7 @@ smallest one; none is a decision.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 21 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 22 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
