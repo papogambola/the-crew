@@ -91,6 +91,25 @@ decisions at the end.
 - **A crew that grows.** Everyone who goes on a job gains experience; ranks — Rookie,
   Operator, Professional, Veteran, Legend — are earned at 40, 110, 220 and 400 xp, and good
   work adds a point to the attributes the job leaned on. You included.
+- **Seats, and other crews.** Four soldiers' seats to start; a Respected name (ranking 60)
+  opens two more, for six soldiers and you. From week 104 (two years in), Feared, with seven on
+  your crew, you can **found a second crew**: a commander-type and four soldiers out of your
+  seven, named after its commander, which takes a job of its own each week from the same board
+  without you — its own reckoning (its commander's score instead of yours, no twists because
+  you are not there to decide), its own live report, and its take, heat and ranking are
+  yours, as is its payroll. A third crew at three years, a fourth at four, no more. People
+  move between crews from their cards; dissolving a crew brings them back as far as your
+  seats allow.
+- **The bonus buys something.** Three weeks' upkeep ($4K at least) for +14 loyalty and three
+  weeks *paid up*: +2 on every reckoning that member goes on, deaf to another crew's drinks,
+  never the one who skims the split, and not the one the between-jobs trouble picks on. It also
+  settles any grumbling about small jobs.
+- **Small money.** Every member has a price: a cut under two weeks of their own upkeep is a job
+  done for you, not for them. The job file's chips say who calls a posting small money before
+  you take it. Three small jobs in a row and they grumble — −5 loyalty a job, −2 on the
+  reckoning, a chip on the card, and the "wants out" event picks them first; five, and they may
+  walk out at the split, back onto the roster, marked QUIT on the field roster. A proper score
+  or a bonus resets the count.
 - **Continue.** The game saves itself after every move, in the browser you play in. The title
   screen offers the saved crew first — name, week, ranking, money — and warns if the browser
   is refusing to keep saves (a private window, or site data blocked).
@@ -102,10 +121,11 @@ decisions at the end.
 - **Music.** The creator's 14-track compilation, split on the silences between tracks and
   re-encoded to 128 kbps for the web (`music/`). Eleven tracks rotate under the live job
   report, one per job; three score the verdict — the quietest for a success, a middle one for a
-  messy job, the loudest for a disaster — and loop while the report is open. The radio is quiet
-  between jobs. Browsers only allow audio after the first click, so the first job's track starts
-  on the click that takes it; the radio in the office shows its state and has a **Start the
-  radio** button.
+  messy job, the loudest for a disaster — and loop while the report is open. Under everything
+  else — the title, the office, the crew, the boards, the log — the creator's hour of suspense
+  (`music/ambient.mp3`, 62 minutes as delivered) plays on a loop. Browsers only allow audio
+  after the first click, so the loop starts on the first click; the radio in the office shows
+  its state and has a **Start the radio** button.
 - **Sound.** A small set of synthesised effects — clicks, the verdict stamp, a coin on a
   hire, a siren on a raid. No files; the office switch turns it off.
 - **Tutorial.** On the first game, ten steps walk through the screens, highlighting each
@@ -159,7 +179,7 @@ smallest one; none is a decision.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 15 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 16 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
