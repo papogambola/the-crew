@@ -1,20 +1,17 @@
 # The Crew
 
-A black-ink-on-white-paper game of global crime interception. One file, no dependencies.
+A black-ink-on-white-paper game of global crime. You are the criminals. One file, no dependencies.
 
-You are the name at the top of the chart. Fill the other four seats from **5,000 operatives**,
-then take the jobs clients post on the dark web — country by country, each with its own
-language, money, politics, religion, terrain and job categories. Everyone on the crew goes
-on every job, if the border lets them in and the job doesn't hit one of their limits.
+You are the name at the top of the police's chart. Fill the other four seats from **5,000
+operatives**, then take the jobs clients post on the dark web — country by country, each
+with its own language, money, politics, religion, terrain and job categories. Everyone on
+the crew goes on every job, if the border lets them in and the job doesn't hit one of
+their limits.
 
-The working foundation for the design is `CONCEPT.md`, kept verbatim.
+Play it here: **https://papogambola.github.io/the-crew/** — every push to `main` redeploys it.
 
-## Play it
-
-Open `index.html` in any browser. Progress saves itself in that browser.
-
-To publish it, turn on GitHub Pages for this repository (Settings → Pages → deploy from
-the `main` branch, root folder) and it serves at `https://<owner>.github.io/the-crew/`.
+The working foundation for the design is `CONCEPT.md`, kept as written, with a dated log of
+decisions at the end.
 
 ## What is in the build
 
@@ -39,18 +36,21 @@ the `main` branch, root folder) and it serves at `https://<owner>.github.io/the-
 - **The reckoning.** Before you take a job, the file shows who can go and why not (border,
   conviction, a limit the job hits, injury), then every factor with its number: crew size,
   commander, language, local national, knowledge (double if studied), techniques, heat.
-- **Deception.** About one file in fourteen is an informant. Vetting costs $6K and a dull
-  crew misses one in three. After a big score, low-loyalty members can skim and vanish.
+- **Deception.** About one file in fourteen is a police informant. Vetting costs $6K and a
+  dull crew misses one in three. After a big score, low-loyalty members can skim and vanish.
 - **Pressure.** Heat penalises every job and triggers a raid at 100; laying low cools it.
-  Botched jobs get people hurt or held. Reach 100 reputation and the final score appears.
+  Botched jobs get people hurt or held. Reach 100 notoriety and the final score appears.
+
+## Decided
+
+- **The crew are criminals, not police** (15 September 2026). Clients on the dark web are
+  the buyers; the police are the heat.
 
 ## Provisional choices — easy to change
 
 `CONCEPT.md` lists these as open. The build needed an answer to run, so each has the
 smallest one; none is a decision.
 
-- **"Crime interception"** is left as the crew's trade without saying which side of the law
-  it is on. Categories and copy read either way.
 - **Commander / soldier** is a quality on every file, not an assignment. In the field, one
   commander adds their command score; none costs −10; each extra costs −6.
 - **Missions** resolve in one roll: crew power (weighted attributes × experience, plus the

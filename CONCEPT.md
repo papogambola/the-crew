@@ -60,3 +60,9 @@ These are unspecified details, not additional requirements:
 The following is preserved verbatim from the creator's message:
 
 > This is active. I lost everything that I wrote because I copied and didn't clipboard it. So myself from the beginning. You choose from 5,000 characters to build your five-team crew, including you. The crew is a global crime interception team that you need to work with to collect jobs around the world that are published on the dark web from clients. The jobs can be different from country to country, depends on the religion, demographic, geographic, topographic, currency, economic, politics, language, culture, etc. This game has only two genders: male and female. No neutral gender, no they, no pronouns. Very basic game. The jobs can be different, depends on, as I said, the country. There are different categories that can be chosen from in each country. They can be shared by countries, but not each country has the same categories or the same jobs. You can choose the jobs that will be the best for you, but you need to understand your team's attributes, because each team member has his own attributes, what he can do, what he cannot do, his experience, his capabilities, his techniques, his knowledge, his education, time in jail, time on the streets. Is he a commander, or is he a soldier? Everything regarding the people on your crew will affect the job.
+
+## Decisions since this document
+
+The text above is kept as written. Decisions that close one of its open details are logged here, dated.
+
+- **15 September 2026 — The crew are criminals, not police.** Closes the first item under "Details still open". The crew is a criminal crew for hire; the clients on the dark web are the buyers. The game's copy, the README and the *notoriety* measure follow from it.
