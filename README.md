@@ -47,9 +47,14 @@ decisions at the end.
   when there are several). Choose a job and the map zooms to its country, centred and spotlit
   with the rest dimmed, while the job file opens on the left. Click a lit country to show only
   its postings; hover a posting to light its country.
+- **Who goes.** Every eligible crew member goes by default, and you can **bench** any of them
+  on the job file, yourself included. A bench seat takes no cut of the score, learns nothing,
+  and cannot be hurt, arrested or killed — and the crew that does go is smaller, which the
+  reckoning counts. Bench yourself and a commander-type runs it in your place.
 - **The reckoning.** Before you take a job, the file shows who can go and why not (border,
   conviction, a limit the job hits, injury), then every factor with its number: crew size,
-  who commands, language, local national, knowledge (double if studied), techniques, heat.
+  who commands, language, local national, knowledge (double if studied), techniques, heat,
+  temperament, and what the crew have been through together.
   Every requirement on the file — crew size, techniques, knowledge, language, the job's
   conditions — carries a green tick or a red cross, and the chip's border says the same.
 - **The live report.** Take the job and it plays out minute by minute, manager-game style:
@@ -153,6 +158,40 @@ decisions at the end.
   X" tag on a posting or job file — for a small card saying what it is, which attribute it
   leans on, what knowledge it comes with, and which jobs want it. The same on knowledge tags
   and on MUS / BRN / TCH / CHM / NRV. Keyboard focus or a tap on a phone shows it too.
+- **Temperament.** Two files in three carry a trait, and a trait is a fact about working with
+  them rather than a number on a bar: **Steady** never loses faith after a bad night;
+  **Hothead** is worth +3 and costs +4 heat; **Careful** takes 4 heat off any job they work;
+  **Quick study** learns at double speed; a **Mentor** is +2 and teaches everyone else half
+  again as fast; **Mercenary** is +2 and takes 3% more; **Lucky** adds 4 to the night's roll,
+  **Jinx** takes 3 off and pulls twists towards the crew; a **Ghost** is never the one the
+  police get their hands on.
+- **They become a crew.** Everyone who goes on a job together builds a bond — +1 for a success
+  or better, −1 for a botched or disastrous one, from −3 to +3. The reckoning counts it, up to
+  ±6, as *They have worked together* or *Bad blood*, and the cards say who gets on with whom.
+- **The record.** Everything the crew has done, counted: jobs, verdicts, money earned and paid
+  out in cuts, the biggest score, countries worked, twists called right, who was hurt, taken or
+  lost, and the current run of jobs without a scratch. Under it, eighteen **career marks** from
+  the first job to the final score — each paying ranking, money or both, announced in a box
+  when it lands, with the next three always shown.
+- **Standing arrangements.** Money with somewhere to go. Three people on a weekly retainer: a
+  **lawyer** (anyone taken is held half as long), a **doctor** (a wound is one week, not two),
+  a **fixer** (two more postings a week, and one written for the crew you actually have) — paid
+  out of the same payroll as the crew, so a missed week loses them. A **safe house** bought
+  outright in three moves: heat falls 7, then 9, then 11 a week, and the best one keeps most of
+  the float through a raid. And a **desk** that will lose a file: heat −20, priced by how hot
+  you are.
+- **The competition and the law.** From Small time on, a rival outfit works the same board, run
+  by somebody with a name. They take the best posting left most weeks and their standing climbs
+  when they do; once it passes your ranking they start buying your crew drinks. You can buy a
+  name inside their operation or send your enforcer, which works about two times in three and is
+  loud when it doesn't. A named **detective** opens a file once the heat has been up or your name
+  has grown: it thickens with heat, thins when you lie low, pay a desk or get raided, and past 50
+  the raid comes at heat 90 instead of 100, past 75 at 80. Two of the between-jobs events are
+  theirs: a sit-down, and a tip-off.
+- **Carrying the game.** A save lives in one browser only. The office's **file cabinet** writes
+  the whole game out as one line of text you can keep anywhere, and reads one back in — on this
+  browser or another. A pasted code is read and named before it loads, so nothing is replaced by
+  accident.
 - **Deception.** About one file in fourteen is a police informant. Vetting costs $6K and a
   dull crew misses one in three. After a big score a disloyal, greedy or informant member
   may skim the split and vanish; a loyal one stays.
@@ -196,7 +235,7 @@ smallest one; none is a decision.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 19 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 20 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
