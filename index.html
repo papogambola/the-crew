@@ -246,6 +246,20 @@
   .tk.good .tk-x{color:var(--good)}
   .tk.warn .tk-x{color:var(--warn)}
   .tk.bad .tk-x{color:var(--stamp)}
+  .tk.tk-twist{border-top:1px solid var(--stamp);border-bottom:1px solid var(--stamp);margin-top:4px;padding:6px 0}
+  .tk.tk-twist .tk-x{font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+  /* ---- the twist: the report stops and waits for a call ---- */
+  .twist{border:2px solid var(--stamp);background:var(--paper);padding:12px 14px;margin-top:12px}
+  .twist h3{font-size:20px;margin:6px 0 4px;text-transform:uppercase;letter-spacing:.05em}
+  .twist p{margin:0 0 10px;font-size:14.5px;line-height:1.55}
+  .twist-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  @media(max-width:640px){.twist-opts{grid-template-columns:1fr}}
+  .twist-opt{text-align:left;font-family:var(--f-mono);font-size:12.5px;line-height:1.45;border:1px solid var(--ink);background:var(--card);color:var(--ink);padding:8px 10px;cursor:pointer;display:flex;gap:8px;align-items:flex-start}
+  .twist-opt b{font-family:var(--f-logo);font-size:15px;letter-spacing:.06em;color:var(--stamp);flex:none;width:16px}
+  .twist-opt:hover:not(:disabled),.twist-opt:focus-visible{background:var(--ink);color:var(--paper)}
+  .twist-opt:hover:not(:disabled) b,.twist-opt:focus-visible b{color:var(--paper)}
+  .twist-opt:disabled{color:var(--muted);border-color:var(--line-2);cursor:not-allowed;background:var(--paper-2)}
+  .nosign{display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;color:var(--stamp);font-weight:400}
   .live{color:var(--stamp);font-weight:500;animation:blink 1.2s steps(2) infinite}
   @keyframes blink{50%{opacity:.25}}
   @media(prefers-reduced-motion:reduce){.live{animation:none}}
@@ -717,11 +731,13 @@ function makeJob(rng,tierBias){
   const co=pick(rng,COUNTRIES);
   const cat=CAT_BY_K[pick(rng,co.cats)];
   const r=rng();
-  const tier=clamp((tierBias||0)+(r<0.34?1:r<0.64?2:r<0.87?3:4),1,4);
+  const rk=rankInfo(S.rep);
+  // clients post to a name: a Nobody sees tier 1–2, a Known crew tier 3, Respected and up tier 4
+  const tier=clamp((tierBias||0)+(r<0.34?1:r<0.64?2:r<0.87?3:4),1,rk.maxTier);
   const need=[0,ri(rng,2,3),ri(rng,3,4),ri(rng,4,5),5][tier];
   const diff=clamp(34+tier*10+ri(rng,-6,6)+Math.floor(S.rep/14)+(co.gate===2?4:0),34,96);
   const payBase=[0,42000,120000,300000,720000][tier]*[0,0.65,0.8,1][co.eco];
-  const payout=Math.round(payBase*(0.7+rng()*0.8)/1000)*1000;
+  const payout=Math.round(payBase*(0.7+rng()*0.8)*rk.pay/1000)*1000;
   const heat=Math.round(cat.heat*(0.8+tier*0.12)*(co.auth?1.2:1));
   const techs=[];const pool=cat.techs.slice();
   const nt=clamp(1+Math.floor(tier/2),1,3);
@@ -749,7 +765,8 @@ function refreshJobs(fill){
   S.jobs=S.jobs.filter(j=>j.final||j.expires>=S.week);
   let guard=0;
   while(S.jobs.filter(j=>!j.final).length<7&&guard++<40)S.jobs.push(makeJob(rng,0));
-  if(!S.jobs.some(j=>j.tier>=3)&&(fill||chance(rng,0.5)))S.jobs.push(makeJob(rng,2));
+  const top=Math.min(3,rankInfo(S.rep).maxTier);
+  if(!S.jobs.some(j=>j.tier>=top)&&(fill||chance(rng,0.5)))S.jobs.push(makeJob(rng,2));
   maybeUnlockFinal();
 }
 function maybeUnlockFinal(){
@@ -839,8 +856,23 @@ function assessJob(job){
 // Everyone who goes on a job learns from it. Experience ranks are earned, not bought.
 const XP_STEPS=[0,40,110,220,400];
 function xpNeeded(exp){return exp>=5?null:XP_STEPS[exp];}
-const RANKS=[[100,"The Crew"],[80,"Feared"],[60,"Respected"],[40,"Known"],[20,"Small time"],[0,"Nobody"]];
-function rankName(rep){for(const r of RANKS)if(rep>=r[0])return r[1];return "Nobody";}
+// Ranking is a name with consequences: what clients post, what they pay, who will sign,
+// whether the crew stays, and how hard the police look. Resolved in one place.
+const RANKS=[
+  [100,"The Crew",{pay:1.35,maxTier:4,hireExp:5,loyDrift:2,heatMul:1.15,note:"Top of the board. Jobs pay +35%, anyone will sign, loyalty holds by itself (+2 a week) — and every police force knows the name (heat +15%)."}],
+  [80,"Feared",{pay:1.2,maxTier:4,hireExp:5,loyDrift:1,heatMul:1.1,note:"Jobs pay +20%. Legends will sign. Loyalty +1 a week. The police look harder (heat +10%)."}],
+  [60,"Respected",{pay:1.1,maxTier:4,hireExp:5,loyDrift:1,heatMul:1.05,note:"Tier-4 jobs open. Jobs pay +10%. Legends will sign. Loyalty +1 a week. Heat +5%."}],
+  [40,"Known",{pay:1.0,maxTier:3,hireExp:4,loyDrift:0,heatMul:1.0,note:"Tier-3 jobs open. Full pay. Veterans will sign."}],
+  [20,"Small time",{pay:0.9,maxTier:2,hireExp:3,loyDrift:0,heatMul:1.0,note:"Jobs pay −10%. Tier 1–2 only. Nobody above Professional will sign."}],
+  [0,"Nobody",{pay:0.8,maxTier:2,hireExp:3,loyDrift:-1,heatMul:1.0,note:"Jobs pay −20%. Tier 1–2 only. Nobody above Professional will sign, and loyalty slips a point a week — nobody stays loyal to a nobody."}],
+];
+function rankInfo(rep){for(const r of RANKS)if(rep>=r[0])return Object.assign({name:r[1],min:r[0]},r[2]);const r=RANKS[RANKS.length-1];return Object.assign({name:r[1],min:r[0]},r[2]);}
+function rankName(rep){return rankInfo(rep).name;}
+function rankNext(rep){let nx=null;for(const r of RANKS){if(r[0]>rep&&(nx===null||r[0]<nx[0]))nx=r;}return nx?Object.assign({name:nx[1],min:nx[0]},nx[2]):null;}
+// Who will sign: a Legend does not join a Nobody. The ranking that opens the door for a given experience.
+function canSign(c){return c.isPlayer||c.exp<=rankInfo(S.rep).hireExp;}
+function repToSign(exp){let best=null;for(const r of RANKS){if(r[2].hireExp>=exp&&(best===null||r[0]<best))best=r[0];}return best===null?0:best;}
+function signWhy(c){return "A "+EXP[c.exp-1]+" won't sign with a "+rankName(S.rep)+" crew. Ranking "+repToSign(c.exp)+" opens the door.";}
 
 /* ----------------------------- THE REPORT ----------------------------- */
 // The job, minute by minute: who got in, who talked, what went right, what went wrong.
@@ -909,10 +941,14 @@ const THINGS=["a partial plate","a description","a name that isn't yours, yet","
 const QUIET=["By morning, nothing. Not a line in the paper.","Nobody reports anything, because nobody wants to explain what was taken."];
 const SPLIT=["The split: {g} gross, {c} to the crew, {n} to you.","The client pays in full: {g}. The crew takes {c}; {n} is yours.","{g} lands. After the crew's {c}, you keep {n}."];
 const NOPAY=["No payment. The client doesn't return the call.","The client's number is dead by morning. No fee.","No fee — the client says 'next time', which means never."];
-function narrate(job,a,tier,rng,x){
+function fill2(s,v){return String(s).replace(/\{(\w+)\}/g,(_,k)=>v[k]!==undefined?v[k]:"{"+k+"}");}
+// The report in two halves: "pre" is the arrival and the plan, "post" is the work and what it cost.
+// A twist can sit between them. The clock carries over.
+function narrate(job,a,tier,rng,x,mode,clock){
+  mode=mode||"all";x=x||{};
   const co=COUNTRY_BY_NAME[job.country];
   const team=a.team;
-  let h=job.tags.includes("night")?ri(rng,20,23):ri(rng,7,15),m=ri(rng,0,59);
+  let h=clock?clock.h:(job.tags.includes("night")?ri(rng,20,23):ri(rng,7,15)),m=clock?clock.m:ri(rng,0,59);
   const lines=[];
   const push=(t,tone)=>{m+=ri(rng,4,26);if(m>=60){m-=60;h=(h+1)%24;}lines.push({t:String(h).padStart(2,"0")+":"+String(m).padStart(2,"0"),x:t,tone:tone||""});};
   S.recent=S.recent||[];
@@ -920,68 +956,197 @@ function narrate(job,a,tier,rng,x){
   const fresh=pool=>{let cand=pool.filter(p=>!S.recent.includes(key(p)));if(!cand.length)cand=pool;const pk=pick(rng,cand);S.recent.push(key(pk));if(S.recent.length>60)S.recent.shift();return pk;};
   const pair=(p,c)=>typeof p==="string"?p:(c&&c.isPlayer?p[1]:p[0]);
   const nm=c=>c.isPlayer?"You":c.first;
-  const fill=(s,v)=>s.replace(/\{(\w+)\}/g,(_,k)=>v[k]!==undefined?v[k]:"{"+k+"}");
-  const say=(pool,c,vars,tone)=>push(fill(pair(fresh(pool),c),Object.assign({X:c?nm(c):"",P:cap(police(co))},vars||{})),tone);
+  const say=(pool,c,vars,tone)=>push(fill2(pair(fresh(pool),c),Object.assign({X:c?nm(c):"",P:cap(police(co))},vars||{})),tone);
   const someone=()=>team.length?pick(rng,team):null;
-  // arrival
-  const kind=co.terrain.some(t=>["islands","coast","port","fjords","canal"].includes(t))&&chance(rng,0.5)?"water":co.terrain.includes("megacity")?"city":co.terrain.includes("mountains")?"mountain":"road";
-  const how=fresh(HOW[kind]);
-  push(fill(fresh(ARRIVE),{city:job.city,country:job.country,how,How:cap(how)}));
-  if(chance(rng,0.5))push(fresh(WEATHER));
-  // borders
-  a.checks.forEach(c=>{
-    if(c.ok){
-      if(c.why==="local national")say(LOCAL,c.c);
-      else if(c.why.indexOf("papers")===0)say(PAPERS,c.c);
-    } else say(OUT,c.c,{why:c.why},"warn");
-  });
-  // language
-  const speaker=team.find(c=>c.langs.some(l=>co.langs.includes(l)));
-  if(speaker)say(SPEAKS,speaker,{L:co.langs.find(l=>speaker.langs.includes(l))});
-  else if(team.length)say(NOSPEAK,someone(),{L:co.langs[0]},"warn");
-  // who runs it
-  // you can't be across the street and at the door: if your own technique is wanted, you work it
-  const you=team.find(c=>c.isPlayer);
-  if(you&&job.techs.includes(you.tech))push(fresh(YOU_INSIDE));
-  else if(you)push(fill(fresh(YOU_RUN),{place:fresh(PLACES)}));
-  else if(team.length){const lead=team.filter(c=>c.role==="commander").sort((p,q)=>q.cmd-p.cmd)[0];if(lead)say(STANDIN,lead);else push(fresh(LEADERLESS),"warn");}
-  // techniques and knowledge
-  let tb=0;
-  job.techs.forEach(t=>{const c=team.find(y=>y.tech===t);
-    if(c){if(tb<2){push(nm(c)+" ("+TECH_BY_K[t].l+") "+pair(fresh(TECH_BEAT[t]),c)+".");tb++;}}
-    else say(NOTECH,someone(),{T:TECH_BY_K[t].l},"warn");});
-  job.know.forEach(k=>{const c=team.find(y=>y.know.includes(k));
-    if(c)say(KNOW_HAS,c,{k,y:KNOW_BEAT[k]});
-    else push(fill(fresh(KNOW_NONE),{k,y:KNOW_BEAT[k],Y:cap(KNOW_BEAT[k])}),"warn");});
-  if(team.length&&chance(rng,0.7))say(TEXTURE,someone());
-  // the work
-  const B=CAT_BEATS[job.cat]||CAT_BEATS.vault;
-  const take=(arr,n,tone)=>{for(let i=0;i<n;i++)push(fresh(arr),tone);};
-  if(tier===4)take(B.go,2,"good");
-  else if(tier===3){take(B.go,1,"good");take(B.hitch,1,"warn");push(fresh(FIXED),"good");}
-  else if(tier===2){take(B.hitch,2,"warn");take(B.go,1,"good");}
-  else if(tier===1){take(B.hitch,1,"warn");take(B.blow,1,"bad");}
-  else take(B.blow,2,"bad");
-  if(team.length&&chance(rng,0.3))say(TEXTURE,someone());
-  // the exit
-  const wheel=team.find(c=>c.tech==="wheelman");
-  if(tier>=2){if(wheel)say(EXIT_OK,wheel,{W:nm(wheel)});else push(fresh(EXIT_NOWHEEL));}
-  else{
-    let s=fill(fresh(POLICE_COME),{P:cap(police(co)),where:fresh(WHERE)});
-    s+=" "+(wheel?fill(pair(fresh(GAP_WHEEL),wheel),{W:nm(wheel)}):fresh(GAP_NONE));
-    push(s,"bad");
+  if(mode!=="post"){
+    const kind=co.terrain.some(t=>["islands","coast","port","fjords","canal"].includes(t))&&chance(rng,0.5)?"water":co.terrain.includes("megacity")?"city":co.terrain.includes("mountains")?"mountain":"road";
+    const how=fresh(HOW[kind]);
+    push(fill2(fresh(ARRIVE),{city:job.city,country:job.country,how,How:cap(how)}));
+    if(chance(rng,0.5))push(fresh(WEATHER));
+    a.checks.forEach(c=>{
+      if(c.ok){
+        if(c.why==="local national")say(LOCAL,c.c);
+        else if(c.why.indexOf("papers")===0)say(PAPERS,c.c);
+      } else say(OUT,c.c,{why:c.why},"warn");
+    });
+    const speaker=team.find(c=>c.langs.some(l=>co.langs.includes(l)));
+    if(speaker)say(SPEAKS,speaker,{L:co.langs.find(l=>speaker.langs.includes(l))});
+    else if(team.length)say(NOSPEAK,someone(),{L:co.langs[0]},"warn");
+    // you can't be across the street and at the door: if your own technique is wanted, you work it
+    const you=team.find(c=>c.isPlayer);
+    if(you&&job.techs.includes(you.tech))push(fresh(YOU_INSIDE));
+    else if(you)push(fill2(fresh(YOU_RUN),{place:fresh(PLACES)}));
+    else if(team.length){const lead=team.filter(c=>c.role==="commander").sort((p,q)=>q.cmd-p.cmd)[0];if(lead)say(STANDIN,lead);else push(fresh(LEADERLESS),"warn");}
+    let tb=0;
+    job.techs.forEach(t=>{const c=team.find(y=>y.tech===t);
+      if(c){if(tb<2){push(nm(c)+" ("+TECH_BY_K[t].l+") "+pair(fresh(TECH_BEAT[t]),c)+".");tb++;}}
+      else say(NOTECH,someone(),{T:TECH_BY_K[t].l},"warn");});
+    job.know.forEach(k=>{const c=team.find(y=>y.know.includes(k));
+      if(c)say(KNOW_HAS,c,{k,y:KNOW_BEAT[k]});
+      else push(fill2(fresh(KNOW_NONE),{k,y:KNOW_BEAT[k],Y:cap(KNOW_BEAT[k])}),"warn");});
+    if(team.length&&chance(rng,0.7))say(TEXTURE,someone());
   }
-  if(x.leaked)push("Someone talked. "+cap(police(co))+" were waiting two streets away.","bad");
-  x.fallout.forEach(e=>push(e,"bad"));
-  if(x.heatGain>0)push(fill(fresh(MORNING),{P:cap(police(co)),thing:fresh(THINGS),n:x.heatGain}),x.heatGain>=20?"warn":"");
-  else if(chance(rng,0.5))push(fresh(QUIET));
-  if(x.take>0)push(fill(fresh(SPLIT),{g:money(x.take),c:money(x.cuts),n:money(x.net)}),"good");
-  else push(fresh(NOPAY),"bad");
-  x.betrayals.forEach(b=>push(b,"bad"));
-  return lines;
+  if(mode!=="pre"){
+    const B=CAT_BEATS[job.cat]||CAT_BEATS.vault;
+    const take=(arr,n,tone)=>{for(let i=0;i<n;i++)push(fresh(arr),tone);};
+    if(tier===4)take(B.go,2,"good");
+    else if(tier===3){take(B.go,1,"good");take(B.hitch,1,"warn");push(fresh(FIXED),"good");}
+    else if(tier===2){take(B.hitch,2,"warn");take(B.go,1,"good");}
+    else if(tier===1){take(B.hitch,1,"warn");take(B.blow,1,"bad");}
+    else take(B.blow,2,"bad");
+    if(team.length&&chance(rng,0.3))say(TEXTURE,someone());
+    const wheel=team.find(c=>c.tech==="wheelman");
+    if(tier>=2){if(wheel)say(EXIT_OK,wheel,{W:nm(wheel)});else push(fresh(EXIT_NOWHEEL));}
+    else{
+      let s=fill2(fresh(POLICE_COME),{P:cap(police(co)),where:fresh(WHERE)});
+      s+=" "+(wheel?fill2(pair(fresh(GAP_WHEEL),wheel),{W:nm(wheel)}):fresh(GAP_NONE));
+      push(s,"bad");
+    }
+    if(x.leaked)push("Someone talked. "+cap(police(co))+" were waiting two streets away.","bad");
+    (x.fallout||[]).forEach(e=>push(e,"bad"));
+    if(x.heatGain>0)push(fill2(fresh(MORNING),{P:cap(police(co)),thing:fresh(THINGS),n:x.heatGain}),x.heatGain>=20?"warn":"");
+    else if(chance(rng,0.5))push(fresh(QUIET));
+    if(x.take>0)push(fill2(fresh(SPLIT),{g:money(x.take),c:money(x.cuts),n:money(x.net)}),"good");
+    else push(fresh(NOPAY),"bad");
+    (x.betrayals||[]).forEach(b=>push(b,"bad"));
+  }
+  return {lines,clock:{h,m}};
 }
 
-function executeJob(job){
+/* ------------------------------ TWISTS -------------------------------- */
+// Mid-job: the report stops, six options, one sets the crew free — the one the crew you
+// brought can actually do. Wrong calls cost time, money, blood or a seat.
+const TWISTS=[
+  {k:"engine",cats:["vault","recovery","extraction","escort","smuggling","interception"],h:"The engine won't turn",
+   s:"Sirens two streets over — and the van won't start. Everyone is looking at you.",
+   opts:[
+    {t:"Hot-wire the second car",req:{tech:["wheelman"]},pri:1,ok:"{X} has the second car running before the sirens turn the corner. Clear.",slow:"{X} gets the second car going. It takes a minute longer than it should have.",bad:"Nobody knows the wiring. Two minutes of sparks, and the sirens are on the block.",wrong:{dm:-16,hurt:1,heat:8}},
+    {t:"Call the fixer's cousin for a car",req:{tech:["fixer"]},pri:2,ok:"A taxi with no meter arrives in ninety seconds. Clear.",slow:"A taxi with no meter arrives. Four minutes is a long time on a kerb.",bad:"There is no cousin to call. You wait for a car that never comes.",wrong:{dm:-18,hurt:1,heat:10}},
+    {t:"Walk out past the patrol on the forged papers",req:{tech:["forger"]},pri:3,ok:"Four tourists with perfect papers walk past two officers. Clear.",slow:"The papers hold, but the walk is long and the take stays in the van.",bad:"The papers are real; the faces aren't. Names are taken.",wrong:{dm:-24,jail:1,heat:12}},
+    {t:"Run for it on foot, split up",pri:9,bad:"Four people running is a description. One of them is caught.",wrong:{dm:-26,jail:1,heat:14}},
+    {t:"Wait it out inside",pri:9,bad:"The building is searched floor by floor. You are on the third.",wrong:{dm:-30,jail:1,hurt:1,heat:16}},
+    {t:"Abort — leave the take, walk away slow",pri:5,fallback:true,lose:1,ok:"You leave it. Nobody is taken; nobody is paid for the night."},
+   ]},
+  {k:"inside",cats:["vault","recovery","infiltration","cyber","forgery","negotiation","surveillance"],h:"The inside man wants more",
+   s:"The inside man calls: double his cut, or he calls the police in ten minutes.",
+   opts:[
+    {t:"Talk him down",req:{tech:["face","grifter"]},pri:1,ok:"{X} talks for nine minutes. He takes his original cut and an apology.",slow:"{X} talks him down. It takes the whole ten minutes and a favour.",bad:"Nobody on the crew can talk like that. He hangs up and dials.",wrong:{dm:-22,jail:1,heat:12}},
+    {t:"Send someone to sit with him until it's done",req:{tech:["enforcer"]},pri:2,ok:"{X} keeps him company. He doesn't call anyone.",slow:"{X} sits with him. He stays quiet; the job runs a man short.",bad:"Nobody is built for that conversation. He makes the call.",wrong:{dm:-20,jail:1,heat:10}},
+    {t:"Cut his phone — and the building's",req:{tech:["hacker"]},pri:3,ok:"{X} kills his phone and the building's. He can't call anyone.",slow:"{X} kills the phones. Late — he had time for one call, and it wasn't the police.",bad:"Nobody can touch the phones. He makes the call.",wrong:{dm:-20,jail:1,heat:10}},
+    {t:"Pay double",pri:5,fallback:true,lose:0.3,ok:"You pay. It hurts; it works."},
+    {t:"Threaten him over the phone",pri:9,bad:"He hangs up and dials. Sirens in eight minutes.",wrong:{dm:-26,jail:1,heat:14}},
+    {t:"Ignore him",pri:9,bad:"He wasn't bluffing.",wrong:{dm:-30,jail:1,hurt:1,heat:16}},
+   ]},
+  {k:"plan",cats:["vault","recovery","sabotage","cyber","infiltration"],h:"The plan is last year's",
+   s:"The floor plan is last year's. The room you want has moved a floor, and the clock hasn't.",
+   opts:[
+    {t:"Go down through the ceiling",req:{tech:["demolitions"]},pri:1,ok:"{X} measures twice and the ceiling opens like a door. Clear.",slow:"{X} makes a hole. It takes longer than a door would have.",bad:"Nobody knows how. You make noise and a hole in the wrong place.",wrong:{dm:-18,hurt:1,heat:10}},
+    {t:"Pull the new plan from the manager's terminal",req:{tech:["hacker"]},pri:2,ok:"{X} has this year's plan in four minutes. Clear.",slow:"{X} finds the plan. Eleven minutes of the clock gone.",bad:"Nobody can get into the terminal. You guess.",wrong:{dm:-16,hurt:1,heat:8}},
+    {t:"Walk into the manager's office and ask",req:{tech:["face","grifter","infiltrator"]},pri:3,ok:"{X} asks a night manager for directions and gets them, with a coffee. Clear.",slow:"{X} gets directions, and a manager who remembers a face.",bad:"Nobody on the crew can bluff a manager. Security is called.",wrong:{dm:-22,jail:1,heat:12}},
+    {t:"Try every door on the floor",req:{tech:["safecracker"]},pri:4,ok:"{X} opens six doors in eleven minutes; the seventh is the one. Clear.",slow:"{X} opens doors until the right one. The clock nearly runs out.",bad:"Six locked doors and nobody who can open them.",wrong:{dm:-18,heat:8}},
+    {t:"Split up and search",pri:9,bad:"Four people on four floors. One of them meets a guard.",wrong:{dm:-26,jail:1,heat:12}},
+    {t:"Abort — out the way you came",pri:5,fallback:true,lose:1,ok:"You leave with nothing and with everyone."},
+   ]},
+  {k:"checkpoint",cats:["smuggling","interception","escort","extraction"],h:"A checkpoint where none was",
+   s:"A checkpoint on the only road, and the paperwork is in yesterday's name.",
+   opts:[
+    {t:"Re-paper it in the back seat",req:{tech:["forger"]},pri:1,ok:"{X} rewrites the manifest with a borrowed pen. The officer stamps it. Clear.",slow:"{X} fixes the papers. The officer wonders why you needed a minute.",bad:"Nobody can fix paper that fast. The officer keeps the manifest.",wrong:{dm:-22,jail:1,heat:12}},
+    {t:"Take the track the dogs don't work",req:{tech:["smuggler"]},pri:2,ok:"{X} knows a farm road. Twenty minutes longer, no checkpoint. Clear.",slow:"{X} finds a way around. It costs an hour and a tyre.",bad:"Nobody knows the back roads. You drive in circles and back to the checkpoint.",wrong:{dm:-18,hurt:1,heat:10}},
+    {t:"Call the sergeant who owes a favour",req:{tech:["fixer"]},pri:3,ok:"{X} makes a call. The barrier lifts. Clear.",slow:"{X} makes a call; the barrier lifts, eventually, for a price.",bad:"There is no sergeant to call. The barrier stays down.",wrong:{dm:-18,jail:1,heat:10}},
+    {t:"Bore the officer into waving you through",req:{tech:["grifter","face"]},pri:4,ok:"{X} explains the paperwork for so long the officer waves you on. Clear.",slow:"{X} talks the officer round. He writes down the plate.",bad:"Nobody talks well enough. The officer opens the back.",wrong:{dm:-24,jail:1,heat:12}},
+    {t:"Force it",pri:9,bad:"The barrier breaks. So does the plan. Gunfire.",wrong:{dm:-30,jail:1,hurt:1,heat:18}},
+    {t:"Turn back",pri:5,fallback:true,lose:0.5,ok:"You turn back. Half the cargo reaches the buyer by another route, a week late."},
+   ]},
+  {k:"radio",cats:["negotiation","forgery","recovery","infiltration","surveillance"],h:"A police radio in the buyer's car",
+   s:"In the buyer's car, under a coat: a police radio, switched on.",
+   opts:[
+    {t:"Have the lookout read the street before you move",req:{tech:["lookout"]},pri:1,ok:"{X} counts two plain cars and a van. You move the meeting; the van doesn't follow. Clear.",slow:"{X} reads the street. You move late, and one car follows for a while.",bad:"Nobody is watching the street. The van is already behind you.",wrong:{dm:-24,jail:1,heat:12}},
+    {t:"Swap the goods for the decoy and finish the deal",req:{tech:["forger","pickpocket"]},pri:2,ok:"{X} makes the swap under a table. They buy the decoy; you keep the goods and the fee. Clear.",slow:"{X} makes the swap. They notice a day later.",bad:"Nobody can make a swap like that. They buy the real thing and arrest you for it.",wrong:{dm:-24,jail:1,heat:12}},
+    {t:"Change the venue, now",req:{tech:["fixer","face"]},pri:3,ok:"{X} moves the meeting to a place with two exits and a cousin at the door. Clear.",slow:"{X} moves the meeting. The other side is late and nervous.",bad:"Nobody has a second venue. You do the deal where they chose.",wrong:{dm:-20,jail:1,heat:10}},
+    {t:"Draw on them",pri:9,bad:"Nobody draws faster than a radio. Everybody is taken.",wrong:{dm:-32,jail:1,hurt:1,heat:20}},
+    {t:"Finish the deal as planned",pri:9,bad:"The deal finishes. So does the night, in a cell.",wrong:{dm:-28,jail:1,heat:16}},
+    {t:"Walk away with the goods",pri:5,fallback:true,lose:1,ok:"You keep the goods and lose the fee. Nobody is taken."},
+   ]},
+  {k:"down",cats:["extraction","escort","sabotage","interception"],h:"{M} is hit",
+   s:"{M} is hit. Moving {M} means leaving the take; leaving {M} means leaving {M}.",
+   opts:[
+    {t:"Patch and carry — both",req:{tech:["cleaner"],know:["Medicine"]},pri:1,ok:"{X} stops the bleeding with a belt and a shirt; the take goes in the same car. Clear.",slow:"{X} stops the bleeding. The take is heavier than it was.",bad:"Nobody knows what to do with a wound. You carry {M} and lose the take.",wrong:{dm:-16,hurt:1,heat:6,lose:1}},
+    {t:"Carry {M} and the take",req:{tech:["enforcer"]},pri:2,ok:"{X} carries {M} and the bag. Nobody argues. Clear.",slow:"{X} carries {M}. The bag comes in a second trip that nearly doesn't happen.",bad:"Nobody can carry both. You choose {M}, and the take stays.",wrong:{dm:-14,hurt:1,lose:1,heat:6}},
+    {t:"Leave {M} with a phone for an ambulance",pri:9,bad:"The ambulance comes with a patrol car. {M} is treated, then held.",wrong:{dm:-14,jail:1,heat:10}},
+    {t:"Call an ambulance and wait",pri:9,bad:"Everyone waits with {M}. Everyone is taken with {M}.",wrong:{dm:-30,jail:1,heat:16}},
+    {t:"Leave the take, carry {M} out",pri:5,fallback:true,lose:1,ok:"You leave the take and carry {M}. Nobody is taken."},
+    {t:"Split up",pri:9,bad:"{M} is left with one person and no plan. Both are found.",wrong:{dm:-26,jail:1,hurt:1,heat:14}},
+   ]},
+  {k:"alarm",cats:["vault","cyber","sabotage","surveillance","recovery"],h:"The alarm goes early",
+   s:"The alarm trips forty seconds before the plan said it could. Response time: six minutes.",
+   opts:[
+    {t:"Kill the alarm at the panel",req:{tech:["hacker"]},pri:1,ok:"{X} kills it at the panel and tells the monitoring company it was a fault. Clear.",slow:"{X} kills it. The company sends a car anyway, slowly.",bad:"Nobody can touch the panel. It keeps ringing.",wrong:{dm:-20,jail:1,heat:12}},
+    {t:"Take what's in hand — overwatch calls the window",req:{tech:["overwatch"]},pri:2,ok:"{X} calls it from the roof: four minutes, one car. You leave with what you have. Clear.",slow:"{X} calls the window. You leave with less than you came for.",bad:"Nobody is watching the street. You leave blind.",wrong:{dm:-16,hurt:1,heat:10}},
+    {t:"Leave now, the long way",req:{tech:["wheelman"]},pri:3,ok:"{X} takes the long way out and the response car takes the short way in. Clear.",slow:"{X} drives. The long way is very long tonight.",bad:"Nobody knows a long way. You meet the response car at the corner.",wrong:{dm:-22,jail:1,heat:12}},
+    {t:"Rush the rest of the plan",pri:9,bad:"Six minutes of plan in three. Somebody drops something; somebody is cut.",wrong:{dm:-20,hurt:1,heat:12}},
+    {t:"Freeze and wait for it to stop",pri:9,bad:"It doesn't stop. The car does.",wrong:{dm:-30,jail:1,heat:16}},
+    {t:"Abort with nothing",pri:5,fallback:true,lose:1,ok:"You leave with nothing and with everyone."},
+   ]},
+  {k:"tail",cats:["surveillance","infiltration","escort","negotiation","forgery","smuggling"],h:"The grey car",
+   s:"A grey car has been behind you since the second roundabout. It is not lost.",
+   opts:[
+    {t:"The lookout calls it; you drop it in the market",req:{tech:["lookout"]},pri:1,ok:"{X} calls the turn. The grey car meets a fruit cart and a one-way street. Clear.",slow:"{X} calls it. You lose the car, and forty minutes.",bad:"Nobody can read a tail. The grey car is still there at the job.",wrong:{dm:-22,jail:1,heat:12}},
+    {t:"Lose it",req:{tech:["wheelman"]},pri:2,ok:"{X} loses it in three turns and a car park. Clear.",slow:"{X} loses it, eventually, and a wing mirror.",bad:"Nobody drives like that. The grey car follows you home.",wrong:{dm:-20,heat:14}},
+    {t:"Have a word with the driver at the lights",req:{tech:["enforcer"]},pri:3,ok:"{X} walks back at the lights and says one sentence. The grey car turns off. Clear.",slow:"{X} has a word. The driver has a radio; the word is heard by more people than intended.",bad:"Nobody on the crew has that kind of word. The driver has a badge.",wrong:{dm:-26,jail:1,heat:14}},
+    {t:"Confront them",pri:9,bad:"Two of them, one of you, and a badge. Somebody is taken.",wrong:{dm:-26,jail:1,heat:14}},
+    {t:"Ignore it",pri:9,bad:"The grey car sees the whole job. Then its friends do.",wrong:{dm:-30,jail:1,heat:18}},
+    {t:"Call it off for today",pri:5,fallback:true,lose:0.5,ok:"You drive to a restaurant and eat slowly. The job happens tomorrow, for half."},
+   ]},
+];
+function reqMet(req,team){
+  if(!req)return false;
+  if(req.tech&&team.some(c=>req.tech.includes(c.tech)))return true;
+  if(req.know&&team.some(c=>req.know.some(k=>c.know.includes(k))))return true;
+  return false;
+}
+function reqWho(req,team){return team.find(c=>(req.tech&&req.tech.includes(c.tech))||(req.know&&req.know.some(k=>c.know.includes(k))))||null;}
+function makeTwist(job,team,rng){
+  const pool=TWISTS.filter(t=>t.cats.includes(job.cat));
+  const T=pick(rng,pool.length?pool:TWISTS);
+  const others=team.filter(c=>!c.isPlayer);
+  const M=others.length?pick(rng,others):null;
+  const sub={M:M?M.first:"one of the crew"};
+  const opts=T.opts.map(o=>Object.assign({},o,{t:fill2(o.t,sub)}));
+  for(let i=opts.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));const tmp=opts[i];opts[i]=opts[j];opts[j]=tmp;}
+  return {k:T.k,h:fill2(T.h,sub),s:fill2(T.s,sub),opts,mId:M?M.id:null};
+}
+function twistCorrect(tw,team){
+  let best=null;
+  tw.opts.forEach((o,i)=>{if(o.req&&reqMet(o.req,team)&&(best===null||o.pri<tw.opts[best].pri))best=i;});
+  if(best===null)best=tw.opts.findIndex(o=>o.fallback);
+  return best;
+}
+function twistWhy(tw,team){
+  const i=twistCorrect(tw,team);const o=tw.opts[i];
+  if(o.fallback)return "nobody on the job could do better — the only clean move was to walk";
+  const w=reqWho(o.req,team);
+  if(!w)return "";
+  if(o.req.tech&&o.req.tech.includes(w.tech))return (w.isPlayer?"you are":w.first+" is")+" a "+TECH_BY_K[w.tech].l;
+  const k=o.req.know?o.req.know.find(x=>w.know.includes(x)):"";
+  return (w.isPlayer?"you know":w.first+" knows")+" "+k;
+}
+function twistResolve(tw,idx,team){
+  const correct=twistCorrect(tw,team);
+  const o=tw.opts[idx];
+  const w=o.req?reqWho(o.req,team):null;
+  const M=tw.mId?byId(tw.mId):null;
+  const v={X:w?(w.isPlayer?"You":w.first):"Someone",M:M?M.first:"one of the crew"};
+  if(idx===correct)return {free:true,correct,dm:0,hurt:0,jail:0,heat:0,lose:o.fallback?(o.lose||0):0,text:fill2(o.ok,v),rank:o.fallback?["Walked away in one piece",1]:["Cool under pressure",3]};
+  if(o.req&&reqMet(o.req,team))return {free:false,correct,dm:-8,hurt:0,jail:0,heat:6,lose:o.lose||0,text:fill2(o.slow||o.ok,v),rank:["The slow call",-2]};
+  const wr=o.wrong||{dm:-16,hurt:1,heat:8};
+  return {free:false,correct,dm:wr.dm,hurt:wr.hurt||0,jail:wr.jail||0,heat:wr.heat||0,lose:wr.lose||0,text:fill2(o.bad||"It goes wrong.",v),rank:["The wrong call",-4]};
+}
+
+/* ------------------------------ THE JOB ------------------------------- */
+// A job runs in two steps: start it (the arrival and the plan, and maybe a twist that waits
+// for a decision), then finish it (the work, the verdict, and everything it cost).
+function startJob(job,opts){
+  opts=opts||{};
   const rng=freshRng();
   const a=assessJob(job);
   const team=a.team;
@@ -989,9 +1154,34 @@ function executeJob(job){
   const hasMole=team.some(c=>c.mole);
   let leaked=false;
   if(hasMole&&chance(rng,0.55)){roll-=16;leaked=true;}
-  const m=a.margin+roll;
+  const pre=narrate(job,a,0,rng,{},"pre",null);
+  let twist=null;
+  const pTw=a.margin>=10?0.25:0.08;
+  if(!opts.noTwist&&!job.final&&team.length>=2&&chance(rng,pTw))twist=makeTwist(job,team,rng);
+  const P={jobId:job.id,job:Object.assign({},job),roll,leaked,teamIds:team.map(c=>c.id),pre:pre.lines,clock:pre.clock,postSeed:ri(rng,1,2000000000),twist,week:S.week};
+  S.pendingJob=P;
+  const d={id:job.id+"-w"+S.week,week:S.week,job:P.job,narrative:pre.lines.slice(),revealed:0,done:false,twist:twist?{h:twist.h,s:twist.s,opts:twist.opts.map(o=>o.t)}:null,awaiting:false,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}};
+  if(twist)d.narrative.push({t:"— —",x:"Then it goes wrong.",tone:"bad",twist:true});
+  else finishJob(P,null,d);
+  save();
+  return d;
+}
+function finishJob(P,choiceIdx,d){
+  const rng=mulberry32(P.postSeed>>>0);
+  const job=S.jobs.find(j=>j.id===P.jobId)||P.job;
+  const a=assessJob(job);
+  const team=a.team;
+  let dm=0,twHurt=0,twJail=0,twHeat=0,twLose=0,twLine=null,twRank=null,twRec=null;
+  if(P.twist&&choiceIdx!=null){
+    const r=twistResolve(P.twist,choiceIdx,team);
+    dm=r.dm;twHurt=r.hurt;twJail=r.jail;twHeat=r.heat;twLose=r.lose;twRank=r.rank;
+    twLine={t:"— —",x:r.text,tone:r.free?"good":"bad"};
+    twRec={h:P.twist.h,s:P.twist.s,chosen:P.twist.opts[choiceIdx].t,correct:P.twist.opts[r.correct].t,free:r.free,why:twistWhy(P.twist,team)};
+  }
+  const m=a.margin+P.roll+dm;
   let tier;
   if(m>22)tier=4;else if(m>10)tier=3;else if(m>-4)tier=2;else if(m>-22)tier=1;else tier=0;
+  if(twLose>=1&&tier>2)tier=2;
   const verdictName=["DISASTER","BOTCHED","MESSY","SUCCESS","CLEAN"][tier];
   const base=job.final?100:[0,6,12,22,36][job.tier];
   let take=0,loyD=0,heatMul=0;
@@ -1000,28 +1190,26 @@ function executeJob(job){
   else if(tier===2){take=Math.round(job.payout*0.55);loyD=-3;heatMul=1.25;}
   else if(tier===1){loyD=-7;heatMul=1.5;}
   else{loyD=-13;heatMul=1.9;}
+  if(twLose>0)take=Math.round(take*(1-twLose));
   let cuts=0;
   team.forEach(c=>{if(!c.isPlayer)cuts+=Math.round(take*c.cut);});
   const net=Math.max(0,take-cuts);
   S.money+=net;
-  const heatGain=Math.max(0,Math.round(job.heat*heatMul)-a.heatCut)+(leaked?12:0);
+  const rk0=rankInfo(S.rep);
+  const heatGain=Math.max(0,Math.round(job.heat*heatMul*rk0.heatMul)-a.heatCut)+(P.leaked?12:0)+twHeat;
   S.heat=clamp(S.heat+heatGain,0,120);
   team.forEach(c=>{if(!c.isPlayer)c.loyalty=clamp(c.loyalty+loyD+(tier>=3?2:0),0,100);});
   // fallout
   const fallout=[],betrayals=[];
-  if(tier<=1){
-    const hitPool=team.filter(c=>!c.isPlayer).sort(()=>rng()-0.5);
-    const nHit=Math.min(hitPool.length,tier===0?ri(rng,2,3):1);
-    for(let i=0;i<nHit;i++){
-      const c=hitPool[i];
-      if(tier===0&&chance(rng,0.5)){c.status="jailed";c.out=S.week+ri(rng,4,8);S.crewIds=S.crewIds.filter(id=>id!==c.id);fallout.push(c.first+" is taken at the scene. Held until week "+c.out+".");}
-      else{c.status="injured";c.out=S.week+2;fallout.push(c.first+" is hurt — out for two weeks.");}
-    }
-  }
+  const hitPool=team.filter(c=>!c.isPlayer).sort(()=>rng()-0.5);
+  let nHurt=twHurt,nJail=twJail;
+  if(tier<=1){const n=tier===0?ri(rng,2,3):1;for(let i=0;i<n;i++){if(tier===0&&chance(rng,0.5))nJail++;else nHurt++;}}
+  let pi=0;
+  for(let i=0;i<nJail&&pi<hitPool.length;i++,pi++){const c=hitPool[pi];c.status="jailed";c.out=S.week+ri(rng,4,8);S.crewIds=S.crewIds.filter(id=>id!==c.id);fallout.push(c.first+" is taken at the scene. Held until week "+c.out+".");}
+  for(let i=0;i<nHurt&&pi<hitPool.length;i++,pi++){const c=hitPool[pi];c.status="injured";c.out=S.week+2;fallout.push(c.first+" is hurt — out for two weeks.");}
   if(net>60000){
     team.forEach(c=>{
       if(c.isPlayer||c.status!=="crew")return;
-      // a loyal member stays loyal; the danger is the disloyal, the greedy, and the informant
       const risk=(c.loyalty<70?((70-c.loyalty)/70)*0.45:0)+(c.greed>75?0.04:0)+(c.mole?0.25:0);
       if(risk>0&&chance(rng,risk*0.6)){
         const stolen=Math.round(net*(0.15+rng()*0.2));
@@ -1032,7 +1220,6 @@ function executeJob(job){
       }
     });
   }
-  // who came back, and who didn't
   const marks={};
   team.forEach(c=>{if(c.status==="gone")marks[c.id]="gone";else if(c.status==="jailed")marks[c.id]="taken";else if(c.status==="injured")marks[c.id]="hurt";});
   // ranking: up for the job and how it went, down when it goes wrong
@@ -1040,17 +1227,18 @@ function executeJob(job){
   const addR=(k,v)=>rk.push({k,v});
   if(tier===4){addR("Clean — tier "+job.tier+" job",base);if(!fallout.length)addR("Nobody hurt",2);}
   else if(tier===3)addR("Success — tier "+job.tier+" job",Math.round(base*0.7));
-  else if(tier===2)addR("Messy work",-job.tier*2);
+  else if(tier===2)addR(twLose>=1?"Walked away — no score":"Messy work",-job.tier*2);
   else if(tier===1)addR("Botched job",-job.tier*4);
   else addR("Disaster",-job.tier*6);
-  if(leaked)addR("The job leaked",-3);
+  if(twRank)addR("Twist: "+twRank[0],twRank[1]);
+  if(P.leaked)addR("The job leaked",-3);
   betrayals.forEach(()=>addR("A member walked with the money",-2));
   if(fallout.some(f=>f.indexOf("taken")>=0))addR("Someone taken by the police",-2);
   const repBefore=S.rep,rankBefore=rankName(S.rep);
   const repDelta=rk.reduce((s,r)=>s+r.v,0);
   S.rep=clamp(S.rep+repDelta,0,999);
   const rankAfter=rankName(S.rep);
-  if(rankAfter!==rankBefore)logMsg("Ranking: "+rankBefore+" → "+rankAfter+".",S.rep>repBefore?"good":"bad",true);
+  if(rankAfter!==rankBefore)logMsg("Ranking: "+rankBefore+" → "+rankAfter+". "+rankInfo(S.rep).note,S.rep>repBefore?"good":"bad",true);
   // progression: everyone who went learns something
   const growth=[];
   const xpBase=job.final?60:[0,10,18,28,40][job.tier];
@@ -1066,19 +1254,107 @@ function executeJob(job){
     for(let i=0;i<n;i++){const at=weighted[Math.min(i,weighted.length-1)];if(c.attrs[at]<98){c.attrs[at]+=1;g.up.push(at);}}
     growth.push(g);
   });
-  const narrative=narrate(job,a,tier,rng,{leaked,fallout,betrayals,heatGain,take,cuts,net});
-  S.jobs=S.jobs.filter(j=>j!==job);
+  const post=narrate(job,a,tier,rng,{leaked:P.leaked,fallout,betrayals,heatGain,take,cuts,net},"post",P.clock);
+  const narrative=P.pre.slice();
+  if(P.twist){narrative.push({t:"— —",x:"Then it goes wrong.",tone:"bad",twist:true});if(twLine)narrative.push(twLine);}
+  post.lines.forEach(l=>narrative.push(l));
+  S.jobs=S.jobs.filter(j=>j.id!==job.id);
   logMsg(verdictName+" — "+job.title+" ("+job.city+", "+job.country+"). "+(net>0?"Net "+money(net)+".":"No pay.")+" Ranking "+(repDelta>=0?"+":"")+repDelta+".",tier>=3?"good":tier===2?"warn":"bad",true);
   if(job.final&&tier>=3){S.finalDone=true;S.over="win";}
-  const wk=S.week;
+  const wk=P.week;
   weekTick(rng);
   refreshJobs(false);
-  const res={id:job.id+"-w"+wk,week:wk,tier,verdictName,take,cuts,net,heatGain,repDelta,repBefore,repAfter:S.rep,rankBefore,rankAfter,rk,growth,marks,events:fallout.concat(betrayals),leaked,job,teamIds:team.map(t=>t.id),narrative,revealed:0,done:false};
-  // every job stays on file, for the case log
+  const res={id:job.id+"-w"+wk,week:wk,tier,verdictName,take,cuts,net,heatGain,repDelta,repBefore,repAfter:S.rep,rankBefore,rankAfter,rk,growth,marks,events:fallout.concat(betrayals),leaked:P.leaked,job:P.job,teamIds:team.map(t=>t.id),narrative,twist:twRec,revealed:0,done:false};
   S.reports=S.reports||[];S.reports.push(Object.assign({},res));if(S.reports.length>80)S.reports.shift();
+  S.pendingJob=null;
+  if(d)Object.assign(d,res,{narrative,revealed:d.revealed,done:false,awaiting:false,resolved:true,twist:twRec});
   save();
   return res;
 }
+// The old one-shot form, used where nobody is watching the report play.
+function executeJob(job){return startJob(job,{noTwist:true});}
+
+/* --------------------------- BETWEEN JOBS ----------------------------- */
+// Every few weeks something happens to the crew that isn't a job. The types rotate, so each
+// comes round before any repeats. Each one asks for a decision.
+const WEEKLY=[
+  {k:"holiday",h:"A death on holiday",text:"{M} went to the coast for three days. A boat, a storm, a phone that rings out. {M} is not coming back.",kill:true,
+   opts:[{t:"Pay for the funeral and the family — $8K",money:-8000,loyAll:6,out:"The crew notices who paid. Loyalty rises."},
+         {t:"Say nothing; fill the seat",loyAll:-6,out:"The crew notices that too."}]},
+  {k:"vanish",h:"Gone without a word",text:"{M}'s flat is empty, the phone is dead, and the bar hasn't seen {M} in a week.",
+   opts:[{t:"Ask around — $4K in the right bars",money:-4000,roll:[{p:0.6,out:"{M} turns up in a cell two towns over, held on something small. Back in three weeks.",set:"jailed",weeks:3},{p:0.4,out:"Nobody has seen {M}. The seat is empty.",set:"gone"}]},
+         {t:"Wait a week",roll:[{p:0.4,out:"{M} walks in on Tuesday with no explanation. Loyalty is lower than it was.",set:"back",loy:-15},{p:0.6,out:"A week passes. {M} doesn't.",set:"gone"}]},
+         {t:"Fill the seat now",out:"The seat is filled; {M} is a name in the log.",set:"gone"}]},
+  {k:"quit",h:"{M} wants out",text:"{M} says it's over: a partner, a kid, a bad dream. {M} is quitting — unless there's a reason not to.",lowest:true,
+   opts:[{t:"A retention bonus — $12K",money:-12000,roll:[{p:0.75,out:"{M} stays, and means it.",set:"stay",loy:20},{p:0.25,out:"{M} takes the money and quits anyway.",set:"gone"}]},
+         {t:"Promise a bigger cut (+5% of every score)",cut:0.05,out:"{M} stays; the split gets thinner.",set:"stay",loy:10},
+         {t:"Let {M} go",out:"{M} leaves. Cleanly, at least.",set:"gone",loyAll:-3},
+         {t:"Have the enforcer explain why leaving is a bad idea",req:"enforcer",roll:[{p:0.5,out:"{M} stays, and never forgets it.",set:"stay",loy:-20},{p:0.5,out:"{M} leaves that night and takes a grudge. Heat +6.",set:"gone",heat:6}]}]},
+  {k:"poach",h:"{M} has a new crew",text:"{M} has gone to another crew — and is buying drinks for yours. Every week {M} is out there, somebody listens.",lowest:true,gone:true,
+   opts:[{t:"Bonuses all round — $5K each",moneyPer:-5000,loyAll:12,out:"Nobody leaves. Nobody forgets who paid."},
+         {t:"Send the enforcer to end the conversation",req:"enforcer",roll:[{p:0.7,out:"The drinks stop. So does the other crew's interest.",poach:0},{p:0.3,out:"It gets loud. Heat +10, and {M} keeps talking.",heat:10,poach:2}]},
+         {t:"Ignore it — they know who they work for",roll:[{p:0.5,out:"They do. Nobody goes.",poach:0},{p:0.5,out:"{L} goes with {M} on Thursday, and {M} keeps talking.",lose:"lowest",poach:2}]},
+         {t:"Let anyone who wants to go, go",out:"{L} goes. The rest stay, and think better of you for it.",lose:"lowest",loyAll:8,poach:0}]},
+  {k:"debt",h:"An old face",text:"{G} — who walked with your money — is back, broke, and talking about the police. $15K buys silence.",needsGone:true,
+   opts:[{t:"Pay — $15K",money:-15000,out:"Silence, for now."},
+         {t:"Refuse",roll:[{p:0.5,out:"{G} talks. Heat +18.",heat:18},{p:0.5,out:"{G} was bluffing. Nothing happens, this time."}]},
+         {t:"Have the enforcer see {G} to the station",req:"enforcer",out:"{G} leaves town. Heat +4.",heat:4},
+         {t:"Offer {G} the seat back",out:"{G} is back in the crew at 30 loyalty. Everyone else's drops.",rehire:true,loyAll:-6}]},
+  {k:"detective",h:"A detective is asking",text:"A detective has your alias in a folder and is asking around the bars.",
+   opts:[{t:"Lay low two weeks",weeks:2,heat:-25,out:"Two weeks of nothing. The folder goes back in a drawer."},
+         {t:"Buy the folder — $20K",money:-20000,heat:-15,out:"The folder is thinner in the morning."},
+         {t:"Carry on",heat:15,out:"The detective keeps asking. Heat +15."},
+         {t:"Move the safe house — $6K",money:-6000,heat:-8,out:"A new address. The folder's old one is useless."}]},
+];
+function makeEvent(rng){
+  const rc=recruits().filter(c=>c.status==="crew");
+  const gone=S.roster.filter(c=>c.status==="gone");
+  if(!S.twistBag||!S.twistBag.length){S.twistBag=WEEKLY.map(w=>w.k);for(let i=S.twistBag.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));const t=S.twistBag[i];S.twistBag[i]=S.twistBag[j];S.twistBag[j]=t;}}
+  let k=null;
+  for(let i=0;i<S.twistBag.length;i++){
+    const W=WEEKLY.find(w=>w.k===S.twistBag[i]);
+    const ok=W.needsGone?gone.length>0:(W.k==="detective"||rc.length>=1);
+    if(ok){k=S.twistBag.splice(i,1)[0];break;}
+  }
+  if(!k)return null;
+  const W=WEEKLY.find(w=>w.k===k);
+  let M=null;
+  if(W.needsGone)M=pick(rng,gone);
+  else if(rc.length){M=W.lowest?rc.slice().sort((a,b)=>a.loyalty-b.loyalty)[0]:pick(rng,rc);}
+  const L=rc.filter(c=>!M||c.id!==M.id).sort((a,b)=>a.loyalty-b.loyalty)[0]||null;
+  const v={M:M?M.first:"one of the crew",G:M?M.first:"someone",L:L?L.first:"somebody"};
+  return {k,h:fill2(W.h,v),text:fill2(W.text,v),mId:M?M.id:null,lId:L?L.id:null,opts:W.opts.map(o=>({t:fill2(o.t,v),req:o.req||null})),v,outcome:null,week:S.week};
+}
+function eventApply(ev,i){
+  const W=WEEKLY.find(w=>w.k===ev.k);const o=W.opts[i];if(!o)return;const rng=freshRng();
+  if(o.req==="enforcer"&&!recruits().some(c=>c.status==="crew"&&c.tech==="enforcer"))return;
+  const M=ev.mId?byId(ev.mId):null,L=ev.lId?byId(ev.lId):null;
+  const rc=()=>recruits().filter(c=>c.status==="crew");
+  let eff=o;let out=o.out||"";
+  if(o.roll){let r=rng(),acc=0,ch=o.roll[o.roll.length-1];for(const c of o.roll){acc+=c.p;if(r<acc){ch=c;break;}}eff=Object.assign({},o,ch);out=ch.out;}
+  const lines=[fill2(out,ev.v)];
+  if(eff.money){S.money=Math.max(0,S.money+eff.money);}
+  if(eff.moneyPer){const n=rc().length;S.money=Math.max(0,S.money+eff.moneyPer*n);lines.push(money(-eff.moneyPer*n)+" paid out.");}
+  if(eff.heat){S.heat=clamp(S.heat+eff.heat,0,120);}
+  if(eff.loyAll){rc().forEach(c=>{if(!M||c.id!==M.id)c.loyalty=clamp(c.loyalty+eff.loyAll,0,100);});lines.push("Crew loyalty "+(eff.loyAll>0?"+":"")+eff.loyAll+".");}
+  if(M&&eff.loy!=null){M.loyalty=clamp(M.loyalty+eff.loy,0,100);}
+  if(M&&eff.cut){M.cut=Math.round((M.cut+eff.cut)*100)/100;}
+  if(M&&eff.set==="gone"){M.status="gone";M._touched=true;S.crewIds=S.crewIds.filter(id=>id!==M.id);}
+  if(M&&eff.set==="jailed"){M.status="jailed";M.out=S.week+(eff.weeks||3);M._touched=true;S.crewIds=S.crewIds.filter(id=>id!==M.id);}
+  if(M&&W.kill){M.status="gone";M._touched=true;S.crewIds=S.crewIds.filter(id=>id!==M.id);}
+  if(M&&W.gone&&M.status==="crew"){M.status="gone";M._touched=true;S.crewIds=S.crewIds.filter(id=>id!==M.id);}
+  if(eff.lose==="lowest"&&L&&L.status==="crew"){L.status="gone";L._touched=true;S.crewIds=S.crewIds.filter(id=>id!==L.id);}
+  if(eff.rehire&&M&&recruits().length<CREW_SLOTS){M.status="crew";M.loyalty=30;M._touched=true;S.crewIds.push(M.id);}
+  else if(eff.rehire&&M){lines.push("No seat free; "+M.first+" stays outside, and quiet.");}
+  if(eff.poach!=null){if(eff.poach>0)S.poach={name:M?M.first:"the other crew",weeks:eff.poach};else S.poach=null;}
+  else if(W.k==="poach"&&!S.poach)S.poach={name:M?M.first:"the other crew",weeks:3};
+  if(eff.weeks){for(let i=0;i<eff.weeks;i++)weekTick(rng);refreshJobs(false);}
+  logMsg(ev.h+" — "+lines[0],eff.set==="gone"||W.kill?"bad":"warn",true);
+  ev.outcome=lines.join(" ");
+  checkOver();
+  save();
+}
+
 function weekTick(rng){
   S.week++;
   const rc=recruits().filter(c=>c.status==="crew");
@@ -1087,8 +1363,19 @@ function weekTick(rng){
     if(S.money>=up)S.money-=up;
     else{S.money=0;rc.forEach(c=>c.loyalty=clamp(c.loyalty-9,0,100));logMsg("Couldn't make payroll ("+money(up)+"). Loyalty slipping.","bad");}
   }
+  // a mole on the books leaks a little heat every week, unexplained
   const moles=rc.filter(c=>c.mole).length;
   if(moles)S.heat=clamp(S.heat+3*moles,0,120);
+  // the crew's standing drifts loyalty: nobody stays loyal to a nobody
+  const rk=rankInfo(S.rep);
+  if(rk.loyDrift)rc.forEach(c=>c.loyalty=clamp(c.loyalty+rk.loyDrift,0,100));
+  // someone out there is buying your crew drinks
+  if(S.poach&&S.poach.weeks>0){
+    S.poach.weeks--;
+    const low=rc.slice().sort((a,b)=>a.loyalty-b.loyalty)[0];
+    if(low&&low.loyalty<60&&chance(rng,0.35)){low.status="gone";low._touched=true;S.crewIds=S.crewIds.filter(id=>id!==low.id);logMsg(low.first+" left for "+S.poach.name+"'s crew.","bad",true);}
+    if(S.poach.weeks<=0){S.poach=null;logMsg("The drinks have stopped. Whoever was going has gone.","");}
+  }
   S.roster.forEach(c=>{
     if(c.status==="injured"&&S.week>=c.out){c.status="crew";logMsg(c.first+" is back on the job.","good");}
     if(c.status==="jailed"&&S.week>=c.out){c.status="available";c.jail+=1;logMsg(c.first+" walked. Back on the roster, a year older.","warn");}
@@ -1104,8 +1391,16 @@ function weekTick(rng){
     S.money=Math.round(S.money*0.7);
     S.heat=58;
   }
+  // something that isn't a job, every few weeks
+  if(S.nextTwistWeek==null)S.nextTwistWeek=S.week+ri(rng,3,6);
+  if(!S.event&&S.week>=S.nextTwistWeek){
+    const ev=makeEvent(rng);
+    if(ev){S.event=ev;S.nextTwistWeek=S.week+ri(rng,3,7);}
+    else S.nextTwistWeek=S.week+2;
+  }
   checkOver();
 }
+
 function checkOver(){
   if(S.over)return;
   if(recruits().length>0)return;
@@ -1135,7 +1430,15 @@ function load(){
     roster.forEach(c=>{const o=ov[c.id];if(o)Object.assign(c,o);});
     delete d.ov;d.roster=roster;d.modal=null;d.player.isPlayer=true;d.player.status="crew";d.player.role="commander";if(!d.player.cmd)d.player.cmd=5;
     migrateReports(d);
-    S=d;return true;
+    S=d;
+    // a job left mid-decision picks up exactly there: the report so far, then the six options
+    const P=S.pendingJob;
+    if(P&&P.twist&&Array.isArray(P.pre)){
+      const narrative=P.pre.slice();narrative.push({t:"— —",x:"Then it goes wrong.",tone:"bad",twist:true});
+      S.modal={type:"result",data:{id:P.jobId+"-w"+P.week,week:P.week,job:P.job,narrative,revealed:narrative.length,done:false,
+        twist:{h:P.twist.h,s:P.twist.s,opts:P.twist.opts.map(o=>o.t)},awaiting:true,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}}};
+    } else if(P){S.pendingJob=null;}
+    return true;
   }catch(e){return false;}
 }
 // Recaps written before the report spoke to the player as "you" still name the player.
@@ -1181,7 +1484,9 @@ const root=document.getElementById("root");
 let draft=null;
 function render(){
   if(!S){root.innerHTML=screenTitle()+chrome();bind();return;}
-  if(S.over&&!(S.modal&&S.modal.type==="result")){root.innerHTML=screenOver()+chrome();bind();return;}
+  // something happened between jobs: it waits for a decision before anything else
+  if(S.event&&!S.modal&&!S.over)S.modal={type:"event"};
+  if(S.over&&!(S.modal&&(S.modal.type==="result"||S.modal.type==="event"))){root.innerHTML=screenOver()+chrome();bind();return;}
   let body="";
   if(S.tab==="crew")body=tabCrew();
   else if(S.tab==="jobs")body=tabJobs();
@@ -1199,7 +1504,7 @@ function topbar(){
     +'<div class="brand">THE CREW</div>'
     +'<div class="stat"><span class="l">Balance</span><span class="v num">'+money(S.money)+'</span></div>'
     +'<div class="stat"><span class="l">Week</span><span class="v num">'+String(S.week).padStart(2,"0")+'</span></div>'
-    +'<div class="stat"><span class="l">Ranking · '+esc(rankName(S.rep))+'</span><span class="v num">'+S.rep+'</span></div>'
+    +'<div class="stat" title="'+esc(rankInfo(S.rep).note)+'"><span class="l">Ranking · '+esc(rankName(S.rep))+'</span><span class="v num">'+S.rep+'</span></div>'
     +'<div class="heatwrap"><div class="stat" style="min-width:0"><span class="l">Heat '+Math.round(S.heat)+(S.heat>=100?" ⚠":"")+'</span>'
       +'<div class="heatbar'+(hot?" hot":"")+'"><i style="width:'+clamp(S.heat,0,100)+'%"></i></div></div></div>'
     +'<div class="spacer"></div>'
@@ -1539,9 +1844,9 @@ function tabRoster(){
     +'<span class="count num">'+total.toLocaleString()+' match · showing '+shown.length+'</span></div>';
   const cards=shown.map(c=>'<div class="id">'+vetStamp(c)+idCardTop(c)
     +'<div class="attrs">'+attrRow(c)+'</div>'+profLine(c)
-    +'<div class="foot"><span class="fee num">'+money(c.fee)+'</span>'
+    +'<div class="foot"><span class="fee num">'+money(c.fee)+(canSign(c)?'':'<span class="nosign" title="'+esc(signWhy(c))+'">won\'t sign · ranking '+repToSign(c.exp)+'</span>')+'</span>'
       +'<span style="display:flex;gap:6px"><button class="btn ghost sm" data-act="open-recruit" data-id="'+c.id+'">File</button>'
-      +'<button class="btn sm" data-act="hire" data-id="'+c.id+'" title="'+(!canHire?"All four seats are taken — cut someone loose first":S.money<c.fee?"Not enough money — the fee is "+money(c.fee):"Hire for "+money(c.fee))+'" '+(canHire&&S.money>=c.fee?"":"disabled")+'>Hire</button></span></div></div>').join("");
+      +'<button class="btn sm" data-act="hire" data-id="'+c.id+'" title="'+esc(!canSign(c)?signWhy(c):!canHire?"All four seats are taken — cut someone loose first":S.money<c.fee?"Not enough money — the fee is "+money(c.fee):"Hire for "+money(c.fee))+'" '+(canHire&&S.money>=c.fee&&canSign(c)?"":"disabled")+'>Hire</button></span></div></div>').join("");
   const more=total>shown.length?'<div style="text-align:center;margin-top:14px"><button class="btn ghost" data-act="more">Show 30 more</button></div>':'';
   return '<div class="panel-h" style="border:0;padding:0 0 6px"><h2>Roster</h2><span class="kicker num">'+S.roster.length.toLocaleString()+' operatives on file · '+(CREW_SLOTS-recruits().length)+' seats open</span></div>'
     +bar+(shown.length?'<div class="cards">'+cards+'</div>'+more:'<div class="empty">No one matches. Loosen the filters.</div>');
@@ -1560,6 +1865,7 @@ function tabLog(){
     ["Jobs on file",(S.reports||[]).length],
   ];
   const finalUp=S.jobs.some(j=>j.final);
+  const rkNow=rankInfo(S.rep),rkNext=rankNext(S.rep);
   const wk=(!S.logWeek||S.logWeek==="all")?null:+S.logWeek;
   let opts='<option value="all"'+(wk===null?" selected":"")+'>All weeks</option>';
   for(let w=S.week;w>=1;w--)opts+='<option value="'+w+'"'+(wk===w?" selected":"")+'>Week '+w+(w===S.week?" · now":"")+'</option>';
@@ -1578,9 +1884,12 @@ function tabLog(){
     +'</div></div></div>';
   const right='<div class="panel"><div class="panel-h"><h2>The Operation</h2><span class="kicker">'+esc(S.player.n)+' · '+natOf(S.player).flag+'</span></div><div class="panel-b">'
     +'<div class="kv">'+status.map(r=>'<span class="k">'+r[0]+'</span><span class="num">'+r[1]+'</span>').join("")+'</div>'
-    +'<hr class="rule"><div class="kicker">Ranking to the final score</div>'
+    +'<hr class="rule"><div class="kicker">Ranking — what the name buys</div>'
+    +'<div class="mono" style="font-size:13px;margin-top:6px"><b>'+esc(rkNow.name)+'</b> · '+S.rep+' points</div>'
     +'<div class="loy" style="height:9px;margin-top:6px"><i style="width:'+clamp(S.rep,0,100)+'%"></i></div>'
-    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px">'+(S.finalDone?"It's done.":finalUp?"The final score is live online.":S.rep+" / 100 — bigger jobs, bigger name.")+'</div>'
+    +'<div class="mono" style="font-size:11.5px;line-height:1.6;margin-top:6px">'+esc(rkNow.note)+'</div>'
+    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">'+(S.finalDone?"It's done.":finalUp?"The final score is live online.":rkNext?"Next: <b>"+esc(rkNext.name)+"</b> at "+rkNext.min+" — "+esc(rkNext.note):"Top of the board. Reach 100 and the final score appears.")+'</div>'
+    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">Clean and successful work raises it; messy work, leaks, arrests and walkouts lower it; a week laid low costs a point.'+(S.poach?' <span style="color:var(--stamp)">'+esc(S.poach.name)+' is buying your crew drinks — '+S.poach.weeks+' more week'+(S.poach.weeks===1?'':'s')+'.</span>':'')+'</div>'
     +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="tab" data-k="jobs">Jobs →</button><button class="btn ghost" data-act="laylow">Lay low a week</button></div>'
     +'</div></div>';
   return recaps+'<div class="grid g-hq">'+left+right+'</div>';
@@ -1591,6 +1900,7 @@ function renderModal(){
   const m=S.modal;
   if(m.type==="recruit")return modalRecruit(m.id);
   if(m.type==="result")return modalResult(m.data);
+  if(m.type==="event")return modalEvent();
   return "";
 }
 function modalWrap(inner){return '<div class="scrim" data-act="scrim"><div class="modal" role="dialog" aria-modal="true">'+inner+'</div></div>';}
@@ -1599,7 +1909,7 @@ function modalRecruit(id){
   const c=byId(id);if(!c)return "";
   const nat=natOf(c);
   const t=TECH_BY_K[c.tech];
-  const canHire=recruits().length<CREW_SLOTS&&c.status==="available"&&S.money>=c.fee;
+  const canHire=recruits().length<CREW_SLOTS&&c.status==="available"&&S.money>=c.fee&&canSign(c);
   const vetLine=c.isPlayer?"":c.vetted
     ?(c.vetFlag?'<div class="warnbox">Vetting flagged ties to an informant network. Hire this one and the heat walks in with the luggage.</div>'
                :'<div class="mono" style="font-size:12px;color:var(--good)">✓ Vetted clean. No known ties — as far as money can tell.</div>')
@@ -1626,38 +1936,55 @@ function modalRecruit(id){
       +'<div class="attrs" style="padding:10px 0 0;grid-template-columns:1fr 1fr">'+attrRow(c)+'</div>'
     +'</div></div>'
     +(vetLine?'<hr class="rule">'+vetLine:'')
+    +(c.status==="available"&&!canSign(c)?'<div class="warnbox" style="margin-top:12px">'+esc(signWhy(c))+'</div>':'')
     +'<hr class="rule"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">'
       +'<button class="btn ghost" data-act="scrim">Close</button>'
       +(c.vetted?'':'<button class="btn ghost" data-act="vet" data-id="'+c.id+'" '+(S.money>=VET_COST?"":"disabled")+'>Vet · '+money(VET_COST)+'</button>')
-      +(c.status==="available"?'<button class="btn" data-act="hire" data-id="'+c.id+'" title="'+(recruits().length>=CREW_SLOTS?"All four seats are taken — cut someone loose first":S.money<c.fee?"Not enough money — the fee is "+money(c.fee):"Hire for "+money(c.fee))+'" '+(canHire?"":"disabled")+'>Hire · '+money(c.fee)+'</button>':'')+'</div></div>';
+      +(c.status==="available"?'<button class="btn" data-act="hire" data-id="'+c.id+'" title="'+esc(!canSign(c)?signWhy(c):recruits().length>=CREW_SLOTS?"All four seats are taken — cut someone loose first":S.money<c.fee?"Not enough money — the fee is "+money(c.fee):"Hire for "+money(c.fee))+'" '+(canHire?"":"disabled")+'>Hire · '+money(c.fee)+'</button>':'')+'</div></div>';
   return modalWrap(h+b);
 }
 
-function tickLine(l){return '<div class="tk '+l.tone+'"><span class="tk-t">'+esc(l.t)+'</span><span class="tk-x">'+esc(l.x)+'</span></div>';}
+function tickLine(l){return '<div class="tk '+(l.tone||"")+(l.twist?" tk-twist":"")+'"><span class="tk-t">'+esc(l.t)+'</span><span class="tk-x">'+esc(l.x)+'</span></div>';}
 let TICK=null;
 function tickerArm(){
   if(TICK){clearInterval(TICK);TICK=null;}
   if(!S||!S.modal||S.modal.type!=="result")return;
   const d=S.modal.data;
-  if(d.done)return;
+  // a re-render shows the latest line, not the first: the marker sits right above the decision
+  if(!d.done){const el0=document.getElementById("ticker");if(el0)el0.scrollTop=el0.scrollHeight;}
+  if(d.done||d.awaiting)return;
   let reduced=false;
   try{reduced=!!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);}catch(e){}
   if(reduced){tickerFinish();return;}
   TICK=setInterval(()=>{
     if(!S||!S.modal||S.modal.type!=="result"||S.modal.data!==d){clearInterval(TICK);TICK=null;return;}
     d.revealed++;
+    const line=d.narrative[d.revealed-1];
     const el=document.getElementById("ticker");
-    if(el){el.insertAdjacentHTML("beforeend",tickLine(d.narrative[d.revealed-1]));el.scrollTop=el.scrollHeight;}
+    if(el&&line){el.insertAdjacentHTML("beforeend",tickLine(line));el.scrollTop=el.scrollHeight;}
     sfx("tick");
+    if(line&&line.twist&&!d.resolved){clearInterval(TICK);TICK=null;d.awaiting=true;sfx("bad");render();return;}
     if(d.revealed>=d.narrative.length){clearInterval(TICK);TICK=null;tickerFinish();}
   },SPEEDS[speedIdx()][0]);
 }
 function tickerFinish(){
   if(TICK){clearInterval(TICK);TICK=null;}
   const d=S&&S.modal&&S.modal.type==="result"?S.modal.data:null;if(!d)return;
-  d.revealed=d.narrative.length;d.done=true;
+  if(d.twist&&!d.resolved){
+    // skip only as far as the decision
+    const i=d.narrative.findIndex(l=>l.twist);
+    d.revealed=i>=0?i+1:d.narrative.length;d.awaiting=true;render();return;
+  }
+  d.revealed=d.narrative.length;d.done=true;d.awaiting=false;
   sfx(d.tier>=3?"good":d.tier===2?"stamp":"bad");
   const vt=verdictTrack(d.tier);musicPlay(vt[0],vt[1],true);
+  render();
+}
+function twistChoose(i){
+  const d=S&&S.modal&&S.modal.type==="result"?S.modal.data:null;
+  if(!d||!S.pendingJob||d.resolved)return;
+  finishJob(S.pendingJob,i,d);
+  sfx("click");
   render();
 }
 function modalResult(d){
@@ -1671,9 +1998,19 @@ function modalResult(d){
           :'<div class="result-verdict" style="margin-top:6px;color:'+col+'"><span class="verdict-stamp" style="border-color:'+col+'">'+d.verdictName+'</span></div>')
     +'</div>'+(live?'':'<button class="x" data-act="scrim" aria-label="Close">✕</button>')+'</div>';
   if(live){
-    return modalWrap(h+'<div class="modal-b">'+ticker+'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">'
-      +'<span class="grp mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)">Speed <button class="btn ghost sm" data-act="speed-down" aria-label="Slower" style="padding:2px 8px">−</button><span class="num" style="width:58px;text-align:center">'+SPEEDS[speedIdx()][1]+'</span><button class="btn ghost sm" data-act="speed-up" aria-label="Faster" style="padding:2px 8px">+</button></span>'
-      +'<button class="btn ghost sm" data-act="skip-ticker">Skip to the end →</button></div></div>');
+    let below;
+    if(d.awaiting&&d.twist&&!d.resolved){
+      const letters="ABCDEF";
+      below='<div class="twist"><div class="kicker" style="color:var(--stamp)">Something goes wrong · your call</div>'
+        +'<h3>'+esc(d.twist.h)+'</h3><p>'+esc(d.twist.s)+'</p>'
+        +'<div class="twist-opts">'+d.twist.opts.map((t,i)=>'<button class="twist-opt" data-act="twist" data-i="'+i+'"><b>'+letters[i]+'</b> '+esc(t)+'</button>').join("")+'</div>'
+        +'<div class="sel-help">One of these sets the crew free. Think about who is on the job and what each of them can do.</div></div>';
+    } else {
+      below='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">'
+        +'<span class="grp mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)">Speed <button class="btn ghost sm" data-act="speed-down" aria-label="Slower" style="padding:2px 8px">−</button><span class="num" style="width:58px;text-align:center">'+SPEEDS[speedIdx()][1]+'</span><button class="btn ghost sm" data-act="speed-up" aria-label="Faster" style="padding:2px 8px">+</button></span>'
+        +'<button class="btn ghost sm" data-act="skip-ticker">'+(d.twist&&!d.resolved?"Skip to the decision →":"Skip to the end →")+'</button></div>';
+    }
+    return modalWrap(h+'<div class="modal-b">'+ticker+below+'</div>');
   }
   const nums='<div class="num-grid">'
     +'<div class="b"><div class="k">Gross</div><div class="v num">'+money(d.take)+'</div></div>'
@@ -1681,6 +2018,9 @@ function modalResult(d){
     +'<div class="b"><div class="k">Your net</div><div class="v num" style="color:'+(d.net>0?"var(--good)":"var(--ink)")+'">'+money(d.net)+'</div></div>'
     +'<div class="b"><div class="k">Heat</div><div class="v num">+'+d.heatGain+'</div></div>'
     +'<div class="b"><div class="k">Ranking</div><div class="v num" style="color:'+(d.repDelta>0?"var(--good)":d.repDelta<0?"var(--stamp)":"var(--ink)")+'">'+(d.repDelta>=0?"+":"")+d.repDelta+'</div></div></div>';
+  const tw=d.twist&&d.twist.chosen?('<hr class="rule"><div class="kicker" style="color:var(--stamp)">The twist — '+esc(d.twist.h)+'</div>'
+    +'<div class="mono" style="font-size:12px;line-height:1.7;margin-top:6px">'+esc(d.twist.s)+'<br><b>You chose:</b> '+esc(d.twist.chosen)+' — '+(d.twist.free?'<span style="color:var(--good)">and it set the crew free.</span>':'<span style="color:var(--stamp)">and it cost you.</span>')
+    +(d.twist.free?'':'<br><b>What would have set you free:</b> '+esc(d.twist.correct)+(d.twist.why?' — because '+esc(d.twist.why)+'.':'.'))+'</div>'):'';
   const rank='<hr class="rule"><div class="kicker">Ranking — why</div><div class="factors">'
     +d.rk.map(r=>'<span class="k">'+esc(r.k)+'</span><span class="'+(r.v>=0?"plus":"minus")+' num">'+(r.v>=0?"+":"")+r.v+'</span>').join("")+'</div>'
     +'<div class="mono" style="font-size:12.5px;margin-top:8px">'+d.repBefore+' → <b>'+d.repAfter+'</b> · '+esc(d.rankBefore)+(d.rankAfter!==d.rankBefore?' → <b>'+esc(d.rankAfter)+'</b>':'')+'</div>';
@@ -1693,8 +2033,25 @@ function modalResult(d){
       return '<div class="fld'+(mk?' mk-'+mk:'')+'"><div class="fld-av">'+avatar(c.avseed,c.gender)+'</div>'+(mk?'<span class="fld-stamp">'+MARK[mk]+'</span>':'')
         +'<div class="fld-n">'+(c.isPlayer?"You":esc(c.first))+'</div>'+(mk==="gone"?'<div class="fld-w">wanted</div>':'')+'</div>';}).join("")+'</div>';
   return modalWrap(h+'<div class="modal-b"><details open><summary class="kicker" style="cursor:pointer">The job, minute by minute</summary>'+ticker+'</details>'
-    +nums+rank+growth+ev+roster
+    +nums+tw+rank+growth+ev+roster
     +'<hr class="rule"><div style="display:flex;justify-content:flex-end"><button class="btn" data-act="scrim">Continue →</button></div></div>');
+}
+// Something between jobs: a decision, then what came of it.
+function modalEvent(){
+  const ev=S.event;if(!ev)return "";
+  const letters="ABCD";
+  const enf=recruits().some(c=>c.status==="crew"&&c.tech==="enforcer");
+  const h='<div class="modal-h"><div><div class="kicker" style="color:var(--stamp)">Between jobs · week '+ev.week+'</div><h2 style="font-size:22px;margin-top:4px">'+esc(ev.h)+'</h2></div></div>';
+  let b='<div class="modal-b"><p style="margin:0 0 12px;font-size:15px;line-height:1.6">'+esc(ev.text)+'</p>';
+  if(ev.outcome){
+    b+='<div class="brief" style="border-left-color:var(--stamp)">'+esc(ev.outcome)+'</div>'
+      +'<div style="display:flex;justify-content:flex-end"><button class="btn" data-act="event-close">Continue →</button></div>';
+  } else {
+    b+='<div class="twist-opts">'+ev.opts.map((o,i)=>{const can=!o.req||(o.req==="enforcer"&&enf);
+      return '<button class="twist-opt" data-act="event" data-i="'+i+'" '+(can?"":'disabled title="Needs an Enforcer on the crew"')+'><b>'+letters[i]+'</b> '+esc(o.t)+(can?'':' <span class="mono" style="color:var(--muted)">(needs an Enforcer)</span>')+'</button>';}).join("")+'</div>'
+      +'<div class="sel-help">Every choice has a cost and a consequence. The crew will remember it.</div>';
+  }
+  return '<div class="scrim"><div class="modal" role="dialog" aria-modal="true">'+h+b+'</div></div></div>';
 }
 
 /* ----------------------------- SETTINGS ------------------------------- */
@@ -1828,7 +2185,7 @@ function radioLabel(){
 // Runs once on a new game; can be run again from the i button or the controls book.
 const TUT={on:false,step:0};
 const TUT_STEPS=[
-  {tab:"crew",sel:".topbar",h:"The top line",t:"Balance is your money — hires, upkeep and vetting come out of it. Week counts time: every job or lay-low is a week. Ranking rises with clean work and falls with messy work — Nobody, Small time, Known, Respected, Feared — and at 100 the final job appears. Heat is how hard the police are looking: every job pays a heat penalty, and at 100 there is a raid."},
+  {tab:"crew",sel:".topbar",h:"The top line",t:"Balance is your money — hires, upkeep and vetting come out of it. Week counts time: every job or lay-low is a week. Ranking is your name — Nobody, Small time, Known, Respected, Feared — and the name decides what clients post, what they pay, who will sign with you and whether your crew stays; at 100 the final job appears. Heat is how hard the police are looking: every job pays a heat penalty, and at 100 there is a raid."},
   {tab:"crew",sel:".id.you",h:"This is you",t:"The commander. Your file goes on every job: five attributes, a technique, education, time in jail and on the streets, knowledge, languages, and anything you won't do. If a border keeps you out, the crew goes without you."},
   {tab:"crew",sel:".id.slot",h:"Four empty seats",t:"Fill them from the Roster. Everyone you hire goes on every job, takes a cut of every score, and costs upkeep each week."},
   {tab:"roster",sel:".rosterbar",h:"Five thousand files",t:"Search by name, country, language or knowledge. Filter by technique, role and nationality. Sort by fee, experience or raw skill."},
@@ -1883,21 +2240,24 @@ const INFO={
   crew:{h:"The Crew",t:[
     "Five seats. You are the first. Each card: flag and passport tier, technique and rank (the pips), the five attributes — Muscle, Brains, Tech, Charm, Nerve — then education, jail, streets, knowledge, languages, and in red what this one will <b>not</b> do.",
     "<b>Loyalty</b> rises with success and bonuses, falls with failure and missed payroll. Under 35, after a big score, a member may skim the split and vanish. <b>Upkeep</b> is charged every week. <b>Cut loose</b> frees the seat.",
-    "Everyone on the crew goes on every job — if the border lets them in and the job doesn't trip one of their limits. A commander-type recruit takes your orders badly (−3 on a job you lead) but can run the crew on a job you can't get into."]},
+    "Everyone on the crew goes on every job — if the border lets them in and the job doesn't trip one of their limits. A commander-type recruit takes your orders badly (−3 on a job you lead) but can run the crew on a job you can't get into.",
+    "Loyalty also follows the name: a Nobody's crew loses a point a week, a Respected crew gains one. Every few weeks something happens between jobs — a death, a disappearance, a resignation, a rival crew buying drinks, an old face, a detective — and the least loyal member is usually the one it happens to. An <b>Enforcer</b> on the crew opens the hard answers."]},
   roster:{h:"The Roster",t:[
     "5,000 files. <b>Search</b> by name, country, language or knowledge. Filter by <b>technique</b>, <b>role</b> and <b>nationality</b>; sort by fee, experience, raw skill or name. Show 30 more at the bottom.",
     "<b>Hover a technique</b> (or MUS, BRN, TCH, CHM, NRV) for a brief: what it is, what it leans on, what it comes with, and which jobs want it. On a phone, tap it.",
-    "<b>Fee</b> is paid once. <b>Cut</b> is their share of every score. <b>Upkeep</b> is weekly. <b>File</b> opens the whole profile; <b>Hire</b> needs an open seat and the fee.",
+    "<b>Fee</b> is paid once. <b>Cut</b> is their share of every score. <b>Upkeep</b> is weekly. <b>File</b> opens the whole profile; <b>Hire</b> needs an open seat, the fee — and a name they will sign with. Rookies, Operators and Professionals sign with anyone; a <b>Veteran</b> wants a Known crew (ranking 40), a <b>Legend</b> a Respected one (60). A file that won't sign yet says so under the fee.",
     "About one file in fourteen is a <b>police informant</b>: they leak jobs and leak heat. <b>Vet</b> a file for $6K — a dull crew misses one in three, so a clean stamp is a guess with money behind it."]},
   jobs:{h:"Jobs",t:[
     "Postings from clients, by country. Each row: category, the techniques and knowledge it wants — <b>green</b> if someone on your crew has it, <b>red</b> if nobody does — city, country and language, crew needed, fee, heat, when it expires, and a chip: <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go.",
     "<b>Sort</b> the board by best fit, crew needed, technique wanted, fee, heat, difficulty, country or expiry. <b>Your crew</b> sits above the board — passport, technique, attributes, languages, knowledge, limits — so a posting can be judged without leaving; hide it if you know them by heart. Keys <b>1–4</b> jump between the tabs.",
     "The bars are difficulty; red means high heat. Open a posting to see the reckoning before you commit.",
-    "<b>Lay low a week</b>: −15 heat, upkeep still due, postings refresh. Reach 100 ranking and the final score appears at the top of the board."]},
+    "<b>Lay low a week</b>: −15 heat, upkeep still due, postings refresh, ranking −1. Clients post to a name: a Nobody or Small time crew sees tier 1–2 postings, a Known crew tier 3, Respected and up tier 4 — and the fee is scaled to the name, from −20% to +35%. Reach 100 ranking and the final score appears at the top of the board.",
+    "On some jobs the live report stops mid-way: something has gone wrong and six options wait for your call. One sets the crew free — the one the crew you brought can actually do — so read the file before you take the job."]},
   log:{h:"The Log",t:[
     "<b>Job recaps</b>: every job you have run stays on file. Open one for the full report — the minute-by-minute, the verdict, the split, why the ranking moved, what they learned, who came back.",
     "<b>The case log</b>, week by week — every hire, job, injury, arrest, leak and betrayal. The <b>Week</b> dropdown narrows both the recaps and the log to one week; \"All weeks\" shows everything.",
-    "The operation panel counts seats, who is ready, who is hurt or held, weekly upkeep and open postings. The bar is ranking towards the final score. Lay low from here too."]},
+    "The operation panel counts seats, who is ready, who is hurt or held, weekly upkeep and open postings. Lay low from here too.",
+    "<b>Ranking — what the name buys.</b> The name decides everything a client, a recruit and a police force does with you. <b>Nobody</b> (0): jobs pay −20%, only tier 1–2 postings, nobody above Professional will sign, loyalty slips a point a week. <b>Small time</b> (20): pay −10%. <b>Known</b> (40): tier-3 postings, full pay, Veterans sign. <b>Respected</b> (60): tier-4 postings, pay +10%, Legends sign, loyalty +1 a week, heat +5%. <b>Feared</b> (80): pay +20%, heat +10%. <b>The Crew</b> (100): pay +35%, loyalty +2, heat +15%, and the final score appears. Clean and successful work raises it; messy work, leaks, arrests and walkouts lower it; a week laid low costs a point — a name unused is a name forgotten."]},
   job:{h:"A job file",t:[
     "<b>The brief</b>: who posted it, and the country — language, money, politics, religion, terrain, and the border rule. Chips: the category, techniques and knowledge wanted, and tags such as <i>on the water</i> or <i>at night</i> that trip a crew member's limits.",
     "<b>Who can go</b>: every crew member, ✓ or ✗, with the reason — the border against their passport, a conviction at a strict border, a limit the job hits, an injury. A forger on the crew gets weak passports through.",
@@ -1909,7 +2269,11 @@ const INFO={
     "First the job as it happened, minute by minute — who got in and who didn't, who did the talking, what each technique bought, what went right and what went wrong, the exit, the split. Skip to the end if you'd rather.",
     "Then the verdict: <b>Clean</b>, <b>Success</b>, <b>Messy</b>, <b>Botched</b> or <b>Disaster</b> — crew power against difficulty, plus the roll. Gross is the fee earned, cuts go to the crew, the net is yours.",
     "<b>Ranking — why</b> lists every reason the crew's ranking moved: up for a clean or successful job (more for a bigger job, a little more if nobody was hurt), down for messy, botched or disastrous work, a leak, an arrest, or a member walking with the money. <b>What they learned</b>: everyone who went gains experience; ranks are earned at 40, 110, 220 and 400 xp, and good work adds a point to the attributes the job leaned on.",
-    "<b>Fallout</b>: injuries (out two weeks), arrests (held for weeks, then back on the roster), leaks (an informant talked), and betrayals (someone skimmed the split and vanished)."]},
+    "<b>Fallout</b>: injuries (out two weeks), arrests (held for weeks, then back on the roster), leaks (an informant talked), and betrayals (someone skimmed the split and vanished).",
+    "<b>The twist.</b> On some jobs — one good fit in four, one long shot in twelve — the report stops: something has gone wrong and six options wait for your call. Only one sets the crew free, and it is always the one the crew you brought can actually do: a wheelman can hot-wire the second car, a forger can re-paper the manifest, a hacker can kill the alarm. A call your crew can make but not best costs time and money; a call nobody can make costs blood, a seat, and ranking. Walking away is always on the list — it keeps everyone and loses the score. The report then shows what you chose, what would have set you free, and why."]},
+  event:{h:"Between jobs",t:[
+    "Every few weeks something happens that is not a job: a death on holiday, a member gone without a word, one who wants out, one who has joined another crew and is buying yours drinks, an old face who walked with your money, a detective asking around. The types rotate, so each comes round before any repeats.",
+    "Every option has a price and a consequence — money, loyalty, a seat, heat — and some are a gamble the text is honest about. Options that need an <b>Enforcer</b> on the crew are greyed without one. The decision cannot be clicked away; the crew remembers it, and the case log keeps it."]},
   office:{h:"The office",t:[
     "Pause and settings, drawn as the boss's office. The <b>radio</b>: SOUND is the master switch, MUSIC switches the track, VOLUME turns both — click the knob's left to lower, right to raise. The <b>monitor</b>: brightness. The <b>paper</b>: language. The <b>book</b>: controls and how the game works. The <b>door</b>: back to the game, or burn the file. Your <b>hat</b>: your own file.",
     "Settings are kept apart from the game and survive a new game. Esc closes the office."]},
@@ -2135,7 +2499,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 14 · 15 September 2026";
+const BUILD="build 15 · 15 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
@@ -2171,6 +2535,9 @@ document.addEventListener("click",e=>{
     case "off-music": SET.music=!SET.music; saveSettings(); musicSync(); render(); break;
     case "off-radio-start": SET.sound=true; SET.music=true; if(SET.volume<=0)SET.volume=0.6; saveSettings(); userGestured=true; musicState="idle"; musicSync(); render(); break;
     case "skip-ticker": tickerFinish(); break;
+    case "twist": twistChoose(+t.getAttribute("data-i")); break;
+    case "event": if(S&&S.event&&!S.event.outcome)eventApply(S.event,+t.getAttribute("data-i")); render(); break;
+    case "event-close": if(S){S.event=null;S.modal=null;save();} render(); window.scrollTo(0,0); break;
     case "speed-down": SET.speed=clamp(speedIdx()-1,0,SPEEDS.length-1); saveSettings(); render(); break;
     case "speed-up": SET.speed=clamp(speedIdx()+1,0,SPEEDS.length-1); saveSettings(); render(); break;
     case "recap": {
@@ -2205,6 +2572,7 @@ document.addEventListener("click",e=>{
     case "tab": S.tab=k; S.modal=null; render(); window.scrollTo(0,0); break;
     case "scrim":
       if(e.target===t||cl.contains("x")||cl.contains("btn")){
+        if(S&&S.modal&&S.modal.type==="result"&&S.modal.data.awaiting)break; // the decision cannot be clicked away
         if(S&&S.modal&&S.modal.type==="result"&&!S.modal.data.done){tickerFinish();break;}
         if(S&&S.modal&&S.modal.type==="result")musicStop();
         if(S)S.modal=null;UI.panel=null;render();window.scrollTo(0,0);
@@ -2237,7 +2605,12 @@ document.addEventListener("keydown",e=>{
     else if(TUT.on){tutEnd();}
     else if(UI.panel){UI.panel=null;render();}
     else if(UI.office){UI.office=false;render();}
-    else if(S&&S.modal){if(S.modal.type==="result"&&!S.modal.data.done)tickerFinish();else{if(S.modal.type==="result")musicStop();S.modal=null;render();}}
+    else if(S&&S.modal){
+      if(S.modal.type==="event"){if(S.event&&S.event.outcome){S.event=null;S.modal=null;save();render();}}
+      else if(S.modal.type==="result"&&S.modal.data.awaiting){}
+      else if(S.modal.type==="result"&&!S.modal.data.done)tickerFinish();
+      else{if(S.modal.type==="result")musicStop();S.modal=null;render();}
+    }
     else if(S&&S.jobOpen){S.jobOpen=null;render();}
     else{UI.office=true;UI.panel=null;render();}
     return;
@@ -2251,6 +2624,7 @@ document.addEventListener("keydown",e=>{
 function hire(id){
   const c=byId(id);if(!c||c.status!=="available")return;
   if(recruits().length>=CREW_SLOTS){note("All four seats are taken. Cut someone loose first.");return;}
+  if(!canSign(c)){note(signWhy(c));return;}
   if(S.money<c.fee){note("Not enough for the fee.");return;}
   S.money-=c.fee;c.status="crew";c._touched=true;S.crewIds.push(c.id);sfx("coin");
   logMsg("Hired "+c.n+" — "+TECH_BY_K[c.tech].l+", "+c.nat+", "+(c.role==="commander"?"commander":"soldier")+" ("+money(c.fee)+").","");
@@ -2284,7 +2658,7 @@ function doExecute(id){
   if(!assessJob(j).canRun)return;
   const ti=(S.trackIdx||0)%TRACKS.report.length;S.trackIdx=ti+1;
   musicPlay(TRACKS.report[ti],"report track "+(ti+1)+" of "+TRACKS.report.length,false);
-  const res=executeJob(j);
+  const res=startJob(j);
   sfx("open");
   S.jobOpen=null;
   S.modal={type:"result",data:res};
@@ -2292,7 +2666,10 @@ function doExecute(id){
 }
 function layLow(){
   S.heat=clamp(S.heat-15,0,120);
-  logMsg("Laid low for a week. Heat cooling.","");
+  const before=rankName(S.rep);
+  S.rep=Math.max(0,S.rep-1);
+  logMsg("Laid low for a week. Heat cooling. A name unused is a name forgotten — ranking −1.","");
+  if(rankName(S.rep)!==before)logMsg("Ranking: "+before+" → "+rankName(S.rep)+". "+rankInfo(S.rep).note,"bad",true);
   weekTick(freshRng());refreshJobs(false);S.modal=null;save();render();
 }
 function note(msg){logMsg(msg,"warn");render();}

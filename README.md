@@ -56,11 +56,38 @@ decisions at the end.
 - **Job recaps.** Every job you have run stays on file. The Log's week is a dropdown to any
   past week, and each job reopens as its full report — the minute-by-minute, the verdict, the
   split, why the ranking moved, what they learned, who came back.
-- **Ranking.** The crew's standing — Nobody, Small time, Known, Respected, Feared, The Crew —
-  rises with clean and successful jobs (more for a bigger job, a little more if nobody was
-  hurt) and **falls** with messy, botched or disastrous work, a leak, an arrest, or a member
-  walking with the money. Every end-of-job screen lists the reasons. At 100 the final score
-  appears.
+- **The twist.** On some jobs — one good fit in four, one long shot in twelve — the live
+  report stops: something has gone wrong (the van won't start with sirens two streets over, the
+  inside man wants double, the floor plan is last year's, a checkpoint where none was, a police
+  radio in the buyer's car, a crew member hit, the alarm early, a grey car that is not lost)
+  and **six options wait for your call**. Only one sets the crew free, and it is always the one
+  the crew you brought can actually do — a wheelman hot-wires the second car, a forger
+  re-papers the manifest, a hacker kills the alarm. A call your crew can make but not best
+  costs time and money (−2 ranking); a call nobody can make costs blood, a seat, heat and −4
+  ranking; walking away is always on the list and keeps everyone while losing the score. The
+  options are shuffled every time. The decision cannot be clicked away, survives a reload, and
+  the verdict screen — and the recap on file — shows what you chose, what would have set you
+  free, and why.
+- **Between jobs.** Every three to seven weeks something happens that is not a job: a death on
+  holiday, a member gone without a word, one who wants out, one who has joined another crew
+  and is buying yours drinks (someone may leave every week until it stops), an old face who
+  walked with your money and is talking about the police, a detective asking around the bars.
+  The six types rotate, so each comes round before any repeats; the least loyal member is
+  usually the one it happens to. Each asks for a decision with a price and a consequence —
+  money, loyalty, a seat, heat, sometimes a gamble the text is honest about — and the hard
+  answers need an Enforcer on the crew.
+- **Ranking, with consequences.** The crew's standing — Nobody, Small time, Known, Respected,
+  Feared, The Crew — rises with clean and successful jobs (more for a bigger job, a little
+  more if nobody was hurt) and **falls** with messy, botched or disastrous work, a leak, an
+  arrest, a member walking with the money, or a week laid low (a name unused is a name
+  forgotten). Every end-of-job screen lists the reasons. **The name decides what happens to
+  you:** a Nobody sees only tier 1–2 postings at −20% pay, loses a point of crew loyalty a
+  week, and no Veteran or Legend will sign; Small time pays −10%; Known opens tier 3 at full
+  pay and Veterans sign; Respected opens tier 4 at +10%, Legends sign, loyalty gains a point a
+  week, and the police look 5% harder; Feared pays +20% at +10% heat; The Crew pays +35% at
+  +15% heat, holds loyalty at +2, and the final score appears at 100. The Log's operation
+  panel says what the current name buys and what the next one costs; a file on the roster that
+  won't sign yet says so under the fee.
 - **A crew that grows.** Everyone who goes on a job gains experience; ranks — Rookie,
   Operator, Professional, Veteran, Legend — are earned at 40, 110, 220 and 400 xp, and good
   work adds a point to the attributes the job leaned on. You included.
@@ -108,6 +135,10 @@ decisions at the end.
 - **Pause, settings and a sound switch** (15 September 2026), as the office above.
 - **No "dark web"** (15 September 2026). Jobs are posted online.
 - **Ranking rises and falls per job, and the crew grows** (15 September 2026), as above.
+- **Every thing has a cause, a consequence and a result** (15 September 2026). A ranking
+  number means something a client, a recruit and a police force do differently; a job can turn
+  on one decision that only the right crew can make; and between jobs the crew has a life that
+  asks for decisions with a price. No number is decorative.
 
 ## Provisional choices — easy to change
 
@@ -115,8 +146,9 @@ decisions at the end.
 smallest one; none is a decision.
 
 - **Missions** resolve in one roll: crew power (weighted attributes × experience, plus the
-  factors above) against difficulty, ±18. Five verdicts: Clean, Success, Messy, Botched,
-  Disaster. The live report narrates that outcome; it does not change it.
+  factors above) against difficulty, ±18, and — when a twist strikes — the decision's cost.
+  Five verdicts: Clean, Success, Messy, Botched, Disaster. The live report narrates that
+  outcome; apart from the twist, it does not change it.
 - **"Very basic"** is read as: four tabs, no map, no per-job assignment — the whole crew
   goes, and the game is choosing who sits in the seats and which postings to take.
 - **Recruitment** is a one-off fee plus weekly upkeep and a cut of each score, with four
@@ -127,7 +159,7 @@ smallest one; none is a decision.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 14 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 15 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
