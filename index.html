@@ -30,8 +30,7 @@
     font-size:15px;
     line-height:1.5;
     -webkit-font-smoothing:antialiased;
-    background-image:
-      repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(17,16,16,.02) 27px,rgba(17,16,16,.02) 28px);
+    background-image:repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(17,16,16,.02) 27px,rgba(17,16,16,.02) 28px);
   }
   .wrap{max-width:1060px;margin:0 auto;padding:0 16px 64px}
   .mono{font-family:var(--f-mono)}
@@ -41,29 +40,23 @@
   a{color:inherit}
   .kicker{font-family:var(--f-mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
 
-  /* ---- Top bar ---- */
   .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:var(--paper);border-bottom:2px solid var(--ink)}
   .topbar-in{max-width:1060px;margin:0 auto;padding:8px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   .brand{font-family:var(--f-logo);font-weight:400;font-size:24px;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;line-height:1}
-  .brand b{font-weight:400}
   .stat{display:flex;flex-direction:column;line-height:1;gap:3px;min-width:72px}
   .stat .l{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
   .stat .v{font-family:var(--f-mono);font-size:15px;font-weight:500}
   .heatwrap{min-width:132px;flex:1 1 132px;max-width:220px}
-  .heatbar{height:9px;border:1px solid var(--ink);background:
-    repeating-linear-gradient(45deg,var(--paper-2),var(--paper-2) 5px,transparent 5px,transparent 10px);position:relative;overflow:hidden}
+  .heatbar{height:9px;border:1px solid var(--ink);background:repeating-linear-gradient(45deg,var(--paper-2),var(--paper-2) 5px,transparent 5px,transparent 10px);position:relative;overflow:hidden}
   .heatbar>i{position:absolute;inset:0;width:0;background:var(--ink);transition:width .5s ease}
   .heatbar.hot>i{background:var(--stamp)}
   .spacer{flex:1 1 auto}
 
-  /* ---- Tabs ---- */
-  .tabs{display:flex;gap:0;border-bottom:2px solid var(--ink);margin:0 0 18px;flex-wrap:wrap}
-  .tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;
-    padding:12px 16px 10px;font-family:var(--f-disp);text-transform:uppercase;letter-spacing:.12em;font-size:14px;color:var(--muted)}
+  .tabs{display:flex;border-bottom:2px solid var(--ink);margin:0 0 18px;flex-wrap:wrap}
+  .tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:12px 16px 10px;font-family:var(--f-disp);text-transform:uppercase;letter-spacing:.12em;font-size:14px;color:var(--muted)}
   .tab.on{color:var(--ink);border-color:var(--stamp)}
   .tab .b{font-family:var(--f-mono);font-size:10px;color:var(--muted);margin-left:6px}
 
-  /* ---- Panels & cards ---- */
   .panel{background:var(--card);border:1px solid var(--line-2);box-shadow:var(--shadow)}
   .panel-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
   .panel-h h2{font-size:16px;letter-spacing:.08em;text-transform:uppercase}
@@ -73,8 +66,7 @@
   @media(max-width:720px){.g-hq{grid-template-columns:1fr}}
 
   .rule{height:1px;background:var(--line);border:0;margin:12px 0}
-  .btn{appearance:none;border:1px solid var(--ink);background:var(--ink);color:var(--paper);
-    font-family:var(--f-disp);text-transform:uppercase;letter-spacing:.1em;font-size:13px;padding:9px 16px;transition:.12s}
+  .btn{appearance:none;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:var(--f-disp);text-transform:uppercase;letter-spacing:.1em;font-size:13px;padding:9px 16px;transition:.12s}
   .btn:hover{background:#000}
   .btn:disabled{opacity:.32;cursor:not-allowed}
   .btn.ghost{background:transparent;color:var(--ink)}
@@ -83,16 +75,17 @@
   .btn.stamp{border-color:var(--stamp);background:var(--stamp)}
   .btn.stamp:hover{background:#7f2116}
 
-  .tag{display:inline-block;font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
-    border:1px solid var(--line-2);padding:2px 6px;color:var(--ink-2);background:var(--paper)}
+  .tag{display:inline-block;font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line-2);padding:2px 6px;color:var(--ink-2);background:var(--paper)}
   .tag.spec{border-color:var(--ink);color:var(--ink)}
   .tag.pass{border-style:dashed}
+  .tag.ok{border-color:var(--good);color:var(--good)}
+  .tag.no{border-color:var(--stamp);color:var(--stamp)}
   .chip{font-family:var(--f-mono);font-size:10px;padding:1px 6px;border:1px solid;letter-spacing:.05em;text-transform:uppercase}
   .c-good{color:var(--good);border-color:var(--good)}
   .c-warn{color:var(--warn);border-color:var(--warn)}
   .c-bad{color:var(--bad);border-color:var(--bad)}
+  .c-ink{color:var(--ink);border-color:var(--ink)}
 
-  /* ---- Roster / ID cards ---- */
   .rosterbar{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
   .field{display:flex;flex-direction:column;gap:3px}
   .field label{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
@@ -100,8 +93,10 @@
   input[type=text]:focus,select:focus,.tab:focus-visible,.btn:focus-visible,button:focus-visible,.jobrow:focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
   .count{font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-left:auto;padding-bottom:8px}
 
-  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:12px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
   .id{border:1px solid var(--line-2);background:var(--card);display:flex;flex-direction:column;position:relative}
+  .id.you{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+  .id.slot{border-style:dashed;justify-content:center;align-items:center;min-height:200px;color:var(--muted);font-family:var(--f-mono);font-size:12px;text-align:center;padding:16px;gap:10px}
   .id .top{display:flex;gap:10px;padding:11px 11px 8px}
   .id .av{width:60px;height:72px;flex:none;border:1px solid var(--ink);background:#fff}
   .id .who{min-width:0;flex:1}
@@ -111,19 +106,20 @@
   .exp{display:inline-flex;gap:2px;margin-top:6px;vertical-align:middle}
   .pip{width:9px;height:9px;border:1px solid var(--ink);display:inline-block;flex:none}
   .pip.f{background:var(--ink)}
-  .attrs{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;padding:2px 11px 10px}
+  .attrs{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;padding:2px 11px 8px}
   .attr{display:flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:10px;color:var(--ink-2)}
   .attr .k{width:34px;color:var(--muted);letter-spacing:.05em}
   .attr .bar{flex:1;height:5px;background:var(--paper-2);border:1px solid var(--line)}
   .attr .bar>i{display:block;height:100%;background:var(--ink)}
   .attr .n{width:20px;text-align:right}
-  .id .foot{margin-top:auto;border-top:1px dashed var(--line-2);padding:8px 11px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+  .prof{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-2);padding:0 11px 10px;line-height:1.55;border-top:1px dotted var(--line);padding-top:7px;margin:0 0 0}
+  .prof b{font-weight:500;color:var(--ink)}
+  .prof .lim{color:var(--stamp)}
+  .id .foot{margin-top:auto;border-top:1px dashed var(--line-2);padding:8px 11px;display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
   .fee{font-family:var(--f-mono);font-size:13px;font-weight:500}
-  .stampmark{position:absolute;top:8px;right:8px;font-family:var(--f-disp);font-size:11px;letter-spacing:.14em;
-    text-transform:uppercase;color:var(--stamp);border:2px solid var(--stamp);padding:1px 5px;transform:rotate(-8deg);opacity:.9;background:rgba(251,250,246,.85)}
+  .stampmark{position:absolute;top:8px;right:8px;font-family:var(--f-disp);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--stamp);border:2px solid var(--stamp);padding:1px 5px;transform:rotate(-8deg);opacity:.9;background:rgba(251,250,246,.85)}
   .stampmark.ink{color:var(--ink-2);border-color:var(--ink-2)}
 
-  /* ---- job ledger ---- */
   .jobrow{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer;transition:.1s}
   .jobrow:hover{background:var(--paper-2)}
   .jobrow:last-child{border-bottom:0}
@@ -138,21 +134,29 @@
   .diffbar i.f{background:var(--ink);border-color:var(--ink)}
   .diffbar i.h{background:var(--stamp);border-color:var(--stamp)}
 
-  /* ---- modal ---- */
   .scrim{position:fixed;inset:0;background:rgba(17,16,16,.44);z-index:60;display:flex;align-items:flex-start;justify-content:center;padding:26px 14px;overflow:auto}
-  .modal{background:var(--paper);border:2px solid var(--ink);max-width:640px;width:100%;box-shadow:0 30px 60px -20px rgba(0,0,0,.6)}
+  .modal{background:var(--paper);border:2px solid var(--ink);max-width:680px;width:100%;box-shadow:0 30px 60px -20px rgba(0,0,0,.6)}
   .modal-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:14px 16px;border-bottom:2px solid var(--ink);background:var(--paper-2)}
   .modal-b{padding:16px}
   .x{appearance:none;border:1px solid var(--ink);background:var(--paper);width:30px;height:30px;font-size:16px;line-height:1;flex:none}
 
-  .assignline{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line-2);margin-bottom:7px;background:var(--card);cursor:pointer}
-  .assignline.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
-  .assignline .av{width:38px;height:46px;border:1px solid var(--ink);background:#fff;flex:none}
+  .check{display:flex;align-items:center;gap:10px;padding:7px 8px;border:1px solid var(--line-2);margin-bottom:6px;background:var(--card)}
+  .check.out{opacity:.6}
+  .check .av{width:34px;height:41px;border:1px solid var(--ink);background:#fff;flex:none}
+  .check .mark{font-family:var(--f-mono);font-size:14px;width:18px;text-align:center;flex:none}
+  .check .why{font-family:var(--f-mono);font-size:10.5px;color:var(--muted)}
+  .check.out .why{color:var(--stamp)}
 
   .req{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
   .req .b{border:1px solid var(--line-2);padding:6px 9px;background:var(--card);min-width:78px;flex:1 1 78px}
   .req .b .k{font-family:var(--f-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
   .req .b .v{font-family:var(--f-disp);font-size:16px}
+  .brief{font-family:var(--f-mono);font-size:12px;color:var(--ink-2);line-height:1.65;border-left:3px solid var(--ink);padding:4px 10px;margin:8px 0 10px;background:var(--card)}
+  .brief .client{color:var(--ink);font-weight:500}
+  .factors{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-family:var(--f-mono);font-size:11px;margin-top:8px}
+  .factors .k{color:var(--muted)}
+  .factors .plus{color:var(--good)}
+  .factors .minus{color:var(--stamp)}
 
   .odds{height:12px;border:1px solid var(--ink);display:flex;overflow:hidden;font-size:0}
   .odds i{height:100%;display:block}
@@ -160,12 +164,10 @@
   .odds .o-mid{background:var(--warn)}
   .odds .o-bad{background:var(--stamp)}
 
-  /* ---- title screen ---- */
   .hero{padding:56px 0 30px;text-align:center;border-bottom:2px solid var(--ink);margin-bottom:26px;position:relative}
   .hero .eyebrow{font-family:var(--f-mono);letter-spacing:.4em;text-transform:uppercase;font-size:12px;color:var(--muted)}
   .hero h1{font-family:var(--f-logo);font-size:clamp(60px,17vw,150px);letter-spacing:.01em;line-height:.9;margin:10px 0 6px;text-transform:uppercase;font-weight:400}
-  .hero h1 b{font-weight:400}
-  .hero .tagline{font-family:var(--f-body);font-style:italic;font-size:clamp(15px,2.4vw,19px);color:var(--ink-2);max-width:44ch;margin:8px auto 0}
+  .hero .tagline{font-family:var(--f-body);font-style:italic;font-size:clamp(15px,2.4vw,19px);color:var(--ink-2);max-width:46ch;margin:8px auto 0}
   .filecard{max-width:720px;margin:0 auto}
   .redacted{background:var(--ink);color:var(--ink);user-select:none}
 
@@ -175,8 +177,9 @@
   .swatchrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px}
   .genbtn{border:1px solid var(--ink);background:var(--paper);padding:8px 14px;font-family:var(--f-disp);text-transform:uppercase;letter-spacing:.1em;font-size:13px}
   .genbtn.on{background:var(--ink);color:var(--paper)}
+  .rolled{border:1px solid var(--line-2);background:var(--card);padding:10px 12px;margin-top:6px}
 
-  .log{display:flex;flex-direction:column;max-height:340px;overflow:auto}
+  .log{display:flex;flex-direction:column;max-height:420px;overflow:auto}
   .logline{font-family:var(--f-mono);font-size:12px;padding:7px 0;border-bottom:1px dotted var(--line);display:flex;gap:9px}
   .logline .wk{color:var(--muted);flex:none;width:30px}
   .logline.good .tx{color:var(--good)}
@@ -208,8 +211,9 @@
 <script>
 "use strict";
 /* =========================================================================
-   THE CREW — a paper-and-ink game of global crime and deception
-   Single file. No dependencies. Progress saved in this browser.
+   THE CREW — a paper-and-ink game of global crime interception.
+   Five-person crew including you. 5,000 operatives. Jobs by country.
+   Single file, no dependencies. Progress saved in this browser.
    ========================================================================= */
 
 /* ----------------------------- RNG ------------------------------------ */
@@ -220,172 +224,252 @@ function chance(rng,p){return rng()<p;}
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 function freshRng(){return mulberry32((Date.now()^Math.floor(Math.random()*1e9))>>>0);}
 
-/* ----------------------------- DATA ----------------------------------- */
-const NAMES = {
-  Anglo:{m:["James","William","Jack","Harry","George","Thomas","Charlie","Oscar","Henry","Leo","Arthur","Freddie"],
-    f:["Olivia","Amelia","Grace","Emily","Sophie","Charlotte","Ava","Isla","Ruby","Chloe","Alice","Nora"],
-    s:["Walsh","Bennett","Carter","Fletcher","Hughes","Morgan","Reed","Sullivan","Harding","Whitfield","Doyle","Ashford"]},
-  Hispanic:{m:["Mateo","Santiago","Diego","Javier","Andrés","Rafael","Emilio","Tomás","Nicolás","Alejandro","Bruno","Ramón"],
-    f:["Sofía","Valentina","Camila","Lucía","Isabela","Daniela","Carmen","Elena","Paloma","Renata","Marisol","Ximena"],
-    s:["García","Herrera","Vargas","Mendoza","Castillo","Ríos","Delgado","Navarro","Peña","Cortés","Salazar","Bravo"]},
-  Slavic:{m:["Dmitri","Ivan","Nikolai","Andrei","Pavel","Sergei","Marek","Lukas","Milan","Viktor","Goran","Tomasz"],
-    f:["Natalia","Irina","Katarzyna","Milena","Vera","Anya","Zofia","Ludmila","Dasha","Yelena","Petra","Ivana"],
-    s:["Volkov","Petrov","Kowalski","Novak","Sokolov","Marković","Janković","Dragan","Lisowski","Orlov","Havel","Ruban"]},
-  Nordic:{m:["Erik","Lars","Magnus","Nils","Bjørn","Anders","Kasper","Sten","Finn","Aksel","Emil","Ivar"],
-    f:["Ingrid","Astrid","Freya","Sigrid","Elin","Maja","Liv","Karin","Solveig","Nora","Signe","Tuva"],
-    s:["Lindqvist","Berg","Halvorsen","Aaltonen","Sørensen","Dahl","Nyman","Holm","Eklund","Ravn","Vik","Lund"]},
-  Germanic:{m:["Klaus","Felix","Jonas","Lukas","Stefan","Matthias","Bram","Dirk","Emil","Bastian","Rutger","Kai"],
-    f:["Greta","Lena","Anke","Katrin","Heidi","Marlene","Saskia","Ingeborg","Frauke","Petra","Anneke","Lore"],
-    s:["Keller","Bauer","Vogel","Brandt","Fischer","Wolff","de Vries","Hoffmann","Schuster","Bergmann","Mulder","Kuiper"]},
-  Mediterranean:{m:["Marco","Luca","Matteo","Alessandro","Stavros","Nikos","Dimitri","João","Rui","Enzo","Salvo","Théo"],
-    f:["Giulia","Chiara","Francesca","Alessia","Eleni","Sofia","Beatriz","Inês","Lucia","Valentina","Céline","Núria"],
-    s:["Ricci","Romano","Costa","Marino","Papadakis","Vlahos","Ferreira","Bianchi","Greco","Conti","Moreau","Lefèvre"]},
-  Arabic:{m:["Karim","Tariq","Samir","Nabil","Youssef","Rami","Hadi","Faisal","Omar","Bassam","Adnan","Zayd"],
-    f:["Layla","Amira","Nadia","Yasmin","Rana","Hana","Salma","Farah","Dalia","Mona","Leila","Rania"],
-    s:["Haddad","Nasser","Khalil","Mansour","Aziz","Rahman","Farouk","Saab","Bishara","Zahran","Darwish","Karam"]},
-  EastAsian:{m:["Kenji","Hiroshi","Ren","Jae-won","Min-ho","Wei","Cheng","Haruto","Sung","Tao","Jun","Kwan"],
-    f:["Yuki","Mei","Hana","Ji-woo","Sora","Lian","Na-ri","Aiko","Xiu","Eun-ji","Rin","Fang"],
-    s:["Tanaka","Nakamura","Zhang","Chen","Kim","Park","Wong","Satō","Liu","Han","Yamamoto","Cho"]},
-  SouthAsian:{m:["Arjun","Rohan","Vikram","Imran","Sanjay","Rahul","Dev","Kabir","Farhan","Raj","Aziz","Nikhil"],
-    f:["Priya","Anjali","Nisha","Meera","Zara","Divya","Sana","Leela","Amara","Roshni","Fatima","Ira"],
-    s:["Kapoor","Nair","Reddy","Khan","Malhotra","Iyer","Chowdhury","Mehta","Sharma","Das","Qureshi","Bose"]},
-  African:{m:["Kwame","Chike","Kofi","Jomo","Sefu","Tunde","Bongani","Abioye","Femi","Zuberi","Kito","Thabo"],
-    f:["Amara","Zola","Nia","Ayana","Folake","Thandiwe","Chiamaka","Imani","Sade","Nala","Zuri","Aisha"],
-    s:["Okafor","Mensah","Diallo","Adeyemi","Nkosi","Owusu","Achebe","Dlamini","Balogun","Mwangi","Okoro","Sow"]},
-  LatinBrazil:{m:["Rafael","Bruno","Thiago","Gustavo","Caio","Felipe","Rodrigo","Vinícius","Leandro","Igor","Murilo","Davi"],
-    f:["Beatriz","Larissa","Camila","Fernanda","Juliana","Priscila","Marina","Tainá","Renata","Bianca","Clara","Lívia"],
-    s:["Silva","Souza","Oliveira","Pereira","Almeida","Barbosa","Ribeiro","Cardoso","Nunes","Teixeira","Rocha","Pinto"]},
-  SoutheastAsian:{m:["Somchai","Minh","Bayani","Adi","Rizal","Chai","Kiet","Arif","Joko","Eman","Dara","Rey"],
-    f:["Mali","Linh","Mayari","Sari","Ratana","Intan","Trang","Dewi","Kanya","Suki","Ning","Amihan"],
-    s:["Nguyễn","Santos","Wongsawat","Tan","Reyes","Pramoj","Trần","Ismail","Putra","Lim","Cruz","Sukarno"]},
+/* ----------------------------- NAMES ---------------------------------- */
+const NAMES={
+  Anglo:{m:["James","William","Jack","Harry","George","Thomas","Charlie","Oscar","Henry","Leo","Arthur","Freddie","Declan","Callum","Rhys","Nathan"],
+    f:["Olivia","Amelia","Grace","Emily","Sophie","Charlotte","Ava","Isla","Ruby","Chloe","Alice","Nora","Maeve","Tessa","Harriet","Bronwyn"],
+    s:["Walsh","Bennett","Carter","Fletcher","Hughes","Morgan","Reed","Sullivan","Harding","Whitfield","Doyle","Ashford","Byrne","Mackenzie","Pryce","Lowell","Grant","Beckett","Crane","Norris"]},
+  Hispanic:{m:["Mateo","Santiago","Diego","Javier","Andrés","Rafael","Emilio","Tomás","Nicolás","Alejandro","Bruno","Ramón","Iker","Joaquín","Sebastián","Álvaro"],
+    f:["Sofía","Valentina","Camila","Lucía","Isabela","Daniela","Carmen","Elena","Paloma","Renata","Marisol","Ximena","Pilar","Rocío","Inés","Catalina"],
+    s:["García","Herrera","Vargas","Mendoza","Castillo","Ríos","Delgado","Navarro","Peña","Cortés","Salazar","Bravo","Ibáñez","Ochoa","Quintero","Serrano","Molina","Arriaga","Beltrán","Zúñiga"]},
+  Slavic:{m:["Dmitri","Ivan","Nikolai","Andrei","Pavel","Sergei","Marek","Lukas","Milan","Viktor","Goran","Tomasz","Bohdan","Radek","Stefan","Yuri"],
+    f:["Natalia","Irina","Katarzyna","Milena","Vera","Anya","Zofia","Ludmila","Dasha","Yelena","Petra","Ivana","Oksana","Jelena","Agnieszka","Tatiana"],
+    s:["Volkov","Petrov","Kowalski","Novak","Sokolov","Marković","Janković","Dragan","Lisowski","Orlov","Havel","Ruban","Zelenko","Wiśniewski","Kuznetsov","Popović","Dvořák","Melnyk","Belov","Nowak"]},
+  Nordic:{m:["Erik","Lars","Magnus","Nils","Bjørn","Anders","Kasper","Sten","Finn","Aksel","Emil","Ivar","Rasmus","Oskar","Tuomas","Leif"],
+    f:["Ingrid","Astrid","Freya","Sigrid","Elin","Maja","Liv","Karin","Solveig","Nora","Signe","Tuva","Aino","Hedda","Kaisa","Britt"],
+    s:["Lindqvist","Berg","Halvorsen","Aaltonen","Sørensen","Dahl","Nyman","Holm","Eklund","Ravn","Vik","Lund","Koskinen","Strand","Bergström","Jensen","Haugen","Mäkelä","Nielsen","Solberg"]},
+  Germanic:{m:["Klaus","Felix","Jonas","Lukas","Stefan","Matthias","Bram","Dirk","Emil","Bastian","Rutger","Kai","Florian","Joris","Anton","Wim"],
+    f:["Greta","Lena","Anke","Katrin","Heidi","Marlene","Saskia","Ingeborg","Frauke","Petra","Anneke","Lore","Jule","Fenna","Verena","Maud"],
+    s:["Keller","Bauer","Vogel","Brandt","Fischer","Wolff","de Vries","Hoffmann","Schuster","Bergmann","Mulder","Kuiper","Zimmermann","Van Dijk","Hartmann","Bakker","Steiner","Roth","Jansen","Krüger"]},
+  Mediterranean:{m:["Marco","Luca","Matteo","Alessandro","Stavros","Nikos","Dimitri","João","Rui","Enzo","Salvo","Théo","Étienne","Tiago","Yannis","Fabrizio"],
+    f:["Giulia","Chiara","Francesca","Alessia","Eleni","Sofia","Beatriz","Inês","Lucia","Valentina","Céline","Núria","Margaux","Despina","Mafalda","Aurélie"],
+    s:["Ricci","Romano","Costa","Marino","Papadakis","Vlahos","Ferreira","Bianchi","Greco","Conti","Moreau","Lefèvre","Durand","Esposito","Carvalho","Andreou","Fontaine","Lombardi","Pires","Kostas"]},
+  Arabic:{m:["Karim","Tariq","Samir","Nabil","Youssef","Rami","Hadi","Faisal","Omar","Bassam","Adnan","Zayd","Mehmet","Emre","Idris","Walid"],
+    f:["Layla","Amira","Nadia","Yasmin","Rana","Hana","Salma","Farah","Dalia","Mona","Leila","Rania","Elif","Zeynep","Nour","Samira"],
+    s:["Haddad","Nasser","Khalil","Mansour","Aziz","Rahman","Farouk","Saab","Bishara","Zahran","Darwish","Karam","Yilmaz","Kaya","El-Sayed","Benali","Demir","Hamdan","Ouali","Tahir"]},
+  Hebrew:{m:["Yonatan","Eitan","Noam","Amir","Ori","Idan","Tal","Gal","Yair","Roi","Lior","Nadav","Omer","Itai","Shai","Dov"],
+    f:["Noa","Shira","Maya","Tamar","Yael","Michal","Hila","Adi","Rotem","Liat","Dana","Inbal","Efrat","Keren","Alma","Ronit"],
+    s:["Cohen","Levi","Mizrahi","Peretz","Biton","Avraham","Friedman","Katz","Shapira","Dahan","Azulay","Ben-David","Malka","Gabay","Sasson","Harel","Amar","Yosef","Barak","Golan"]},
+  EastAsian:{m:["Kenji","Hiroshi","Ren","Jae-won","Min-ho","Wei","Cheng","Haruto","Sung","Tao","Jun","Kwan","Daisuke","Ji-hoon","Liang","Kaito"],
+    f:["Yuki","Mei","Hana","Ji-woo","Sora","Lian","Na-ri","Aiko","Xiu","Eun-ji","Rin","Fang","Sakura","Hye-jin","Qing","Mika"],
+    s:["Tanaka","Nakamura","Zhang","Chen","Kim","Park","Wong","Satō","Liu","Han","Yamamoto","Cho","Lee","Wang","Kobayashi","Jung","Huang","Ito","Lim","Zhou"]},
+  SouthAsian:{m:["Arjun","Rohan","Vikram","Imran","Sanjay","Rahul","Dev","Kabir","Farhan","Raj","Aziz","Nikhil","Bilal","Tariq","Aditya","Hamza"],
+    f:["Priya","Anjali","Nisha","Meera","Zara","Divya","Sana","Leela","Amara","Roshni","Fatima","Ira","Ayesha","Kavya","Hina","Sunita"],
+    s:["Kapoor","Nair","Reddy","Khan","Malhotra","Iyer","Chowdhury","Mehta","Sharma","Das","Qureshi","Bose","Siddiqui","Pillai","Bhatt","Rana","Saxena","Mirza","Menon","Gill"]},
+  African:{m:["Kwame","Chike","Kofi","Jomo","Sefu","Tunde","Bongani","Abioye","Femi","Zuberi","Kito","Thabo","Emeka","Yaw","Sipho","Baraka"],
+    f:["Amara","Zola","Nia","Ayana","Folake","Thandiwe","Chiamaka","Imani","Sade","Nala","Zuri","Aisha","Adaeze","Abena","Wanjiru","Lindiwe"],
+    s:["Okafor","Mensah","Diallo","Adeyemi","Nkosi","Owusu","Achebe","Dlamini","Balogun","Mwangi","Okoro","Sow","Boateng","Kamau","Nwosu","Zulu","Asante","Otieno","Eze","Mokoena"]},
+  LatinBrazil:{m:["Rafael","Bruno","Thiago","Gustavo","Caio","Felipe","Rodrigo","Vinícius","Leandro","Igor","Murilo","Davi","Matheus","Renan","Otávio","Cauã"],
+    f:["Beatriz","Larissa","Camila","Fernanda","Juliana","Priscila","Marina","Tainá","Renata","Bianca","Clara","Lívia","Letícia","Yasmin","Isadora","Manuela"],
+    s:["Silva","Souza","Oliveira","Pereira","Almeida","Barbosa","Ribeiro","Cardoso","Nunes","Teixeira","Rocha","Pinto","Moraes","Carvalho","Freitas","Duarte","Batista","Correia","Lima","Azevedo"]},
+  SoutheastAsian:{m:["Somchai","Minh","Bayani","Adi","Rizal","Chai","Kiet","Arif","Joko","Eman","Dara","Rey","Hafiz","Tuan","Paolo","Bagus"],
+    f:["Mali","Linh","Mayari","Sari","Ratana","Intan","Trang","Dewi","Kanya","Suki","Ning","Amihan","Siti","Hương","Marites","Ayu"],
+    s:["Nguyễn","Santos","Wongsawat","Tan","Reyes","Pramoj","Trần","Ismail","Putra","Lim","Cruz","Sukarno","Phạm","Villanueva","Chaiyasit","Rahman","Bautista","Lê","Hidayat","Ocampo"]},
 };
 
-// nationality -> region + passport tier (1 strong .. 4 weak)
-const NATS = [
-  ["United States","🇺🇸","Anglo",1],["United Kingdom","🇬🇧","Anglo",1],["Canada","🇨🇦","Anglo",1],
-  ["Australia","🇦🇺","Anglo",1],["Ireland","🇮🇪","Anglo",1],["Germany","🇩🇪","Germanic",1],
-  ["Netherlands","🇳🇱","Germanic",1],["Switzerland","🇨🇭","Germanic",1],["Sweden","🇸🇪","Nordic",1],
-  ["Norway","🇳🇴","Nordic",1],["Denmark","🇩🇰","Nordic",1],["Finland","🇫🇮","Nordic",2],
-  ["France","🇫🇷","Mediterranean",1],["Italy","🇮🇹","Mediterranean",1],["Spain","🇪🇸","Hispanic",1],
-  ["Portugal","🇵🇹","Mediterranean",1],["Greece","🇬🇷","Mediterranean",2],["Poland","🇵🇱","Slavic",2],
-  ["Czechia","🇨🇿","Slavic",2],["Russia","🇷🇺","Slavic",3],["Ukraine","🇺🇦","Slavic",3],
-  ["Serbia","🇷🇸","Slavic",3],["Mexico","🇲🇽","Hispanic",3],["Colombia","🇨🇴","Hispanic",3],
-  ["Argentina","🇦🇷","Hispanic",2],["Brazil","🇧🇷","LatinBrazil",3],["Nigeria","🇳🇬","African",4],
-  ["Kenya","🇰🇪","African",3],["South Africa","🇿🇦","African",3],["Morocco","🇲🇦","Arabic",3],
-  ["Egypt","🇪🇬","Arabic",3],["Lebanon","🇱🇧","Arabic",4],["U.A.E.","🇦🇪","Arabic",2],
-  ["Turkey","🇹🇷","Arabic",3],["China","🇨🇳","EastAsian",2],["Japan","🇯🇵","EastAsian",1],
-  ["South Korea","🇰🇷","EastAsian",1],["India","🇮🇳","SouthAsian",3],["Pakistan","🇵🇰","SouthAsian",4],
-  ["Thailand","🇹🇭","SoutheastAsian",3],["Vietnam","🇻🇳","SoutheastAsian",3],
-  ["Philippines","🇵🇭","SoutheastAsian",3],["Indonesia","🇮🇩","SoutheastAsian",3],
-].map(n=>({name:n[0],flag:n[1],region:n[2],tier:n[3]}));
+/* ---------------------------- COUNTRIES ------------------------------- */
+// [name, flag, name-pool, passport tier (1 strong..4 weak), languages, currency,
+//  religion, politics, economy (1 poor..3 rich), terrain, gate (0 open,1 visa,2 strict),
+//  EU member, authoritarian flag, job categories offered, cities]
+const COUNTRIES=[
+  ["United States","🇺🇸","Anglo",1,["English"],"USD $","Christian majority","Federal republic",3,["megacity","coast","desert","mountains"],1,0,0,["cyber","vault","extraction","negotiation","surveillance","recovery"],["New York","Los Angeles","Chicago","Miami"]],
+  ["United Kingdom","🇬🇧","Anglo",1,["English"],"GBP £","Christian / secular","Constitutional monarchy",3,["megacity","coast"],1,0,0,["vault","forgery","negotiation","surveillance","infiltration"],["London","Manchester","Glasgow"]],
+  ["Canada","🇨🇦","Anglo",1,["English","French"],"CAD $","Christian / secular","Parliamentary democracy",3,["mountains","forest","coast"],1,0,0,["smuggling","recovery","escort","cyber"],["Toronto","Vancouver","Montreal"]],
+  ["Australia","🇦🇺","Anglo",1,["English"],"AUD $","Christian / secular","Parliamentary democracy",3,["coast","desert"],1,0,0,["smuggling","recovery","surveillance","sabotage"],["Sydney","Melbourne","Perth"]],
+  ["Ireland","🇮🇪","Anglo",1,["English"],"EUR €","Catholic majority","Parliamentary republic",3,["coast"],0,1,0,["forgery","negotiation","cyber","vault"],["Dublin","Cork"]],
+  ["Germany","🇩🇪","Germanic",1,["German"],"EUR €","Christian / secular","Federal republic",3,["megacity","mountains","forest"],0,1,0,["vault","cyber","forgery","sabotage","surveillance"],["Berlin","Frankfurt","Hamburg"]],
+  ["Netherlands","🇳🇱","Germanic",1,["Dutch","English"],"EUR €","Secular / Christian","Constitutional monarchy",3,["coast","port"],0,1,0,["smuggling","interception","vault","cyber"],["Amsterdam","Rotterdam"]],
+  ["Switzerland","🇨🇭","Germanic",1,["German","French","Italian"],"CHF","Christian","Federal republic",3,["mountains","lakes"],0,0,0,["vault","negotiation","forgery","recovery"],["Zürich","Geneva","Basel"]],
+  ["Sweden","🇸🇪","Nordic",1,["Swedish","English"],"SEK kr","Lutheran / secular","Constitutional monarchy",3,["coast","forest"],0,1,0,["cyber","surveillance","recovery"],["Stockholm","Gothenburg","Malmö"]],
+  ["Norway","🇳🇴","Nordic",1,["Norwegian","English"],"NOK kr","Lutheran / secular","Constitutional monarchy",3,["mountains","fjords","coast"],0,0,0,["interception","escort","recovery"],["Oslo","Bergen"]],
+  ["Denmark","🇩🇰","Nordic",1,["Danish","English"],"DKK kr","Lutheran / secular","Constitutional monarchy",3,["coast","port"],0,1,0,["cyber","vault","smuggling"],["Copenhagen","Aarhus"]],
+  ["Finland","🇫🇮","Nordic",2,["Finnish","Swedish"],"EUR €","Lutheran / secular","Parliamentary republic",3,["forest","lakes"],0,1,0,["cyber","surveillance","sabotage"],["Helsinki","Tampere"]],
+  ["France","🇫🇷","Mediterranean",1,["French"],"EUR €","Catholic / secular","Semi-presidential republic",3,["megacity","coast","mountains"],0,1,0,["vault","recovery","negotiation","infiltration","forgery"],["Paris","Marseille","Lyon"]],
+  ["Italy","🇮🇹","Mediterranean",1,["Italian"],"EUR €","Catholic majority","Parliamentary republic",3,["coast","mountains"],0,1,0,["recovery","forgery","smuggling","negotiation","vault"],["Milan","Rome","Naples"]],
+  ["Spain","🇪🇸","Hispanic",1,["Spanish"],"EUR €","Catholic / secular","Constitutional monarchy",3,["coast","mountains"],0,1,0,["smuggling","recovery","negotiation","infiltration"],["Madrid","Barcelona","Valencia"]],
+  ["Portugal","🇵🇹","Mediterranean",1,["Portuguese"],"EUR €","Catholic majority","Parliamentary republic",2,["coast","port"],0,1,0,["smuggling","interception","forgery"],["Lisbon","Porto"]],
+  ["Greece","🇬🇷","Mediterranean",2,["Greek"],"EUR €","Orthodox majority","Parliamentary republic",2,["islands","coast","mountains"],0,1,0,["smuggling","interception","recovery","escort"],["Athens","Piraeus","Thessaloniki"]],
+  ["Poland","🇵🇱","Slavic",2,["Polish"],"PLN zł","Catholic majority","Parliamentary republic",2,["plains","forest"],0,1,0,["smuggling","forgery","escort","cyber"],["Warsaw","Gdańsk","Kraków"]],
+  ["Czechia","🇨🇿","Slavic",2,["Czech"],"CZK Kč","Secular / Catholic","Parliamentary republic",2,["forest","hills"],0,1,0,["forgery","vault","surveillance"],["Prague","Brno"]],
+  ["Russia","🇷🇺","Slavic",3,["Russian"],"RUB ₽","Orthodox majority","Centralised presidential state",2,["megacity","tundra","forest"],2,0,1,["extraction","cyber","escort","negotiation","sabotage"],["Moscow","St Petersburg","Vladivostok"]],
+  ["Ukraine","🇺🇦","Slavic",3,["Ukrainian","Russian"],"UAH ₴","Orthodox majority","Semi-presidential republic",1,["plains","coast"],1,0,0,["extraction","escort","smuggling","interception"],["Kyiv","Odesa","Lviv"]],
+  ["Serbia","🇷🇸","Slavic",3,["Serbian"],"RSD дин","Orthodox majority","Parliamentary republic",2,["mountains","rivers"],0,0,0,["smuggling","forgery","escort"],["Belgrade","Novi Sad"]],
+  ["Mexico","🇲🇽","Hispanic",3,["Spanish"],"MXN $","Catholic majority","Federal republic",2,["desert","mountains","coast","megacity"],0,0,0,["extraction","escort","smuggling","interception","negotiation"],["Mexico City","Tijuana","Monterrey"]],
+  ["Colombia","🇨🇴","Hispanic",3,["Spanish"],"COP $","Catholic majority","Presidential republic",2,["mountains","jungle","coast"],0,0,0,["extraction","interception","escort","smuggling"],["Bogotá","Medellín","Cartagena"]],
+  ["Argentina","🇦🇷","Hispanic",2,["Spanish"],"ARS $","Catholic majority","Federal republic",2,["plains","mountains","coast"],0,0,0,["negotiation","forgery","recovery","vault"],["Buenos Aires","Rosario"]],
+  ["Chile","🇨🇱","Hispanic",2,["Spanish"],"CLP $","Catholic / none","Presidential republic",2,["mountains","desert","coast"],0,0,0,["recovery","escort","smuggling","vault"],["Santiago","Valparaíso"]],
+  ["Panama","🇵🇦","Hispanic",3,["Spanish"],"USD $","Catholic majority","Presidential republic",2,["canal","coast","jungle"],0,0,0,["smuggling","interception","forgery","negotiation","vault"],["Panama City","Colón"]],
+  ["Brazil","🇧🇷","LatinBrazil",3,["Portuguese"],"BRL R$","Christian majority","Federal republic",2,["megacity","jungle","coast"],0,0,0,["extraction","escort","smuggling","cyber","interception"],["São Paulo","Rio de Janeiro","Manaus"]],
+  ["Nigeria","🇳🇬","African",4,["English"],"NGN ₦","Muslim and Christian, split","Federal republic",1,["megacity","coast","delta"],1,0,0,["cyber","extraction","escort","negotiation"],["Lagos","Abuja","Port Harcourt"]],
+  ["Ghana","🇬🇭","African",3,["English"],"GHS ₵","Christian majority","Presidential republic",1,["coast","savanna"],1,0,0,["negotiation","cyber","smuggling","escort"],["Accra","Kumasi"]],
+  ["Kenya","🇰🇪","African",3,["Swahili","English"],"KES KSh","Christian majority","Presidential republic",1,["savanna","coast","highlands"],1,0,0,["escort","interception","recovery","surveillance"],["Nairobi","Mombasa"]],
+  ["South Africa","🇿🇦","African",3,["English","Zulu","Afrikaans"],"ZAR R","Christian majority","Parliamentary republic",2,["coast","mountains","megacity"],0,0,0,["vault","escort","extraction","recovery"],["Johannesburg","Cape Town","Durban"]],
+  ["Morocco","🇲🇦","Arabic",3,["Arabic","French"],"MAD د.م.","Muslim majority","Constitutional monarchy",1,["desert","mountains","coast"],1,0,0,["smuggling","forgery","negotiation","interception"],["Casablanca","Tangier","Marrakesh"]],
+  ["Egypt","🇪🇬","Arabic",3,["Arabic"],"EGP E£","Muslim majority","Presidential, military-backed",1,["desert","river","megacity"],2,0,1,["recovery","smuggling","extraction","surveillance"],["Cairo","Alexandria"]],
+  ["Lebanon","🇱🇧","Arabic",4,["Arabic","French"],"LBP L£","Muslim and Christian, mixed","Confessional republic",1,["coast","mountains"],1,0,0,["negotiation","forgery","smuggling","extraction"],["Beirut","Tripoli"]],
+  ["U.A.E.","🇦🇪","Arabic",2,["Arabic","English"],"AED د.إ","Muslim majority","Federal monarchy",3,["desert","coast","megacity"],2,0,1,["vault","cyber","negotiation","recovery"],["Dubai","Abu Dhabi"]],
+  ["Saudi Arabia","🇸🇦","Arabic",3,["Arabic"],"SAR ﷼","Muslim majority","Absolute monarchy",3,["desert","coast"],2,0,1,["negotiation","escort","recovery","cyber"],["Riyadh","Jeddah"]],
+  ["Turkey","🇹🇷","Arabic",3,["Turkish"],"TRY ₺","Muslim majority","Presidential republic",2,["megacity","coast","mountains"],1,0,0,["smuggling","negotiation","escort","interception","forgery"],["Istanbul","Ankara","Izmir"]],
+  ["Israel","🇮🇱","Hebrew",2,["Hebrew","English","Arabic"],"ILS ₪","Jewish majority","Parliamentary democracy",3,["coast","desert","megacity"],1,0,0,["cyber","surveillance","negotiation","extraction"],["Tel Aviv","Haifa","Jerusalem"]],
+  ["China","🇨🇳","EastAsian",2,["Mandarin"],"CNY ¥","Secular / folk and Buddhist","One-party state",2,["megacity","mountains","coast"],2,0,1,["cyber","surveillance","extraction","smuggling"],["Shanghai","Shenzhen","Beijing","Hong Kong"]],
+  ["Japan","🇯🇵","EastAsian",1,["Japanese"],"JPY ¥","Shinto and Buddhist, secular","Constitutional monarchy",3,["megacity","islands","mountains"],0,0,0,["vault","cyber","recovery","infiltration"],["Tokyo","Osaka","Yokohama"]],
+  ["South Korea","🇰🇷","EastAsian",1,["Korean"],"KRW ₩","Christian, Buddhist, none","Presidential republic",3,["megacity","coast","mountains"],0,0,0,["cyber","surveillance","vault","forgery"],["Seoul","Busan"]],
+  ["Singapore","🇸🇬","EastAsian",1,["English","Mandarin","Malay"],"SGD $","Buddhist, Christian, Muslim, mixed","Parliamentary, dominant-party",3,["port","megacity"],1,0,0,["vault","cyber","negotiation","forgery"],["Singapore"]],
+  ["India","🇮🇳","SouthAsian",3,["Hindi","English"],"INR ₹","Hindu majority","Federal parliamentary republic",1,["megacity","mountains","coast","plains"],1,0,0,["cyber","negotiation","escort","recovery","forgery"],["Mumbai","Delhi","Chennai"]],
+  ["Pakistan","🇵🇰","SouthAsian",4,["Urdu","English"],"PKR ₨","Muslim majority","Federal parliamentary, military-influenced",1,["mountains","desert","megacity"],2,0,0,["escort","smuggling","extraction","negotiation"],["Karachi","Lahore","Islamabad"]],
+  ["Thailand","🇹🇭","SoutheastAsian",3,["Thai"],"THB ฿","Buddhist majority","Constitutional monarchy, military-influenced",1,["coast","islands","jungle","megacity"],1,0,0,["smuggling","interception","forgery","negotiation"],["Bangkok","Phuket","Chiang Mai"]],
+  ["Vietnam","🇻🇳","SoutheastAsian",3,["Vietnamese"],"VND ₫","Folk and Buddhist, secular","One-party state",1,["coast","jungle","delta","megacity"],2,0,1,["smuggling","extraction","surveillance","escort"],["Ho Chi Minh City","Hanoi","Da Nang"]],
+  ["Philippines","🇵🇭","SoutheastAsian",3,["Tagalog","English"],"PHP ₱","Catholic majority","Presidential republic",1,["islands","coast","jungle","megacity"],1,0,0,["interception","smuggling","extraction","escort"],["Manila","Cebu","Davao"]],
+  ["Indonesia","🇮🇩","SoutheastAsian",3,["Indonesian"],"IDR Rp","Muslim majority","Presidential republic",1,["islands","jungle","coast","megacity"],1,0,0,["smuggling","interception","escort","negotiation"],["Jakarta","Surabaya","Medan"]],
+].map(r=>({name:r[0],flag:r[1],pool:r[2],tier:r[3],langs:r[4],cur:r[5],rel:r[6],pol:r[7],eco:r[8],terrain:r[9],gate:r[10],eu:!!r[11],auth:!!r[12],cats:r[13],cities:r[14]}));
+const COUNTRY_BY_NAME={};COUNTRIES.forEach(c=>COUNTRY_BY_NAME[c.name]=c);
 const TIER_WORD=["","strong","strong","limited","weak"];
+const EXTRA_LANGS=["English","English","English","Spanish","French","Arabic","Russian","Mandarin","German","Portuguese","Italian","Turkish","Hindi","Swahili"];
 
+/* --------------------------- PROFILE VOCAB ---------------------------- */
 const ATTRS=["muscle","brains","tech","charm","nerve"];
 const ATTR_ABBR={muscle:"MUS",brains:"BRN",tech:"TCH",charm:"CHM",nerve:"NRV"};
-
-const SPECS=[
-  {k:"safecracker",l:"Safecracker",a:"brains",d:"Opens what was meant to stay shut."},
-  {k:"hacker",l:"Hacker",a:"tech",d:"Breaks networks, cameras, cold wallets."},
-  {k:"wheelman",l:"Wheelman",a:"nerve",d:"Gets everyone out before the sirens."},
-  {k:"grifter",l:"Grifter",a:"charm",d:"Sells you a lie you want to buy."},
-  {k:"forger",l:"Forger",a:"brains",d:"Papers, passports, provenance."},
-  {k:"enforcer",l:"Enforcer",a:"muscle",d:"Makes the problem reconsider."},
-  {k:"fixer",l:"Fixer",a:"charm",d:"Knows a guy for the guy you need."},
-  {k:"infiltrator",l:"Infiltrator",a:"nerve",d:"Walks in like the building was expecting it."},
-  {k:"demolitions",l:"Demolitions",a:"tech",d:"Doors, walls, and distractions."},
-  {k:"pickpocket",l:"Pickpocket",a:"charm",d:"Your watch is already gone."},
-  {k:"lookout",l:"Lookout",a:"brains",d:"Sees the tail three blocks back."},
-  {k:"launderer",l:"Launderer",a:"brains",d:"Turns hot money quiet."},
-  {k:"overwatch",l:"Overwatch",a:"nerve",d:"One angle, total control."},
-  {k:"cleaner",l:"Cleaner",a:"nerve",d:"No trace, no story, no you."},
-  {k:"face",l:"Face",a:"charm",d:"The name in the room, the smile on the deal."},
-  {k:"smuggler",l:"Smuggler",a:"nerve",d:"Moves cargo across any line on a map."},
+const TECHS=[
+  {k:"safecracker",l:"Safecracker",a:"brains",know:"Finance",d:"Opens what was meant to stay shut."},
+  {k:"hacker",l:"Hacker",a:"tech",know:"Networks",d:"Breaks networks, cameras, cold wallets."},
+  {k:"wheelman",l:"Wheelman",a:"nerve",know:"Logistics",d:"Gets everyone out before the sirens."},
+  {k:"grifter",l:"Grifter",a:"charm",know:"Finance",d:"Sells you a lie you want to buy."},
+  {k:"forger",l:"Forger",a:"brains",know:"Law",d:"Papers, passports, provenance. Gets the crew through borders."},
+  {k:"enforcer",l:"Enforcer",a:"muscle",know:"Weapons",d:"Makes the problem reconsider."},
+  {k:"fixer",l:"Fixer",a:"charm",know:"Politics",d:"Knows a guy for the guy you need."},
+  {k:"infiltrator",l:"Infiltrator",a:"nerve",know:"Law",d:"Walks in like the building was expecting it."},
+  {k:"demolitions",l:"Demolitions",a:"tech",know:"Weapons",d:"Doors, walls, and distractions."},
+  {k:"pickpocket",l:"Pickpocket",a:"charm",know:"Art",d:"Your watch is already gone."},
+  {k:"lookout",l:"Lookout",a:"brains",know:"Logistics",d:"Sees the tail three blocks back."},
+  {k:"launderer",l:"Launderer",a:"brains",know:"Finance",d:"Turns hot money quiet."},
+  {k:"overwatch",l:"Overwatch",a:"nerve",know:"Weapons",d:"One angle, total control."},
+  {k:"cleaner",l:"Cleaner",a:"nerve",know:"Medicine",d:"No trace, no story, no you."},
+  {k:"face",l:"Face",a:"charm",know:"Politics",d:"The name in the room, the smile on the deal."},
+  {k:"smuggler",l:"Smuggler",a:"nerve",know:"Maritime",d:"Moves cargo across any line on a map."},
 ];
-const SPEC_BY_K={};SPECS.forEach(s=>SPEC_BY_K[s.k]=s);
-
+const TECH_BY_K={};TECHS.forEach(t=>TECH_BY_K[t.k]=t);
 const EXP=["Rookie","Operator","Professional","Veteran","Legend"];
-
-const CITIES=[
-  ["Zürich","Switzerland","Germanic"],["Geneva","Switzerland","Germanic"],["London","U.K.","Anglo"],
-  ["New York","U.S.A.","Anglo"],["Los Angeles","U.S.A.","Anglo"],["Chicago","U.S.A.","Anglo"],
-  ["Toronto","Canada","Anglo"],["Sydney","Australia","Anglo"],["Berlin","Germany","Germanic"],
-  ["Amsterdam","Netherlands","Germanic"],["Paris","France","Mediterranean"],["Monaco","Monaco","Mediterranean"],
-  ["Milan","Italy","Mediterranean"],["Rome","Italy","Mediterranean"],["Madrid","Spain","Hispanic"],
-  ["Barcelona","Spain","Hispanic"],["Lisbon","Portugal","Mediterranean"],["Athens","Greece","Mediterranean"],
-  ["Stockholm","Sweden","Nordic"],["Oslo","Norway","Nordic"],["Copenhagen","Denmark","Nordic"],
-  ["Moscow","Russia","Slavic"],["Kyiv","Ukraine","Slavic"],["Warsaw","Poland","Slavic"],
-  ["Belgrade","Serbia","Slavic"],["Prague","Czechia","Slavic"],["Mexico City","Mexico","Hispanic"],
-  ["Bogotá","Colombia","Hispanic"],["Buenos Aires","Argentina","Hispanic"],["São Paulo","Brazil","LatinBrazil"],
-  ["Rio de Janeiro","Brazil","LatinBrazil"],["Lagos","Nigeria","African"],["Nairobi","Kenya","African"],
-  ["Cape Town","South Africa","African"],["Casablanca","Morocco","Arabic"],["Cairo","Egypt","Arabic"],
-  ["Beirut","Lebanon","Arabic"],["Dubai","U.A.E.","Arabic"],["Istanbul","Turkey","Arabic"],
-  ["Shanghai","China","EastAsian"],["Hong Kong","China","EastAsian"],["Tokyo","Japan","EastAsian"],
-  ["Seoul","South Korea","EastAsian"],["Mumbai","India","SouthAsian"],["Delhi","India","SouthAsian"],
-  ["Bangkok","Thailand","SoutheastAsian"],["Singapore","Singapore","SoutheastAsian"],
-  ["Manila","Philippines","SoutheastAsian"],["Jakarta","Indonesia","SoutheastAsian"],
+const EDU=["No schooling","Street-schooled","Trade school","University","Military academy","Doctorate"];
+const KNOW=["Finance","Law","Networks","Logistics","Art","Politics","Medicine","Weapons","Maritime","Aviation"];
+const LIMITS=[
+  {k:"swim",l:"Cannot swim",tag:"water"},
+  {k:"fly",l:"Will not fly",tag:"air"},
+  {k:"heights",l:"Fear of heights",tag:"heights"},
+  {k:"tight",l:"Claustrophobic",tag:"underground"},
+  {k:"noviolence",l:"No violence",tag:"violence"},
+  {k:"night",l:"Won't work nights",tag:"night"},
+  {k:"eu",l:"Banned from the EU",country:c=>c.eu},
+  {k:"us",l:"Wanted in the United States",country:c=>c.name==="United States"},
+  {k:"auth",l:"Won't work under authoritarian rule",country:c=>c.auth},
+  {k:"cut",l:"Demands 15% or walks"},
 ];
+const LIMIT_BY_K={};LIMITS.forEach(l=>LIMIT_BY_K[l.k]=l);
+const TAG_LABEL={water:"on the water",air:"by air",heights:"at height",underground:"underground",violence:"violent",night:"at night"};
 
-const JOBTYPES=[
-  {k:"vault",l:"Vault Job",w:{brains:3,tech:2,nerve:2},specs:["safecracker","hacker","wheelman"],heat:26,verbs:["crack the","empty the","tunnel into the"],nouns:["private vault","bullion room","deposit-box floor","clearing-house safe"]},
-  {k:"gallery",l:"Gallery Lift",w:{nerve:3,charm:2,brains:2},specs:["infiltrator","forger","face"],heat:18,verbs:["lift the","swap the","walk out with the"],nouns:["loaned Vermeer","museum bronze","private collection","biennale centerpiece"]},
-  {k:"cyber",l:"Cyber Raid",w:{tech:4,brains:2},specs:["hacker","launderer","lookout"],heat:12,verbs:["drain the","clone the","siphon the"],nouns:["exchange hot wallet","clearing network","payroll rail","settlement ledger"]},
-  {k:"con",l:"The Long Con",w:{charm:4,brains:2},specs:["grifter","face","forger"],heat:9,verbs:["run the","sell the","close the"],nouns:["fund that isn't real","forged provenance","phantom tender","paper merger"]},
-  {k:"smuggle",l:"Smuggling Run",w:{nerve:3,muscle:2},specs:["smuggler","wheelman","fixer"],heat:20,pass:true,verbs:["move the","run the","carry the"],nouns:["container of stones","sealed cargo","cold shipment","unmarked freight"]},
-  {k:"extract",l:"Extraction",w:{muscle:3,nerve:3},specs:["enforcer","wheelman","cleaner"],heat:24,verbs:["pull the","spring the","lift the"],nouns:["witness before dawn","chemist from custody","asset off the grid","defector at the border"]},
-  {k:"casino",l:"Casino Sting",w:{charm:3,brains:2,nerve:2},specs:["grifter","pickpocket","lookout"],heat:16,verbs:["take the","break the","rinse the"],nouns:["high-roller floor","private baccarat room","whale's marker","cage on a bad night"]},
-  {k:"blackmail",l:"Blackmail",w:{brains:3,charm:2,tech:2},specs:["face","hacker","lookout"],heat:11,verbs:["turn the","squeeze the","bury the"],nouns:["minister's dossier","offshore ledger","boardroom secret","sealed recording"]},
-  {k:"break",l:"Prison Break",w:{muscle:3,tech:2,nerve:2},specs:["demolitions","wheelman","enforcer"],heat:30,verbs:["break the","spring the","open the"],nouns:["holding block","transfer convoy","island wing","supermax laundry"]},
-  {k:"swap",l:"Diamond Swap",w:{nerve:3,charm:2,brains:2},specs:["forger","infiltrator","pickpocket"],heat:17,verbs:["swap the","fog the","lift the"],nouns:["auction lot","cutter's tray","insured parure","estate stones"]},
+/* ---------------------------- CATEGORIES ------------------------------ */
+const CATS=[
+  {k:"interception",l:"Interception",w:{nerve:3,muscle:2,brains:1},techs:["smuggler","wheelman","overwatch"],know:["Logistics","Maritime"],tags:{water:.55,violence:.5,night:.4},heat:20,
+    v:["Intercept the","Stop the","Take the"],n:["night ferry","container of stones","courier convoy","cold shipment","diplomatic pouch","tanker manifest"]},
+  {k:"recovery",l:"Recovery",w:{brains:3,nerve:2,charm:1},techs:["safecracker","infiltrator","lookout"],know:["Art","Finance"],tags:{night:.4,underground:.3},heat:14,
+    v:["Recover the","Bring back the","Find the"],n:["stolen bronze","missing ledger","seized cargo","lost provenance","auction lot","family stones"]},
+  {k:"extraction",l:"Extraction",w:{muscle:3,nerve:3},techs:["enforcer","wheelman","cleaner"],know:["Medicine","Weapons"],tags:{violence:.7,night:.5,air:.25},heat:24,
+    v:["Extract the","Pull the","Get the"],n:["witness before dawn","chemist out of custody","defector at the border","heir off the grid","courier before the handover","auditor before the audit"]},
+  {k:"escort",l:"Escort",w:{muscle:3,nerve:2,brains:1},techs:["enforcer","overwatch","wheelman"],know:["Logistics","Weapons"],tags:{violence:.5,water:.25,heights:.2},heat:16,
+    v:["Escort the","Walk the","Move the"],n:["client through the checkpoints","cargo over the pass","witness to the border","envoy across town","shipment down the coast"]},
+  {k:"surveillance",l:"Surveillance",w:{brains:3,tech:3},techs:["lookout","hacker","cleaner"],know:["Networks","Politics"],tags:{night:.6,heights:.3},heat:8,
+    v:["Watch the","Record the","Shadow the"],n:["minister's driver","boardroom","harbour master","broker's apartment","consulate car"]},
+  {k:"infiltration",l:"Infiltration",w:{charm:3,nerve:2,brains:2},techs:["infiltrator","face","forger"],know:["Law","Politics"],tags:{night:.2},heat:12,lang:true,
+    v:["Get inside the","Join the","Walk into the"],n:["private bank","shipping firm","militia's supply line","auction house","ministry annex"]},
+  {k:"cyber",l:"Cyber",w:{tech:4,brains:2},techs:["hacker","launderer"],know:["Networks","Finance"],tags:{},heat:10,
+    v:["Drain the","Clone the","Open the"],n:["exchange hot wallet","port authority network","payroll rail","settlement ledger","border database"]},
+  {k:"smuggling",l:"Smuggling",w:{nerve:3,muscle:2},techs:["smuggler","wheelman","fixer"],know:["Maritime","Aviation","Logistics"],tags:{water:.5,air:.3,night:.4},heat:18,
+    v:["Run the","Carry the","Move the"],n:["stones across the border","sealed cargo up the coast","unmarked freight inland","cold shipment through the islands"]},
+  {k:"forgery",l:"Papers",w:{brains:3,charm:2,tech:1},techs:["forger","face","launderer"],know:["Law","Art","Finance"],tags:{},heat:7,
+    v:["Paper the","Forge the","Launder the"],n:["shell company","end-user certificate","provenance file","three passports","export licence"]},
+  {k:"negotiation",l:"Negotiation",w:{charm:4,brains:2},techs:["face","grifter","fixer"],know:["Finance","Politics"],tags:{},heat:9,lang:true,
+    v:["Settle the","Close the","Buy back the"],n:["ransom","hostage exchange","stolen archive","debt with the harbour","silence of a witness"]},
+  {k:"sabotage",l:"Sabotage",w:{tech:3,muscle:2,nerve:2},techs:["demolitions","hacker","overwatch"],know:["Weapons","Networks"],tags:{underground:.4,heights:.4,night:.6},heat:26,
+    v:["Shut down the","Blind the","Stall the"],n:["refinery night shift","port cranes","radar on the ridge","clearing house","convoy at the pass"]},
+  {k:"vault",l:"Vault",w:{brains:3,tech:2,nerve:2},techs:["safecracker","hacker","wheelman"],know:["Finance"],tags:{underground:.5,night:.5},heat:24,
+    v:["Crack the","Empty the","Open the"],n:["private vault","deposit-box floor","bullion room","evidence locker","clearing-house safe"]},
 ];
-const JOBTYPE_BY_K={};JOBTYPES.forEach(j=>JOBTYPE_BY_K[j.k]=j);
+const CAT_BY_K={};CATS.forEach(c=>CAT_BY_K[c.k]=c);
+const CLIENTS=["Ghost_Ledger","the Marrakesh Broker","the Quiet Auction","K.","the Widow of Trieste","Nine Fingers","a consulate, unofficially","the Notary","Blue Harbour Holdings","M. Voss","Sister Cassandra","the Committee","Dr. Sable","an heir","the Ferryman","old Ostrowski","a shipping line","Redacted_07"];
 
-const CREW_CAP=8;
+const ROSTER_SIZE=5000;
+const CREW_SLOTS=4;       // four recruits plus you
 const VET_COST=6000;
 
 /* --------------------------- CHARACTER GEN ---------------------------- */
-function genChar(rng,idNum){
-  const nat=pick(rng,NATS);
-  const gender=chance(rng,0.5)?"M":"F";
-  const pool=NAMES[nat.region];
-  const first=pick(rng,gender==="M"?pool.m:pool.f);
-  const last=pick(rng,pool.s);
-  const spec=pick(rng,SPECS);
+function genProfile(rng,nat,gender,opts){
+  opts=opts||{};
+  const tech=opts.tech?TECH_BY_K[opts.tech]:pick(rng,TECHS);
+  const role=opts.role||(chance(rng,0.25)?"commander":"soldier");
   const r=rng();
   const exp=r<0.40?1:r<0.70?2:r<0.87?3:r<0.97?4:5;
+  const er=rng();
+  const edu=er<0.15?0:er<0.40?1:er<0.65?2:er<0.87?3:er<0.95?4:5;
+  const jail=chance(rng,0.55)?0:ri(rng,1,12);
+  const streets=clamp(ri(rng,0,25)-edu*2,0,25);
   const base=24+(exp-1)*11;
   const attrs={};
-  ATTRS.forEach(a=>{attrs[a]=clamp(Math.round(base+ri(rng,-8,18)+(a===spec.a?ri(rng,10,26):0)),12,98);});
-  const feeBase=(exp*7000)+(avg(attrs)*260)+(spec.k==="hacker"||spec.k==="safecracker"?4000:0);
+  ATTRS.forEach(a=>{
+    let v=base+ri(rng,-8,18);
+    if(a===tech.a)v+=ri(rng,10,26);
+    if(role==="commander"&&(a==="brains"||a==="charm"))v+=5;
+    if(role==="soldier"&&(a==="muscle"||a==="nerve"))v+=4;
+    if(a==="brains")v+=edu*2;
+    if(a==="nerve")v+=Math.round(jail*0.6+streets*0.4);
+    attrs[a]=clamp(Math.round(v),12,98);
+  });
+  const know=[tech.know];
+  const nk=chance(rng,0.55)?1:chance(rng,0.5)?2:0;
+  for(let i=0;i<nk;i++){const k=pick(rng,KNOW);if(!know.includes(k))know.push(k);}
+  const langs=nat.langs.slice(0,chance(rng,0.6)?1:2);
+  if(chance(rng,0.5)){const l=pick(rng,EXTRA_LANGS);if(!langs.includes(l))langs.push(l);}
+  if(chance(rng,0.25)){const l=pick(rng,EXTRA_LANGS);if(!langs.includes(l))langs.push(l);}
+  const limits=[];
+  const nl=chance(rng,0.6)?0:chance(rng,0.75)?1:2;
+  for(let i=0;i<nl;i++){const l=pick(rng,LIMITS);if(!limits.includes(l.k))limits.push(l.k);}
+  return {tech:tech.k,role,exp,edu,jail,streets,attrs,know,langs,limits,cmd:role==="commander"?ri(rng,3,9):0};
+}
+function genChar(rng,i,used){
+  const nat=pick(rng,COUNTRIES);
+  const gender=chance(rng,0.5)?"M":"F";
+  const pool=NAMES[nat.pool];
+  const first=pick(rng,gender==="M"?pool.m:pool.f);
+  const last=pick(rng,pool.s);
+  let n=first+" "+last;
+  let guard=0;
+  while(used.has(n)&&guard++<40){n=first+" "+String.fromCharCode(65+ri(rng,0,25))+". "+last;}
+  used.add(n);
+  const p=genProfile(rng,nat,gender);
+  const feeBase=(p.exp*7000)+(avg(p.attrs)*260)+(p.know.length-1)*2500+p.edu*900+(p.tech==="hacker"||p.tech==="safecracker"||p.tech==="forger"?4000:0);
   const fee=Math.round(feeBase*(1+rng()*0.35)/500)*500;
-  return {
-    id:"C"+idNum,
-    n:first+" "+last, first,last,gender,
-    nat,
-    spec:spec.k,
-    exp,
-    attrs,
-    fee,
-    cut:Math.round((0.05+(exp-1)*0.02+rng()*0.05)*100)/100,
-    upkeep:Math.round((exp*1200+rng()*800)/100)*100,
+  let cut=Math.round((0.05+(p.exp-1)*0.02+rng()*0.05)*100)/100;
+  if(p.limits.includes("cut"))cut=Math.max(cut,0.15);
+  return Object.assign({
+    id:"C"+(1000+i),n,first,gender,nat:nat.name,
+    fee,cut,
+    upkeep:Math.round((p.exp*1200+rng()*800)/100)*100,
     loyalty:ri(rng,42,68),
     greed:ri(rng,15,90),
     mole:chance(rng,0.07),
-    vetted:false,
-    vetFlag:false,
-    status:"available", // available | crew | injured | jailed | gone
+    vetted:false,vetFlag:false,
+    status:"available",   // available | crew | injured | jailed | gone
     out:0,
     avseed:ri(rng,1,1e9),
-  };
+  },p);
 }
 function avg(o){let s=0,n=0;for(const k in o){s+=o[k];n++;}return s/n;}
-
 function buildRoster(seed){
   const rng=mulberry32(seed);
-  const n=ri(rng,420,460);
-  const arr=[];
-  for(let i=0;i<n;i++)arr.push(genChar(rng,1000+i));
+  const used=new Set();
+  const arr=new Array(ROSTER_SIZE);
+  for(let i=0;i<ROSTER_SIZE;i++)arr[i]=genChar(rng,i,used);
   return arr;
 }
+function natOf(c){return COUNTRY_BY_NAME[c.nat];}
 
 /* ------------------------------ AVATAR -------------------------------- */
 // Bold ink bust, matched to the reference sheet: solid black shirt, hair and
@@ -406,7 +490,6 @@ function avatar(seed,gender){
   const line=(d,w)=>'<path d="'+d+'" fill="none"'+st(w)+'/>';
   const wline=(d,w)=>'<path d="'+d+'" fill="none" stroke="'+W+'" stroke-width="'+w+'" stroke-linecap="round"/>';
   const dot=(x,y,r,c)=>'<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+r+'" fill="'+c+'"/>';
-  // a scalloped arc of an ellipse — curls, pixie texture
   function scallop(sx,sy,rx,ry,a0,a1,n,bump){
     const pt=i=>{const a=(a0+(a1-a0)*i/n)*Math.PI/180;return [sx+rx*Math.cos(a),sy+ry*Math.sin(a)];};
     let d='M'+f(pt(0)[0])+' '+f(pt(0)[1]);
@@ -430,34 +513,27 @@ function avatar(seed,gender){
   const earrings=!M&&chance(rng,0.4);
   const scar=chance(rng,0.08);
   let s='<rect x="0" y="0" width="100" height="120" fill="'+W+'"/>';
-  // hair that sits behind the head
   if(style.indexOf("long")===0)s+=ink('M'+f(L-5)+' 40 C'+f(L-5)+' 14 '+f(R+5)+' 14 '+f(R+5)+' 40 L'+f(R+5)+' 96 Q'+f(R+5)+' 101 '+R+' 101 L'+L+' 101 Q'+f(L-5)+' 101 '+f(L-5)+' 96 Z',2.4);
   else if(style.indexOf("bob")===0)s+=ink('M'+f(L-6)+' 40 C'+f(L-6)+' 14 '+f(R+6)+' 14 '+f(R+6)+' 40 L'+f(R+6)+' 70 Q'+f(R+6)+' 78 '+f(R-2)+' 78 L'+f(L+2)+' 78 Q'+f(L-6)+' 78 '+f(L-6)+' 70 Z',2.4);
   else if(!M&&style==="curly")s+=ink(scallop(cx,48,hw+9,36,150,390,16,5)+' L'+f(R+6)+' 84 L'+f(L-6)+' 84 Z',2.2);
   else if(style==="ponytail")s+=ink('M'+f(R-2)+' 34 C'+f(R+13)+' 40 '+f(R+11)+' 66 '+f(R+3)+' 88 C'+f(R+1)+' 70 '+f(R+4)+' 52 '+f(R-4)+' 42 Z',2.2);
-  // neck, shirt, collar
   s+=white('M'+(cx-nw)+' 66 L'+(cx-nw)+' 100 L'+(cx+nw)+' 100 L'+(cx+nw)+' 66 Z',2.6);
   s+='<path d="M0 120 L0 104 C12 97 26 93 36 92 Q50 106 64 92 C74 93 88 97 100 104 L100 120 Z" fill="'+K+'"/>';
   s+=line('M35 89 Q50 103 65 89',3);
-  // ears, then the head over them
   s+=white('M'+f(L+1)+' 46 C'+f(L-5)+' 44 '+f(L-6)+' 58 '+f(L+1)+' 60 Z',2.4);
   s+=white('M'+f(R-1)+' 46 C'+f(R+5)+' 44 '+f(R+6)+' 58 '+f(R-1)+' 60 Z',2.4);
   s+=white(headD,2.8);
-  // brows: solid, tapered; the inner end drops for a stern look
   const brow=(ec,dir)=>{const ox=ec-dir*7.5,ix=ec+dir*7;
     return 'M'+f(ox)+' '+f(ey-7.5)+' Q'+ec+' '+f(ey-11.5)+' '+f(ix)+' '+f(ey-8.5+browAng)+' L'+f(ix)+' '+f(ey-8.5+browAng+browThick)+' Q'+ec+' '+f(ey-11.5+browThick)+' '+f(ox)+' '+f(ey-7.5+browThick)+' Z';};
   s+=ink(brow(cx-ex,1),1.2)+ink(brow(cx+ex,-1),1.2);
-  // eyes
   [cx-ex,cx+ex].forEach((ec,i)=>{
     s+=white('M'+f(ec-6)+' '+ey+' Q'+ec+' '+f(ey-4.5)+' '+f(ec+6)+' '+ey+' Q'+ec+' '+f(ey+4.2)+' '+f(ec-6)+' '+ey+' Z',2.2);
     s+=dot(ec,ey+0.4,2.6,K);
     if(!M){const ox=i===0?ec-6:ec+6,dx=i===0?-2.2:2.2;s+=line('M'+f(ox)+' '+f(ey-0.5)+' l'+dx+' -2.2',1.8);}
   });
-  // nose, mouth
   s+=line('M'+f(cx-1)+' 55 L'+f(cx-3.5)+' 63 Q'+cx+' 66.5 '+f(cx+4)+' 63',2.4);
   s+=line('M'+f(cx-7)+' 69.5 Q'+f(cx-3.5)+' 67.3 '+cx+' 69.2 Q'+f(cx+3.5)+' 67.3 '+f(cx+7)+' 69.5',2.2);
   s+=line('M'+f(cx-5)+' 73 Q'+cx+' 75.6 '+f(cx+5)+' 73',M?2:2.6);
-  // facial hair
   const mustache='M'+f(cx-7.5)+' 65.5 Q'+cx+' 60.5 '+f(cx+7.5)+' 65.5 Q'+cx+' 67.8 '+f(cx-7.5)+' 65.5 Z';
   if(fh==="stubble"){
     for(let i=0;i<70;i++){const x=cx+(rng()*2-1)*hw*0.88,y=60+rng()*(chin-58);
@@ -468,12 +544,8 @@ function avatar(seed,gender){
     s+=ink('M'+f(L+1)+' 56 C'+f(L+1)+' 70 '+f(cx-hw*jaw)+' '+(chin+7)+' '+cx+' '+(chin+7)+' C'+f(cx+hw*jaw)+' '+(chin+7)+' '+f(R-1)+' 70 '+f(R-1)+' 56 L'+f(R-1)+' 60 C'+f(R-3)+' 73 '+f(cx+9)+' 77.5 '+cx+' 77.5 C'+f(cx-9)+' 77.5 '+f(L+3)+' 73 '+f(L+1)+' 60 Z',2);
     s+=ink(mustache,1.2);
     for(let i=0;i<12;i++)s+=dot(cx+(rng()*2-1)*hw*0.7,72+rng()*9,0.6,W);
-  } else if(fh==="mustache"){
-    s+=ink(mustache,1.2);
-  } else if(fh==="goatee"){
-    s+=ink('M'+f(cx-6)+' 74 Q'+cx+' 84 '+f(cx+6)+' 74 Q'+cx+' 77 '+f(cx-6)+' 74 Z',1.2);
-  }
-  // hair in front of the head
+  } else if(fh==="mustache"){s+=ink(mustache,1.2);}
+  else if(fh==="goatee"){s+=ink('M'+f(cx-6)+' 74 Q'+cx+' 84 '+f(cx+6)+' 74 Q'+cx+' 77 '+f(cx-6)+' 74 Z',1.2);}
   const front={
     center:capTop+' L'+R+' 46 C'+R+' 34 '+f(cx+hw*0.6)+' 27 '+f(cx+2)+' 25 L'+cx+' 31 L'+f(cx-2)+' 25 C'+f(cx-hw*0.6)+' 27 '+L+' 34 '+L+' 46 Z',
     sweep:capTop+' L'+R+' 44 C'+f(cx+hw*0.6)+' 36 '+f(cx+hw*0.2)+' 33 '+f(cx-hw*0.3)+' 40 C'+f(cx-hw*0.6)+' 44 '+L+' 46 '+L+' '+mid+' Z',
@@ -515,50 +587,55 @@ function avatar(seed,gender){
 
 /* ------------------------------ STATE --------------------------------- */
 let S=null;
-const SAVE_KEY="thecrew_save_v1";
+const SAVE_KEY="thecrew_save_v2";
 
 function newGame(player){
   const seed=(Date.now()^Math.floor(Math.random()*1e9))>>>0;
-  const roster=buildRoster(seed);
   S={
-    seed, player, roster,
-    crewIds:[], money:50000, heat:0, week:1, rep:0, jobSeq:0,
-    tab:"hq", modal:null, filter:{spec:"",sort:"fee",q:""},
-    jobs:[], log:[], finalDone:false, over:null, seenFinal:false,
-    assign:[],
+    v:2,seed,player,roster:buildRoster(seed),
+    crewIds:[],money:60000,heat:0,week:1,rep:0,jobSeq:0,
+    tab:"crew",modal:null,filter:{q:"",tech:"",role:"",nat:"",sort:"fee"},shown:30,
+    jobs:[],log:[],finalDone:false,over:null,seenFinal:false,
   };
   refreshJobs(true);
-  logMsg("Dossier opened. You are "+player.n+", "+player.nat.name+" passport. Build a crew.","big");
-  logMsg("Starting float: "+money(50000)+". Keep the heat down and everyone honest.","");
+  logMsg("File opened. You are "+player.n+", "+player.nat+" passport, "+(player.role==="commander"?"commander":"soldier")+". Four seats to fill.","big");
+  logMsg("Float: "+money(S.money)+". The dark web has "+S.jobs.length+" postings.","");
   save();
 }
-
-function crew(){return S.crewIds.map(byId).filter(Boolean);}
-function byId(id){return S.roster.find(c=>c.id===id);}
-function activeCrew(){return crew().filter(c=>c.status==="crew");}
+function byId(id){if(id==="YOU")return S.player;return S.roster.find(c=>c.id===id);}
+function recruits(){return S.crewIds.map(byId).filter(Boolean);}
+function crewAll(){return [S.player].concat(recruits());}
+function field(){return crewAll().filter(c=>c.status==="crew");}
 
 /* ------------------------------ JOBS ---------------------------------- */
 function makeJob(rng,tierBias){
-  const type=pick(rng,JOBTYPES);
-  const city=pick(rng,CITIES);
+  const co=pick(rng,COUNTRIES);
+  const cat=CAT_BY_K[pick(rng,co.cats)];
   const r=rng();
   const tier=clamp((tierBias||0)+(r<0.34?1:r<0.64?2:r<0.87?3:4),1,4);
-  const need=clamp(1+tier+(chance(rng,0.4)?1:0)+(type.k==="break"||type.k==="extract"?1:0),1,6);
-  const diff=clamp(34+tier*10+ri(rng,-6,6)+Math.floor(S.rep/14),34,96);
-  const payBase=[0,42000,120000,300000,720000][tier];
+  const need=[0,ri(rng,2,3),ri(rng,3,4),ri(rng,4,5),5][tier];
+  const diff=clamp(34+tier*10+ri(rng,-6,6)+Math.floor(S.rep/14)+(co.gate===2?4:0),34,96);
+  const payBase=[0,42000,120000,300000,720000][tier]*[0,0.65,0.8,1][co.eco];
   const payout=Math.round(payBase*(0.7+rng()*0.8)/1000)*1000;
-  const heat=Math.round(type.heat*(0.8+tier*0.12));
-  const specs=[];
-  const pool=type.specs.slice();
-  const nspec=clamp(1+Math.floor(tier/2),1,3);
-  for(let i=0;i<nspec&&pool.length;i++){specs.push(pool.splice(Math.floor(rng()*pool.length),1)[0]);}
-  const sealed=!!type.pass||(tier>=3&&chance(rng,0.5));
-  const title=cap(pick(rng,type.verbs))+" "+pick(rng,type.nouns);
+  const heat=Math.round(cat.heat*(0.8+tier*0.12)*(co.auth?1.2:1));
+  const techs=[];const pool=cat.techs.slice();
+  const nt=clamp(1+Math.floor(tier/2),1,3);
+  for(let i=0;i<nt&&pool.length;i++)techs.push(pool.splice(Math.floor(rng()*pool.length),1)[0]);
+  const know=[pick(rng,cat.know)];
+  if(tier>=3&&cat.know.length>1){const k=pick(rng,cat.know);if(!know.includes(k))know.push(k);}
+  const tags=[];
+  for(const t in cat.tags){
+    let p=cat.tags[t];
+    if(t==="water"&&!co.terrain.some(x=>["coast","port","islands","fjords","canal","delta","river","lakes"].includes(x)))p*=0.3;
+    if(t==="heights"&&co.terrain.some(x=>x==="mountains"||x==="megacity"))p+=0.2;
+    if(chance(rng,p))tags.push(t);
+  }
   S.jobSeq++;
   return {
-    id:"J"+S.jobSeq,
-    type:type.k, tier, city:city[0], country:city[1], region:city[2],
-    need, diff, payout, heat, specs, sealed, title,
+    id:"J"+S.jobSeq,cat:cat.k,tier,country:co.name,city:pick(rng,co.cities),
+    need,diff,payout,heat,techs,know,tags,
+    client:pick(rng,CLIENTS),
+    title:pick(rng,cat.v)+" "+pick(rng,cat.n),
     expires:S.week+ri(rng,2,4),
   };
 }
@@ -566,68 +643,97 @@ function refreshJobs(fill){
   const rng=mulberry32((S.seed^(S.week*2654435761))>>>0);
   S.jobs=S.jobs.filter(j=>j.final||j.expires>=S.week);
   let guard=0;
-  while(S.jobs.filter(j=>!j.final).length<6&&guard++<30){S.jobs.push(makeJob(rng,0));}
-  if(!S.jobs.some(j=>j.tier>=3)&&(fill||chance(rng,0.5))){S.jobs.push(makeJob(rng,2));}
+  while(S.jobs.filter(j=>!j.final).length<7&&guard++<40)S.jobs.push(makeJob(rng,0));
+  if(!S.jobs.some(j=>j.tier>=3)&&(fill||chance(rng,0.5)))S.jobs.push(makeJob(rng,2));
   maybeUnlockFinal();
 }
 function maybeUnlockFinal(){
   if(S.rep>=100&&!S.finalDone&&!S.jobs.some(j=>j.final)){
-    S.jobs.unshift({
-      id:"JFINAL",final:true,type:"vault",tier:5,city:"Everywhere",country:"7 cities, one night",region:"Anglo",
-      need:6,diff:94,payout:6000000,heat:60,specs:["safecracker","hacker","wheelman"],sealed:true,
-      title:"The one that ends it",expires:9999,
-    });
-    if(!S.seenFinal){S.seenFinal=true;logMsg("A name has reached the right ears. The final score is on the board.","big",true);}
+    S.jobs.unshift({id:"JFINAL",final:true,cat:"vault",tier:5,country:"Switzerland",city:"Zürich, then everywhere",
+      need:5,diff:94,payout:6000000,heat:60,techs:["safecracker","hacker","wheelman"],know:["Finance","Logistics"],tags:["night","underground"],
+      client:"the Committee",title:"The one that ends it",expires:9999});
+    if(!S.seenFinal){S.seenFinal=true;logMsg("Your name has reached the right ears. The final score is on the board.","big",true);}
   }
 }
 
 /* --------------------------- JOB RESOLUTION --------------------------- */
-function jobW(job){return JOBTYPE_BY_K[job.type].w;}
-function passportOK(job,team){
-  const local=team.some(c=>c.nat.region===job.region);
-  if(!job.sealed)return {ok:true,local,bonus:local?6:0};
-  const strong=team.some(c=>c.nat.tier<=2);
-  const ok=local||strong;
-  return {ok,local,bonus:(local?12:0)+(strong?4:0)-(ok?0:34)};
+// Can this member work this job? Returns {ok, why}.
+function entry(c,job,forgerAboard){
+  const co=COUNTRY_BY_NAME[job.country];
+  const nat=natOf(c);
+  for(const k of c.limits){
+    const l=LIMIT_BY_K[k];
+    if(l.country&&l.country(co))return {ok:false,why:l.l};
+    if(l.tag&&job.tags.includes(l.tag))return {ok:false,why:l.l+" — job is "+TAG_LABEL[l.tag]};
+  }
+  if(c.status!=="crew")return {ok:false,why:c.status==="injured"?"injured, back week "+c.out:"not available"};
+  const local=nat.name===co.name;
+  if(!local&&!forgerAboard){
+    if(co.gate===2&&nat.tier>1)return {ok:false,why:"strict border, "+TIER_WORD[nat.tier]+" passport — needs a forger aboard"};
+    if(co.gate===1&&nat.tier>2)return {ok:false,why:"needs a visa, "+TIER_WORD[nat.tier]+" passport — needs a forger aboard"};
+    if(co.gate>=1&&c.jail>=(co.gate===2?3:5))return {ok:false,why:c.jail+" years inside — refused at the border without papers"};
+  }
+  return {ok:true,why:local?"local national":forgerAboard&&(co.gate>=1)?"papers from the forger":"clean entry"};
 }
 function memberEff(c,job){
-  const w=jobW(job);
+  const cat=CAT_BY_K[job.cat];
   let ws=0,tw=0;
-  for(const a in w){ws+=w[a]*c.attrs[a];tw+=w[a];}
+  for(const a in cat.w){ws+=cat.w[a]*c.attrs[a];tw+=cat.w[a];}
   let e=ws/tw;
   e*=(1+(c.exp-1)*0.11);
-  if(job.specs.includes(c.spec))e+=14;
+  if(job.techs.includes(c.tech))e+=14;
+  if((cat.w.brains||0)>=3)e+=c.edu*1.2;
   return e;
 }
-function assessJob(job,team){
-  const pp=passportOK(job,team);
+function assessJob(job){
+  const co=COUNTRY_BY_NAME[job.country];
+  const cat=CAT_BY_K[job.cat];
+  const all=crewAll();
+  const forger=all.some(c=>c.status==="crew"&&c.tech==="forger"&&!c.limits.some(k=>{const l=LIMIT_BY_K[k];return l.country&&l.country(co);}));
+  const checks=all.map(c=>Object.assign({c},entry(c,job,forger)));
+  const team=checks.filter(x=>x.ok).map(x=>x.c);
+  const factors=[];
   let power=0;
   if(team.length){team.forEach(c=>power+=memberEff(c,job));power/=team.length;}
-  let sizeAdj=team.length>=job.need?6+Math.min(12,(team.length-job.need)*4):-22*(job.need-team.length);
-  const heatPen=S.heat*0.24;
-  const specHit=job.specs.filter(s=>team.some(c=>c.spec===s)).length;
-  const eff=power+sizeAdj+pp.bonus+specHit*4-heatPen;
+  let adj=0;
+  const add=(k,v,note)=>{adj+=v;factors.push({k,v,note});};
+  if(team.length<job.need)add("Crew short",-22*(job.need-team.length),team.length+" of "+job.need+" can go");
+  else add("Crew size",6+Math.min(9,(team.length-job.need)*3),team.length+" in the field");
+  const cmds=team.filter(c=>c.role==="commander");
+  if(!cmds.length)add("No commander",-10,"nobody is running the op");
+  else if(cmds.length===1)add("Commander",cmds[0].cmd,cmds[0].first+" runs it");
+  else add("Too many commanders",-6*(cmds.length-1),cmds.map(c=>c.first).join(", "));
+  const speaks=team.some(c=>c.langs.some(l=>co.langs.includes(l)));
+  if(speaks)add("Language",6,co.langs[0]+" spoken");
+  else add("No "+co.langs[0],cat.lang?-14:-8,"nobody speaks it"+(cat.lang?" — this job is all talk":""));
+  if(team.some(c=>natOf(c).name===co.name))add("Local national",8,"knows the ground");
+  const covered=job.know.filter(k=>team.some(c=>c.know.includes(k)));
+  covered.forEach(k=>{const schooled=team.some(c=>c.know.includes(k)&&c.edu>=3);add("Knows "+k,schooled?10:5,schooled?"and studied it":"street knowledge");});
+  job.know.filter(k=>!covered.includes(k)).forEach(k=>add("Nobody knows "+k,-6,"wanted for this job"));
+  const hits=job.techs.filter(t=>team.some(c=>c.tech===t)).length;
+  if(hits)add("Techniques",hits*4,hits+" of "+job.techs.length+" wanted");
+  const streets=team.reduce((m,c)=>Math.max(m,c.streets),0);
+  const heatCut=Math.min(4,Math.floor(streets/5));
+  if(S.heat>0)add("Heat",-Math.round(S.heat*0.24),"the world is watching");
+  const eff=power+adj;
   const margin=eff-job.diff;
   const lo=margin-18,hi=margin+18;
   const pAbove=t=>clamp((hi-t)/(hi-lo),0,1);
   const pGood=pAbove(22),pFailish=pAbove(-4),pDis=pAbove(-22);
-  return {
-    power:Math.round(power),eff:Math.round(eff),margin:Math.round(margin),pp,specHit,
-    pClean:Math.round(pGood*100),
-    pOk:Math.round((pFailish-pGood)*100),
-    pFail:Math.round((pDis-pFailish)*100),
-    pDis:Math.round((1-pDis)*100),
-  };
+  return {team,checks,factors,power:Math.round(power),eff:Math.round(eff),margin:Math.round(margin),heatCut,
+    canRun:team.length>0&&team.length>=job.need,
+    pClean:Math.round(pGood*100),pOk:Math.round((pFailish-pGood)*100),pFail:Math.round((pDis-pFailish)*100),pDis:Math.round((1-pDis)*100)};
 }
-function executeJob(job,team){
+function executeJob(job){
   const rng=freshRng();
-  const a=assessJob(job,team);
+  const a=assessJob(job);
+  const team=a.team;
   let roll=ri(rng,-18,18);
   const hasMole=team.some(c=>c.mole);
   let leaked=false;
   if(hasMole&&chance(rng,0.55)){roll-=16;leaked=true;}
   const m=a.margin+roll;
-  let tier; // 4 clean, 3 success, 2 messy, 1 botched, 0 disaster
+  let tier;
   if(m>22)tier=4;else if(m>10)tier=3;else if(m>-4)tier=2;else if(m>-22)tier=1;else tier=0;
   const tierRep=job.final?100:[0,6,12,22,36][job.tier];
   let take=0,repGain=0,loyD=0,heatMul=0;
@@ -638,30 +744,30 @@ function executeJob(job,team){
   else if(tier===1){loyD=-7;heatMul=1.5;}
   else{loyD=-13;heatMul=1.9;}
   let cuts=0;
-  team.forEach(c=>{cuts+=Math.round(take*c.cut);});
+  team.forEach(c=>{if(!c.isPlayer)cuts+=Math.round(take*c.cut);});
   const net=Math.max(0,take-cuts);
   S.money+=net;
   S.rep=clamp(S.rep+repGain,0,999);
-  const heatGain=Math.round(job.heat*heatMul)+(leaked?12:0);
+  const heatGain=Math.max(0,Math.round(job.heat*heatMul)-a.heatCut)+(leaked?12:0);
   S.heat=clamp(S.heat+heatGain,0,120);
-  team.forEach(c=>{c.loyalty=clamp(c.loyalty+loyD+(tier>=3?2:0),0,100);});
+  team.forEach(c=>{if(!c.isPlayer)c.loyalty=clamp(c.loyalty+loyD+(tier>=3?2:0),0,100);});
   const verdictName=["DISASTER","BOTCHED","MESSY","SUCCESS","CLEAN"][tier];
   if(tier<=1){
-    const nHit=tier===0?ri(rng,2,3):1;
-    const shuffled=team.slice().sort(()=>rng()-0.5);
-    for(let i=0;i<nHit&&i<shuffled.length;i++){
-      const c=shuffled[i];
+    const hitPool=team.filter(c=>!c.isPlayer).sort(()=>rng()-0.5);
+    const nHit=Math.min(hitPool.length,tier===0?ri(rng,2,3):1);
+    for(let i=0;i<nHit;i++){
+      const c=hitPool[i];
       if(tier===0&&chance(rng,0.5)){
         c.status="jailed";c.out=S.week+ri(rng,4,8);
         S.crewIds=S.crewIds.filter(id=>id!==c.id);
-        events.push(c.first+" was taken at the scene. Held on remand until week "+c.out+".");
+        events.push(c.first+" was taken at the scene. Held until week "+c.out+".");
       } else {c.status="injured";c.out=S.week+2;events.push(c.first+" is hurt — out for two weeks.");}
     }
   }
-  if(leaked)events.push("The job leaked before you moved. Someone at the table talked.");
+  if(leaked)events.push("The job leaked before you moved. Someone on the crew talked.");
   if(net>60000){
     team.forEach(c=>{
-      if(c.status!=="crew")return;
+      if(c.isPlayer||c.status!=="crew")return;
       const risk=((100-c.loyalty)/100)*0.5+(c.greed/100)*0.25+(c.mole?0.3:0);
       if(chance(rng,risk*0.6)){
         const stolen=Math.round(net*(0.15+rng()*0.2));
@@ -674,36 +780,33 @@ function executeJob(job,team){
     });
   }
   S.jobs=S.jobs.filter(j=>j!==job);
-  const tone=tier>=3?"good":tier===2?"warn":"bad";
-  logMsg(verdictName+" — "+job.title+" ("+job.city+"). "+(net>0?"Net "+money(net)+".":"No pay."),tone,true);
+  logMsg(verdictName+" — "+job.title+" ("+job.city+", "+job.country+"). "+(net>0?"Net "+money(net)+".":"No pay."),tier>=3?"good":tier===2?"warn":"bad",true);
   if(job.final&&tier>=3){S.finalDone=true;S.over="win";}
   weekTick(rng);
   refreshJobs(false);
   save();
   return {tier,verdictName,take,cuts,net,heatGain,repGain,events,leaked,job,teamIds:team.map(t=>t.id)};
 }
-
 function weekTick(rng){
   S.week++;
-  const ac=activeCrew();
-  let up=0;ac.forEach(c=>up+=c.upkeep);
+  const rc=recruits().filter(c=>c.status==="crew");
+  let up=0;rc.forEach(c=>up+=c.upkeep);
   if(up>0){
     if(S.money>=up)S.money-=up;
-    else{S.money=0;ac.forEach(c=>c.loyalty=clamp(c.loyalty-9,0,100));logMsg("Couldn't make payroll ("+money(up)+"). Loyalty slipping.","bad");}
+    else{S.money=0;rc.forEach(c=>c.loyalty=clamp(c.loyalty-9,0,100));logMsg("Couldn't make payroll ("+money(up)+"). Loyalty slipping.","bad");}
   }
-  // a mole on the books leaks a little heat every week, unexplained
-  const moles=ac.filter(c=>c.mole).length;
+  const moles=rc.filter(c=>c.mole).length;
   if(moles)S.heat=clamp(S.heat+3*moles,0,120);
   S.roster.forEach(c=>{
     if(c.status==="injured"&&S.week>=c.out){c.status="crew";logMsg(c.first+" is back on the job.","good");}
-    if(c.status==="jailed"&&S.week>=c.out){c.status="available";logMsg(c.first+" walked. Back on the market.","warn");}
+    if(c.status==="jailed"&&S.week>=c.out){c.status="available";c.jail+=1;logMsg(c.first+" walked. Back on the roster, a year older.","warn");}
   });
   S.heat=clamp(S.heat-5,0,120);
   if(S.heat>=100){
-    const ac2=activeCrew();
-    if(ac2.length){
-      const n=Math.min(ac2.length,ri(rng,1,2));
-      for(let i=0;i<n;i++){const c=ac2[i];c.status="jailed";c.out=S.week+ri(rng,4,7);S.crewIds=S.crewIds.filter(id=>id!==c.id);}
+    const rc2=recruits().filter(c=>c.status==="crew");
+    if(rc2.length){
+      const n=Math.min(rc2.length,ri(rng,1,2));
+      for(let i=0;i<n;i++){const c=rc2[i];c.status="jailed";c.out=S.week+ri(rng,4,7);S.crewIds=S.crewIds.filter(id=>id!==c.id);}
       logMsg("RAID. The heat boiled over — "+n+" of your crew taken.","bad",true);
     }
     S.money=Math.round(S.money*0.7);
@@ -713,19 +816,35 @@ function weekTick(rng){
 }
 function checkOver(){
   if(S.over)return;
-  if(crew().length>0)return;
+  if(recruits().length>0)return;
   const fees=S.roster.filter(c=>c.status==="available").map(c=>c.fee);
   const minFee=fees.length?Math.min.apply(null,fees):Infinity;
   if(S.money<minFee){S.over="lose";logMsg("No crew, no float. The name means nothing now.","bad",true);}
 }
 
 /* ------------------------------- LOG ---------------------------------- */
-function logMsg(t,tone,big){S.log.unshift({t,tone:tone||"",big:!!big,wk:S.week});if(S.log.length>80)S.log.pop();}
+function logMsg(t,tone,big){S.log.unshift({t,tone:tone||"",big:!!big,wk:S.week});if(S.log.length>100)S.log.pop();}
 
 /* ------------------------------ SAVE ---------------------------------- */
-function stripState(){const c=Object.assign({},S);delete c.modal;delete c.assign;return c;}
-function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(stripState()));}catch(e){}}
-function load(){try{const r=localStorage.getItem(SAVE_KEY);if(!r)return false;const d=JSON.parse(r);if(!d||!d.roster)return false;d.modal=null;d.assign=[];S=d;return true;}catch(e){return false;}}
+// The roster is rebuilt from the seed; only changed members are stored.
+function packState(){
+  const ov={};
+  S.roster.forEach(c=>{if(c.status!=="available"||c.vetted||c.loyalty!==undefined&&c._touched){ov[c.id]={status:c.status,out:c.out,loyalty:c.loyalty,vetted:c.vetted,vetFlag:c.vetFlag,jail:c.jail};}});
+  const d=Object.assign({},S);delete d.roster;delete d.modal;d.ov=ov;
+  return d;
+}
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(packState()));}catch(e){}}
+function load(){
+  try{
+    const r=localStorage.getItem(SAVE_KEY);if(!r)return false;
+    const d=JSON.parse(r);if(!d||d.v!==2||!d.seed||!d.player)return false;
+    const roster=buildRoster(d.seed);
+    const ov=d.ov||{};
+    roster.forEach(c=>{const o=ov[c.id];if(o)Object.assign(c,o);});
+    delete d.ov;d.roster=roster;d.modal=null;d.player.isPlayer=true;d.player.status="crew";
+    S=d;return true;
+  }catch(e){return false;}
+}
 function wipe(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}}
 function hasSave(){try{return !!localStorage.getItem(SAVE_KEY);}catch(e){return false;}}
 
@@ -735,10 +854,10 @@ function money(n){n=Math.round(n);const neg=n<0;n=Math.abs(n);let s;
   else if(n>=1e3)s="$"+Math.round(n/1000)+"K";
   else s="$"+n;
   return (neg?"−":"")+s;}
-function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 function esc(s){return String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));}
 function pips(n){let s='<span class="exp" title="'+EXP[n-1]+'">';for(let i=0;i<5;i++)s+='<i class="pip'+(i<n?" f":"")+'"></i>';return s+"</span>";}
 function diffbar(d,hot){const filled=Math.round(d/100*8);let s='<span class="diffbar" aria-label="difficulty '+d+'">';for(let i=0;i<8;i++)s+='<i class="'+(i<filled?(hot?"h":"f"):"")+'"></i>';return s+"</span>";}
+function yrs(n){return n===1?"1 yr":n+" yrs";}
 
 /* ------------------------------ RENDER -------------------------------- */
 const root=document.getElementById("root");
@@ -747,158 +866,153 @@ function render(){
   if(!S){root.innerHTML=screenTitle();bind();return;}
   if(S.over){root.innerHTML=screenOver();bind();return;}
   let body="";
-  if(S.tab==="hq")body=tabHQ();
-  else if(S.tab==="recruit")body=tabRecruit();
+  if(S.tab==="crew")body=tabCrew();
   else if(S.tab==="jobs")body=tabJobs();
-  else if(S.tab==="crew")body=tabCrew();
+  else if(S.tab==="roster")body=tabRoster();
+  else if(S.tab==="log")body=tabLog();
   root.innerHTML=topbar()+'<div class="wrap">'+tabsBar()+body+footNote()+"</div>"+(S.modal?renderModal():"");
   bind();
 }
-
 function topbar(){
-  const heatPct=clamp(S.heat,0,100);
   const hot=S.heat>=70;
   return '<div class="topbar"><div class="topbar-in">'
-    +'<div class="brand">THE&nbsp;<b>CREW</b></div>'
+    +'<div class="brand">THE CREW</div>'
     +'<div class="stat"><span class="l">Balance</span><span class="v num">'+money(S.money)+'</span></div>'
     +'<div class="stat"><span class="l">Week</span><span class="v num">'+String(S.week).padStart(2,"0")+'</span></div>'
-    +'<div class="stat"><span class="l">Notoriety</span><span class="v num">'+S.rep+'</span></div>'
+    +'<div class="stat"><span class="l">Reputation</span><span class="v num">'+S.rep+'</span></div>'
     +'<div class="heatwrap"><div class="stat" style="min-width:0"><span class="l">Heat '+Math.round(S.heat)+(S.heat>=100?" ⚠":"")+'</span>'
-      +'<div class="heatbar'+(hot?" hot":"")+'"><i style="width:'+heatPct+'%"></i></div></div></div>'
+      +'<div class="heatbar'+(hot?" hot":"")+'"><i style="width:'+clamp(S.heat,0,100)+'%"></i></div></div></div>'
     +'<div class="spacer"></div>'
     +'<button class="btn ghost sm" data-act="menu">Menu</button>'
     +'</div></div>';
 }
 function tabsBar(){
   const t=(k,l,b)=>'<button class="tab'+(S.tab===k?" on":"")+'" data-act="tab" data-k="'+k+'" role="tab">'+l+(b!=null?'<span class="b num">'+b+'</span>':"")+'</button>';
-  return '<div class="tabs" role="tablist">'+t("hq","HQ")+t("recruit","Recruit")+t("jobs","Jobs",S.jobs.length)+t("crew","Crew",crew().length+"/"+CREW_CAP)+'</div>';
+  return '<div class="tabs" role="tablist">'+t("crew","Crew",(1+recruits().length)+"/5")+t("jobs","Dark Web",S.jobs.length)+t("roster","Roster")+t("log","Log")+'</div>';
 }
 
-/* ---- HQ ---- */
-function tabHQ(){
-  const ac=activeCrew();
-  const finalUp=S.jobs.some(j=>j.final);
-  const repPct=clamp(S.rep,0,100);
-  const status=[
-    ["On the books",crew().length+" / "+CREW_CAP],
-    ["Ready to work",ac.length],
-    ["Injured",crew().filter(c=>c.status==="injured").length],
-    ["Held by police",S.roster.filter(c=>c.status==="jailed").length],
-    ["Open jobs",S.jobs.length],
-    ["Weekly upkeep",money(ac.reduce((s,c)=>s+c.upkeep,0))],
-  ];
-  const left='<div class="panel"><div class="panel-h"><h2>Case Log</h2><span class="kicker">Week '+S.week+'</span></div>'
-    +'<div class="panel-b"><div class="log">'+(S.log.length?S.log.map(l=>
-      '<div class="logline '+l.tone+(l.big?" big":"")+'"><span class="wk">'+String(l.wk).padStart(2,"0")+'</span><span class="tx">'+esc(l.t)+'</span></div>'
-    ).join(""):'<div class="empty">Nothing logged yet.</div>')+'</div></div></div>';
-  const right='<div class="panel"><div class="panel-h"><h2>The Operation</h2><span class="kicker">'+esc(S.player.n)+' · '+S.player.nat.flag+'</span></div><div class="panel-b">'
-    +'<div class="kv">'+status.map(r=>'<span class="k">'+r[0]+'</span><span class="num">'+r[1]+'</span>').join("")+'</div>'
-    +'<hr class="rule">'
-    +'<div class="kicker">Notoriety to the final score</div>'
-    +'<div class="loy" style="height:9px;margin-top:6px"><i style="width:'+repPct+'%"></i></div>'
-    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px">'+(S.finalDone?"It's done. You are The Crew.":finalUp?"The final score is live on the Jobs board.":S.rep+" / 100 — pull bigger jobs to be noticed.")+'</div>'
-    +'<hr class="rule">'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
-      +'<button class="btn" data-act="tab" data-k="jobs">Jobs board →</button>'
-      +'<button class="btn ghost" data-act="tab" data-k="recruit">Recruit →</button>'
-      +'<button class="btn ghost" data-act="laylow" title="Skip a week: −15 heat, upkeep still due">Lay low a week</button>'
-    +'</div></div></div>';
-  let alert="";
-  if(S.heat>=80)alert='<div class="warnbox">HEAT CRITICAL ('+Math.round(S.heat)+'/100). At 100 there is a raid. Lay low, or take only clean, low-heat work.</div>';
-  else if(ac.length===0)alert='<div class="warnbox">Nobody is ready to work. Recruit a crew before taking a job.</div>';
-  return alert+'<div class="grid g-hq">'+left+right+'</div>';
+/* ---- shared card pieces ---- */
+function attrRow(c){return ATTRS.map(a=>'<div class="attr"><span class="k">'+ATTR_ABBR[a]+'</span><span class="bar"><i style="width:'+c.attrs[a]+'%"></i></span><span class="n num">'+c.attrs[a]+'</span></div>').join("");}
+function profLine(c){
+  const lim=c.limits.map(k=>'<span class="lim">'+LIMIT_BY_K[k].l+'</span>').join(" · ");
+  return '<div class="prof">'
+    +'<b>'+EDU[c.edu]+'</b> · jail '+yrs(c.jail)+' · streets '+yrs(c.streets)+'<br>'
+    +'Knows '+c.know.join(", ")+'<br>Speaks '+c.langs.join(", ")
+    +(lim?'<br>'+lim:'')+'</div>';
+}
+function vetStamp(c){if(!c.vetted)return "";return c.vetFlag?'<span class="stampmark">Informant</span>':'<span class="stampmark ink">Vetted</span>';}
+function roleChip(c){return c.role==="commander"?'<span class="chip c-ink">Commander</span>':'<span class="chip" style="border-color:var(--line-2);color:var(--muted)">Soldier</span>';}
+function idCardTop(c,extra){
+  const nat=natOf(c);
+  return '<div class="top"><div class="av">'+avatar(c.avseed,c.gender)+'</div>'
+    +'<div class="who"><div class="nm">'+esc(c.n)+(c.isPlayer?' <span class="chip c-bad" style="vertical-align:middle">You</span>':'')+'</div>'
+    +'<div class="sub">'+nat.flag+' '+esc(nat.name)+' · '+(c.gender==="M"?"Male":"Female")+' <span class="tag pass" title="Passport tier '+nat.tier+' — '+TIER_WORD[nat.tier]+'">P'+nat.tier+'</span> '+roleChip(c)+(extra||'')+'</div>'
+    +'<div class="spec">'+TECH_BY_K[c.tech].l+' · '+EXP[c.exp-1]+'</div>'+pips(c.exp)+'</div></div>';
 }
 
-/* ---- RECRUIT ---- */
-function tabRecruit(){
-  const f=S.filter;
-  let list=S.roster.filter(c=>c.status==="available");
-  if(f.q){const q=f.q.toLowerCase();list=list.filter(c=>c.n.toLowerCase().includes(q)||c.nat.name.toLowerCase().includes(q));}
-  if(f.spec)list=list.filter(c=>c.spec===f.spec);
-  const sorters={fee:(a,b)=>a.fee-b.fee,feeD:(a,b)=>b.fee-a.fee,exp:(a,b)=>b.exp-a.exp,
-    power:(a,b)=>avg(b.attrs)-avg(a.attrs),name:(a,b)=>a.n.localeCompare(b.n)};
-  list.sort(sorters[f.sort]||sorters.fee);
-  const total=list.length;
-  const shown=list.slice(0,30);
-  const canHire=crew().length<CREW_CAP;
-  const specOpts='<option value="">All specialties</option>'+SPECS.map(s=>'<option value="'+s.k+'"'+(f.spec===s.k?" selected":"")+'>'+s.l+'</option>').join("");
-  const sortOpts=[["fee","Fee, low first"],["feeD","Fee, high first"],["exp","Experience"],["power","Raw skill"],["name","Name"]]
-    .map(o=>'<option value="'+o[0]+'"'+(f.sort===o[0]?" selected":"")+'>'+o[1]+'</option>').join("");
-  const bar='<div class="rosterbar">'
-    +'<div class="field"><label for="q">Search</label><input type="text" id="q" value="'+esc(f.q)+'" placeholder="name or nationality" autocomplete="off"></div>'
-    +'<div class="field"><label for="fspec">Specialty</label><select id="fspec">'+specOpts+'</select></div>'
-    +'<div class="field"><label for="fsort">Sort</label><select id="fsort">'+sortOpts+'</select></div>'
-    +'<span class="count">'+total+' on file · showing '+shown.length+'</span></div>';
-  const cards=shown.map(c=>idCard(c,canHire)).join("");
-  return '<div class="panel-h" style="border:0;padding:0 0 6px"><h2>The Rolodex</h2><span class="kicker">'+S.roster.length+' operatives · independent · worldwide</span></div>'
-    +bar+(shown.length?'<div class="cards">'+cards+'</div>':'<div class="empty">No one matches. Loosen the filters.</div>');
+/* ---- CREW ---- */
+function tabCrew(){
+  const cards=[];
+  const you=S.player;
+  cards.push('<div class="id you">'+idCardTop(you)+'<div class="attrs">'+attrRow(you)+'</div>'+profLine(you)
+    +'<div class="foot"><span class="mono" style="font-size:11px;color:var(--muted)">the name on the file</span></div></div>');
+  recruits().forEach(c=>{
+    const statusChip=c.status==="injured"?' <span class="chip c-warn">Injured · back wk '+c.out+'</span>':'';
+    const low=c.loyalty<35;
+    const bonusCost=bonusCostFor(c);
+    cards.push('<div class="id">'+vetStamp(c)+idCardTop(c,statusChip)
+      +'<div style="padding:0 11px 4px"><div class="field" style="gap:2px"><label>Loyalty '+c.loyalty+' · takes '+Math.round(c.cut*100)+'% of each score</label>'
+        +'<div class="loy'+(low?" low":"")+'"><i style="width:'+c.loyalty+'%"></i></div></div></div>'
+      +'<div class="attrs">'+attrRow(c)+'</div>'+profLine(c)
+      +'<div class="foot"><span class="mono" style="font-size:11px;color:var(--muted)">upkeep '+money(c.upkeep)+'/wk</span>'
+        +'<span style="display:flex;gap:6px"><button class="btn ghost sm" data-act="bonus" data-id="'+c.id+'" '+(S.money>=bonusCost?"":"disabled")+'>Bonus '+money(bonusCost)+'</button>'
+        +'<button class="btn ghost sm" data-act="drop" data-id="'+c.id+'">Cut loose</button></span></div></div>');
+  });
+  for(let i=recruits().length;i<CREW_SLOTS;i++){
+    cards.push('<div class="id slot"><div>Seat '+(i+2)+' of 5 — empty</div><button class="btn sm" data-act="tab" data-k="roster">Open the roster</button></div>');
+  }
+  const cmds=field().filter(c=>c.role==="commander").length;
+  let note="";
+  if(cmds===0)note='<div class="warnbox">No commander in the crew. Every job runs at −10 until someone is in charge.</div>';
+  else if(cmds>1)note='<div class="warnbox">'+cmds+' commanders. Too many people in charge costs −6 each beyond the first.</div>';
+  return note+'<div class="panel-h" style="border:0;padding:0 0 6px"><h2>The Crew</h2><span class="kicker">five seats · everyone goes on every job</span></div>'
+    +'<div class="cards">'+cards.join("")+'</div>';
 }
-function attrRow(c){
-  return ATTRS.map(a=>'<div class="attr"><span class="k">'+ATTR_ABBR[a]+'</span><span class="bar"><i style="width:'+c.attrs[a]+'%"></i></span><span class="n num">'+c.attrs[a]+'</span></div>').join("");
-}
-function vetStamp(c){
-  if(!c.vetted)return "";
-  return c.vetFlag?'<span class="stampmark">Informant</span>':'<span class="stampmark ink">Vetted</span>';
-}
-function idCard(c,canHire){
-  const sp=SPEC_BY_K[c.spec];
-  return '<div class="id">'+vetStamp(c)
-    +'<div class="top"><div class="av">'+avatar(c.avseed,c.gender)+'</div>'
-    +'<div class="who"><div class="nm">'+esc(c.n)+'</div>'
-      +'<div class="sub">'+c.nat.flag+' '+esc(c.nat.name)+' · '+(c.gender==="M"?"Male":"Female")+' <span class="tag pass" title="Passport tier '+c.nat.tier+' — '+TIER_WORD[c.nat.tier]+'">P'+c.nat.tier+'</span></div>'
-      +'<div class="spec">'+sp.l+'</div>'
-      +pips(c.exp)+'</div></div>'
-    +'<div class="attrs">'+attrRow(c)+'</div>'
-    +'<div class="foot"><span class="fee num">'+money(c.fee)+'</span>'
-      +'<span style="display:flex;gap:6px"><button class="btn ghost sm" data-act="open-recruit" data-id="'+c.id+'">File</button>'
-      +'<button class="btn sm" data-act="hire" data-id="'+c.id+'" '+(canHire&&S.money>=c.fee?"":"disabled")+'>Hire</button></span></div></div>';
-}
+function bonusCostFor(c){return Math.max(4000,Math.round(c.upkeep*3/1000)*1000);}
 
-/* ---- JOBS ---- */
+/* ---- DARK WEB ---- */
 function tabJobs(){
-  const head='<div class="panel-h"><h2>Jobs Board</h2><span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="kicker">Offers expire · Week '+S.week+'</span><button class="btn ghost sm" data-act="laylow">Lay low a week</button></span></div>';
+  const head='<div class="panel-h"><h2>Dark Web · Postings</h2><span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="kicker">Week '+S.week+' · postings expire</span><button class="btn ghost sm" data-act="laylow">Lay low a week</button></span></div>';
   if(!S.jobs.length)return '<div class="panel">'+head+'<div class="empty">The board is quiet. Lay low a week and check again.</div></div>';
   const rows=S.jobs.slice().sort((a,b)=>(b.final?1:0)-(a.final?1:0)||a.tier-b.tier).map(j=>{
-    const jt=JOBTYPE_BY_K[j.type];
-    const specTags=j.specs.map(s=>'<span class="tag spec">'+SPEC_BY_K[s].l+'</span>').join(" ");
-    const sealed=j.sealed?'<span class="tag pass">Sealed border · needs a passport</span>':"";
-    const finalTag=j.final?'<span class="chip c-bad">Final score</span> ':"";
-    const exp=j.final?"":" · expires wk "+j.expires;
+    const co=COUNTRY_BY_NAME[j.country];
+    const a=assessJob(j);
+    const fit=a.canRun?(a.margin>=10?'<span class="chip c-good">Good fit</span>':a.margin>=-4?'<span class="chip c-warn">Risky</span>':'<span class="chip c-bad">Long odds</span>'):'<span class="chip c-bad">'+a.team.length+' of '+j.need+' can go</span>';
     return '<div class="jobrow" data-act="open-job" data-id="'+j.id+'" role="button" tabindex="0">'
-      +'<div class="code">'+(j.final?"—":"№"+j.id.slice(1).padStart(3,"0"))+'<br>'+diffbar(j.diff,j.heat>28)+'</div>'
-      +'<div><div class="t">'+finalTag+esc(j.title)+'</div>'
-        +'<div class="loc">'+esc(j.city)+' · '+esc(j.country)+' · crew of '+j.need+exp+'</div>'
-        +'<div class="meta"><span class="tag">'+jt.l+'</span>'+specTags+' '+sealed+'</div></div>'
+      +'<div class="code">'+(j.final?"—":"№"+j.id.slice(1).padStart(3,"0"))+'<br>'+diffbar(j.diff,j.heat>22)+'</div>'
+      +'<div><div class="t">'+(j.final?'<span class="chip c-bad">Final score</span> ':'')+esc(j.title)+'</div>'
+        +'<div class="loc">'+co.flag+' '+esc(j.city)+', '+esc(j.country)+' · crew of '+j.need+' · from '+esc(j.client)+(j.final?'':' · expires wk '+j.expires)+'</div>'
+        +'<div class="meta"><span class="tag">'+CAT_BY_K[j.cat].l+'</span>'+j.techs.map(t=>'<span class="tag spec">'+TECH_BY_K[t].l+'</span>').join(" ")+' '+fit+'</div></div>'
       +'<div class="pay num">'+money(j.payout)+'<div class="loc" style="text-align:right">+'+j.heat+' heat</div></div></div>';
   }).join("");
   return '<div class="panel">'+head+rows+'</div>';
 }
 
-/* ---- CREW ---- */
-function tabCrew(){
-  const cw=crew();
-  if(!cw.length)return '<div class="empty">No crew yet. Head to Recruit and build one.</div>';
-  const cards=cw.map(c=>{
-    const sp=SPEC_BY_K[c.spec];
-    const statusChip=c.status==="injured"?'<span class="chip c-warn">Injured · back wk '+c.out+'</span>':'<span class="chip c-good">Ready</span>';
-    const low=c.loyalty<35;
-    const bonusCost=bonusCostFor(c);
-    return '<div class="id">'+vetStamp(c)
-      +'<div class="top"><div class="av">'+avatar(c.avseed,c.gender)+'</div>'
-      +'<div class="who"><div class="nm">'+esc(c.n)+'</div>'
-        +'<div class="sub">'+c.nat.flag+' '+esc(c.nat.name)+' <span class="tag pass">P'+c.nat.tier+'</span> '+statusChip+'</div>'
-        +'<div class="spec">'+sp.l+'</div>'+pips(c.exp)+'</div></div>'
-      +'<div style="padding:0 11px 4px"><div class="field" style="gap:2px"><label>Loyalty '+c.loyalty+' · takes '+Math.round(c.cut*100)+'% of each score</label>'
-        +'<div class="loy'+(low?" low":"")+'"><i style="width:'+c.loyalty+'%"></i></div></div></div>'
-      +'<div class="attrs">'+attrRow(c)+'</div>'
-      +'<div class="foot"><span class="mono" style="font-size:11px;color:var(--muted)">upkeep '+money(c.upkeep)+'/wk</span>'
-        +'<span style="display:flex;gap:6px"><button class="btn ghost sm" data-act="bonus" data-id="'+c.id+'" title="Pay '+money(bonusCost)+' to raise loyalty" '+(S.money>=bonusCost?"":"disabled")+'>Bonus '+money(bonusCost)+'</button>'
-        +'<button class="btn ghost sm" data-act="drop" data-id="'+c.id+'">Cut loose</button></span></div></div>';
-  }).join("");
-  return '<div class="panel-h" style="border:0;padding:0 0 6px"><h2>Your Crew</h2><span class="kicker">'+activeCrew().length+' ready · loyalty is leverage</span></div>'
-    +'<div class="cards">'+cards+'</div>';
+/* ---- ROSTER ---- */
+function tabRoster(){
+  const f=S.filter;
+  let list=S.roster.filter(c=>c.status==="available");
+  if(f.q){const q=f.q.toLowerCase();list=list.filter(c=>c.n.toLowerCase().includes(q)||c.nat.toLowerCase().includes(q)||c.langs.some(l=>l.toLowerCase().includes(q))||c.know.some(k=>k.toLowerCase().includes(q)));}
+  if(f.tech)list=list.filter(c=>c.tech===f.tech);
+  if(f.role)list=list.filter(c=>c.role===f.role);
+  if(f.nat)list=list.filter(c=>c.nat===f.nat);
+  const sorters={fee:(a,b)=>a.fee-b.fee,feeD:(a,b)=>b.fee-a.fee,exp:(a,b)=>b.exp-a.exp||b.fee-a.fee,power:(a,b)=>avg(b.attrs)-avg(a.attrs),name:(a,b)=>a.n.localeCompare(b.n)};
+  list.sort(sorters[f.sort]||sorters.fee);
+  const total=list.length;
+  const shown=list.slice(0,S.shown);
+  const canHire=recruits().length<CREW_SLOTS;
+  const opt=(v,l,cur)=>'<option value="'+esc(v)+'"'+(cur===v?" selected":"")+'>'+l+'</option>';
+  const bar='<div class="rosterbar">'
+    +'<div class="field"><label for="q">Search</label><input type="text" id="q" value="'+esc(f.q)+'" placeholder="name, country, language, knowledge" autocomplete="off" style="min-width:220px"></div>'
+    +'<div class="field"><label for="ftech">Technique</label><select id="ftech">'+opt("","All",f.tech)+TECHS.map(t=>opt(t.k,t.l,f.tech)).join("")+'</select></div>'
+    +'<div class="field"><label for="frole">Role</label><select id="frole">'+opt("","Any",f.role)+opt("commander","Commander",f.role)+opt("soldier","Soldier",f.role)+'</select></div>'
+    +'<div class="field"><label for="fnat">Nationality</label><select id="fnat">'+opt("","All",f.nat)+COUNTRIES.map(c=>opt(c.name,c.flag+" "+c.name,f.nat)).join("")+'</select></div>'
+    +'<div class="field"><label for="fsort">Sort</label><select id="fsort">'+opt("fee","Fee, low first",f.sort)+opt("feeD","Fee, high first",f.sort)+opt("exp","Experience",f.sort)+opt("power","Raw skill",f.sort)+opt("name","Name",f.sort)+'</select></div>'
+    +'<span class="count num">'+total.toLocaleString()+' match · showing '+shown.length+'</span></div>';
+  const cards=shown.map(c=>'<div class="id">'+vetStamp(c)+idCardTop(c)
+    +'<div class="attrs">'+attrRow(c)+'</div>'+profLine(c)
+    +'<div class="foot"><span class="fee num">'+money(c.fee)+'</span>'
+      +'<span style="display:flex;gap:6px"><button class="btn ghost sm" data-act="open-recruit" data-id="'+c.id+'">File</button>'
+      +'<button class="btn sm" data-act="hire" data-id="'+c.id+'" '+(canHire&&S.money>=c.fee?"":"disabled")+'>Hire</button></span></div></div>').join("");
+  const more=total>shown.length?'<div style="text-align:center;margin-top:14px"><button class="btn ghost" data-act="more">Show 30 more</button></div>':'';
+  return '<div class="panel-h" style="border:0;padding:0 0 6px"><h2>Roster</h2><span class="kicker num">'+S.roster.length.toLocaleString()+' operatives on file · '+(CREW_SLOTS-recruits().length)+' seats open</span></div>'
+    +bar+(shown.length?'<div class="cards">'+cards+'</div>'+more:'<div class="empty">No one matches. Loosen the filters.</div>');
 }
-function bonusCostFor(c){return Math.max(4000,Math.round(c.upkeep*3/1000)*1000);}
+
+/* ---- LOG ---- */
+function tabLog(){
+  const rc=recruits();
+  const status=[
+    ["Seats filled",(1+rc.length)+" / 5"],
+    ["Ready to go",field().length],
+    ["Injured",rc.filter(c=>c.status==="injured").length],
+    ["Held by police",S.roster.filter(c=>c.status==="jailed").length],
+    ["Weekly upkeep",money(rc.filter(c=>c.status==="crew").reduce((s,c)=>s+c.upkeep,0))],
+    ["Postings open",S.jobs.length],
+  ];
+  const finalUp=S.jobs.some(j=>j.final);
+  const left='<div class="panel"><div class="panel-h"><h2>Case Log</h2><span class="kicker">Week '+S.week+'</span></div><div class="panel-b"><div class="log">'
+    +(S.log.length?S.log.map(l=>'<div class="logline '+l.tone+(l.big?" big":"")+'"><span class="wk">'+String(l.wk).padStart(2,"0")+'</span><span class="tx">'+esc(l.t)+'</span></div>').join(""):'<div class="empty">Nothing logged yet.</div>')
+    +'</div></div></div>';
+  const right='<div class="panel"><div class="panel-h"><h2>The Operation</h2><span class="kicker">'+esc(S.player.n)+' · '+natOf(S.player).flag+'</span></div><div class="panel-b">'
+    +'<div class="kv">'+status.map(r=>'<span class="k">'+r[0]+'</span><span class="num">'+r[1]+'</span>').join("")+'</div>'
+    +'<hr class="rule"><div class="kicker">Reputation to the final score</div>'
+    +'<div class="loy" style="height:9px;margin-top:6px"><i style="width:'+clamp(S.rep,0,100)+'%"></i></div>'
+    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px">'+(S.finalDone?"It's done.":finalUp?"The final score is live on the dark web.":S.rep+" / 100 — bigger jobs, bigger name.")+'</div>'
+    +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="tab" data-k="jobs">Dark web →</button><button class="btn ghost" data-act="laylow">Lay low a week</button></div>'
+    +'</div></div>';
+  return '<div class="grid g-hq">'+left+right+'</div>';
+}
 
 /* ------------------------------ MODALS -------------------------------- */
 function renderModal(){
@@ -913,67 +1027,80 @@ function modalWrap(inner){return '<div class="scrim" data-act="scrim"><div class
 
 function modalJob(id){
   const j=S.jobs.find(x=>x.id===id);if(!j)return "";
-  const jt=JOBTYPE_BY_K[j.type];
-  const avail=activeCrew();
-  const team=S.assign.map(byId).filter(c=>c&&c.status==="crew");
-  const a=team.length?assessJob(j,team):null;
-  const wtxt=Object.entries(jt.w).map(([k,v])=>ATTR_ABBR[k]+'×'+v).join("  ");
-  const oddsBar=a?('<div class="odds" title="estimated outcome spread">'
-    +'<i class="o-good" style="width:'+a.pClean+'%"></i><i class="o-mid" style="width:'+a.pOk+'%"></i>'
-    +'<i class="o-bad" style="width:'+(a.pFail+a.pDis)+'%"></i></div>'
+  const co=COUNTRY_BY_NAME[j.country];
+  const cat=CAT_BY_K[j.cat];
+  const a=assessJob(j);
+  const wtxt=Object.entries(cat.w).map(([k,v])=>ATTR_ABBR[k]+'×'+v).join("  ");
+  const local=Math.round(j.payout*[0,1,1,1][co.eco]);
+  const brief='<div class="brief"><span class="client">Posted by '+esc(j.client)+'.</span> '
+    +co.flag+' '+esc(j.city)+', '+esc(j.country)+' — '+esc(co.langs.join(" / "))+' spoken; pays in '+esc(co.cur)+'. '
+    +esc(co.pol)+'; '+esc(co.rel.toLowerCase())+'. Terrain: '+co.terrain.join(", ")+'. '
+    +(co.gate===2?'Strict border — weak passports and old convictions get turned back without papers. ':co.gate===1?'Visa border — limited passports need a forger aboard. ':'Open border. ')
+    +(co.eco===1?'Money goes far here, but the fee is lower.':co.eco===3?'Rich ground; expect the client to pay well and the police to be well funded.':'')
+    +'</div>';
+  const chips='<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">'
+    +'<span class="tag">'+cat.l+'</span>'
+    +j.techs.map(t=>'<span class="tag spec">wants '+TECH_BY_K[t].l+'</span>').join("")
+    +j.know.map(k=>'<span class="tag">knows '+k+'</span>').join("")
+    +j.tags.map(t=>'<span class="tag pass">'+TAG_LABEL[t]+'</span>').join("")
+    +'</div>';
+  const checks=a.checks.map(x=>{
+    const c=x.c;
+    return '<div class="check'+(x.ok?"":" out")+'"><div class="av">'+avatar(c.avseed,c.gender)+'</div>'
+      +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12.5px">'+esc(c.n)+' '+natOf(c).flag+' <span class="mono" style="color:var(--muted);font-size:10.5px">'+TECH_BY_K[c.tech].l+(c.role==="commander"?' · cmdr':'')+'</span></div>'
+      +'<div class="why">'+esc(x.why)+'</div></div>'
+      +'<div class="mark">'+(x.ok?"✓":"✗")+'</div></div>';
+  }).join("");
+  const factors='<div class="factors">'+a.factors.map(f=>'<span class="k">'+esc(f.k)+'</span><span><span class="'+(f.v>=0?"plus":"minus")+' num">'+(f.v>=0?"+":"")+f.v+'</span> · '+esc(f.note)+'</span>').join("")+'</div>';
+  const odds=a.team.length?('<div class="odds" title="estimated outcome spread">'
+    +'<i class="o-good" style="width:'+a.pClean+'%"></i><i class="o-mid" style="width:'+a.pOk+'%"></i><i class="o-bad" style="width:'+(a.pFail+a.pDis)+'%"></i></div>'
     +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">'
     +'<span style="color:var(--good)">Clean ~'+a.pClean+'%</span><span style="color:var(--warn)">Messy ~'+a.pOk+'%</span><span style="color:var(--stamp)">Blown ~'+(a.pFail+a.pDis)+'%</span></div>'
-    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">Crew power '+a.eff+' vs difficulty '+j.diff+(S.heat>0?' · heat is costing you '+Math.round(S.heat*0.24)+' points':'')+'</div>')
-    :'<div class="mono" style="font-size:11px;color:var(--muted)">Assign a crew to see the odds.</div>';
-  const ppWarn=(j.sealed&&team.length&&!a.pp.ok)?'<div class="warnbox">Nobody assigned can get into '+esc(j.country)+'. Add a local national or a strong (P1–P2) passport, or this is near-impossible.</div>':"";
-  const assignList=avail.length?avail.map(c=>{
-    const on=S.assign.includes(c.id);
-    const sp=SPEC_BY_K[c.spec];
-    const match=j.specs.includes(c.spec);
-    return '<div class="assignline'+(on?" on":"")+'" data-act="assign" data-id="'+c.id+'" role="checkbox" aria-checked="'+on+'" tabindex="0">'
-      +'<div class="av">'+avatar(c.avseed,c.gender)+'</div>'
-      +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:13px">'+esc(c.n)+' '+c.nat.flag+'</div>'
-        +'<div class="mono" style="font-size:10.5px;color:var(--muted)">'+sp.l+(match?' · <b style="color:var(--good)">wanted</b>':'')+' · P'+c.nat.tier+(c.nat.region===j.region?' · <b style="color:var(--good)">local</b>':'')+'</div></div>'
-      +'<div class="num" style="font-family:var(--f-mono);font-size:11px;text-align:right;color:var(--muted)">'+ATTRS.map(x=>jt.w[x]?ATTR_ABBR[x]+' '+c.attrs[x]:"").filter(Boolean).join('<br>')+'</div>'
-      +'<div class="pip'+(on?" f":"")+'" style="width:14px;height:14px"></div></div>';
-  }).join(""):'<div class="empty">No crew ready. Recruit, or wait for the injured to heal.</div>';
-  const h='<div class="modal-h"><div><div class="kicker">'+esc(j.city)+' · '+esc(j.country)+(j.final?' · Final score':'')+'</div>'
-    +'<h2 style="font-size:22px;margin-top:4px">'+esc(j.title)+'</h2></div>'
-    +'<button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
+    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">Crew '+a.eff+' vs difficulty '+j.diff+'</div>'):'';
+  const h='<div class="modal-h"><div><div class="kicker">'+esc(co.name)+' · '+cat.l+(j.final?' · Final score':'')+'</div>'
+    +'<h2 style="font-size:22px;margin-top:4px">'+esc(j.title)+'</h2></div><button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
   const reqs='<div class="req">'
-    +'<div class="b"><div class="k">Payout</div><div class="v num">'+money(j.payout)+'</div></div>'
-    +'<div class="b"><div class="k">Crew</div><div class="v num">'+team.length+' / '+j.need+'</div></div>'
-    +'<div class="b"><div class="k">Difficulty</div><div class="v">'+diffbar(j.diff,j.heat>28)+'</div></div>'
+    +'<div class="b"><div class="k">Fee</div><div class="v num">'+money(j.payout)+'</div></div>'
+    +'<div class="b"><div class="k">Crew</div><div class="v num">'+a.team.length+' / '+j.need+'</div></div>'
+    +'<div class="b"><div class="k">Difficulty</div><div class="v">'+diffbar(j.diff,j.heat>22)+'</div></div>'
     +'<div class="b"><div class="k">Heat</div><div class="v num">+'+j.heat+'</div></div></div>';
-  const b='<div class="modal-b">'+ppWarn
-    +'<div class="mono" style="font-size:12px;color:var(--muted)">'+jt.l+' — the plan leans on '+wtxt+'. Wants: '+j.specs.map(s=>SPEC_BY_K[s].l).join(", ")+'.'+(j.sealed?' Border is sealed: bring a passport that works there.':'')+'</div>'
-    +reqs+oddsBar
-    +'<hr class="rule"><div class="kicker">Assign the crew</div><div class="sel-help">Bigger isn\'t always better — everyone takes a cut, and everyone is a risk once the money is on the table. Match the wanted specialties, cover the passport.</div>'
-    +'<div style="max-height:260px;overflow:auto;margin-top:4px">'+assignList+'</div>'
+  const b='<div class="modal-b">'+brief
+    +'<div class="mono" style="font-size:12px;color:var(--muted)">The plan leans on '+wtxt+'.</div>'+chips+reqs
+    +'<hr class="rule"><div class="kicker">Who can go</div><div class="sel-help">Everyone on the crew goes — if the border, the job and their own limits let them.</div>'
+    +checks
+    +'<hr class="rule"><div class="kicker">The reckoning</div>'+factors
+    +'<div style="margin-top:10px">'+odds+'</div>'
     +'<hr class="rule"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">'
       +'<button class="btn ghost" data-act="scrim">Walk away</button>'
-      +'<button class="btn stamp" data-act="execute" data-id="'+j.id+'" '+(team.length?"":"disabled")+'>Run it →</button></div></div>';
+      +'<button class="btn stamp" data-act="execute" data-id="'+j.id+'" '+(a.canRun?"":"disabled")+'>'+(a.canRun?"Take the job →":"Needs "+j.need+" in the field")+'</button></div></div>';
   return modalWrap(h+b);
 }
 
 function modalRecruit(id){
   const c=byId(id);if(!c)return "";
-  const sp=SPEC_BY_K[c.spec];
-  const canHire=crew().length<CREW_CAP&&c.status==="available"&&S.money>=c.fee;
+  const nat=natOf(c);
+  const t=TECH_BY_K[c.tech];
+  const canHire=recruits().length<CREW_SLOTS&&c.status==="available"&&S.money>=c.fee;
   const vetLine=c.vetted
     ?(c.vetFlag?'<div class="warnbox">Vetting flagged ties to an informant network. Hire this one and the heat walks in with the luggage.</div>'
                :'<div class="mono" style="font-size:12px;color:var(--good)">✓ Vetted clean. No known ties — as far as money can tell.</div>')
     :'<div class="mono" style="font-size:12px;color:var(--muted)">Not vetted. A stranger\'s loyalty is a guess. Vetting ('+money(VET_COST)+') reads this file against your crew\'s instincts — a sharper crew catches more.</div>';
-  const h='<div class="modal-h"><div><div class="kicker">Personnel file · '+c.id+'</div><h2 style="font-size:22px;margin-top:4px">'+esc(c.n)+'</h2></div>'
-    +'<button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
+  const h='<div class="modal-h"><div><div class="kicker">Personnel file · '+c.id+'</div><h2 style="font-size:22px;margin-top:4px">'+esc(c.n)+'</h2></div><button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
   const b='<div class="modal-b"><div style="display:flex;gap:16px;flex-wrap:wrap">'
     +'<div style="width:130px;flex:none"><div style="border:1px solid var(--ink);background:#fff;aspect-ratio:100/120;max-width:100%">'+avatar(c.avseed,c.gender)+'</div>'
-      +'<div class="mono" style="font-size:10px;color:var(--muted);text-align:center;margin-top:4px">'+c.nat.flag+' '+esc(c.nat.name)+'</div></div>'
-    +'<div style="flex:1;min-width:200px">'
-      +'<div class="kv"><span class="k">Specialty</span><span>'+sp.l+' — '+sp.d+'</span>'
+      +'<div class="mono" style="font-size:10px;color:var(--muted);text-align:center;margin-top:4px">'+nat.flag+' '+esc(nat.name)+'</div></div>'
+    +'<div style="flex:1;min-width:220px">'
+      +'<div class="kv"><span class="k">Role</span><span>'+(c.role==="commander"?"Commander — runs the op (+"+c.cmd+")":"Soldier — does the work")+'</span>'
+        +'<span class="k">Technique</span><span>'+t.l+' — '+t.d+'</span>'
         +'<span class="k">Experience</span><span>'+EXP[c.exp-1]+' '+pips(c.exp)+'</span>'
-        +'<span class="k">Passport</span><span>'+esc(c.nat.name)+' · tier '+c.nat.tier+' ('+TIER_WORD[c.nat.tier]+')</span>'
+        +'<span class="k">Education</span><span>'+EDU[c.edu]+'</span>'
+        +'<span class="k">Knowledge</span><span>'+c.know.join(", ")+'</span>'
+        +'<span class="k">Languages</span><span>'+c.langs.join(", ")+'</span>'
+        +'<span class="k">Time in jail</span><span class="num">'+yrs(c.jail)+'</span>'
+        +'<span class="k">Time on the streets</span><span class="num">'+yrs(c.streets)+'</span>'
+        +'<span class="k">Passport</span><span>'+esc(nat.name)+' · tier '+nat.tier+' ('+TIER_WORD[nat.tier]+')</span>'
         +'<span class="k">Sex</span><span>'+(c.gender==="M"?"Male":"Female")+'</span>'
+        +'<span class="k">Cannot</span><span>'+(c.limits.length?c.limits.map(k=>'<span style="color:var(--stamp)">'+LIMIT_BY_K[k].l+'</span>').join(", "):"— no known limits")+'</span>'
         +'<span class="k">Fee</span><span class="num">'+money(c.fee)+' one-off</span>'
         +'<span class="k">Cut</span><span class="num">'+Math.round(c.cut*100)+'% of each score</span>'
         +'<span class="k">Upkeep</span><span class="num">'+money(c.upkeep)+' a week</span></div>'
@@ -991,7 +1118,7 @@ function modalResult(d){
   const colors=["var(--stamp)","var(--stamp)","var(--warn)","var(--good)","var(--good)"];
   const col=colors[d.tier];
   const team=d.teamIds.map(byId).filter(Boolean);
-  const h='<div class="modal-h"><div><div class="kicker">'+esc(d.job.city)+' · week '+(S.week-1)+'</div>'
+  const h='<div class="modal-h"><div><div class="kicker">'+esc(d.job.city)+', '+esc(d.job.country)+' · week '+(S.week-1)+'</div>'
     +'<div class="result-verdict" style="margin-top:6px;color:'+col+'"><span class="verdict-stamp" style="border-color:'+col+'">'+d.verdictName+'</span></div></div>'
     +'<button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
   const nums='<div class="num-grid">'
@@ -999,27 +1126,21 @@ function modalResult(d){
     +'<div class="b"><div class="k">Crew cuts</div><div class="v num">'+money(-d.cuts)+'</div></div>'
     +'<div class="b"><div class="k">Your net</div><div class="v num" style="color:'+(d.net>0?"var(--good)":"var(--ink)")+'">'+money(d.net)+'</div></div>'
     +'<div class="b"><div class="k">Heat</div><div class="v num">+'+d.heatGain+'</div></div>'
-    +'<div class="b"><div class="k">Notoriety</div><div class="v num">+'+d.repGain+'</div></div></div>';
+    +'<div class="b"><div class="k">Reputation</div><div class="v num">+'+d.repGain+'</div></div></div>';
   const ev=d.events.length?'<hr class="rule"><div class="kicker">Fallout</div>'+d.events.map(e=>'<div class="mono" style="font-size:12px;color:var(--stamp);padding:3px 0">— '+esc(e)+'</div>').join(""):"";
-  const roster='<hr class="rule"><div class="kicker">On the job</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
+  const roster='<hr class="rule"><div class="kicker">In the field</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
     +team.map(c=>'<div style="width:44px;text-align:center"><div style="width:44px;height:52px;border:1px solid var(--ink);background:#fff">'+avatar(c.avseed,c.gender)+'</div><div class="mono" style="font-size:9px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(c.first)+'</div></div>').join("")+'</div>';
-  const b='<div class="modal-b">'+nums+ev+roster
-    +'<hr class="rule"><div style="display:flex;justify-content:flex-end"><button class="btn" data-act="scrim">Continue →</button></div></div>';
-  return modalWrap(h+b);
+  return modalWrap(h+'<div class="modal-b">'+nums+ev+roster+'<hr class="rule"><div style="display:flex;justify-content:flex-end"><button class="btn" data-act="scrim">Continue →</button></div></div>');
 }
 
 function modalMenu(){
   const h='<div class="modal-h"><h2>Menu</h2><button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
-  const b='<div class="modal-b"><div class="mono" style="font-size:12px;color:var(--muted);line-height:1.7">'
-    +'THE CREW · a paper game of global crime and deception.<br>Progress saves itself in this browser.</div>'
+  const b='<div class="modal-b"><div class="mono" style="font-size:12px;color:var(--muted);line-height:1.7">THE CREW · a paper game of global crime interception.<br>Progress saves itself in this browser.</div>'
     +'<hr class="rule"><div class="mono" style="font-size:12px;line-height:1.8">'
-    +'<b>How it works.</b> Hire from 400+ operatives — each with a passport, five attributes, a specialty and a price. '
-    +'Pick a job, assign a crew, run it. Success pays and raises notoriety; failure raises heat and gets people hurt or held. '
-    +'Sealed borders need a local or a strong passport. Some recruits are informants: vet them, or find out the hard way. '
-    +'Reach 100 notoriety and the final score appears.</div>'
-    +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap">'
-    +'<button class="btn ghost" data-act="scrim">Back to it</button>'
-    +'<button class="btn stamp" data-act="newgame">Burn the file · new game</button></div></div>';
+    +'<b>How it works.</b> You and four others. Pick them from 5,000 files — each has a passport, five attributes, a technique, knowledge, education, time in jail, time on the streets, a role, and things they will not do. '
+    +'Clients post jobs on the dark web by country; each country has its own categories, language, money, politics and terrain. Everyone on the crew goes on every job, if they can get in and the job doesn\'t hit one of their limits. '
+    +'Success pays and builds reputation; failure adds heat and gets people hurt or held. Reach 100 reputation and the final score appears.</div>'
+    +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" data-act="scrim">Back to it</button><button class="btn stamp" data-act="newgame">Burn the file · new game</button></div></div>';
   return modalWrap(h+b);
 }
 
@@ -1028,81 +1149,77 @@ function screenTitle(){
   const has=hasSave();
   const redact=w=>'<span class="redacted">'+"█".repeat(w)+'</span>';
   return '<div class="wrap"><div class="hero">'
-    +'<div class="eyebrow">Case file · Classified</div>'
-    +'<h1>The&nbsp;<b>Crew</b></h1>'
-    +'<p class="tagline">Recruit them from every corner of the map. Cross every border. Trust no cut you didn\'t count. Assemble the crew and pull the jobs the world will never pin on you.</p>'
-    +'</div>'
-    +'<div class="filecard panel"><div class="panel-h"><h2>Open a Dossier</h2><span class="kicker">400+ operatives on file</span></div>'
+    +'<div class="eyebrow">Case file · Classified</div><h1>The Crew</h1>'
+    +'<p class="tagline">Five seats. Five thousand files. Clients on the dark web, jobs in every country, and a border between you and each one. Know your crew, or the job will teach you.</p></div>'
+    +'<div class="filecard panel"><div class="panel-h"><h2>Open a Dossier</h2><span class="kicker">5,000 operatives on file</span></div>'
     +'<div class="panel-b"><div class="mono" style="font-size:13px;line-height:1.7;color:var(--ink-2)">'
-      +'You are the name at the top of the chart. Everyone below is '+redact(6)+' — a nationality, a passport, a set of hands, a price, and a secret. '
+      +'You are the name at the top of the chart. Everyone below is '+redact(6)+' — a passport, a set of hands, a history, a price, and a secret. '
       +'Some of them are '+redact(9)+'. Your job is to know which, before the border does.</div>'
-    +'<hr class="rule"><div style="display:flex;gap:10px;flex-wrap:wrap">'
-      +'<button class="btn stamp" data-act="begin">New game →</button>'
-      +(has?'<button class="btn ghost" data-act="continue">Continue last game</button>':'')
-    +'</div></div></div>'
+    +'<hr class="rule"><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn stamp" data-act="begin">New game →</button>'+(has?'<button class="btn ghost" data-act="continue">Continue last game</button>':'')+'</div></div></div>'
     +footNote()+'</div>';
 }
-
+function rollDraftProfile(){
+  const rng=freshRng();
+  const nat=COUNTRY_BY_NAME[draft.nat];
+  draft.profile=genProfile(rng,nat,draft.gender,{tech:draft.tech,role:draft.role});
+}
 function screenCreate(){
   if(!draft){
     const r=freshRng();
-    draft={name:"",gender:"M",nat:pick(r,NATS),avseed:ri(r,1,1e9)};
+    draft={name:"",gender:"M",nat:pick(r,COUNTRIES).name,role:"commander",tech:pick(r,TECHS).k,avseed:ri(r,1,1e9),profile:null};
+    rollDraftProfile();
   }
-  const natOpts=NATS.map(n=>'<option value="'+esc(n.name)+'"'+(draft.nat.name===n.name?" selected":"")+'>'+n.flag+' '+esc(n.name)+' · P'+n.tier+'</option>').join("");
-  const g=(v,l)=>'<button class="genbtn'+(draft.gender===v?" on":"")+'" data-act="draft-gender" data-v="'+v+'">'+l+'</button>';
+  const p=draft.profile;
+  const natOpts=COUNTRIES.map(n=>'<option value="'+esc(n.name)+'"'+(draft.nat===n.name?" selected":"")+'>'+n.flag+' '+esc(n.name)+' · P'+n.tier+'</option>').join("");
+  const techOpts=TECHS.map(t=>'<option value="'+t.k+'"'+(draft.tech===t.k?" selected":"")+'>'+t.l+'</option>').join("");
+  const g=(v,l,act,key)=>'<button class="genbtn'+(draft[key]===v?" on":"")+'" data-act="'+act+'" data-v="'+v+'">'+l+'</button>';
+  const fake={attrs:p.attrs,edu:p.edu,jail:p.jail,streets:p.streets,know:p.know,langs:p.langs,limits:p.limits};
   return '<div class="wrap"><div class="hero" style="padding:34px 0 22px"><div class="eyebrow">New dossier</div><h1 style="font-size:clamp(38px,10vw,74px)">Who are you?</h1></div>'
-    +'<div class="panel" style="max-width:760px;margin:0 auto"><div class="panel-b">'
-    +'<div class="create-grid">'
-      +'<div><div class="bigav">'+avatar(draft.avseed,draft.gender)+'</div>'
-        +'<div style="text-align:center;margin-top:10px"><button class="btn ghost sm" data-act="reroll-av">↻ New likeness</button></div></div>'
+    +'<div class="panel" style="max-width:820px;margin:0 auto"><div class="panel-b"><div class="create-grid">'
+      +'<div><div class="bigav">'+avatar(draft.avseed,draft.gender)+'</div><div style="text-align:center;margin-top:10px"><button class="btn ghost sm" data-act="reroll-av">↻ New likeness</button></div></div>'
       +'<div>'
-        +'<div class="field" style="margin-bottom:14px"><label for="pname">Alias</label><input type="text" id="pname" maxlength="22" value="'+esc(draft.name)+'" placeholder="e.g. Vera Kessler" autocomplete="off"></div>'
-        +'<div class="field" style="margin-bottom:14px"><label>Sex</label><div class="swatchrow">'+g("M","Male")+g("F","Female")+'</div></div>'
-        +'<div class="field" style="margin-bottom:14px"><label for="pnat">Nationality · your passport</label><select id="pnat">'+natOpts+'</select>'
-          +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">A stronger passport opens more of the map. A weaker one is who you already are.</div></div>'
-        +'<hr class="rule"><div style="display:flex;gap:10px;flex-wrap:wrap">'
-          +'<button class="btn ghost" data-act="to-title">← Back</button>'
-          +'<button class="btn stamp" data-act="confirm-create" '+(draft.name.trim()?"":"disabled")+'>Assemble the crew →</button></div>'
-      +'</div>'
-    +'</div></div></div>'+footNote()+'</div>';
+        +'<div class="field" style="margin-bottom:12px"><label for="pname">Alias</label><input type="text" id="pname" maxlength="22" value="'+esc(draft.name)+'" placeholder="e.g. Vera Kessler" autocomplete="off"></div>'
+        +'<div class="field" style="margin-bottom:12px"><label>Sex</label><div class="swatchrow">'+g("M","Male","draft-gender","gender")+g("F","Female","draft-gender","gender")+'</div></div>'
+        +'<div class="field" style="margin-bottom:12px"><label>Role</label><div class="swatchrow">'+g("commander","Commander","draft-role","role")+g("soldier","Soldier","draft-role","role")+'</div>'
+          +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:4px">A crew needs exactly one commander in the field. Two argue; none drifts.</div></div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
+          +'<div class="field"><label for="pnat">Nationality · passport</label><select id="pnat">'+natOpts+'</select></div>'
+          +'<div class="field"><label for="ptech">Technique</label><select id="ptech">'+techOpts+'</select></div></div>'
+        +'<div class="kicker">Your file</div><div class="rolled">'
+          +'<div class="attrs" style="padding:0 0 6px;grid-template-columns:1fr 1fr">'+attrRow(fake)+'</div>'
+          +'<div class="mono" style="font-size:11px;line-height:1.6;color:var(--ink-2)"><b>'+EDU[p.edu]+'</b> · jail '+yrs(p.jail)+' · streets '+yrs(p.streets)+'<br>Knows '+p.know.join(", ")+' · Speaks '+p.langs.join(", ")
+          +(p.limits.length?'<br><span style="color:var(--stamp)">'+p.limits.map(k=>LIMIT_BY_K[k].l).join(" · ")+'</span>':'<br>No known limits')+'</div>'
+          +'<div style="margin-top:8px"><button class="btn ghost sm" data-act="reroll-profile">↻ Another life</button></div></div>'
+        +'<hr class="rule"><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn ghost" data-act="to-title">← Back</button>'
+          +'<button class="btn stamp" data-act="confirm-create" '+(draft.name.trim()?"":"disabled")+'>Fill the seats →</button></div>'
+      +'</div></div></div></div>'+footNote()+'</div>';
 }
-
 function screenOver(){
   const win=S.over==="win";
   const col=win?"var(--good)":"var(--stamp)";
-  return '<div class="wrap"><div class="hero" style="padding:60px 0 30px">'
-    +'<div class="eyebrow">'+(win?"Case closed":"The file is burned")+'</div>'
+  return '<div class="wrap"><div class="hero" style="padding:60px 0 30px"><div class="eyebrow">'+(win?"Case closed":"The file is burned")+'</div>'
     +'<h1 style="color:'+col+'">'+(win?"You are<br>The Crew":"Game<br>Over")+'</h1>'
-    +'<p class="tagline">'+(win
-        ?'Seven cities, one night. The score cleared, and the name at the top of the chart was never spoken aloud. '+esc(S.player.n)+' walks away, and the crew walks too.'
-        :'The heat won, the loyalty didn\'t hold, and the float ran dry. Somewhere a detective closes a folder with your alias on the tab.')+'</p></div>'
-    +'<div class="panel" style="max-width:520px;margin:0 auto"><div class="panel-b">'
-      +'<div class="num-grid">'
-        +'<div class="b"><div class="k">Weeks run</div><div class="v num">'+S.week+'</div></div>'
-        +'<div class="b"><div class="k">Notoriety</div><div class="v num">'+S.rep+'</div></div>'
-        +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div>'
-      +'</div><hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div>'
-    +'</div></div>'+footNote()+'</div>';
+    +'<p class="tagline">'+(win?'The score cleared, and the name at the top of the chart was never spoken aloud. '+esc(S.player.n)+' walks away, and the crew walks too.'
+      :'The heat won, the loyalty didn\'t hold, and the float ran dry. Somewhere a detective closes a folder with your alias on the tab.')+'</p></div>'
+    +'<div class="panel" style="max-width:520px;margin:0 auto"><div class="panel-b"><div class="num-grid">'
+      +'<div class="b"><div class="k">Weeks run</div><div class="v num">'+S.week+'</div></div>'
+      +'<div class="b"><div class="k">Reputation</div><div class="v num">'+S.rep+'</div></div>'
+      +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
+    +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-
-function footNote(){
-  return '<div class="foot-note">THE CREW · a work of fiction. Every operative, passport and job is invented.<br>Black ink, white paper, and a great deal of nerve.</div>';
-}
+function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve.</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
 function bind(){
   const q=document.getElementById("q");
-  if(q){q.oninput=()=>{S.filter.q=q.value;rerenderKeepingSearch();};}
-  const fs=document.getElementById("fspec");if(fs)fs.onchange=()=>{S.filter.spec=fs.value;render();};
-  const so=document.getElementById("fsort");if(so)so.onchange=()=>{S.filter.sort=so.value;render();};
+  if(q){q.oninput=()=>{S.filter.q=q.value;S.shown=30;const v=q.value;render();const q2=document.getElementById("q");if(q2){q2.focus();q2.setSelectionRange(v.length,v.length);}};}
+  const sel=(id,key)=>{const el=document.getElementById(id);if(el)el.onchange=()=>{S.filter[key]=el.value;S.shown=30;render();};};
+  sel("ftech","tech");sel("frole","role");sel("fnat","nat");sel("fsort","sort");
   const pn=document.getElementById("pname");if(pn)pn.oninput=()=>{draft.name=pn.value;const btn=document.querySelector('[data-act=confirm-create]');if(btn)btn.disabled=!draft.name.trim();};
-  const pnat=document.getElementById("pnat");if(pnat)pnat.onchange=()=>{draft.nat=NATS.find(n=>n.name===pnat.value)||draft.nat;};
+  const pnat=document.getElementById("pnat");if(pnat)pnat.onchange=()=>{draft.nat=pnat.value;rollDraftProfile();showCreate();};
+  const pt=document.getElementById("ptech");if(pt)pt.onchange=()=>{draft.tech=pt.value;rollDraftProfile();showCreate();};
 }
-function rerenderKeepingSearch(){
-  const val=S.filter.q;render();
-  const q=document.getElementById("q");if(q){q.focus();q.value=val;q.setSelectionRange(val.length,val.length);}
-}
-function showCreate(){root.innerHTML=screenCreate();bind();const pn=document.getElementById("pname");if(pn&&!draft.name)pn.focus();}
+function showCreate(){root.innerHTML=screenCreate();bind();}
 
 document.addEventListener("click",e=>{
   const t=e.target.closest("[data-act]");if(!t)return;
@@ -1112,22 +1229,20 @@ document.addEventListener("click",e=>{
     case "to-title": draft=null; render(); break;
     case "continue": if(load())render(); break;
     case "draft-gender": draft.gender=v; showCreate(); break;
+    case "draft-role": draft.role=v; rollDraftProfile(); showCreate(); break;
     case "reroll-av": draft.avseed=ri(freshRng(),1,1e9); showCreate(); break;
+    case "reroll-profile": rollDraftProfile(); showCreate(); break;
     case "confirm-create": {
       const nm=(draft.name||"").trim(); if(!nm)break;
-      newGame({n:nm,gender:draft.gender,nat:draft.nat,avseed:draft.avseed});
-      draft=null; render(); break;
+      const player=Object.assign({id:"YOU",isPlayer:true,n:nm,first:nm.split(" ")[0],gender:draft.gender,nat:draft.nat,avseed:draft.avseed,status:"crew",cut:0,upkeep:0,loyalty:100,greed:0,mole:false,vetted:true,vetFlag:false,limits:[]},draft.profile);
+      newGame(player); draft=null; render(); break;
     }
     case "tab": S.tab=k; S.modal=null; render(); window.scrollTo(0,0); break;
     case "menu": S.modal={type:"menu"}; render(); break;
-    case "scrim":
-      if(e.target===t||t.classList.contains("x")||t.classList.contains("btn")){S.modal=null;S.assign=[];render();}
-      break;
+    case "scrim": if(e.target===t||t.classList.contains("x")||t.classList.contains("btn")){S.modal=null;render();} break;
     case "open-recruit": S.modal={type:"recruit",id}; render(); break;
-    case "open-job": S.assign=[]; S.modal={type:"job",id}; render(); break;
-    case "assign":
-      if(S.assign.includes(id))S.assign=S.assign.filter(x=>x!==id);else S.assign.push(id);
-      render(); break;
+    case "open-job": S.modal={type:"job",id}; render(); break;
+    case "more": S.shown+=30; render(); break;
     case "hire": hire(id); break;
     case "vet": vet(id); break;
     case "bonus": bonus(id); break;
@@ -1138,77 +1253,65 @@ document.addEventListener("click",e=>{
   }
 });
 document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"&&S&&S.modal){S.modal=null;S.assign=[];render();return;}
+  if(e.key==="Escape"&&S&&S.modal){S.modal=null;render();return;}
   if(e.key==="Enter"||e.key===" "){
-    const el=document.activeElement;
-    if(!el||!el.closest)return;
-    const row=el.closest(".jobrow,.assignline");
-    if(row){e.preventDefault();row.click();}
+    const el=document.activeElement;if(!el||!el.closest)return;
+    const row=el.closest(".jobrow");if(row){e.preventDefault();row.click();}
   }
 });
 
 function hire(id){
   const c=byId(id);if(!c||c.status!=="available")return;
-  if(crew().length>=CREW_CAP){note("Crew is full ("+CREW_CAP+"). Cut someone loose first.");return;}
+  if(recruits().length>=CREW_SLOTS){note("All four seats are taken. Cut someone loose first.");return;}
   if(S.money<c.fee){note("Not enough for the fee.");return;}
-  S.money-=c.fee;c.status="crew";S.crewIds.push(c.id);
-  logMsg("Hired "+c.n+" — "+SPEC_BY_K[c.spec].l+", "+c.nat.name+" ("+money(c.fee)+").","");
+  S.money-=c.fee;c.status="crew";c._touched=true;S.crewIds.push(c.id);
+  logMsg("Hired "+c.n+" — "+TECH_BY_K[c.tech].l+", "+c.nat+", "+(c.role==="commander"?"commander":"soldier")+" ("+money(c.fee)+").","");
   if(S.modal&&S.modal.type==="recruit")S.modal=null;
   save();render();
 }
 function vet(id){
   const c=byId(id);if(!c||c.vetted||S.money<VET_COST)return;
   S.money-=VET_COST;
-  const sharpest=activeCrew().reduce((s,x)=>Math.max(s,x.attrs.brains),40);
+  const sharpest=field().reduce((s,x)=>Math.max(s,x.attrs.brains),40);
   let flagged=c.mole;
-  if(c.mole&&sharpest<55&&chance(freshRng(),0.35))flagged=false; // a dull crew misses one in three
-  c.vetted=true;c.vetFlag=flagged;
+  if(c.mole&&sharpest<55&&chance(freshRng(),0.35))flagged=false;
+  c.vetted=true;c.vetFlag=flagged;c._touched=true;
   logMsg("Vetted "+c.n+" ("+money(VET_COST)+"). "+(flagged?"Flag raised — informant ties.":"Came back clean."),flagged?"warn":"");
   save();render();
 }
 function bonus(id){
   const c=byId(id);if(!c)return;const cost=bonusCostFor(c);
   if(S.money<cost){note("Can't cover the bonus.");return;}
-  S.money-=cost;c.loyalty=clamp(c.loyalty+14,0,100);
+  S.money-=cost;c.loyalty=clamp(c.loyalty+14,0,100);c._touched=true;
   logMsg("Paid "+c.first+" a "+money(cost)+" bonus. Loyalty up.","good");save();render();
 }
 function drop(id){
   const c=byId(id);if(!c)return;
-  c.status="available";c.loyalty=clamp(c.loyalty-6,0,100);
+  c.status="available";c.loyalty=clamp(c.loyalty-6,0,100);c._touched=true;
   S.crewIds=S.crewIds.filter(x=>x!==id);
   logMsg("Cut "+c.first+" loose.","");checkOver();save();render();
 }
 function doExecute(id){
   const j=S.jobs.find(x=>x.id===id);if(!j)return;
-  const team=S.assign.map(byId).filter(c=>c&&c.status==="crew");
-  if(!team.length)return;
-  const res=executeJob(j,team);
-  S.assign=[];
+  if(!assessJob(j).canRun)return;
+  const res=executeJob(j);
   S.modal={type:"result",data:res};
   render();
 }
 function layLow(){
   S.heat=clamp(S.heat-15,0,120);
   logMsg("Laid low for a week. Heat cooling.","");
-  weekTick(freshRng());
-  refreshJobs(false);
-  S.modal=null;
-  save();render();
+  weekTick(freshRng());refreshJobs(false);S.modal=null;save();render();
 }
 function note(msg){logMsg(msg,"warn");render();}
 
 /* ------------------------------ BOOT ---------------------------------- */
-function start(){
-  if(!S&&hasSave()){/* keep the title screen; the Continue button is there */}
-  render();
-}
 (function boot(){
   try{
     const hot=window.claude&&window.claude.hot;
-    if(hot&&typeof hot.snapshot==="function")hot.snapshot(()=>S?stripState():null);
-    if(hot&&typeof hot.ready==="function"){hot.ready(function(data){if(data&&data.roster){S=data;S.modal=null;S.assign=[];}start();});return;}
-    const data=hot&&hot.data;if(data&&data.roster){S=data;S.modal=null;S.assign=[];}
+    if(hot&&typeof hot.snapshot==="function")hot.snapshot(()=>S?packState():null);
+    if(hot&&typeof hot.ready==="function"){hot.ready(function(){render();});return;}
   }catch(e){}
-  start();
+  render();
 })();
 </script>
