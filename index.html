@@ -52,7 +52,11 @@
   .heatbar.hot>i{background:var(--stamp)}
   .spacer{flex:1 1 auto}
 
-  .tabs{display:flex;border-bottom:2px solid var(--ink);margin:0 0 18px;flex-wrap:wrap}
+  /* The tabs pin under the top bar, so Crew/Jobs/Roster/Log are reachable from anywhere down a
+     long board. The offset is the top bar's real height — it wraps on narrow screens, so a
+     hardcoded number would leave a gap or hide the first row. See syncTopbarH(). */
+  .tabs{position:sticky;top:calc(var(--topbar-h,56px) + env(safe-area-inset-top,0px));z-index:30;
+    background:var(--paper);display:flex;border-bottom:2px solid var(--ink);margin:0 0 18px;flex-wrap:wrap}
   .tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:12px 16px 10px;font-family:var(--f-disp);text-transform:uppercase;letter-spacing:.12em;font-size:14px;color:var(--muted)}
   .tab.on{color:var(--ink);border-color:var(--stamp)}
   .tab .b{font-family:var(--f-mono);font-size:10px;color:var(--muted);margin-left:6px}
@@ -2393,10 +2397,21 @@ function render(){
   else if(S.tab==="log")body=tabLog();
   root.innerHTML=topbar()+'<div class="wrap">'+tabsBar()+body+footNote()+"</div>"+(S.modal?renderModal():"")+chrome();
   bind();
+  syncTopbarH();
   tutMark();
   tickerArm();
   mapArm();
 }
+// The tabs sit under the top bar, which wraps to two rows when the window is narrow. Measure it
+// rather than guessing, on every render and whenever the window changes shape.
+function syncTopbarH(){
+  try{
+    const tb=document.querySelector(".topbar");
+    const h=tb?Math.round(tb.getBoundingClientRect().height):0;
+    if(h)document.documentElement.style.setProperty("--topbar-h",h+"px");
+  }catch(e){}
+}
+try{window.addEventListener("resize",syncTopbarH);}catch(e){}
 function topbar(){
   const hot=S.heat>=70;
   return '<div class="topbar"><div class="topbar-in">'
@@ -3773,7 +3788,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 27 · 15 September 2026";
+const BUILD="build 28 · 15 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */

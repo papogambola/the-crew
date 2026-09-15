@@ -47,7 +47,8 @@ decisions at the end.
   crew has them, red if not — and the tags that trip a crew member's limits. Postings expire.
   Sort the board by best fit, crew needed, trade wanted, fee, heat, difficulty, country or
   expiry. Your crew sits above the board in a strip so a posting can be judged without leaving;
-  keys 1–4 jump between the tabs.
+  keys 1–4 jump between the tabs. **Crew · Jobs · Roster · Log pins under the top bar** and stays
+  there however far down a board you are, so no tab is ever a scroll away.
 - **The map.** Beside the postings, a world map drawn in the same ink — continents and a
   graticule, no borders — with a lit marker on every country that has a posting (and a count
   when there are several). Choose a job and the map zooms to its country, centred and spotlit
@@ -353,7 +354,7 @@ something to fake now by making the numbers bigger.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 27 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 28 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
