@@ -23,7 +23,8 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0}
-  body{
+  /* A PC game has one layout. Below this the window scrolls; nothing rearranges. */
+  body{min-width:960px;
     background:var(--paper);
     color:var(--ink);
     font-family:var(--f-body);
@@ -55,6 +56,14 @@
   /* The tabs pin under the top bar, so Crew/Jobs/Roster/Log are reachable from anywhere down a
      long board. The offset is the top bar's real height — it wraps to two rows in a narrow window,
      so a hardcoded number would leave a gap or hide the first row. See syncTopbarH(). */
+  /* The one screen a phone or tablet ever gets. It is not a layout of the game; it is a door. */
+  .pconly{min-width:0;max-width:640px;margin:0 auto;padding:56px 22px;text-align:center}
+  .pconly h1{font-family:var(--f-logo);font-weight:400;font-size:44px;letter-spacing:.02em;text-transform:uppercase;margin:0 0 6px;line-height:1}
+  .pconly .rule{height:2px;background:var(--ink);margin:16px auto 20px;max-width:120px}
+  .pconly p{font-size:16px;line-height:1.65;margin:0 0 14px}
+  .pconly .k{font-family:var(--f-mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+  .pconly .b{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;color:var(--muted);margin-top:26px}
+
   .tabs{position:sticky;top:var(--topbar-h,56px);z-index:30;
     background:var(--paper);display:flex;border-bottom:2px solid var(--ink);margin:0 0 18px;flex-wrap:wrap}
   .tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:12px 16px 10px;font-family:var(--f-disp);text-transform:uppercase;letter-spacing:.12em;font-size:14px;color:var(--muted)}
@@ -67,7 +76,6 @@
   .panel-b{padding:16px}
   .grid{display:grid;gap:14px}
   .g-hq{grid-template-columns:1.3fr 1fr}
-  @media(max-width:720px){.g-hq{grid-template-columns:1fr}}
 
   .rule{height:1px;background:var(--line);border:0;margin:12px 0}
   .btn{appearance:none;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:var(--f-disp);text-transform:uppercase;letter-spacing:.1em;font-size:13px;padding:9px 16px;transition:.12s}
@@ -137,7 +145,6 @@
   .jobrow .loc{font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-top:2px}
   .jobrow .pay{font-family:var(--f-mono);font-size:15px;text-align:right;font-weight:500}
   .jobrow .meta{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
-  @media(max-width:520px){.jobrow{grid-template-columns:1fr auto}.jobrow .code{display:none}}
   .diffbar{display:inline-flex;gap:2px;vertical-align:middle}
   .diffbar i{width:6px;height:11px;background:var(--paper-2);border:1px solid var(--line-2)}
   .diffbar i.f{background:var(--ink);border-color:var(--ink)}
@@ -187,7 +194,6 @@
   .redacted{background:var(--ink);color:var(--ink);user-select:none}
 
   .create-grid{display:grid;grid-template-columns:288px 1fr;gap:22px;align-items:start}
-  @media(max-width:700px){.create-grid{grid-template-columns:1fr}}
   .bigav{width:100%;max-width:288px;aspect-ratio:200/240;border:2px solid var(--ink);background:#fff;margin:0 auto}
   /* The picture stays put while the ten sliders scroll past it. Choosing a nose you cannot see
      is not choosing anything, and ten parts is taller than a laptop screen. */
@@ -203,7 +209,6 @@
   .faceslide{grid-area:2/1/3/3}
   /* what the trade actually is, the first time anybody reads the word */
   .tradehint{margin-top:6px;font-size:11.5px;line-height:1.6;color:var(--ink-2);border-left:2px solid var(--line);padding-left:9px}
-  @media(max-width:700px){.bigav{max-width:190px}.facecol{padding-top:6px}}
   .faceslide{-webkit-appearance:none;appearance:none;width:100%;height:14px;background:transparent;cursor:pointer;margin:2px 0}
   .faceslide::-webkit-slider-runnable-track{height:12px;background:var(--line-2);border:1px solid var(--line)}
   .faceslide::-moz-range-track{height:12px;background:var(--line-2);border:1px solid var(--line)}
@@ -289,7 +294,6 @@
   .twist h3{font-size:20px;margin:6px 0 4px;text-transform:uppercase;letter-spacing:.05em}
   .twist p{margin:0 0 10px;font-size:14.5px;line-height:1.55}
   .twist-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  @media(max-width:640px){.twist-opts{grid-template-columns:1fr}}
   .twist-opt{text-align:left;font-family:var(--f-mono);font-size:12.5px;line-height:1.45;border:1px solid var(--ink);background:var(--card);color:var(--ink);padding:8px 10px;cursor:pointer;display:flex;gap:8px;align-items:flex-start}
   .twist-opt b{font-family:var(--f-logo);font-size:15px;letter-spacing:.06em;color:var(--stamp);flex:none;width:16px}
   .twist-opt:hover:not(:disabled),.twist-opt:focus-visible{background:var(--ink);color:var(--paper)}
@@ -342,7 +346,6 @@
 
   /* ---- the jobs board: postings left, the map right ---- */
   .jobs-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,1fr);gap:14px;align-items:start}
-  @media(max-width:900px){.jobs-grid{grid-template-columns:1fr}.jobs-right{order:-1}.map-panel{position:static}}
   .map-panel{position:sticky;top:72px}
   .map-svg{width:100%;height:auto;display:block;background:var(--card);overflow:hidden}
   .map-land{fill:var(--paper-2);stroke:var(--ink);stroke-width:1.1px;vector-effect:non-scaling-stroke;stroke-linejoin:round}
@@ -3788,7 +3791,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 29 · 15 September 2026";
+const BUILD="build 30 · 15 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
@@ -4703,7 +4706,50 @@ document.addEventListener("mouseout",e=>{
 });
 let STORAGE_OK=true;
 try{localStorage.setItem("thecrew_probe","1");localStorage.removeItem("thecrew_probe");}catch(e){STORAGE_OK=false;}
+// A phone or a tablet is not a smaller PC, so it is not given a smaller game. It is turned
+// away at the door, before any setting is read and before a sitting is counted.
+//
+// The test is deliberately reluctant: a false "no" locks a paying PC player out of the game,
+// while a phone that slips through merely sees a page it cannot play. So it names devices it
+// is sure of and lets everything else in. A Windows or ChromeOS laptop with a touch screen is
+// a PC and reports itself as one; an iPad is the one device that lies, claiming to be a Mac,
+// and is caught by the touch points no Mac has.
+function mobileDevice(){
+  try{
+    const uad=navigator.userAgentData;
+    if(uad&&typeof uad.mobile==="boolean"&&uad.mobile)return true;
+    const ua=navigator.userAgent||"";
+    if(/Android|iPhone|iPod|iPad|Windows Phone|IEMobile|BlackBerry|BB10|webOS|Opera Mini|Silk|Kindle/i.test(ua))return true;
+    if(/Macintosh/i.test(ua)&&(navigator.maxTouchPoints||0)>2)return true;  // iPadOS 13+
+  }catch(e){}
+  return false;
+}
+function pcOnlyDoor(){
+  const r=document.getElementById("root");
+  if(!r)return;
+  // The game has no viewport tag on purpose — there is no phone layout to lay out. The door is
+  // the one thing a phone must be able to read, so it gets one, and it is let out of the PC
+  // minimum width the board is held to.
+  try{
+    const m=document.createElement("meta");
+    m.name="viewport";m.content="width=device-width,initial-scale=1";
+    document.head.appendChild(m);
+    document.body.style.minWidth="0";
+  }catch(e){}
+  r.innerHTML='<div class="pconly">'
+    +'<div class="k">The Crew</div>'
+    +'<h1>Not on a phone</h1>'
+    +'<div class="rule"></div>'
+    +'<p>This is a game for a computer. It is a board you read across — a world map beside a '
+    +'list of postings, a crew above them, a job running minute by minute — and that does not '
+    +'fold into a hand.</p>'
+    +'<p>Open it on a desktop or a laptop.</p>'
+    +'<div class="b">'+BUILD+'</div>'
+    +'</div>';
+}
+
 (function boot(){
+  if(mobileDevice()){pcOnlyDoor();return;}
   loadSettings();applySettings();
   // a play is a sitting: a return after half an hour away counts as the next one
   try{const now=Date.now();if(!SET.lastSeen||now-SET.lastSeen>PLAY_GAP_MS)SET.plays=(SET.plays||0)+1;SET.lastSeen=now;saveSettings();}catch(e){}

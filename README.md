@@ -354,20 +354,25 @@ something to fake now by making the numbers bigger.
 
 ## What it runs on
 
-**A desktop or laptop browser. There is no phone version and none is planned.** The game is a
-board you read across — a jobs list beside a world map, a crew strip above it, a minute-by-minute
-feed — and that is a wide-screen shape, not a thumb-sized one. Nothing here is built for touch,
-there is no viewport meta tag, and a phone will show a zoomed-out desktop page rather than a
-cramped one.
+**A PC. A desktop or laptop browser, and nothing else.** The game is a board you read across — a
+jobs list beside a world map, a crew strip above it, a job running minute by minute — and that is
+a wide-screen shape. There is no phone version, none is planned, and a phone cannot reach the game
+at all: it gets a door instead, a single page saying to open it on a computer.
 
-The layout does still answer to a **narrow window**, because a half-screen browser is a normal
-desktop thing to do: the top bar wraps to two rows below about 740px, the jobs grid drops the map
-under the board below 900px, and the tab row measures the wrapped bar rather than assuming a
-height. That is a resized window, not a phone.
+**The board has one layout.** It does not rearrange itself for a small window. Below 960px the
+window scrolls sideways and the board keeps its shape, which is what a PC game does; there are no
+small-screen breakpoints left in the stylesheet and nothing is built for touch.
+
+**The door is deliberately reluctant.** A wrong "no" locks a real player out of the game, while a
+phone that slips past merely sees a page it cannot play — so it turns away only devices it is sure
+of: phones and tablets by user agent, and an iPad by the touch points no Mac has, since iPadOS
+claims to be a Mac. A Windows or ChromeOS laptop **with a touch screen is a PC** and plays
+normally. Nine device profiles are driven in a real browser on every change, and five of them are
+computers that must not be stopped.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 29 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 30 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
