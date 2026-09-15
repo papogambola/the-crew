@@ -89,6 +89,16 @@ decisions at the end.
   speeds, Slowest to Fastest, on the report itself and in the office. The field
   roster marks who came back: **GONE** in red on anyone who walked with the money, **TAKEN** on
   anyone the police held, **HURT** on the injured.
+- **And a plan of the job, running with it.** Above the text, the job as a place: a street, a post
+  across it, the way in, the room and the car, drawn in the same ink. Every operator is a disc with
+  their initial, and they **move as the feed names them** — the clock in the top-left corner reading
+  the time of the line on screen, the place the current line happens in lit. Nothing on it is
+  decided separately from the text: each line of the feed is written with the place it happens in
+  and, where it is about one person, who it is about, so **where somebody stands is what their
+  trade is** — the wheelman never leaves the car, the lookout stays on the corner, the forger is at
+  the way in, the safecracker is in the room. The lines after the crew have gone — the morning, the
+  quiet week, the split — name no place and leave the map where it stood. A recruitment trip is a
+  flight and a conversation, so it runs its own feed with no plan of a building.
 - **Standing in for a trade you haven't got.** Take a job that wants a Safecracker with no
   safecracker on the books and somebody spends the week before learning enough of it to try —
   the report says who, by name. If the job comes off, that week is worth a point of brains, and
@@ -407,7 +417,7 @@ computers that must not be stopped.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 33 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 34 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
