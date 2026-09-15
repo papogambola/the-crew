@@ -25,12 +25,11 @@ decisions at the end.
   or soldier by nature; a fee, a cut and weekly upkeep; and things they will not do — cannot
   swim, will not fly, fear of heights, claustrophobic, no violence, won't work nights, banned
   from the EU, wanted in the United States, won't work under authoritarian rule, demands 15%.
-- **Faces.** Every file has a line-art portrait drawn from its seed, and every portrait is one
-  of a countable set of looks: six male hair styles, five kinds of facial hair, glasses, three
-  brow sets, three head widths and a scar make 1,080 male faces; fifteen female hair styles
-  (long, bob, ponytail, curly, pixie, beanie, braid, bun, afro, headscarf, wavy, crop), glasses,
-  earrings, three brow sets, three head widths and a scar make 1,080 female faces. Jaw line and
-  brow weight vary continuously on top, so two faces of the same look are still not identical.
+- **Faces, built part by part.** Every portrait is a set of choices: hair or hat (six styles for
+  a man, fifteen for a woman), face shape, eyebrows, eyes, nose, mouth, ears, glasses, facial
+  hair or earrings, and a scar. A roster file rolls them from its seed. **You** move a slider for
+  each one on the dossier screen, under your picture, which redraws as you go, with **↻ Random**
+  to roll the lot. That is 3,000,000 faces for a man and 4,500,000 for a woman.
 - **49 countries**, each with languages, currency, majority religion, political system,
   economy, terrain, a border rule (open, visa, strict) and **its own subset of the twelve
   job categories** — interception, recovery, extraction, escort, surveillance, infiltration,
@@ -235,7 +234,7 @@ smallest one; none is a decision.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 20 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 21 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
