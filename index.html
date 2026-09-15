@@ -41,7 +41,7 @@
   .kicker{font-family:var(--f-mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
 
   .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:var(--paper);border-bottom:2px solid var(--ink)}
-  .topbar-in{max-width:1060px;margin:0 auto;padding:8px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .topbar-in{max-width:1060px;margin:0 auto;padding:8px 64px 8px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   .brand{font-family:var(--f-logo);font-weight:400;font-size:24px;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;line-height:1}
   .stat{display:flex;flex-direction:column;line-height:1;gap:3px;min-width:72px}
   .stat .l{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
@@ -204,6 +204,26 @@
   .num-grid .b .v{font-family:var(--f-mono);font-size:18px}
   .warnbox{border:1px solid var(--stamp);background:var(--paper);padding:10px 12px;font-family:var(--f-mono);font-size:12px;color:var(--stamp);margin-bottom:12px}
   .sel-help{font-family:var(--f-mono);font-size:11px;color:var(--muted);margin:6px 0 12px}
+
+  /* ---- the burger and the office ---- */
+  .burger{position:fixed;top:calc(env(safe-area-inset-top,0px) + 9px);right:16px;z-index:75;width:40px;height:36px;border:1px solid var(--ink);background:var(--paper);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;padding:0}
+  .burger span{display:block;width:20px;height:2.5px;background:var(--ink)}
+  .burger:hover{background:var(--paper-2)}
+  .office{position:fixed;inset:0;z-index:70;background:var(--paper);overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 24px)}
+  .office-in{max-width:1100px;margin:0 auto}
+  .office-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:4px 56px 10px 0;border-bottom:2px solid var(--ink);margin-bottom:12px}
+  .office-head h2{font-family:var(--f-logo);font-size:28px;letter-spacing:.03em;text-transform:uppercase;font-weight:400}
+  .office-svg{width:100%;height:auto;display:block;border:1px solid var(--line-2);background:#fff}
+  .office-svg :is(path,rect,line,polygon,polyline,ellipse,circle):not(.ns){stroke:var(--ink);stroke-width:2.2px;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+  .office-svg text{font-family:var(--f-mono);fill:var(--ink);stroke:none}
+  .office-label{font-size:16px;font-weight:500;letter-spacing:.08em}
+  .office-small{font-size:12px;letter-spacing:.06em}
+  .office-svg .hot{cursor:pointer}
+  .office-svg .hot:hover :is(rect,path,polygon,ellipse):not(.ns){fill:var(--paper-2)}
+  .office-words{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;font-family:var(--f-mono);font-size:12px}
+  .office-words .grp{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)}
+  .office-words .grp button{appearance:none;border:1px solid var(--ink);background:var(--paper);width:24px;height:24px;font-family:var(--f-mono);padding:0}
+  .above .scrim{z-index:80}
 </style>
 
 <div id="root"></div>
@@ -699,10 +719,16 @@ function assessJob(job){
   const add=(k,v,note)=>{adj+=v;factors.push({k,v,note});};
   if(team.length<job.need)add("Crew short",-22*(job.need-team.length),team.length+" of "+job.need+" can go");
   else add("Crew size",6+Math.min(9,(team.length-job.need)*3),team.length+" in the field");
-  const cmds=team.filter(c=>c.role==="commander");
-  if(!cmds.length)add("No commander",-10,"nobody is running the op");
-  else if(cmds.length===1)add("Commander",cmds[0].cmd,cmds[0].first+" runs it");
-  else add("Too many commanders",-6*(cmds.length-1),cmds.map(c=>c.first).join(", "));
+  // You are the commander. A commander-type recruit chafes under you, but can lead when you can't get in.
+  const youIn=team.some(c=>c.isPlayer);
+  const cmdTypes=team.filter(c=>!c.isPlayer&&c.role==="commander");
+  if(youIn){
+    add("You command",S.player.cmd||5,"your crew, your call");
+    if(cmdTypes.length)add("Commanders under you",-3*cmdTypes.length,cmdTypes.map(c=>c.first).join(", ")+" take orders badly");
+  } else if(cmdTypes.length){
+    const lead=cmdTypes.slice().sort((a,b)=>b.cmd-a.cmd)[0];
+    add("Stand-in leader",Math.max(1,lead.cmd-2),lead.first+" runs it while you stay out");
+  } else add("Leaderless",-10,"you can't get in and nobody else can lead");
   const speaks=team.some(c=>c.langs.some(l=>co.langs.includes(l)));
   if(speaks)add("Language",6,co.langs[0]+" spoken");
   else add("No "+co.langs[0],cat.lang?-14:-8,"nobody speaks it"+(cat.lang?" — this job is all talk":""));
@@ -807,7 +833,7 @@ function weekTick(rng){
     if(rc2.length){
       const n=Math.min(rc2.length,ri(rng,1,2));
       for(let i=0;i<n;i++){const c=rc2[i];c.status="jailed";c.out=S.week+ri(rng,4,7);S.crewIds=S.crewIds.filter(id=>id!==c.id);}
-      logMsg("RAID. The heat boiled over — "+n+" of your crew taken.","bad",true);
+      logMsg("RAID. The heat boiled over — "+n+" of your crew taken.","bad",true);sfx("siren");
     }
     S.money=Math.round(S.money*0.7);
     S.heat=58;
@@ -841,7 +867,7 @@ function load(){
     const roster=buildRoster(d.seed);
     const ov=d.ov||{};
     roster.forEach(c=>{const o=ov[c.id];if(o)Object.assign(c,o);});
-    delete d.ov;d.roster=roster;d.modal=null;d.player.isPlayer=true;d.player.status="crew";
+    delete d.ov;d.roster=roster;d.modal=null;d.player.isPlayer=true;d.player.status="crew";d.player.role="commander";if(!d.player.cmd)d.player.cmd=5;
     S=d;return true;
   }catch(e){return false;}
 }
@@ -863,14 +889,14 @@ function yrs(n){return n===1?"1 yr":n+" yrs";}
 const root=document.getElementById("root");
 let draft=null;
 function render(){
-  if(!S){root.innerHTML=screenTitle();bind();return;}
-  if(S.over){root.innerHTML=screenOver();bind();return;}
+  if(!S){root.innerHTML=screenTitle()+chrome();bind();return;}
+  if(S.over){root.innerHTML=screenOver()+chrome();bind();return;}
   let body="";
   if(S.tab==="crew")body=tabCrew();
   else if(S.tab==="jobs")body=tabJobs();
   else if(S.tab==="roster")body=tabRoster();
   else if(S.tab==="log")body=tabLog();
-  root.innerHTML=topbar()+'<div class="wrap">'+tabsBar()+body+footNote()+"</div>"+(S.modal?renderModal():"");
+  root.innerHTML=topbar()+'<div class="wrap">'+tabsBar()+body+footNote()+"</div>"+(S.modal?renderModal():"")+chrome();
   bind();
 }
 function topbar(){
@@ -883,7 +909,6 @@ function topbar(){
     +'<div class="heatwrap"><div class="stat" style="min-width:0"><span class="l">Heat '+Math.round(S.heat)+(S.heat>=100?" ⚠":"")+'</span>'
       +'<div class="heatbar'+(hot?" hot":"")+'"><i style="width:'+clamp(S.heat,0,100)+'%"></i></div></div></div>'
     +'<div class="spacer"></div>'
-    +'<button class="btn ghost sm" data-act="menu">Menu</button>'
     +'</div></div>';
 }
 function tabsBar(){
@@ -931,10 +956,8 @@ function tabCrew(){
   for(let i=recruits().length;i<CREW_SLOTS;i++){
     cards.push('<div class="id slot"><div>Seat '+(i+2)+' of 5 — empty</div><button class="btn sm" data-act="tab" data-k="roster">Open the roster</button></div>');
   }
-  const cmds=field().filter(c=>c.role==="commander").length;
-  let note="";
-  if(cmds===0)note='<div class="warnbox">No commander in the crew. Every job runs at −10 until someone is in charge.</div>';
-  else if(cmds>1)note='<div class="warnbox">'+cmds+' commanders. Too many people in charge costs −6 each beyond the first.</div>';
+  const ct=recruits().filter(c=>c.role==="commander");
+  const note=ct.length?'<div class="warnbox" style="color:var(--ink-2);border-color:var(--line-2)">'+ct.map(c=>c.first).join(", ")+(ct.length>1?" are commanders":" is a commander")+' by nature — takes your orders badly (−3 each on a job you lead), but can run the crew on a job you can\'t get into.</div>':'';
   return note+'<div class="panel-h" style="border:0;padding:0 0 6px"><h2>The Crew</h2><span class="kicker">five seats · everyone goes on every job</span></div>'
     +'<div class="cards">'+cards.join("")+'</div>';
 }
@@ -1020,7 +1043,6 @@ function renderModal(){
   if(m.type==="job")return modalJob(m.id);
   if(m.type==="recruit")return modalRecruit(m.id);
   if(m.type==="result")return modalResult(m.data);
-  if(m.type==="menu")return modalMenu();
   return "";
 }
 function modalWrap(inner){return '<div class="scrim" data-act="scrim"><div class="modal" role="dialog" aria-modal="true">'+inner+'</div></div>';}
@@ -1081,16 +1103,16 @@ function modalRecruit(id){
   const nat=natOf(c);
   const t=TECH_BY_K[c.tech];
   const canHire=recruits().length<CREW_SLOTS&&c.status==="available"&&S.money>=c.fee;
-  const vetLine=c.vetted
+  const vetLine=c.isPlayer?"":c.vetted
     ?(c.vetFlag?'<div class="warnbox">Vetting flagged ties to an informant network. Hire this one and the heat walks in with the luggage.</div>'
                :'<div class="mono" style="font-size:12px;color:var(--good)">✓ Vetted clean. No known ties — as far as money can tell.</div>')
     :'<div class="mono" style="font-size:12px;color:var(--muted)">Not vetted. A stranger\'s loyalty is a guess. Vetting ('+money(VET_COST)+') reads this file against your crew\'s instincts — a sharper crew catches more.</div>';
-  const h='<div class="modal-h"><div><div class="kicker">Personnel file · '+c.id+'</div><h2 style="font-size:22px;margin-top:4px">'+esc(c.n)+'</h2></div><button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
+  const h='<div class="modal-h"><div><div class="kicker">'+(c.isPlayer?"Your file":"Personnel file · "+c.id)+'</div><h2 style="font-size:22px;margin-top:4px">'+esc(c.n)+'</h2></div><button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
   const b='<div class="modal-b"><div style="display:flex;gap:16px;flex-wrap:wrap">'
     +'<div style="width:130px;flex:none"><div style="border:1px solid var(--ink);background:#fff;aspect-ratio:100/120;max-width:100%">'+avatar(c.avseed,c.gender)+'</div>'
       +'<div class="mono" style="font-size:10px;color:var(--muted);text-align:center;margin-top:4px">'+nat.flag+' '+esc(nat.name)+'</div></div>'
     +'<div style="flex:1;min-width:220px">'
-      +'<div class="kv"><span class="k">Role</span><span>'+(c.role==="commander"?"Commander — runs the op (+"+c.cmd+")":"Soldier — does the work")+'</span>'
+      +'<div class="kv"><span class="k">Role</span><span>'+(c.isPlayer?"Commander — it's your crew (+"+c.cmd+")":c.role==="commander"?"Commander by nature — takes orders badly, can lead if you can't get in (+"+c.cmd+")":"Soldier — does the work")+'</span>'
         +'<span class="k">Technique</span><span>'+t.l+' — '+t.d+'</span>'
         +'<span class="k">Experience</span><span>'+EXP[c.exp-1]+' '+pips(c.exp)+'</span>'
         +'<span class="k">Education</span><span>'+EDU[c.edu]+'</span>'
@@ -1101,12 +1123,12 @@ function modalRecruit(id){
         +'<span class="k">Passport</span><span>'+esc(nat.name)+' · tier '+nat.tier+' ('+TIER_WORD[nat.tier]+')</span>'
         +'<span class="k">Sex</span><span>'+(c.gender==="M"?"Male":"Female")+'</span>'
         +'<span class="k">Cannot</span><span>'+(c.limits.length?c.limits.map(k=>'<span style="color:var(--stamp)">'+LIMIT_BY_K[k].l+'</span>').join(", "):"— no known limits")+'</span>'
-        +'<span class="k">Fee</span><span class="num">'+money(c.fee)+' one-off</span>'
+        +(c.isPlayer?'':'<span class="k">Fee</span><span class="num">'+money(c.fee)+' one-off</span>'
         +'<span class="k">Cut</span><span class="num">'+Math.round(c.cut*100)+'% of each score</span>'
-        +'<span class="k">Upkeep</span><span class="num">'+money(c.upkeep)+' a week</span></div>'
+        +'<span class="k">Upkeep</span><span class="num">'+money(c.upkeep)+' a week</span>')+'</div>'
       +'<div class="attrs" style="padding:10px 0 0;grid-template-columns:1fr 1fr">'+attrRow(c)+'</div>'
     +'</div></div>'
-    +'<hr class="rule">'+vetLine
+    +(vetLine?'<hr class="rule">'+vetLine:'')
     +'<hr class="rule"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">'
       +'<button class="btn ghost" data-act="scrim">Close</button>'
       +(c.vetted?'':'<button class="btn ghost" data-act="vet" data-id="'+c.id+'" '+(S.money>=VET_COST?"":"disabled")+'>Vet · '+money(VET_COST)+'</button>')
@@ -1133,15 +1155,168 @@ function modalResult(d){
   return modalWrap(h+'<div class="modal-b">'+nums+ev+roster+'<hr class="rule"><div style="display:flex;justify-content:flex-end"><button class="btn" data-act="scrim">Continue →</button></div></div>');
 }
 
-function modalMenu(){
-  const h='<div class="modal-h"><h2>Menu</h2><button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
-  const b='<div class="modal-b"><div class="mono" style="font-size:12px;color:var(--muted);line-height:1.7">THE CREW · a paper game of global crime. You are the criminals; the clients are worse.<br>Progress saves itself in this browser.</div>'
-    +'<hr class="rule"><div class="mono" style="font-size:12px;line-height:1.8">'
-    +'<b>How it works.</b> You and four others. Pick them from 5,000 files — each has a passport, five attributes, a technique, knowledge, education, time in jail, time on the streets, a role, and things they will not do. '
-    +'Clients post jobs on the dark web by country; each country has its own categories, language, money, politics and terrain. Everyone on the crew goes on every job, if they can get in and the job doesn\'t hit one of their limits. '
-    +'Success pays and builds notoriety; failure adds heat and gets people hurt or held. Reach 100 notoriety and the final score appears.</div>'
-    +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" data-act="scrim">Back to it</button><button class="btn stamp" data-act="newgame">Burn the file · new game</button></div></div>';
-  return modalWrap(h+b);
+/* ----------------------------- SETTINGS ------------------------------- */
+// Settings live outside the game save, so they survive a new game.
+const SET_KEY="thecrew_settings_v1";
+const SET={sound:true,volume:0.6,bright:100,lang:"en"};
+function loadSettings(){try{const r=localStorage.getItem(SET_KEY);if(r)Object.assign(SET,JSON.parse(r));}catch(e){}}
+function saveSettings(){try{localStorage.setItem(SET_KEY,JSON.stringify(SET));}catch(e){}}
+function applySettings(){
+  const b=clamp(SET.bright,55,100)/100;
+  const dim=hex=>{const n=parseInt(hex.slice(1),16);return "#"+[(n>>16)&255,(n>>8)&255,n&255].map(v=>Math.round(v*b).toString(16).padStart(2,"0")).join("");};
+  const st=document.documentElement.style;
+  st.setProperty("--paper",dim("#f6f4ee"));st.setProperty("--paper-2",dim("#efece3"));st.setProperty("--card",dim("#fbfaf6"));st.setProperty("--line",dim("#d9d5c8"));
+}
+function setVolume(v){SET.volume=clamp(Math.round(v*100)/100,0,1);saveSettings();sfx("click");render();}
+function setBright(b){SET.bright=clamp(Math.round(b),55,100);saveSettings();applySettings();render();}
+
+/* ------------------------------ SOUND --------------------------------- */
+// A handful of synthesised sounds; no files. Nothing plays until the first click.
+let AC=null;
+function ac(){
+  if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){AC=null;}}
+  if(AC&&AC.state==="suspended")AC.resume();
+  return AC;
+}
+function tone(freq,dur,type,gain,when,slide){
+  const c=ac();if(!c)return;
+  const t0=c.currentTime+(when||0);
+  const o=c.createOscillator(),g=c.createGain();
+  o.type=type||"sine";o.frequency.setValueAtTime(freq,t0);
+  if(slide)o.frequency.exponentialRampToValueAtTime(slide,t0+dur);
+  g.gain.setValueAtTime(0.0001,t0);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002,gain*SET.volume),t0+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  o.connect(g);g.connect(c.destination);o.start(t0);o.stop(t0+dur+0.05);
+}
+function sfx(name){
+  if(!SET.sound||SET.volume<=0)return;
+  try{
+    switch(name){
+      case "click": tone(1200,0.03,"square",0.05,0); break;
+      case "open": tone(440,0.08,"triangle",0.08,0); tone(660,0.08,"triangle",0.06,0.06); break;
+      case "coin": tone(880,0.07,"sine",0.12,0); tone(1320,0.12,"sine",0.12,0.07); break;
+      case "stamp": tone(140,0.12,"sine",0.5,0,60); tone(90,0.2,"triangle",0.3,0.02,40); break;
+      case "good": sfx("stamp"); tone(660,0.1,"sine",0.1,0.15); tone(990,0.18,"sine",0.1,0.25); break;
+      case "bad": sfx("stamp"); tone(220,0.25,"sawtooth",0.08,0.15,110); break;
+      case "siren": for(let i=0;i<3;i++){tone(700,0.18,"square",0.06,i*0.36);tone(500,0.18,"square",0.06,i*0.36+0.18);} break;
+    }
+  }catch(e){}
+}
+
+/* ------------------------------ THE OFFICE ---------------------------- */
+// Pause and settings, drawn as the boss's office. Every object on the desk does something.
+const UI={office:false,panel:null,confirmNew:false};
+function chrome(){
+  return '<button class="burger" data-act="office" aria-label="The office — pause and settings (Esc)" title="The office (Esc)"><span></span><span></span><span></span></button>'
+    +(UI.office?officeHTML():"");
+}
+function officeSVG(){
+  const K="#111010";
+  const on=SET.sound, vol=SET.volume;
+  const ang=(-135+270*vol-90)*Math.PI/180;
+  const bx=1035+135*((clamp(SET.bright,55,100)-55)/45);
+  let dots="";for(let y=580;y<=634;y+=9)for(let x=128;x<=194;x+=9)dots+='<circle class="ns" cx="'+x+'" cy="'+y+'" r="2.2" fill="'+K+'"/>';
+  let ticks="";for(let i=0;i<=8;i++){const a=(-135+i*33.75-90)*Math.PI/180;ticks+='<line x1="'+(320+27*Math.cos(a)).toFixed(1)+'" y1="'+(614+27*Math.sin(a)).toFixed(1)+'" x2="'+(320+31*Math.cos(a)).toFixed(1)+'" y2="'+(614+31*Math.sin(a)).toFixed(1)+'"/>';}
+  let rays="";for(let d=0;d<360;d+=45){const a=d*Math.PI/180;rays+='<line x1="'+(1005+10*Math.cos(a)).toFixed(1)+'" y1="'+(474+10*Math.sin(a)).toFixed(1)+'" x2="'+(1005+13*Math.cos(a)).toFixed(1)+'" y2="'+(474+13*Math.sin(a)).toFixed(1)+'"/>';}
+  return '<svg class="office-svg" viewBox="0 0 1700 900" role="img" aria-label="The boss\'s office: a window, a chair, a radio with a sound switch and volume knob, a language paper, a display monitor, a controls book, the exit door, and your hat on the hook">'
+    +'<rect class="ns" x="0" y="0" width="1700" height="900" fill="#ffffff"/>'
+    // window with the skyline
+    +'<g><rect x="60" y="30" width="370" height="350" fill="#fff"/><line x1="245" y1="30" x2="245" y2="380"/>'
+    +'<polyline fill="none" points="75,378 110,378 110,255 165,255 165,378 190,378 190,185 215,185 215,150 232,118 249,150 249,185 262,185 262,378 320,378 320,240 380,240 380,378 425,378"/>'
+    +'<rect x="42" y="380" width="405" height="22" fill="#fff"/></g>'
+    // framed picture
+    +'<g><rect x="975" y="140" width="175" height="180" fill="#fff"/><rect x="990" y="155" width="145" height="150" fill="#fff"/>'
+    +'<polyline fill="none" points="1000,290 1015,290 1015,215 1035,215 1035,195 1045,195 1045,215 1060,215 1060,290 1075,290 1075,240 1095,240 1095,290 1105,290 1105,205 1120,205 1120,290 1128,290"/><line x1="998" y1="296" x2="1128" y2="296"/></g>'
+    // the door
+    +'<g class="hot" data-act="off-exit"><title>Exit — leave the office, or burn the file</title>'
+    +'<rect x="1250" y="50" width="300" height="650" fill="#fff"/><rect x="1272" y="72" width="262" height="628" fill="#fff"/>'
+    +'<rect x="1302" y="112" width="200" height="245" fill="#fff"/><rect x="1302" y="410" width="200" height="240" fill="#fff"/>'
+    +'<rect x="1398" y="392" width="72" height="28" fill="#fff"/><text x="1434" y="412" text-anchor="middle" class="office-label">EXIT</text>'
+    +'<rect x="1500" y="395" width="36" height="14" rx="7" fill="#fff"/><circle class="ns" cx="1510" cy="402" r="4" fill="'+K+'"/></g>'
+    // the hat on the hook
+    +'<g class="hot" data-act="off-hat"><title>'+(S?"Your file":"Your file — start a game first")+'</title>'
+    +'<path d="M1610 262 q-12 14 -2 28 q10 10 20 0" fill="none"/>'
+    +'<path d="M1576 236 C1580 198 1612 186 1636 206 L1646 236 Z" fill="#fff"/>'
+    +'<ellipse cx="1606" cy="240" rx="48" ry="12" fill="#fff" transform="rotate(-18 1606 240)"/></g>'
+    // the chair, behind the desk
+    +'<g><rect x="560" y="320" width="240" height="250" rx="44" fill="#fff"/><path d="M600 340 q80 -14 160 0" fill="none"/><line x1="680" y1="345" x2="680" y2="560"/>'
+    +'<rect x="528" y="546" width="62" height="30" rx="10" fill="#fff"/><rect x="770" y="546" width="62" height="30" rx="10" fill="#fff"/></g>'
+    // the desk
+    +'<g><polygon points="30,700 1520,700 1300,590 300,590" fill="#fff"/><rect x="30" y="700" width="1490" height="26" fill="#fff"/>'
+    +'<line x1="62" y1="726" x2="62" y2="900"/><line x1="1490" y1="726" x2="1490" y2="900"/></g>'
+    // the lamp
+    +'<g><ellipse cx="412" cy="628" rx="44" ry="11" fill="#fff"/><line x1="412" y1="617" x2="402" y2="470"/><path d="M398 472 Q470 410 548 466 Z" fill="#fff"/></g>'
+    // the radio: sound switch
+    +'<g class="hot" data-act="off-sound"><title>Sound '+(on?"on — click to switch off":"off — click to switch on")+'</title>'
+    +'<polyline fill="none" points="100,548 118,534 372,520 355,548"/><rect x="100" y="548" width="255" height="112" rx="6" fill="#fff"/>'
+    +'<rect x="120" y="572" width="82" height="70" rx="4" fill="#fff"/>'+dots
+    +'<text x="250" y="580" text-anchor="middle" class="office-label">SOUND</text>'
+    +'<rect x="236" y="590" width="14" height="34" rx="7" fill="#fff"/><circle class="ns" cx="243" cy="'+(on?599:615)+'" r="5" fill="'+K+'"/>'
+    +'<text x="258" y="603" class="office-small">ON</text><text x="258" y="627" class="office-small">OFF</text></g>'
+    // the radio: volume knob
+    +'<g class="hot" data-act="off-vol" id="volKnob"><title>Volume '+Math.round(vol*100)+'% — click the left of the knob to lower, the right to raise</title>'
+    +'<text x="320" y="578" text-anchor="middle" class="office-label">VOLUME</text>'
+    +'<circle cx="320" cy="614" r="23" fill="#fff"/>'+ticks
+    +'<line x1="320" y1="614" x2="'+(320+18*Math.cos(ang)).toFixed(1)+'" y2="'+(614+18*Math.sin(ang)).toFixed(1)+'" style="stroke-width:4px"/></g>'
+    // the paper: language
+    +'<g class="hot" data-act="off-lang"><title>Language</title>'
+    +'<polygon points="672,618 842,610 852,662 682,670" fill="#fff"/><text x="762" y="640" text-anchor="middle" class="office-label">LANGUAGE</text>'
+    +'<line x1="712" y1="650" x2="812" y2="647"/><line x1="720" y1="658" x2="800" y2="655"/></g>'
+    // the monitor: display brightness
+    +'<g class="hot" data-act="off-bright"><title>Brightness '+SET.bright+'% — click along the slider</title>'
+    +'<rect x="960" y="400" width="236" height="160" rx="5" fill="#fff"/><rect x="972" y="411" width="212" height="138" fill="#fff"/>'
+    +'<text x="1078" y="444" text-anchor="middle" class="office-label">DISPLAY</text>'
+    +'<circle cx="1005" cy="474" r="7" fill="#fff"/>'+rays
+    +'<rect id="brightTrack" class="ns" x="1030" y="462" width="145" height="24" fill="transparent"/><line x1="1035" y1="474" x2="1170" y2="474"/><rect x="'+(bx-6).toFixed(1)+'" y="467" width="12" height="14" fill="#fff"/>'
+    +'<rect x="1065" y="560" width="26" height="20" fill="#fff"/><rect x="1030" y="580" width="96" height="12" rx="4" fill="#fff"/></g>'
+    // the book: controls
+    +'<g class="hot" data-act="off-controls"><title>Controls</title>'
+    +'<polygon points="960,605 1150,598 1250,650 1060,660" fill="#fff"/><polygon points="1060,660 1250,650 1250,674 1060,684" fill="#fff"/>'
+    +'<polygon points="1152,654 1242,650 1242,668 1152,672" fill="#fff"/><text x="1197" y="665" text-anchor="middle" class="office-small">CONTROLS</text></g>'
+    +'</svg>';
+}
+function officeHTML(){
+  const words='<div class="office-words">'
+    +'<button class="btn ghost sm" data-act="off-sound">Sound '+(SET.sound?"on":"off")+'</button>'
+    +'<span class="grp">Volume <button data-act="off-vol-down" aria-label="Lower volume">−</button><span class="num" style="width:38px;text-align:center">'+Math.round(SET.volume*100)+'%</span><button data-act="off-vol-up" aria-label="Raise volume">+</button></span>'
+    +'<span class="grp">Brightness <button data-act="off-bright-down" aria-label="Dimmer">−</button><span class="num" style="width:38px;text-align:center">'+SET.bright+'%</span><button data-act="off-bright-up" aria-label="Brighter">+</button></span>'
+    +'<button class="btn ghost sm" data-act="off-lang">Language</button>'
+    +'<button class="btn ghost sm" data-act="off-controls">Controls</button>'
+    +(S?'<button class="btn ghost sm" data-act="off-hat">Your file</button>':'')
+    +'<button class="btn sm" data-act="off-close">'+(S?"Back to the game":"Back")+'</button>'
+    +'<button class="btn ghost sm" data-act="off-exit">Exit door</button>'
+    +'</div>';
+  return '<div class="office" role="dialog" aria-modal="true" aria-label="The office"><div class="office-in">'
+    +'<div class="office-head"><div><h2>The Office</h2><div class="kicker">'+(S&&!S.over?'Paused · week '+S.week:'Settings')+' · everything on the desk does something · Esc to leave</div></div></div>'
+    +officeSVG()+words+'</div></div>'+officePanel();
+}
+function officePanel(){
+  if(!UI.panel)return "";
+  if(UI.panel==="file"){return S?'<div class="above">'+modalRecruit("YOU")+'</div>':"";}
+  let h="",b="";
+  if(UI.panel==="lang"){
+    h="Language";
+    b='<div class="mono" style="font-size:13px;line-height:1.8"><b>English</b> ✓ — the only language on file for now.<br><span style="color:var(--muted)">More will follow. The paper stays on the desk.</span></div>';
+  } else if(UI.panel==="controls"){
+    h="Controls";
+    b='<div class="kv" style="font-size:12.5px;line-height:1.7">'
+      +'<span class="k">Esc</span><span>The office — pause and settings. Also closes whatever is open.</span>'
+      +'<span class="k">≡ top right</span><span>The same.</span>'
+      +'<span class="k">Crew · Dark Web · Roster · Log</span><span>The four tabs.</span>'
+      +'<span class="k">Enter / Space</span><span>Open the posting you have selected.</span>'
+      +'<span class="k">✓ / ✗</span><span>On a job file: who can go, and why not.</span>'
+      +'<span class="k">Saving</span><span>Automatic, in this browser. Settings are kept separately and survive a new game.</span></div>'
+      +'<hr class="rule"><div class="mono" style="font-size:12px;line-height:1.8"><b>How it works.</b> You are the commander. Fill four seats from 5,000 files — each has a passport, five attributes, a technique, knowledge, education, time in jail, time on the streets, and things they will not do. '
+      +'Clients post jobs on the dark web by country; each country has its own categories, language, money, politics and terrain. Everyone on the crew goes on every job, if they can get in and the job doesn\'t hit one of their limits. '
+      +'Success pays and builds notoriety; failure adds heat and gets people hurt or held. Reach 100 notoriety and the final score appears.</div>';
+  } else if(UI.panel==="exit"){
+    h="The door";
+    b=UI.confirmNew
+      ?'<div class="warnbox">This burns the current file. The crew, the money, the notoriety — gone. Sure?</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn stamp" data-act="off-burn-yes">Yes, burn it</button><button class="btn ghost" data-act="off-exit">No, keep it</button></div>'
+      :'<div class="mono" style="font-size:12.5px;line-height:1.7;color:var(--ink-2)">The game saves itself; walking out loses nothing.</div><hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="off-close">'+(S?"Back to the game":"Back")+'</button>'+(S?'<button class="btn ghost" data-act="off-burn">Burn the file · new game</button>':'')+'</div>';
+  }
+  return '<div class="above"><div class="scrim" data-act="off-panel-close"><div class="modal" role="dialog" aria-modal="true" style="max-width:560px"><div class="modal-h"><h2>'+h+'</h2><button class="x" data-act="off-panel-close" aria-label="Close">✕</button></div><div class="modal-b">'+b+'</div></div></div></div>';
 }
 
 /* --------------------------- TITLE / CREATE --------------------------- */
@@ -1161,7 +1336,9 @@ function screenTitle(){
 function rollDraftProfile(){
   const rng=freshRng();
   const nat=COUNTRY_BY_NAME[draft.nat];
-  draft.profile=genProfile(rng,nat,draft.gender,{tech:draft.tech,role:draft.role});
+  draft.role="commander";
+  draft.profile=genProfile(rng,nat,draft.gender,{tech:draft.tech,role:"commander"});
+  draft.profile.cmd=Math.max(5,draft.profile.cmd);
 }
 function screenCreate(){
   if(!draft){
@@ -1180,8 +1357,7 @@ function screenCreate(){
       +'<div>'
         +'<div class="field" style="margin-bottom:12px"><label for="pname">Alias</label><input type="text" id="pname" maxlength="22" value="'+esc(draft.name)+'" placeholder="e.g. Vera Kessler" autocomplete="off"></div>'
         +'<div class="field" style="margin-bottom:12px"><label>Sex</label><div class="swatchrow">'+g("M","Male","draft-gender","gender")+g("F","Female","draft-gender","gender")+'</div></div>'
-        +'<div class="field" style="margin-bottom:12px"><label>Role</label><div class="swatchrow">'+g("commander","Commander","draft-role","role")+g("soldier","Soldier","draft-role","role")+'</div>'
-          +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:4px">A crew needs exactly one commander in the field. Two argue; none drifts.</div></div>'
+        +'<div class="field" style="margin-bottom:12px"><label>Role</label><div class="mono" style="font-size:13px"><b>Commander</b> — it\'s your crew. The seats are for soldiers, and the odd commander-type who takes your orders badly but can lead when you can\'t get in.</div></div>'
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
           +'<div class="field"><label for="pnat">Nationality · passport</label><select id="pnat">'+natOpts+'</select></div>'
           +'<div class="field"><label for="ptech">Technique</label><select id="ptech">'+techOpts+'</select></div></div>'
@@ -1219,17 +1395,34 @@ function bind(){
   const pnat=document.getElementById("pnat");if(pnat)pnat.onchange=()=>{draft.nat=pnat.value;rollDraftProfile();showCreate();};
   const pt=document.getElementById("ptech");if(pt)pt.onchange=()=>{draft.tech=pt.value;rollDraftProfile();showCreate();};
 }
-function showCreate(){root.innerHTML=screenCreate();bind();}
+function showCreate(){root.innerHTML=screenCreate()+chrome();bind();}
 
 document.addEventListener("click",e=>{
   const t=e.target.closest("[data-act]");if(!t)return;
   const act=t.getAttribute("data-act"),id=t.getAttribute("data-id"),k=t.getAttribute("data-k"),v=t.getAttribute("data-v");
+  const cl=t.classList;
+  if(cl.contains("btn")||cl.contains("tab")||cl.contains("jobrow")||cl.contains("genbtn")||cl.contains("burger"))sfx("click");
   switch(act){
+    case "office": UI.office=!UI.office; UI.panel=null; render(); break;
+    case "off-close": UI.office=false; UI.panel=null; render(); break;
+    case "off-sound": SET.sound=!SET.sound; saveSettings(); if(SET.sound)sfx("open"); render(); break;
+    case "off-vol": { const r=t.getBoundingClientRect(); setVolume(SET.volume+((e.clientX<r.left+r.width/2)?-0.2:0.2)); break; }
+    case "off-vol-down": setVolume(SET.volume-0.2); break;
+    case "off-vol-up": setVolume(SET.volume+0.2); break;
+    case "off-bright": { const tr=document.getElementById("brightTrack"); if(tr){const r=tr.getBoundingClientRect(); if(r.width>0&&e.clientX>=r.left-6&&e.clientX<=r.right+6)setBright(55+45*clamp((e.clientX-r.left)/r.width,0,1));} break; }
+    case "off-bright-down": setBright(SET.bright-5); break;
+    case "off-bright-up": setBright(SET.bright+5); break;
+    case "off-lang": UI.panel="lang"; render(); break;
+    case "off-controls": UI.panel="controls"; render(); break;
+    case "off-exit": UI.panel="exit"; UI.confirmNew=false; render(); break;
+    case "off-hat": if(S){UI.panel="file";render();} break;
+    case "off-panel-close": if(e.target===t||cl.contains("x")){UI.panel=null;render();} break;
+    case "off-burn": UI.confirmNew=true; render(); break;
+    case "off-burn-yes": wipe(); S=null; draft=null; UI.office=false; UI.panel=null; UI.confirmNew=false; render(); window.scrollTo(0,0); break;
     case "begin": draft=null; showCreate(); break;
     case "to-title": draft=null; render(); break;
     case "continue": if(load())render(); break;
     case "draft-gender": draft.gender=v; showCreate(); break;
-    case "draft-role": draft.role=v; rollDraftProfile(); showCreate(); break;
     case "reroll-av": draft.avseed=ri(freshRng(),1,1e9); showCreate(); break;
     case "reroll-profile": rollDraftProfile(); showCreate(); break;
     case "confirm-create": {
@@ -1238,8 +1431,7 @@ document.addEventListener("click",e=>{
       newGame(player); draft=null; render(); break;
     }
     case "tab": S.tab=k; S.modal=null; render(); window.scrollTo(0,0); break;
-    case "menu": S.modal={type:"menu"}; render(); break;
-    case "scrim": if(e.target===t||t.classList.contains("x")||t.classList.contains("btn")){S.modal=null;render();} break;
+    case "scrim": if(e.target===t||cl.contains("x")||cl.contains("btn")){if(S)S.modal=null;UI.panel=null;render();} break;
     case "open-recruit": S.modal={type:"recruit",id}; render(); break;
     case "open-job": S.modal={type:"job",id}; render(); break;
     case "more": S.shown+=30; render(); break;
@@ -1253,7 +1445,13 @@ document.addEventListener("click",e=>{
   }
 });
 document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"&&S&&S.modal){S.modal=null;render();return;}
+  if(e.key==="Escape"){
+    if(UI.panel){UI.panel=null;render();}
+    else if(UI.office){UI.office=false;render();}
+    else if(S&&S.modal){S.modal=null;render();}
+    else{UI.office=true;UI.panel=null;render();}
+    return;
+  }
   if(e.key==="Enter"||e.key===" "){
     const el=document.activeElement;if(!el||!el.closest)return;
     const row=el.closest(".jobrow");if(row){e.preventDefault();row.click();}
@@ -1264,7 +1462,7 @@ function hire(id){
   const c=byId(id);if(!c||c.status!=="available")return;
   if(recruits().length>=CREW_SLOTS){note("All four seats are taken. Cut someone loose first.");return;}
   if(S.money<c.fee){note("Not enough for the fee.");return;}
-  S.money-=c.fee;c.status="crew";c._touched=true;S.crewIds.push(c.id);
+  S.money-=c.fee;c.status="crew";c._touched=true;S.crewIds.push(c.id);sfx("coin");
   logMsg("Hired "+c.n+" — "+TECH_BY_K[c.tech].l+", "+c.nat+", "+(c.role==="commander"?"commander":"soldier")+" ("+money(c.fee)+").","");
   if(S.modal&&S.modal.type==="recruit")S.modal=null;
   save();render();
@@ -1295,6 +1493,7 @@ function doExecute(id){
   const j=S.jobs.find(x=>x.id===id);if(!j)return;
   if(!assessJob(j).canRun)return;
   const res=executeJob(j);
+  sfx(res.tier>=3?"good":res.tier===2?"stamp":"bad");
   S.modal={type:"result",data:res};
   render();
 }
@@ -1307,6 +1506,7 @@ function note(msg){logMsg(msg,"warn");render();}
 
 /* ------------------------------ BOOT ---------------------------------- */
 (function boot(){
+  loadSettings();applySettings();
   try{
     const hot=window.claude&&window.claude.hot;
     if(hot&&typeof hot.snapshot==="function")hot.snapshot(()=>S?packState():null);
