@@ -1,0 +1,104 @@
+{
+ "report": [
+  {
+   "name": "report-01.mp3",
+   "from": 1,
+   "seconds": 128.317427,
+   "bytes": 2054312,
+   "mean": -14.4
+  },
+  {
+   "name": "report-02.mp3",
+   "from": 2,
+   "seconds": 150,
+   "bytes": 2401218,
+   "mean": -14.2
+  },
+  {
+   "name": "report-03.mp3",
+   "from": 3,
+   "seconds": 147.15857299999993,
+   "bytes": 2355661,
+   "mean": -12
+  },
+  {
+   "name": "report-04.mp3",
+   "from": 5,
+   "seconds": 112.65900999999997,
+   "bytes": 1803536,
+   "mean": -12
+  },
+  {
+   "name": "report-05.mp3",
+   "from": 6,
+   "seconds": 117.14376100000004,
+   "bytes": 1875425,
+   "mean": -12.6
+  },
+  {
+   "name": "report-06.mp3",
+   "from": 7,
+   "seconds": 107.92920800000002,
+   "bytes": 1727886,
+   "mean": -14.5
+  },
+  {
+   "name": "report-07.mp3",
+   "from": 8,
+   "seconds": 150,
+   "bytes": 2401218,
+   "mean": -13.5
+  },
+  {
+   "name": "report-08.mp3",
+   "from": 9,
+   "seconds": 150,
+   "bytes": 2401218,
+   "mean": -14.4
+  },
+  {
+   "name": "report-09.mp3",
+   "from": 10,
+   "seconds": 108.18775000000005,
+   "bytes": 1732065,
+   "mean": -13.5
+  },
+  {
+   "name": "report-10.mp3",
+   "from": 11,
+   "seconds": 144.17641649999996,
+   "bytes": 2308013,
+   "mean": -11.2
+  },
+  {
+   "name": "report-11.mp3",
+   "from": 12,
+   "seconds": 150,
+   "bytes": 2401218,
+   "mean": -10.7
+  }
+ ],
+ "result": {
+  "success": {
+   "name": "result-success.mp3",
+   "from": 4,
+   "seconds": 24.891250000000014,
+   "bytes": 399194,
+   "mean": -20.3
+  },
+  "messy": {
+   "name": "result-messy.mp3",
+   "from": 14,
+   "seconds": 176.28833299999997,
+   "bytes": 2820849,
+   "mean": -13.2
+  },
+  "disaster": {
+   "name": "result-disaster.mp3",
+   "from": 13,
+   "seconds": 128.30112549999967,
+   "bytes": 2053894,
+   "mean": -9
+  }
+ }
+}

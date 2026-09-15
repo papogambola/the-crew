@@ -44,12 +44,18 @@ decisions at the end.
 - **The reckoning.** Before you take a job, the file shows who can go and why not (border,
   conviction, a limit the job hits, injury), then every factor with its number: crew size,
   who commands, language, local national, knowledge (double if studied), techniques, heat.
+  Every requirement on the file — crew size, techniques, knowledge, language, the job's
+  conditions — carries a green tick or a red cross, and the chip's border says the same.
 - **The live report.** Take the job and it plays out minute by minute, manager-game style:
   the crew arriving, who got in and who didn't, who does the talking, what each technique
   buys, what goes right and wrong for that kind of job, the exit, the police by morning, the
-  split — then the verdict stamp. Skip to the end if you'd rather. The field
+  split — then the verdict stamp. Skip to the end if you'd rather, or set the pace: five
+  speeds, Slowest to Fastest, on the report itself and in the office. The field
   roster marks who came back: **GONE** in red on anyone who walked with the money, **TAKEN** on
   anyone the police held, **HURT** on the injured.
+- **Job recaps.** Every job you have run stays on file. The Log's week is a dropdown to any
+  past week, and each job reopens as its full report — the minute-by-minute, the verdict, the
+  split, why the ranking moved, what they learned, who came back.
 - **Ranking.** The crew's standing — Nobody, Small time, Known, Respected, Feared, The Crew —
   rises with clean and successful jobs (more for a bigger job, a little more if nobody was
   hurt) and **falls** with messy, botched or disastrous work, a leak, an arrest, or a member
@@ -66,11 +72,13 @@ decisions at the end.
   switch and VOLUME knob, the DISPLAY monitor's brightness slider, the LANGUAGE paper, the
   CONTROLS book, the EXIT door, and your hat on the hook (your own file). Settings are kept
   separately from the game and survive a new game.
-- **Music.** *A Name Worth Keeping* — the creator's own track, eight minutes, looped — plays
-  from the radio in the office. Browsers only allow audio after the first click, so it starts
-  on your first press; the radio shows its state ("Now playing", "Standby", or the reason it
-  is silent) and has a **Start the radio** button. Shipped as `a-name-worth-keeping.mp3`,
-  re-encoded to 128 kbps for the web.
+- **Music.** The creator's 14-track compilation, split on the silences between tracks and
+  re-encoded to 128 kbps for the web (`music/`). Eleven tracks rotate under the live job
+  report, one per job; three score the verdict — the quietest for a success, a middle one for a
+  messy job, the loudest for a disaster — and loop while the report is open. The radio is quiet
+  between jobs. Browsers only allow audio after the first click, so the first job's track starts
+  on the click that takes it; the radio in the office shows its state and has a **Start the
+  radio** button.
 - **Sound.** A small set of synthesised effects — clicks, the verdict stamp, a coin on a
   hire, a siren on a raid. No files; the office switch turns it off.
 - **Tutorial.** On the first game, ten steps walk through the screens, highlighting each
@@ -115,7 +123,7 @@ smallest one; none is a decision.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 10 · 15 September
+The footer of every screen, and the office header, carry a build stamp (`build 11 · 15 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

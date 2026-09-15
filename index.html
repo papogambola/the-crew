@@ -1001,10 +1001,14 @@ function executeJob(job){
   S.jobs=S.jobs.filter(j=>j!==job);
   logMsg(verdictName+" — "+job.title+" ("+job.city+", "+job.country+"). "+(net>0?"Net "+money(net)+".":"No pay.")+" Ranking "+(repDelta>=0?"+":"")+repDelta+".",tier>=3?"good":tier===2?"warn":"bad",true);
   if(job.final&&tier>=3){S.finalDone=true;S.over="win";}
+  const wk=S.week;
   weekTick(rng);
   refreshJobs(false);
+  const res={id:job.id+"-w"+wk,week:wk,tier,verdictName,take,cuts,net,heatGain,repDelta,repBefore,repAfter:S.rep,rankBefore,rankAfter,rk,growth,marks,events:fallout.concat(betrayals),leaked,job,teamIds:team.map(t=>t.id),narrative,revealed:0,done:false};
+  // every job stays on file, for the case log
+  S.reports=S.reports||[];S.reports.push(Object.assign({},res));if(S.reports.length>80)S.reports.shift();
   save();
-  return {tier,verdictName,take,cuts,net,heatGain,repDelta,repBefore,repAfter:S.rep,rankBefore,rankAfter,rk,growth,marks,events:fallout.concat(betrayals),leaked,job,teamIds:team.map(t=>t.id),narrative,revealed:0,done:false};
+  return res;
 }
 function weekTick(rng){
   S.week++;
@@ -1316,8 +1320,8 @@ function jobsList(){
   const rows=items.map(({j,a})=>{
     const co=COUNTRY_BY_NAME[j.country];
     const fit=a.canRun?(a.margin>=10?'<span class="chip c-good">Good fit</span>':a.margin>=-4?'<span class="chip c-warn">Risky</span>':'<span class="chip c-bad">Long odds</span>'):'<span class="chip c-bad">'+a.team.length+' of '+j.need+' can go</span>';
-    const techs=j.techs.map(t=>'<span class="tag spec '+(has(t)?"ok":"no")+'" title="'+(has(t)?"on your crew":"nobody on your crew has it")+'">'+TECH_BY_K[t].l+'</span>').join(" ");
-    const kn=j.know.map(x=>'<span class="tag '+(knows(x)?"ok":"no")+'" title="'+(knows(x)?"someone on the crew knows it":"nobody on the crew knows it")+'">knows '+x+'</span>').join(" ");
+    const techs=j.techs.map(t=>'<span class="tag spec '+(has(t)?"ok":"no")+'" title="'+(has(t)?"on your crew":"nobody on your crew has it")+'">'+(has(t)?"✓ ":"✗ ")+TECH_BY_K[t].l+'</span>').join(" ");
+    const kn=j.know.map(x=>'<span class="tag '+(knows(x)?"ok":"no")+'" title="'+(knows(x)?"someone on the crew knows it":"nobody on the crew knows it")+'">'+(knows(x)?"✓ ":"✗ ")+'knows '+x+'</span>').join(" ");
     return '<div class="jobrow" data-act="open-job" data-id="'+j.id+'" data-country="'+esc(j.country)+'" role="button" tabindex="0">'
       +'<div class="code">'+(j.final?"—":"№"+j.id.slice(1).padStart(3,"0"))+'<br>'+diffbar(j.diff,j.heat>22)+'</div>'
       +'<div><div class="t">'+(j.final?'<span class="chip c-bad">Final score</span> ':'')+esc(j.title)+'</div>'
@@ -1339,10 +1343,17 @@ function jobPanel(j){
     +(co.gate===2?'Strict border — weak passports and old convictions get turned back without papers. ':co.gate===1?'Visa border — limited passports need a forger aboard. ':'Open border. ')
     +(co.eco===1?'Money goes far here, but the fee is lower.':co.eco===3?'Rich ground; expect the client to pay well and the police to be well funded.':'')
     +'</div>';
+  // every requirement, checked against the crew that can actually go: green tick or red cross
+  const has=t=>a.team.some(c=>c.tech===t),knows=k=>a.team.some(c=>c.know.includes(k));
+  const speaks=a.team.some(c=>c.langs.some(l=>co.langs.includes(l)));
+  const blockedBy=tag=>crewAll().filter(c=>c.status==="crew"&&c.limits.some(k=>LIMIT_BY_K[k].tag===tag)).map(c=>c.first);
+  const chip=(ok,text,title)=>'<span class="tag '+(ok?"ok":"no")+'" title="'+esc(title||"")+'">'+(ok?"✓ ":"✗ ")+text+'</span>';
   const chips='<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"><span class="tag">'+cat.l+'</span>'
-    +j.techs.map(t=>'<span class="tag spec">wants '+TECH_BY_K[t].l+'</span>').join("")
-    +j.know.map(k=>'<span class="tag">knows '+k+'</span>').join("")
-    +j.tags.map(t=>'<span class="tag pass">'+TAG_LABEL[t]+'</span>').join("")+'</div>';
+    +chip(a.team.length>=j.need,'crew of '+j.need,a.team.length+' of '+j.need+' can go')
+    +j.techs.map(t=>chip(has(t),'wants '+TECH_BY_K[t].l,has(t)?'on your crew, and going':'nobody going has it')).join("")
+    +j.know.map(k=>chip(knows(k),'knows '+k,knows(k)?'someone going knows it':'nobody going knows it')).join("")
+    +chip(speaks,'speaks '+co.langs[0],speaks?'someone going speaks it':'nobody going speaks it'+(cat.lang?' — and this job is all talk':''))
+    +j.tags.map(t=>{const b=blockedBy(t);return chip(!b.length,TAG_LABEL[t],b.length?b.join(", ")+' won\'t — sits this one out':'nobody on the crew minds');}).join("")+'</div>';
   const checks=a.checks.map(x=>{const c=x.c;
     return '<div class="check'+(x.ok?"":" out")+'"><div class="av">'+avatar(c.avseed,c.gender)+'</div>'
       +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12.5px">'+esc(c.n)+' '+natOf(c).flag+' <span class="mono" style="color:var(--muted);font-size:10.5px">'+TECH_BY_K[c.tech].l+(c.role==="commander"?' · cmdr':'')+'</span></div>'
@@ -1423,10 +1434,24 @@ function tabLog(){
     ["Held by police",S.roster.filter(c=>c.status==="jailed").length],
     ["Weekly upkeep",money(rc.filter(c=>c.status==="crew").reduce((s,c)=>s+c.upkeep,0))],
     ["Postings open",S.jobs.length],
+    ["Jobs on file",(S.reports||[]).length],
   ];
   const finalUp=S.jobs.some(j=>j.final);
-  const left='<div class="panel"><div class="panel-h"><h2>Case Log</h2><span class="kicker">Week '+S.week+'</span></div><div class="panel-b"><div class="log">'
-    +(S.log.length?S.log.map(l=>'<div class="logline '+l.tone+(l.big?" big":"")+'"><span class="wk">'+String(l.wk).padStart(2,"0")+'</span><span class="tx">'+esc(l.t)+'</span></div>').join(""):'<div class="empty">Nothing logged yet.</div>')
+  const wk=(!S.logWeek||S.logWeek==="all")?null:+S.logWeek;
+  let opts='<option value="all"'+(wk===null?" selected":"")+'>All weeks</option>';
+  for(let w=S.week;w>=1;w--)opts+='<option value="'+w+'"'+(wk===w?" selected":"")+'>Week '+w+(w===S.week?" · now":"")+'</option>';
+  const wsel='<span class="field" style="gap:2px"><label for="logweek">Week</label><select id="logweek">'+opts+'</select></span>';
+  const lines=S.log.filter(l=>wk===null||l.wk===wk);
+  const reps=(S.reports||[]).filter(r=>wk===null||r.week===wk).slice().reverse();
+  const VC={4:"c-good",3:"c-good",2:"c-warn",1:"c-bad",0:"c-bad"};
+  const recaps='<div class="panel" style="margin-bottom:14px"><div class="panel-h"><h2>Job recaps</h2><span class="kicker">'+reps.length+(wk!==null?' in week '+wk:' on file')+' · open any for the full report</span></div>'
+    +(reps.length?reps.map(r=>'<div class="jobrow" data-act="recap" data-id="'+esc(r.id)+'" role="button" tabindex="0"><div class="code">wk '+r.week+'</div>'
+      +'<div><div class="t"><span class="chip '+VC[r.tier]+'">'+r.verdictName+'</span> '+esc(r.job.title)+'</div>'
+        +'<div class="loc">'+esc(r.job.city)+', '+esc(r.job.country)+' · '+CAT_BY_K[r.job.cat].l+' · '+r.teamIds.length+' in the field'+(r.events.length?' · '+r.events.length+' fallout':'')+'</div></div>'
+      +'<div class="pay num">'+money(r.net)+'<div class="loc" style="text-align:right">ranking '+(r.repDelta>=0?"+":"")+r.repDelta+'</div></div></div>').join("")
+      :'<div class="empty">No jobs '+(wk!==null?'in week '+wk:'on file yet')+'.</div>')+'</div>';
+  const left='<div class="panel"><div class="panel-h"><h2>Case Log</h2>'+wsel+'</div><div class="panel-b"><div class="log">'
+    +(lines.length?lines.map(l=>'<div class="logline '+l.tone+(l.big?" big":"")+'"><span class="wk">'+String(l.wk).padStart(2,"0")+'</span><span class="tx">'+esc(l.t)+'</span></div>').join(""):'<div class="empty">Nothing logged'+(wk!==null?' in week '+wk:' yet')+'.</div>')
     +'</div></div></div>';
   const right='<div class="panel"><div class="panel-h"><h2>The Operation</h2><span class="kicker">'+esc(S.player.n)+' · '+natOf(S.player).flag+'</span></div><div class="panel-b">'
     +'<div class="kv">'+status.map(r=>'<span class="k">'+r[0]+'</span><span class="num">'+r[1]+'</span>').join("")+'</div>'
@@ -1435,7 +1460,7 @@ function tabLog(){
     +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px">'+(S.finalDone?"It's done.":finalUp?"The final score is live online.":S.rep+" / 100 — bigger jobs, bigger name.")+'</div>'
     +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="tab" data-k="jobs">Jobs →</button><button class="btn ghost" data-act="laylow">Lay low a week</button></div>'
     +'</div></div>';
-  return '<div class="grid g-hq">'+left+right+'</div>';
+  return recaps+'<div class="grid g-hq">'+left+right+'</div>';
 }
 
 /* ------------------------------ MODALS -------------------------------- */
@@ -1502,13 +1527,14 @@ function tickerArm(){
     if(el){el.insertAdjacentHTML("beforeend",tickLine(d.narrative[d.revealed-1]));el.scrollTop=el.scrollHeight;}
     sfx("tick");
     if(d.revealed>=d.narrative.length){clearInterval(TICK);TICK=null;tickerFinish();}
-  },950);
+  },SPEEDS[speedIdx()][0]);
 }
 function tickerFinish(){
   if(TICK){clearInterval(TICK);TICK=null;}
   const d=S&&S.modal&&S.modal.type==="result"?S.modal.data:null;if(!d)return;
   d.revealed=d.narrative.length;d.done=true;
   sfx(d.tier>=3?"good":d.tier===2?"stamp":"bad");
+  const vt=verdictTrack(d.tier);musicPlay(vt[0],vt[1],true);
   render();
 }
 function modalResult(d){
@@ -1517,12 +1543,14 @@ function modalResult(d){
   const team=d.teamIds.map(byId).filter(Boolean);
   const live=!d.done;
   const ticker='<div class="ticker" id="ticker">'+d.narrative.slice(0,d.revealed).map(tickLine).join("")+'</div>';
-  const h='<div class="modal-h"><div><div class="kicker">'+esc(d.job.city)+', '+esc(d.job.country)+' · week '+(S.week-1)+(live?' · <span class="live">● LIVE</span>':'')+'</div>'
+  const h='<div class="modal-h"><div><div class="kicker">'+esc(d.job.city)+', '+esc(d.job.country)+' · week '+(d.week||S.week-1)+(d.replay?' · recap':'')+(live?' · <span class="live">● LIVE</span>':'')+'</div>'
     +(live?'<h2 style="font-size:22px;margin-top:4px">'+esc(d.job.title)+'</h2>'
           :'<div class="result-verdict" style="margin-top:6px;color:'+col+'"><span class="verdict-stamp" style="border-color:'+col+'">'+d.verdictName+'</span></div>')
     +'</div>'+(live?'':'<button class="x" data-act="scrim" aria-label="Close">✕</button>')+'</div>';
   if(live){
-    return modalWrap(h+'<div class="modal-b">'+ticker+'<div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn ghost sm" data-act="skip-ticker">Skip to the end →</button></div></div>');
+    return modalWrap(h+'<div class="modal-b">'+ticker+'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">'
+      +'<span class="grp mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)">Speed <button class="btn ghost sm" data-act="speed-down" aria-label="Slower" style="padding:2px 8px">−</button><span class="num" style="width:58px;text-align:center">'+SPEEDS[speedIdx()][1]+'</span><button class="btn ghost sm" data-act="speed-up" aria-label="Faster" style="padding:2px 8px">+</button></span>'
+      +'<button class="btn ghost sm" data-act="skip-ticker">Skip to the end →</button></div></div>');
   }
   const nums='<div class="num-grid">'
     +'<div class="b"><div class="k">Gross</div><div class="v num">'+money(d.take)+'</div></div>'
@@ -1549,7 +1577,7 @@ function modalResult(d){
 /* ----------------------------- SETTINGS ------------------------------- */
 // Settings live outside the game save, so they survive a new game.
 const SET_KEY="thecrew_settings_v1";
-const SET={sound:true,music:true,volume:0.6,bright:100,lang:"en",tutorialDone:false};
+const SET={sound:true,music:true,volume:0.6,bright:100,lang:"en",tutorialDone:false,speed:2};
 function loadSettings(){try{const r=localStorage.getItem(SET_KEY);if(r)Object.assign(SET,JSON.parse(r));}catch(e){}}
 function saveSettings(){try{localStorage.setItem(SET_KEY,JSON.stringify(SET));}catch(e){}}
 function applySettings(){
@@ -1597,39 +1625,52 @@ function sfx(name){
 }
 
 /* ------------------------------ MUSIC --------------------------------- */
-// "A Name Worth Keeping" — the radio in the office. Browsers allow it only after the first click.
-// The radio reports its state, so a silent page says why.
-const MUSIC_SRC="a-name-worth-keeping.mp3";
-let MUSIC=null,userGestured=false,musicState="idle",musicNote="",musicTriedBlob=false;
+// Fourteen tracks from the creator's compilation: eleven rotate under the live job report,
+// three score the verdict. Quiet between jobs. Browsers allow audio only after the first
+// click, and the radio in the office reports its state.
+const TRACKS={
+  report:["music/report-01.mp3","music/report-02.mp3","music/report-03.mp3","music/report-04.mp3","music/report-05.mp3","music/report-06.mp3","music/report-07.mp3","music/report-08.mp3","music/report-09.mp3","music/report-10.mp3","music/report-11.mp3"],
+  result:{good:"music/result-success.mp3",messy:"music/result-messy.mp3",bad:"music/result-disaster.mp3"},
+};
+const SPEEDS=[[4500,"Slowest"],[3000,"Slow"],[2000,"Normal"],[1300,"Fast"],[800,"Fastest"]];
+function speedIdx(){return clamp(Math.round(SET.speed==null?2:SET.speed),0,SPEEDS.length-1);}
+let MUSIC=null,userGestured=false,musicState="idle",musicNote="",musicWant=null,musicSrc=null;
+const musicBlobTried={};
 function musicEl(){
   if(!MUSIC){
     try{
-      MUSIC=new Audio();MUSIC.loop=true;MUSIC.preload="auto";
+      MUSIC=new Audio();MUSIC.preload="auto";
       MUSIC.addEventListener("playing",()=>{musicState="playing";musicNote="";refreshRadio();});
       MUSIC.addEventListener("pause",()=>{if(musicState==="playing"){musicState="stopped";refreshRadio();}});
+      MUSIC.addEventListener("ended",()=>{if(musicWant&&!musicWant.loop){musicState="stopped";refreshRadio();}});
       MUSIC.addEventListener("error",()=>{musicLoadFallback();});
-      MUSIC.src=MUSIC_SRC;
     }catch(e){MUSIC=null;musicState="blocked";musicNote="this browser has no audio";}
   }
   return MUSIC;
 }
-// If the file won't load as a plain source, fetch it and play it from memory.
+// If a track won't load as a plain source, fetch it and play it from memory.
 function musicLoadFallback(){
+  const src=musicSrc;if(!src)return;
   const fail=why=>{musicState="blocked";musicNote="the track could not be loaded here ("+why+")";refreshRadio();};
-  if(musicTriedBlob){fail("media blocked");return;}
-  musicTriedBlob=true;
+  if(musicBlobTried[src]){fail("media blocked");return;}
+  musicBlobTried[src]=true;
   try{
-    fetch(MUSIC_SRC).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.blob();})
-      .then(b=>{MUSIC.src=URL.createObjectURL(b);musicSync();})
+    fetch(src).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.blob();})
+      .then(b=>{if(musicSrc!==src)return;MUSIC.src=URL.createObjectURL(b);musicSync();})
       .catch(e=>fail(e&&e.message?e.message:"fetch failed"));
   }catch(e){fail("fetch unavailable");}
 }
+function musicPlay(src,label,loop){musicWant={src,label,loop:!!loop};musicSync();}
+function musicStop(){musicWant=null;musicSync();}
+function verdictTrack(tier){return tier>=3?[TRACKS.result.good,"the verdict — success"]:tier===2?[TRACKS.result.messy,"the verdict — messy"]:[TRACKS.result.bad,"the verdict — disaster"];}
 function musicSync(){
   const m=musicEl();if(!m)return;
   try{
-    m.volume=clamp(SET.volume*0.45,0,1);
-    const want=SET.sound&&SET.music&&SET.volume>0&&userGestured&&!document.hidden;
-    if(want){
+    m.volume=clamp(SET.volume*0.5,0,1);
+    const allowed=SET.sound&&SET.music&&SET.volume>0&&userGestured&&!document.hidden;
+    if(musicWant&&allowed){
+      if(musicSrc!==musicWant.src){musicSrc=musicWant.src;m.src=musicWant.src;musicState="idle";}
+      m.loop=musicWant.loop;
       if(m.paused){
         const p=m.play();
         if(p&&p.catch)p.catch(err=>{
@@ -1647,15 +1688,17 @@ function musicStatusText(){
   if(!SET.sound)return "Radio off — sound is off";
   if(!SET.music)return "Radio off";
   if(SET.volume<=0)return "Radio on, volume at zero";
-  if(musicState==="playing")return "♪ Now playing — A Name Worth Keeping";
+  if(!musicWant)return "Radio quiet between jobs — a track plays under each job report, another under the verdict";
+  if(musicState==="playing")return "♪ Now playing — "+musicWant.label;
   if(musicState==="blocked")return "Radio silent: "+musicNote;
-  return "Radio ready — press Start the radio, or click anywhere";
+  return "Radio ready — "+musicWant.label+" · press Start the radio, or click anywhere";
 }
 function radioLabel(){
   if(!SET.sound||!SET.music)return "RADIO OFF";
-  if(musicState==="playing")return "♪ NOW PLAYING";
+  if(!musicWant)return "STANDBY";
+  if(musicState==="playing")return "♪ ON AIR";
   if(musicState==="blocked")return "NO SIGNAL";
-  return "STANDBY";
+  return "TUNING";
 }
 
 /* ----------------------------- TUTORIAL ------------------------------- */
@@ -1670,7 +1713,7 @@ const TUT_STEPS=[
   {tab:"jobs",sel:".jobrow",h:"Jobs",t:"Clients post jobs by country. Each row: category, the techniques it wants, city, crew needed, fee, heat, when it expires — and a chip saying how your crew fits. Open one."},
   {tab:"jobs",openJob:true,sel:".check",h:"Who can go",t:"Every crew member, ✓ or ✗, with the reason: the border and their passport, a conviction, a limit the job trips, an injury. A forger on the crew gets weak passports through."},
   {tab:"jobs",openJob:true,sel:".factors",h:"The reckoning",t:"Every factor with its number — crew size, who commands, language, a local national, knowledge, techniques, heat — then the odds. Take the job and the whole eligible crew goes; a week passes."},
-  {tab:"log",sel:".log",h:"The case log",t:"Everything that happened, week by week. Lay low a week here or on the Jobs board: −15 heat, upkeep still due, fresh postings."},
+  {tab:"log",sel:".log",h:"The case log",t:"Everything that happened, week by week; the Week dropdown goes back to any past week, and every job you have run is on file above as a recap you can reopen. Lay low a week here or on the Jobs board: −15 heat, upkeep still due, fresh postings."},
   {tab:"log",sel:".burger",h:"The office",t:"Esc, or this button, on any screen: pause, sound, music, brightness, the controls book, your file, and the door out. The i button beside it explains whatever is on screen."},
 ];
 function tutStart(){TUT.on=true;tutGo(0);}
@@ -1728,8 +1771,9 @@ const INFO={
     "The bars are difficulty; red means high heat. Open a posting to see the reckoning before you commit.",
     "<b>Lay low a week</b>: −15 heat, upkeep still due, postings refresh. Reach 100 ranking and the final score appears at the top of the board."]},
   log:{h:"The Log",t:[
-    "The case log, week by week — every hire, job, injury, arrest, leak and betrayal. The operation panel counts seats, who is ready, who is hurt or held, weekly upkeep and open postings.",
-    "The bar is ranking towards the final score. Lay low from here too."]},
+    "<b>Job recaps</b>: every job you have run stays on file. Open one for the full report — the minute-by-minute, the verdict, the split, why the ranking moved, what they learned, who came back.",
+    "<b>The case log</b>, week by week — every hire, job, injury, arrest, leak and betrayal. The <b>Week</b> dropdown narrows both the recaps and the log to one week; \"All weeks\" shows everything.",
+    "The operation panel counts seats, who is ready, who is hurt or held, weekly upkeep and open postings. The bar is ranking towards the final score. Lay low from here too."]},
   job:{h:"A job file",t:[
     "<b>The brief</b>: who posted it, and the country — language, money, politics, religion, terrain, and the border rule. Chips: the category, techniques and knowledge wanted, and tags such as <i>on the water</i> or <i>at night</i> that trip a crew member's limits.",
     "<b>Who can go</b>: every crew member, ✓ or ✗, with the reason — the border against their passport, a conviction at a strict border, a limit the job hits, an injury. A forger on the crew gets weak passports through.",
@@ -1815,7 +1859,7 @@ function officeSVG(){
     +'<rect x="236" y="590" width="14" height="34" rx="7" fill="#fff"/><circle class="ns" cx="243" cy="'+(on?599:615)+'" r="5" fill="'+K+'"/>'
     +'<text x="258" y="603" class="office-small">ON</text><text x="258" y="627" class="office-small">OFF</text></g>'
     // the radio: music switch
-    +'<g class="hot" data-act="off-music"><title>Music — "A Name Worth Keeping" — '+(SET.music?"on, click to switch off":"off, click to switch on")+'</title>'
+    +'<g class="hot" data-act="off-music"><title>Music — the job tracks — '+(SET.music?"on, click to switch off":"off, click to switch on")+'</title>'
     +'<rect class="ns" x="290" y="562" width="66" height="76" fill="transparent"/>'
     +'<text x="322" y="580" text-anchor="middle" class="office-label">MUSIC</text>'
     +'<rect x="305" y="590" width="14" height="34" rx="7" fill="#fff"/><circle class="ns" cx="312" cy="'+(SET.music?599:615)+'" r="5" fill="'+K+'"/>'
@@ -1845,7 +1889,8 @@ function officeSVG(){
 function officeHTML(){
   const words='<div class="office-words">'
     +'<button class="btn ghost sm" data-act="off-sound">Sound '+(SET.sound?"on":"off")+'</button>'
-    +'<button class="btn ghost sm" data-act="off-music" title="A Name Worth Keeping">Music '+(SET.music?"on":"off")+'</button>'
+    +'<button class="btn ghost sm" data-act="off-music" title="The job tracks">Music '+(SET.music?"on":"off")+'</button>'
+    +'<span class="grp" title="How fast the live job report reads out">Report speed <button data-act="speed-down" aria-label="Slower">−</button><span class="num" style="width:58px;text-align:center">'+SPEEDS[speedIdx()][1]+'</span><button data-act="speed-up" aria-label="Faster">+</button></span>'
     +'<span class="mono" style="font-size:11px;color:'+(musicState==="blocked"?"var(--stamp)":"var(--muted)")+'">'+esc(musicStatusText())+'</span>'
     +(musicState!=="playing"?'<button class="btn sm" data-act="off-radio-start">Start the radio</button>':'')
     +(STORAGE_OK?'':'<span class="mono" style="font-size:11px;color:var(--stamp)">This browser is not keeping saves (private window, or site data blocked) — progress is lost when you leave.</span>')
@@ -1965,7 +2010,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 10 · 15 September 2026";
+const BUILD="build 11 · 15 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
@@ -1975,6 +2020,7 @@ function bind(){
   const sel=(id,key)=>{const el=document.getElementById(id);if(el)el.onchange=()=>{S.filter[key]=el.value;S.shown=30;render();};};
   sel("ftech","tech");sel("frole","role");sel("fnat","nat");sel("fsort","sort");
   const js=document.getElementById("jsort");if(js)js.onchange=()=>{S.jobSort=js.value;save();render();};
+  const lw=document.getElementById("logweek");if(lw)lw.onchange=()=>{S.logWeek=lw.value;save();render();};
   const pn=document.getElementById("pname");if(pn)pn.oninput=()=>{draft.name=pn.value;const btn=document.querySelector('[data-act=confirm-create]');if(btn)btn.disabled=!draft.name.trim();};
   const pnat=document.getElementById("pnat");if(pnat)pnat.onchange=()=>{draft.nat=pnat.value;rollDraftProfile();showCreate();};
   const pt=document.getElementById("ptech");if(pt)pt.onchange=()=>{draft.tech=pt.value;rollDraftProfile();showCreate();};
@@ -2000,6 +2046,13 @@ document.addEventListener("click",e=>{
     case "off-music": SET.music=!SET.music; saveSettings(); musicSync(); render(); break;
     case "off-radio-start": SET.sound=true; SET.music=true; if(SET.volume<=0)SET.volume=0.6; saveSettings(); userGestured=true; musicState="idle"; musicSync(); render(); break;
     case "skip-ticker": tickerFinish(); break;
+    case "speed-down": SET.speed=clamp(speedIdx()-1,0,SPEEDS.length-1); saveSettings(); render(); break;
+    case "speed-up": SET.speed=clamp(speedIdx()+1,0,SPEEDS.length-1); saveSettings(); render(); break;
+    case "recap": {
+      const r=(S.reports||[]).find(x=>x.id===id); if(!r)break;
+      S.modal={type:"result",data:Object.assign({},r,{revealed:r.narrative.length,done:true,replay:true})};
+      const vt=verdictTrack(r.tier); musicPlay(vt[0],vt[1],true); render(); break;
+    }
     case "off-vol": { const r=t.getBoundingClientRect(); setVolume(SET.volume+((e.clientX<r.left+r.width/2)?-0.2:0.2)); break; }
     case "off-vol-down": setVolume(SET.volume-0.2); break;
     case "off-vol-up": setVolume(SET.volume+0.2); break;
@@ -2028,6 +2081,7 @@ document.addEventListener("click",e=>{
     case "scrim":
       if(e.target===t||cl.contains("x")||cl.contains("btn")){
         if(S&&S.modal&&S.modal.type==="result"&&!S.modal.data.done){tickerFinish();break;}
+        if(S&&S.modal&&S.modal.type==="result")musicStop();
         if(S)S.modal=null;UI.panel=null;render();window.scrollTo(0,0);
       }
       break;
@@ -2058,7 +2112,7 @@ document.addEventListener("keydown",e=>{
     else if(TUT.on){tutEnd();}
     else if(UI.panel){UI.panel=null;render();}
     else if(UI.office){UI.office=false;render();}
-    else if(S&&S.modal){if(S.modal.type==="result"&&!S.modal.data.done)tickerFinish();else{S.modal=null;render();}}
+    else if(S&&S.modal){if(S.modal.type==="result"&&!S.modal.data.done)tickerFinish();else{if(S.modal.type==="result")musicStop();S.modal=null;render();}}
     else if(S&&S.jobOpen){S.jobOpen=null;render();}
     else{UI.office=true;UI.panel=null;render();}
     return;
@@ -2103,6 +2157,8 @@ function drop(id){
 function doExecute(id){
   const j=S.jobs.find(x=>x.id===id);if(!j)return;
   if(!assessJob(j).canRun)return;
+  const ti=(S.trackIdx||0)%TRACKS.report.length;S.trackIdx=ti+1;
+  musicPlay(TRACKS.report[ti],"report track "+(ti+1)+" of "+TRACKS.report.length,false);
   const res=executeJob(j);
   sfx("open");
   S.jobOpen=null;
