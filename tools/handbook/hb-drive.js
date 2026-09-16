@@ -57,11 +57,16 @@ const ok=(c,m)=>{if(c){pass++;console.log("  ok   "+m);}else{fail++;console.log(
   const blank=await pg.evaluate(()=>[].slice.call(document.querySelectorAll("#techs table tbody tr,#bigtechs table tbody tr"))
     .filter(r=>!r.cells[4]||!r.cells[4].textContent.trim()).map(r=>r.cells[0].textContent.trim()));
   ok(blank.length===0,"every trade has a place on the plan"+(blank.length?", blank: "+blank.join(", "):""));
-  ok(text.indexOf(D.ROSTER_SIZE.toLocaleString("en-US"))>=0,
-    "the page says how many people are on file ("+D.ROSTER_SIZE.toLocaleString("en-US")+")");
+  // How many people exist decides nothing the player does, so the handbook does not print it.
+  // What matters is the shape: a crew of five, and thousands of jobs.
+  const heads=[D.ROSTER_SIZE,D.ROSTER_CORE,D.ROSTER_BIG].map(n=>n.toLocaleString("en-US"))
+    .concat(["five thousand","six thousand","thousand files"]).filter(n=>new RegExp(n,"i").test(text));
+  ok(heads.length===0,"no head count of the roster anywhere on the page"+(heads.length?": "+heads.join(", "):""));
+  ok(/crew of five/i.test(text)&&/thousands of jobs/i.test(text),
+    "it says the shape instead: a crew of five, and thousands of jobs");
   ok(text.indexOf(String(D.BAL.bigCount))>=0&&/OP-001/.test(text),
     "and how many operations there are ("+D.BAL.bigCount+"), by their code");
-  const stale=["5,000 people on file","All five thousand files","one of sixteen. Worth"]
+  const stale=["5,000 people on file","All five thousand files","one of sixteen. Worth","operatives on file"]
     .filter(n=>text.indexOf(n)>=0);
   ok(stale.length===0,"nothing left describing the smaller game"+(stale.length?": "+stale.join("; "):""));
 

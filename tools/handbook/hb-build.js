@@ -371,7 +371,7 @@ const html=`<!doctype html>
   <h1>The Crew<span>Player's Handbook</span></h1>
   <hr>
   <p>Every rule the game plays by, every number on every screen, and where to find all of it.
-     You are the commander of a criminal crew. Five thousand files, a job in every country, and a border in front of each one.</p>
+     We are the criminals. A crew of five, thousands of jobs, and a border in front of every one of them.</p>
   <p>Nothing in this handbook is invented. Every figure in it is read out of the game itself.</p>
   <div class="stamp">For the commander</div>
   <div class="foot">${BUILD} · ${CH.length} chapters</div>

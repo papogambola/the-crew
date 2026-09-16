@@ -22,11 +22,11 @@ ch("start","What this is","The game in four minutes",[
       +"Clients post work on a board — by country, by kind, with a fee on it — and you decide which of that work your crew takes, who goes on it, and what happens when it goes wrong in the middle.")
     +p("A turn is a week. Taking a job spends one to three of them, casing a job spends one, laying low spends one. "
       +"Every week the payroll comes out of your float whether anybody worked or not, the heat falls a little, and the world does something you did not ask it to.")
-    +p("There are "+m(D.ROSTER_SIZE.toLocaleString("en-US"))+" people on file. Five attributes each, a trade, a passport, a record, a price, and a secret. "
-      +"You will hire between four and seven of them at a time, out of six thousand, and the difference between a good crew and a bad one is not their numbers — it is whether their numbers match the room you are sending them into.")
-    +p(m(D.ROSTER_CORE.toLocaleString("en-US"))+" of them work the sixteen ordinary trades. The other "+m(D.ROSTER_BIG.toLocaleString("en-US"))
-      +" are <a href=\"#bigtechs\">specialists</a> — pilots, divers, tunnellers, handlers — and nothing on the board wants one "
-      +"until your name opens the seventh place. See <a href=\"#ops\">the operations</a>.")),
+    +p("<b>A crew of five, and thousands of jobs.</b> That is the shape of it. Everybody for hire carries five attributes, a trade, "
+      +"a passport, a record, a price and a secret, and the difference between a good crew and a bad one is not their numbers — "
+      +"it is whether their numbers match the room you are sending them into.")
+    +p("Most of them work the sixteen ordinary trades. The rest are <a href=\"#bigtechs\">specialists</a> — pilots, divers, tunnellers, "
+      +"handlers — and nothing on the board wants one until your name opens the seventh place. See <a href=\"#ops\">the operations</a>.")),
   S("goal","The goal",
     p("Build the name. Everything in the game is downstream of your <b>ranking</b>: what clients post to you, what they pay, who will sign with you, whether the crew stays loyal, and how hard the police look.")
     +p("At ranking "+m(D.BAL.finalRep)+" the board has nothing left to offer you but the last score — three operations, in order, against the Committee. "
@@ -67,7 +67,7 @@ ch("where","Where everything is","The screen, tab by tab",[
     +G.T(["Tab","What is on it"],[
       ["<b>Crew</b>","Who is on the books: their cards, attributes, trade, loyalty, cut, upkeep, temperament, limits and what they have been through. Retainers and the safe house are reached from here too, and so is founding a second crew."],
       ["<b>Jobs</b>","The board. Every posting open this week, its country, its fee, what it wants, and — once you open one — the job file: who can go, who cannot and why, the odds, the split, and the button that starts it."],
-      ["<b>Roster</b>","All six thousand files, filtered — every trade, including the fourteen an <a href=\"#ops\">operation</a> asks for. This is where hiring happens."],
+      ["<b>Roster</b>","Everybody for hire, filtered — every trade, including the fourteen an <a href=\"#ops\">operation</a> asks for. This is where hiring happens."],
       ["<b>Dashboard</b>","Six folded sections: the operation, the competition and the law, standing arrangements, the record, job recaps, and the case log. One opens at a time; opening one shuts the last."],
     ])),
   S("office","The office",
@@ -95,9 +95,9 @@ ch("where","Where everything is","The screen, tab by tab",[
 /* ---------------- 3 --------------------------------- */
 ch("you","You","The commander",[
   S("dossier","Opening a dossier",
-    p("The title screen is the game's front door: the name, five faces under it — five files drawn "
-      +"fresh out of the same face builder every operative on the roster uses, a different five every "
-      +"time you open it — and a way into this handbook.")
+    p("The title screen is the game's front door: the name, five faces under it, and a way into this handbook. "
+      +"The faces are drawn out of the same face builder every operative on the roster uses, so what you are "
+      +"looking at is a crew — five of the people you are about to go and find.")
     +p("<b>New game</b> goes to the <b>WHO ARE YOU?</b> screen. You choose:")
     +ul([
       "<b>Alias</b> — type one, or press "+m("↻ RANDOM")+", which draws a name from the naming pool of the nationality you have picked. A Nigerian commander gets a Nigerian name.",
@@ -132,9 +132,8 @@ ch("people","The people","Everything on a crew member's file",[
     +G.techs()),
   S("bigtechs","The fourteen specialists",
     p("Fourteen more trades exist, and they are not simply rarer versions of the sixteen — they are the trades that "
-      +"<a href=\"#ops\">an operation</a> asks for, and ordinary work on the board never does. "
-      +m(D.ROSTER_BIG.toLocaleString("en-US"))+" of the "+m(D.ROSTER_SIZE.toLocaleString("en-US"))
-      +" people on file work one of them.")
+      +"<a href=\"#ops\">an operation</a> asks for, and ordinary work on the board never does. They are the minority of "
+      +"the roster, so they are something you go looking for rather than something you come across.")
     +p("They are on the roster from the first week and you may hire one whenever you like. There is no reason to. "
       +"A Diver on a warehouse job is a stranger with a bottle of air: their trade is never the trade the client named, "
       +"so they are worth their attributes and nothing more, and they cost "+money(9000)+" more to sign than somebody who is. "
@@ -206,7 +205,7 @@ ch("people","The people","Everything on a crew member's file",[
 /* ---------------- 5 --------------------------------- */
 ch("hiring","Hiring","The roster, the trip, the signature",[
   S("roster","The roster",
-    p("Five thousand files, filterable by trade, experience, nationality, price and what they will not do. "
+    p("Everybody for hire, filterable by trade, experience, nationality, price and what they will not do. "
       +"They are generated once from the game's seed and they do not change — the person you looked at in week 3 and could not afford is still there in week 40, at the same price, unless somebody else got to them.")),
   S("sign","Who will sign",
     p("Your ranking decides the ceiling. A Nobody cannot get a Legend to sit down with them at any price.")

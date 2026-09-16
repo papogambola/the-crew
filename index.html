@@ -485,8 +485,8 @@
 <script>
 "use strict";
 /* =========================================================================
-   THE CREW — a paper-and-ink game of global crime. You are the criminals.
-   Five-person crew including you, seven once the name is big enough. 6,000 operatives.
+   THE CREW — a paper-and-ink game of global crime. We are the criminals.
+   A crew of five including you, seven once the name is big enough. Thousands of jobs.
    Single file, no dependencies. Progress saved in this browser.
    ========================================================================= */
 
@@ -3448,7 +3448,7 @@ function tabRoster(){
       +'<span style="display:flex;gap:6px"><button class="btn ghost sm" data-act="open-recruit" data-id="'+c.id+'">File</button>'
       +'<button class="btn sm" data-act="hire" data-id="'+c.id+'" title="'+esc(hireWhy(c)||("Fly to "+c.nat+" and put it to "+c.first+" — a week, and "+money(c.fee)+" if they say yes"))+'" '+(canApproach(c)?"":"disabled")+'>Go and ask</button></span></div></div>').join("");
   const more=total>shown.length?'<div style="text-align:center;margin-top:14px"><button class="btn ghost" data-act="more">Show 30 more</button></div>':'';
-  return '<div class="panel-h" style="border:0;padding:0 0 6px"><h2>Roster</h2><span class="kicker num">'+S.roster.length.toLocaleString()+' operatives on file · '+(crewSeats()-recruits().length)+' places open</span></div>'
+  return '<div class="panel-h" style="border:0;padding:0 0 6px"><h2>Roster</h2><span class="kicker num">Everybody for hire · '+(crewSeats()-recruits().length)+' places open</span></div>'
     +bar+(shown.length?'<div class="cards">'+cards+'</div>'+more:'<div class="empty">No one matches. Loosen the filters.</div>');
 }
 
@@ -4214,7 +4214,7 @@ const TUT_STEPS=[
   {tab:"crew",sel:".id.you",h:"This is you",t:"The commander. Your file goes on every job: five attributes, a trade, education, time in jail and on the streets, knowledge, languages, and anything you won't do. If a border keeps you out, the crew goes without you — a commander-type recruit runs it, well or badly."},
   {tab:"crew",sel:".id.slot",h:"The empty places",t:"Fill them from the Roster. Everyone you hire goes on every job, takes a cut of every score, and costs upkeep each week. Four places to start; a Respected name opens two more. Every member has a price: a cut under two weeks of their own upkeep is small money — three small jobs in a row and they grumble, five and they may walk. A bonus settles it and keeps them sharp for three weeks."},
   {tab:"crew",sel:"[data-act=found-open]",h:"Other crews, later",t:"Two years in, Feared, with seven on your crew, you can found a second crew out of your own people — a commander and four soldiers, named after its commander — that takes a job of its own each week without you. A third at three years, a fourth at four, no more. The game announces each milestone in a box when you reach it."},
-  {tab:"roster",sel:".rosterbar",h:"Five thousand files",t:"Search by name, country, language or knowledge. Filter by trade, role and nationality. Sort by fee, experience or raw skill."},
+  {tab:"roster",sel:".rosterbar",h:"Everybody for hire",t:"Search by name, country, language or knowledge. Filter by trade, role and nationality. Sort by fee, experience or raw skill."},
   {tab:"roster",sel:".cards .id",h:"A file",t:"Flag and passport tier (P1 strong, P4 weak), trade and rank, the five attributes, then education, jail, streets, knowledge, languages — and in red, what this one will not do. Hover the trade, or MUS, BRN, TCH, CHM, NRV, for a brief. File opens the whole thing and lets you vet for informants. Hire pays the fee — if the file will sign with a crew of your name: Veterans want a Known crew, Legends a Respected one."},
   {tab:"jobs",sel:".jobrow",h:"Jobs",t:"Clients post jobs by country; the map beside them lights every country with a posting. Each row: category, the trades and knowledge it wants — green if your crew has it, red if not — city, crew needed, fee, heat, when it expires, and a chip saying how your crew fits. Open one."},
   {tab:"jobs",openJob:true,sel:".check",h:"Who can go",t:"Every crew member, ✓ or ✗, with the reason: the border and their passport, a conviction, a limit the job trips, an injury. A forger on the crew gets weak passports through. Above, every requirement carries a tick or a cross — including the money: who calls this job small money."},
@@ -4276,7 +4276,7 @@ function infoContext(){
 }
 const INFO={
   title:{h:"The Crew",t:[
-    "A game of global crime. <b>You are the criminals.</b> You command a crew of five — you and four places to fill from 6,000 files, seven places once the name is big enough — and take the jobs clients post online, country by country.",
+    "A game of global crime. <b>We are the criminals</b> — the clients online are worse. You command a crew of five: you and four to fill, and two more once the name is big enough. Then you take the jobs clients post online, country by country.",
     "<b>New game</b> opens a dossier for you. <b>Continue</b> picks up the last game saved in this browser. Progress saves itself after every move.",
     "<b>Esc</b> or the three-line button opens the office: pause, sound, music, brightness, controls, and the door out. This <b>i</b> button explains whatever is on screen.",
     "The first time anyone plays, a tutorial walks through every screen. The second sitting opens with a short reminder. After that, both wait behind this button and in the controls book."]},
@@ -4286,7 +4286,7 @@ const INFO={
     "<b>Your appearance</b> — under the picture, a slider for each part of the face: hair or hat, face shape, eyebrows, eyes, nose, mouth, ears, glasses, and facial hair or earrings, plus a scar. The picture redraws as you move them. <b>↻ Random</b> rolls every part at once. Three million faces for a man, four and a half million for a woman.",
     "<b>Your file</b> — five attributes, education, time in jail, time on the streets, knowledge, languages, anything you will not do, and a temperament — is rolled. <b>Another life</b> rolls it again. You are always the commander."]},
   crew:{h:"The Crew",t:[
-    "Five places. You are the first. Each card: flag and passport tier, trade and rank (the pips), the five attributes — Muscle, Brains, Tech, Charm, Nerve — then education, jail, streets, knowledge, languages, and in red what this one will <b>not</b> do.",
+    "A crew of five. You are the first. Each card: flag and passport tier, trade and rank (the pips), the five attributes — Muscle, Brains, Tech, Charm, Nerve — then education, jail, streets, knowledge, languages, and in red what this one will <b>not</b> do.",
     "<b>Loyalty</b> rises with success and bonuses, falls with failure and missed payroll. Under 35, after a big score, a member may skim the split and vanish. <b>Upkeep</b> is charged every week. <b>Cut loose</b> frees the place.",
     "Everyone on the crew goes on every job — if the border lets them in and the job doesn't trip one of their limits. A commander-type recruit takes your orders badly (−3 on a job you lead) but can run the crew on a job you can't get into.",
     "Loyalty also follows the name: a Nobody's crew loses a point a week, a Respected crew gains one. Every few weeks something happens between jobs — a death, a disappearance, a resignation, a rival crew buying drinks, an old face, a detective — and the least loyal member is usually the one it happens to. An <b>Enforcer</b> on the crew opens the hard answers.",
@@ -4316,7 +4316,7 @@ const INFO={
     "<b>The rest end them</b>, and each says how likely it is to go cleanly and what happens when it does not. A <b>cleaner</b> makes it an accident — the most expensive and the quietest. A stranger you never meet is cheaper and worse. Your enforcer tonight is cheapest, loudest, and half the time somebody sees; when it goes wrong it is your enforcer the police take.",
     "It works. A body does not talk, and the board notices what happens to people who leave your crew — <b>ranking +2</b> when it is clean. It also costs: <b>heat</b>, the detective's file, and <b>loyalty across everybody still with you</b>, because they can all count. Nobody is safe working for somebody who does that, and they know it."]},
   roster:{h:"The Roster",t:[
-    "6,000 files — five thousand of the original sixteen trades, and a thousand specialists who only matter once there are seven places. <b>Search</b> by name, country, language or knowledge. Filter by <b>trade</b>, <b>role</b> and <b>nationality</b>; sort by fee, experience, raw skill or name. Show 30 more at the bottom.",
+    "Everybody who can be hired, in one list. Most of them work the sixteen ordinary trades; the specialists are the minority you go looking for once there are seven places to fill. <b>Search</b> by name, country, language or knowledge. Filter by <b>trade</b>, <b>role</b> and <b>nationality</b>; sort by fee, experience, raw skill or name. Show 30 more at the bottom.",
     "<b>Hover a trade</b> (or MUS, BRN, TCH, CHM, NRV) for a brief: what it is, what it leans on, what it comes with, and which jobs want it. On a phone, tap it.",
     "<b>Temperament.</b> Two files in three carry a trait, and a trait is a fact about working with them, not a number on a bar. <b>Steady</b> never loses faith after a bad night. <b>Hothead</b> is worth +3 and costs +4 heat. <b>Careful</b> takes 4 heat off any job they work. <b>Quick study</b> learns at double speed; a <b>Mentor</b> is +2 and teaches everyone else half again as fast. <b>Mercenary</b> is +2 and takes 3% more. <b>Lucky</b> adds 4 to the night's roll, <b>Jinx</b> takes 3 off it and pulls twists towards the crew. A <b>Ghost</b> is never the one the police get their hands on.",
     "<b>Fee</b> is paid once, and only if they say yes. <b>Cut</b> is their share of every score. <b>Upkeep</b> is weekly. <b>File</b> opens the whole profile; <b>Go and ask</b> needs an open place, the fee — and a name they will sign with. Rookies, Operators and Professionals sign with anyone; a <b>Veteran</b> wants a Known crew, a <b>Legend</b> a Respected one. A file that won't sign yet says so under the fee.",
@@ -4602,11 +4602,12 @@ function titleFaces(){
 }
 function lineupHTML(){
   const f=titleFaces();
+  // No labels under the faces. Numbering them said nothing a row of five portraits doesn't
+  // already say, and the caption under it has to earn its line — so it says what the game is.
   return '<div class="lineup" aria-hidden="true">'
-    +f.map((x,i)=>'<div class="lu"><div class="lu-av">'+avatar(x.seed,x.gender,x.face)+'</div>'
-      +'<div class="lu-n">place '+(i+1)+'</div></div>').join("")
+    +f.map(x=>'<div class="lu"><div class="lu-av">'+avatar(x.seed,x.gender,x.face)+'</div></div>').join("")
     +'</div><div class="lineup-rule"></div>'
-    +'<div class="lineup-cap">Five places · a different five every time you open the door</div>';
+    +'<div class="lineup-cap">A crew of five · thousands of jobs</div>';
 }
 
 function screenTitle(){
@@ -4616,8 +4617,8 @@ function screenTitle(){
   return '<div class="wrap"><div class="hero title">'
     +'<div class="eyebrow">Case file · Classified</div><h1>The Crew</h1>'
     +lineupHTML()
-    +'<p class="tagline">Five places. Five thousand files. You are the criminals — the clients online are worse. A job in every country, a border in front of each one. Know your crew, or the job will teach you.</p></div>'
-    +'<div class="filecard panel"><div class="panel-h"><h2>Open a Dossier</h2><span class="kicker">'+ROSTER_SIZE.toLocaleString()+' operatives on file</span></div>'
+    +'<p class="tagline">We are the criminals — the clients online are worse. A job in every country, a border in front of each one. Know your crew, or the job will teach you.</p></div>'
+    +'<div class="filecard panel"><div class="panel-h"><h2>Open a Dossier</h2><span class="kicker">A name, a face, a passport, a trade</span></div>'
     +'<div class="panel-b"><div class="mono" style="font-size:13px;line-height:1.7;color:var(--ink-2)">'
       +'You are the name at the top of the police\'s chart. Everyone below is '+redact(6)+' — a passport, a set of hands, a record, a price, and a secret. '
       +'Some of them are '+redact(9)+'. Your job is to know which, before the border does.</div>'

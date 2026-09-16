@@ -1,11 +1,11 @@
 # The Crew
 
-A black-ink-on-white-paper game of global crime. You are the criminals. One file, no dependencies.
+A black-ink-on-white-paper game of global crime. We are the criminals. One file, no dependencies.
 
-You are the name at the top of the police's chart, and the commander of the crew. Fill the
-other four places from **6,000 operatives**, then take the jobs clients post online — country
-by country, each with its own language, money, politics, religion, terrain and job
-categories. Everyone on the crew goes on every job, if the border lets them in and the job
+A crew of five, and thousands of jobs. You are the name at the top of the police's chart and
+the commander of the crew; you fill the other four places, then take the jobs clients post
+online — country by country, each with its own language, money, politics, religion, terrain
+and job categories. Everyone on the crew goes on every job, if the border lets them in and the job
 doesn't hit one of their limits.
 
 Play it here: **https://papogambola.github.io/the-crew/** — every push to `main` redeploys it.
