@@ -20,6 +20,12 @@ decisions at the end.
 
 ## What is in the build
 
+- **A title screen.** The logotype in the middle, and under it **five faces** — five files drawn out
+  of the same face builder every operative on the roster uses, and a different five every time the
+  door opens. Then the dossier card, a way into the player's handbook, and at the foot the
+  publisher's mark: **Shhh Games**, traced to paths so it is ink like everything else here, and the
+  year.
+
 - **Where the crew's numbers are.** The **Crew** tab is the crew: a card each, with **loyalty** as a
   number and a bar, what they take of every score, weekly upkeep, the five attributes, experience,
   schooling, knowledge, languages, temperament, limits, and who they get on with. Clicking a name
@@ -496,7 +502,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 43 · 16 September
+The footer of every screen, and the office header, carry a build stamp (`build 44 · 16 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

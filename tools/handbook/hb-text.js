@@ -84,6 +84,7 @@ ch("where","Where everything is","The screen, tab by tab",[
       ["The week-by-week log","<b>Dashboard</b> → <b>Case log</b>, filterable by week."],
       ["What the last score is still waiting for","<b>Dashboard</b> → <b>The operation</b>."],
       ["Your own file","The office → <b>Your file</b>."],
+      ["This handbook","The title screen, the office's bookshelf, the controls book, or the footer of any screen."],
       ["A copy of your save you can keep","The office → <b>The file cabinet</b>. Writes the game out as one long code and reads one back in."],
     ])),
 ]);
@@ -91,7 +92,10 @@ ch("where","Where everything is","The screen, tab by tab",[
 /* -------------------------------- 3 ----------------------------------- */
 ch("you","You","The commander",[
   S("dossier","Opening a dossier",
-    p("A new game starts with the <b>WHO ARE YOU?</b> screen. You choose:")
+    p("The title screen is the game's front door: the name, five faces under it — five files drawn "
+      +"fresh out of the same face builder every operative on the roster uses, a different five every "
+      +"time you open it — and a way into this handbook.")
+    +p("<b>New game</b> goes to the <b>WHO ARE YOU?</b> screen. You choose:")
     +ul([
       "<b>Alias</b> — type one, or press "+m("↻ RANDOM")+", which draws a name from the naming pool of the nationality you have picked. A Nigerian commander gets a Nigerian name.",
       "<b>Appearance</b> — a face, drawn in ink. "+m("↻ RANDOM")+" here too.",
