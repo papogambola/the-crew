@@ -177,6 +177,25 @@
   .jobbrief p{margin:5px 0 0;font-family:var(--f-body);font-size:14.5px;line-height:1.6;color:var(--ink)}
   .brief .client{color:var(--ink);font-weight:500}
   .factors{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-family:var(--f-mono);font-size:11px;margin-top:8px}
+  /* the dashboard: every section shut is still a line of numbers */
+  .fold{border:1px solid var(--line-2);background:var(--card);margin-bottom:10px}
+  .fold.on{border-color:var(--ink)}
+  .fold-h{display:flex;align-items:baseline;gap:10px;width:100%;text-align:left;appearance:none;border:0;
+    background:none;padding:11px 13px;cursor:pointer;color:inherit}
+  .fold-h:hover{background:var(--paper-2)}
+  .fold.on .fold-h{border-bottom:1px solid var(--line)}
+  .fold-c{font-family:var(--f-mono);font-size:12px;color:var(--muted);flex:none;width:11px}
+  .fold-t{font-family:var(--f-disp);font-size:16px;letter-spacing:.02em;text-transform:uppercase;flex:none}
+  .fold-s{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);letter-spacing:.02em;
+    margin-left:auto;text-align:right;line-height:1.45}
+  .fold-s .bad{color:var(--stamp)}
+  .fold-s .ok{color:var(--good)}
+  .fold-b{padding:12px 13px 13px}
+  /* the panels inside a section have already been introduced by its header */
+  .fold-b>.panel{border:0;margin:0!important;background:none}
+  .fold-b>.panel>.panel-h{display:none}
+  .fold-b>.panel>.panel-b{padding:0}
+  @media(prefers-reduced-motion:no-preference){.fold-c{transition:none}}
   /* what the reckoning said, and what would have answered it */
   .wrongs{margin-top:8px;border:1px solid var(--line-2);background:var(--card)}
   .wr{padding:7px 10px}
@@ -2661,7 +2680,7 @@ function topbar(){
 }
 function tabsBar(){
   const t=(k,l,b)=>'<button class="tab'+(S.tab===k?" on":"")+'" data-act="tab" data-k="'+k+'" role="tab">'+l+(b!=null?'<span class="b num">'+b+'</span>':"")+'</button>';
-  return '<div class="tabs" role="tablist">'+t("crew","Crew",(1+recruits().length)+"/"+(1+crewSeats())+(crews().length?" +"+crews().length:""))+t("jobs","Jobs",S.jobs.length)+t("roster","Roster")+t("log","Log")+'</div>';
+  return '<div class="tabs" role="tablist">'+t("crew","Crew",(1+recruits().length)+"/"+(1+crewSeats())+(crews().length?" +"+crews().length:""))+t("jobs","Jobs",S.jobs.length)+t("roster","Roster")+t("log","Dashboard")+'</div>';
 }
 
 /* ---- hover briefs: what a trade, a knowledge or an attribute means ---- */
@@ -3182,10 +3201,32 @@ function tabRoster(){
 }
 
 /* ---- LOG ---- */
+// Open sections live in settings, not in the save: which panels somebody likes open is a habit,
+// not a fact about this crew, and it should survive a new game.
+function foldOpen(k,dflt){
+  try{const o=SET.folds||{};return o[k]==null?!!dflt:!!o[k];}catch(e){return !!dflt;}
+}
+function foldToggle(k,dflt){
+  SET.folds=SET.folds||{};
+  SET.folds[k]=!foldOpen(k,dflt);
+  saveSettings();
+}
+// title, the line that must be readable when it is shut, and the panel itself.
+function fold(k,title,summary,inner,dflt){
+  const on=foldOpen(k,dflt);
+  return '<section class="fold'+(on?" on":"")+'" data-fold="'+k+'">'
+    +'<button class="fold-h" data-act="fold" data-k="'+k+'" data-d="'+(dflt?1:0)+'" aria-expanded="'+(on?"true":"false")+'">'
+      +'<span class="fold-c" aria-hidden="true">'+(on?"▾":"▸")+'</span>'
+      +'<span class="fold-t">'+esc(title)+'</span>'
+      +'<span class="fold-s">'+summary+'</span></button>'
+    +(on?'<div class="fold-b">'+inner+'</div>':'')
+    +'</section>';
+}
 function tabLog(){
   const rc=recruits();
   const status=[
-    ["Places filled",(1+rc.length)+" / 5"],
+    // not "/ 5": a Respected name opens two more places, and the panel was still saying five
+    ["Places filled",(1+rc.length)+" / "+(1+crewSeats())],
     ["Ready to go",field().length],
     ["Injured",rc.filter(c=>c.status==="injured").length],
     ["Held by police",S.roster.filter(c=>c.status==="jailed").length],
@@ -3280,7 +3321,41 @@ function tabLog(){
     +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span class="mono" style="font-size:12px">'+(S.heat>=20?'A file can be lost for '+money(bribeCost())+' — it costs what the heat is worth. Heat −20.':'Nothing to buy off at heat '+Math.round(S.heat)+'.')+'</span>'
     +'<button class="btn ghost sm" data-act="bribe" '+(S.heat>=20&&S.money>=bribeCost()?"":"disabled")+'>Pay the desk</button></div>'
     +'</div></div>';
-  return recaps+'<div class="grid g-hq">'+left+right+'</div>'+record+watch+arrange;
+  // what each section says with its head down — the numbers, not a label
+  const hurt=rc.filter(c=>c.status==="injured").length, held=S.roster.filter(c=>c.status==="jailed").length;
+  const upkeep=payroll().filter(c=>c.status==="crew").reduce((s,c)=>s+c.upkeep,0)+retainerCost();
+  const sOp=(1+rc.length)+' of '+(1+crewSeats())+' places · '+field().length+' ready'
+    +(hurt?' · <span class="bad">'+hurt+' hurt</span>':'')+(held?' · <span class="bad">'+held+' held</span>':'')
+    +' · '+money(upkeep)+'/wk';
+  const sRec=st.jobs+' job'+(st.jobs===1?'':'s')+' · '+nDone+' of '+GOALS.length+' marks · ranking '+S.rep;
+  const sWatch=(function(){
+    if(!rv&&!dt)return '<span class="ok">nobody on you yet</span>';
+    const a=[];
+    if(rv)a.push(esc(cap(rv.name))+' at '+rv.standing+(rv.standing>S.rep?' — <span class="bad">ahead of you</span>':' — behind you'));
+    if(dt)a.push(esc(dt.name)+' · file '+dt.file+(dt.file>=50?' <span class="bad">(they come sooner)</span>':''));
+    return a.join(' · ');
+  })();
+  const sArr=(function(){
+    const on=RETAINERS.filter(r=>hasRetainer(r.k));
+    const bits=[money(retainerCost())+'/wk'];
+    bits.push(on.length?on.map(r=>esc(r.l.toLowerCase())).join(", "):'<span class="bad">nobody on retainer</span>');
+    bits.push(lv?'safe house '+lv:'<span class="bad">no safe house</span>');
+    bits.push('heat '+Math.round(S.heat));
+    return bits.join(' · ');
+  })();
+  const sRecaps=reps.length+(wk!==null?' in week '+wk:' on file');
+  const sLog=(wk===null?'all weeks':'week '+wk)+' · '+lines.length+' entries';
+
+  // Everything starts shut. Leaving the first one open put the two sections that were being
+  // missed back under the fold on a 760-tall screen, which is the whole complaint — and six
+  // summaries in four hundred pixels IS the dashboard: the screen is an index of itself, and
+  // whatever anybody opens is remembered, so the habit only has to be formed once.
+  return fold("op","The operation",sOp,right,false)
+    +fold("law","The competition and the law",sWatch,watch||'<div class="sel-help">Nobody is working against you by name yet. A rival appears once you are Small time; a detective opens a file once the heat has been up.</div>',false)
+    +fold("arrange","Standing arrangements",sArr,arrange,false)
+    +fold("record","The record",sRec,record,false)
+    +fold("recaps","Job recaps",sRecaps,recaps,false)
+    +fold("caselog","Case log",sLog,left,false);
 }
 
 /* ------------------------------ MODALS -------------------------------- */
@@ -4293,7 +4368,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 40 · 16 September 2026";
+const BUILD="build 41 · 16 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
@@ -4378,6 +4453,7 @@ document.addEventListener("click",e=>{
     case "to-title": draft=null; render(); break;
     case "continue": if(load()){if(tutOnEntry())tutGo(0);else render();} break;
     case "draft-gender": draft.gender=v; draft.face=normFace(draft.face,draft.gender); showCreate(); break;
+    case "fold": { foldToggle(t.getAttribute("data-k"),t.getAttribute("data-d")==="1"); render(); break; }
     case "reroll-av": { const r=freshRng(); draft.avseed=ri(r,1,1e9); draft.face=randomFace(r,draft.gender); showCreate(); break; }
     // The box writes straight into draft.name as it is typed and the select into draft.nat, so the
     // passport and sex used here are the ones showing on the screen.

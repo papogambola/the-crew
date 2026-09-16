@@ -175,7 +175,15 @@ decisions at the end.
   and the board notices what happens to people who leave your crew: **ranking +2** when it is
   clean. It also costs heat, the detective's file, and **loyalty across everybody still with
   you**, because they can all count. Nobody is safe working for somebody who does that.
-- **Job recaps.** Every job you have run stays on file. The Log's week is a dropdown to any
+- **The Dashboard.** What was the Log is a **Dashboard**: six sections — the operation, the
+  competition and the law, standing arrangements, the record, job recaps, the case log — each one
+  a header you click open. **They all start shut**, and a shut section still says its own numbers
+  on its header: places filled and who is hurt, the rival's standing against yours and how thick
+  the detective's file is, what you pay every week and whether you have a safe house, jobs run and
+  marks earned. So the whole screen is an index of itself on one screen, and nothing is four panels
+  down a scroll. Whatever you open stays open — it is kept in settings, so it survives a new game.
+  The game still opens on **Crew**.
+- **Job recaps.** Every job you have run stays on file. The Dashboard's week is a dropdown to any
   past week, and each job reopens as its full report — the minute-by-minute, the verdict, the
   split, why the ranking moved, what they learned, who came back.
 - **The twist.** On some jobs — one good fit in four, one long shot in twelve — the live
@@ -455,7 +463,7 @@ computers that must not be stopped.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 40 · 16 September
+The footer of every screen, and the office header, carry a build stamp (`build 41 · 16 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
