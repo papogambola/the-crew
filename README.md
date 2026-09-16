@@ -106,7 +106,9 @@ decisions at the end.
   line on screen. Around the city are the five places a job happens in — the street, the post, the
   way in, the room, the car — and every operator stands at one of them, each tied to their place by
   a hairline so there is never a doubt who is where.
-- **The icons say what they are doing.** Not an initial: a mark that **changes with the line** — a
+- **The icons are the operators' own faces** — the same ink bust their crew card carries, clipped
+  into a disc, with their name under it. **What they are doing rides as a small mark on the corner
+  of the face**: a mark that **changes with the line** — a
   figure on foot arriving, an eye watching, a document at a border, a key at the way in, a dial in
   the room, a wheel at the car, a handset, a banknote, a fist, a cross when somebody goes down.
   Nothing on it is decided separately from the text: each line of the feed is written with the place
@@ -116,6 +118,14 @@ decisions at the end.
   quiet week, the split — name no place and leave the map where it stood. **A recruitment trip gets
   the same map**, framed on the city you flew to, with four places of its own — off the plane, the
   city, the table, the answer — and two people on it: you, and whoever you went to meet.
+- **A night that went wrong says why.** Botch one, or worse, and the report carries **What went
+  wrong**: your crew's number against the room's — and whether the gap was there before anybody
+  rolled anything — then every factor that was against you, each with **the thing that would have
+  answered it**. Somebody who speaks the language. Somebody who knows the domain. A Safecracker,
+  because the one who stood in learned a little and that is not the same thing. A quieter week
+  before a room like this. Splitting up two who have lost together. Nothing is a new judgement:
+  it is the reckoning the job file showed you **before** you took it, kept as it stood and read
+  back in the order of what it cost. A night that came off does not explain itself.
 - **Standing in for a trade you haven't got.** Take a job that wants a Safecracker with no
   safecracker on the books and somebody spends the week before learning enough of it to try —
   the report says who, by name. If the job comes off, that week is worth a point of brains, and
@@ -439,7 +449,7 @@ computers that must not be stopped.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 38 · 16 September
+The footer of every screen, and the office header, carry a build stamp (`build 39 · 16 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

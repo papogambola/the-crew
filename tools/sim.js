@@ -85,7 +85,10 @@ for(let run=0;run<RUNS;run++){
       if(!S.modal||S.modal.type!=="trip"){break;}
       const Tr=S.modal.data;
       trips++;
-      if(S.pendingTrip){
+      // A trip is pending until the week runs out, snag or no snag — it used to settle inside
+      // startTrip when nobody had to decide anything, so a pending trip always meant a snag was
+      // waiting. Reading .snag.k off every pending trip now throws on the quiet ones.
+      if(S.pendingTrip&&S.pendingTrip.snag){
         snags++;
         const cc=byId(S.pendingTrip.cid),kit=tripKit(cc);
         const W=TRIP_SNAGS.find(x=>x.k===S.pendingTrip.snag.k);
@@ -94,6 +97,8 @@ for(let run=0;run<RUNS;run++){
         W.opts.forEach((o,i)=>{if(tripCan(o,cc,kit)&&o.pri<bp){bp=o.pri;bi=i;}});
         if(r()>P.twist){bi=Math.floor(r()*W.opts.length);}   // an imperfect player
         finishTrip(S.pendingTrip,bi,Tr);
+      } else if(S.pendingTrip){
+        finishTrip(S.pendingTrip,null,Tr);   // nobody had to decide anything; the week just runs out
       }
       S.modal=null;
       if(Tr.outcome==="signed"){hires++;feesPaid+=(m0-S.money);}
