@@ -15,6 +15,12 @@ decisions at the end.
 
 ## What is in the build
 
+- **Where the crew's numbers are.** The **Crew** tab is the crew: a card each, with **loyalty** as a
+  number and a bar, what they take of every score, weekly upkeep, the five attributes, experience,
+  schooling, knowledge, languages, temperament, limits, and who they get on with. Clicking a name
+  anywhere opens the same person's **file**, which carries loyalty too — with what a thin one risks
+  — beside the fee, the cut and the upkeep. A file on somebody who does not work for you shows no
+  loyalty, because there is none yet.
 - **A five-person crew, you included.** You create your own file — alias, sex (male or
   female), nationality, trade — and the rest of your profile is rolled, re-rollable. You
   are the commander. Four places to fill from the roster.
@@ -449,7 +455,7 @@ computers that must not be stopped.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 39 · 16 September
+The footer of every screen, and the office header, carry a build stamp (`build 40 · 16 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

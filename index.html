@@ -3329,6 +3329,9 @@ function modalRecruit(id){
         +(bondsFor(c).length?'<span class="k">On the crew</span><span>'+bondsFor(c).map(x=>'<span class="tip" tabindex="0" data-wide="1" data-tip="'+esc(bondStory(c.id,x.c.id))+'">'
           +(c.isPlayer?"You "+youWord(bondWord(x.b)):cap(bondWord(x.b)))+" "+esc(x.c.isPlayer?"you":x.c.first)+'</span>').join("<br>")+'</span>':'')
         +'<span class="k">Cannot</span><span>'+(c.limits.length?c.limits.map(k=>'<span style="color:var(--stamp)">'+LIMIT_BY_K[k].l+'</span>').join(", "):"— no known limits")+'</span>'
+        +(c.status==="crew"&&!c.isPlayer?'<span class="k">Loyalty</span><span class="num">'+c.loyalty+' / 100'
+          +(c.loyalty<35?' — <span style="color:var(--stamp)">thin; under 35 they may skim a big score and go</span>'
+           :c.loyalty<60?' — <span style="color:var(--muted)">they would listen to another crew</span>':'')+'</span>':'')
         +(c.isPlayer?'':'<span class="k">Fee</span><span class="num">'+money(c.fee)+' one-off</span>'
         +'<span class="k">Cut</span><span class="num">'+Math.round(c.cut*100)+'% of each score</span>'
         +'<span class="k">Upkeep</span><span class="num">'+money(c.upkeep)+' a week</span>')+'</div>'
@@ -4290,7 +4293,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 39 · 16 September 2026";
+const BUILD="build 40 · 16 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
@@ -4744,7 +4747,10 @@ function looseResolve(i){
   if(o.loy){
     const rest=field().filter(x=>!x.isPlayer);
     rest.forEach(x=>{x.loyalty=clamp(x.loyalty+o.loy,0,100);x._touched=true;});
-    if(rest.length)lines.push("The crew hears about it. Loyalty "+(o.loy>0?"+":"")+o.loy+" across "+rest.length+".");
+    if(rest.length){
+      const who=rest.length<=3?listAnd(rest.map(x=>x.first)):"all "+rest.length+" of them";
+      lines.push("The crew hears about it. Loyalty "+(o.loy>0?"+":"")+o.loy+" for "+who+".");
+    }
   }
   logMsg((o.kill?"Dealt with "+c.first+". ":c.first+": "+o.t+". ")+lines.join(" "),o.kill?"bad":"warn",true);
   S.loose.shift();
