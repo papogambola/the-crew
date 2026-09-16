@@ -20,7 +20,9 @@ decisions at the end.
 
 ## What is in the build
 
-- **A title screen.** The logotype in the middle, and under it **five faces** — five files drawn out
+- **A title screen.** The logotype across the width of the column — it is measured, not guessed, and
+  if the font never loads the title is measured again on screen and brought down so it cannot run off
+  the page. Under it **five faces** — five files drawn out
   of the same face builder every operative on the roster uses, and a different five every time the
   door opens. Then the dossier card, a way into the player's handbook, and at the foot the
   publisher's mark: **Shhh Games**, traced to paths so it is ink like everything else here, and the
@@ -502,7 +504,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 44 · 16 September
+The footer of every screen, and the office header, carry a build stamp (`build 45 · 16 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
