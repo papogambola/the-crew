@@ -181,8 +181,9 @@ decisions at the end.
   on its header: places filled and who is hurt, the rival's standing against yours and how thick
   the detective's file is, what you pay every week and whether you have a safe house, jobs run and
   marks earned. So the whole screen is an index of itself on one screen, and nothing is four panels
-  down a scroll. Whatever you open stays open — it is kept in settings, so it survives a new game.
-  The game still opens on **Crew**.
+  down a scroll. **One opens at a time** — opening a section shuts whatever was open, so the screen
+  never grows back into the scroll it was built to stop being. Whatever you left open stays open,
+  kept in settings, so it survives a new game. The game still opens on **Crew**.
 - **Job recaps.** Every job you have run stays on file. The Dashboard's week is a dropdown to any
   past week, and each job reopens as its full report — the minute-by-minute, the verdict, the
   split, why the ranking moved, what they learned, who came back.
@@ -463,7 +464,7 @@ computers that must not be stopped.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 41 · 16 September
+The footer of every screen, and the office header, carry a build stamp (`build 42 · 16 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
