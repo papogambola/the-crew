@@ -486,7 +486,7 @@
 "use strict";
 /* =========================================================================
    THE CREW — a paper-and-ink game of global crime. You are the criminals.
-   Five-person crew including you. 5,000 operatives. Jobs by country.
+   Five-person crew including you, seven once the name is big enough. 6,000 operatives.
    Single file, no dependencies. Progress saved in this browser.
    ========================================================================= */
 
@@ -511,8 +511,8 @@ const BAL={
   roll:26,                // ±, so no margin is ever safe and none is ever hopeless
   messyPay:0.6,           // a messy job still has to feed the crew
   // --- time --- weeks on the ground per job tier, and what casing one costs
-  jobWeeks:[0,1,1,2,3], finalWeeks:4,
-  caseMax:[0,1,2,3,4],    // how many weeks of casing a tier will take
+  jobWeeks:[0,1,1,2,3,4], finalWeeks:4,
+  caseMax:[0,1,2,3,4,5],  // how many weeks of casing a tier will take
   caseGain:9,             // margin per week cased
   caseCostPct:0.06,       // of the fee, per week
   caseHeat:2,
@@ -529,7 +529,7 @@ const BAL={
   // --- the money --- a crew of six takes roughly half the gross in cuts and eats every week
   // whether it works or not, so the fee has to be worth the weeks the job costs. It didn't
   // used to matter: every job was one week and the game was over in eighteen of them.
-  payTier:[0,52000,150000,380000,950000],
+  payTier:[0,52000,150000,380000,950000,2400000],
   payWeeks:0.42,          // a job pays (1−this)+(this×weeks): a three-week room pays ~1.8×
   startMoney:150000,      // the opening stake has to survive a bad first month, not just a good one
   // What a soldier takes off the top. Six Legends used to take 13–18% each — ninety per cent of
@@ -537,6 +537,18 @@ const BAL={
   // A big crew of good people should be expensive, not impossible.
   cutBase:0.03, cutPerExp:0.012, cutJitter:0.03,
   countryHeatPerJob:14, countryHeatDecay:1,
+  // --- the seven-place work --- five hundred operations that only exist once the name opens the
+  // sixth and seventh places. They ask for six or seven in the field, three to five wanted trades
+  // and two or three kinds of knowledge, which is more than a five-person crew has room to carry.
+  bigDiff:122,            // before ranking, local heat and the seventh body are added
+  // These rooms are hard because of what they are, not because of who you are. An ordinary posting
+  // is defended against your name — that is the whole of repPressure — but an operation four floors
+  // under Zurich was built that way before anybody had heard of you, so it takes half the pressure.
+  // At full pressure the base and the name compound, and the last rung of the ladder cannot run one.
+  bigRepPressure:0.5,
+  bigNeed7:8,             // a seven-body operation is harder than a six-body one
+  bigHeat:34,
+  bigCount:500,
 };
 /* ----------------------------- RNG ------------------------------------ */
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
@@ -669,7 +681,32 @@ const TECHS=[
   {k:"face",l:"Face",a:"charm",know:"Politics",d:"The name in the room, the smile on the deal."},
   {k:"smuggler",l:"Smuggler",a:"nerve",know:"Maritime",d:"Moves cargo across any line on a map."},
 ];
-const TECH_BY_K={};TECHS.forEach(t=>TECH_BY_K[t.k]=t);
+// The sixteen above are what a five-person crew is made of, and the roster's first five thousand
+// files are drawn from them — unchanged, in the same order, consuming the same one roll of the
+// RNG, so every save opened before these fourteen existed rebuilds exactly the crew it had.
+//
+// These fourteen are what a SEVEN-person crew is made of. They are specialists nobody needs until
+// the rooms get big enough to need them, and they are the reason the ultra-complex operations can
+// be run at all: those postings ask for three to five wanted trades and most of them are here.
+const TECHS_BIG=[
+  {k:"drone",      l:"Drone specialist",a:"tech",  know:"Aviation", big:true,d:"Eyes, ears and hands where nobody can stand."},
+  {k:"pilot",      l:"Pilot",           a:"nerve", know:"Aviation", big:true,d:"Anything with wings, off any strip, at night, unfiled."},
+  {k:"skipper",    l:"Skipper",         a:"nerve", know:"Maritime", big:true,d:"Reads the water, the weather and the coastguard the same way."},
+  {k:"diver",      l:"Diver",           a:"nerve", know:"Maritime", big:true,d:"Works under the hull, in the dark, on a bottle and a clock."},
+  {k:"climber",    l:"Climber",         a:"muscle",know:"Logistics",big:true,d:"Takes the outside of a building, because the inside is watched."},
+  {k:"tunneller",  l:"Tunneller",       a:"muscle",know:"Logistics",big:true,d:"Comes up through the floor, weeks after starting."},
+  {k:"chemist",    l:"Chemist",         a:"tech",  know:"Medicine", big:true,d:"Makes it, kills it, or makes it look like neither happened."},
+  {k:"medic",      l:"Medic",           a:"brains",know:"Medicine", big:true,d:"Keeps people on their feet long enough to finish the job."},
+  {k:"electrician",l:"Electrician",     a:"tech",  know:"Networks", big:true,d:"Takes a building's power without taking its alarms."},
+  {k:"signals",    l:"Signals",         a:"tech",  know:"Networks", big:true,d:"Jams, spoofs and listens to everything on the air."},
+  {k:"analyst",    l:"Analyst",         a:"brains",know:"Finance",  big:true,d:"Finds the eleven minutes in a year when nobody is looking."},
+  {k:"quarter",    l:"Quartermaster",   a:"brains",know:"Logistics",big:true,d:"The right kit, in the right country, before anybody asks for it."},
+  {k:"linguist",   l:"Linguist",        a:"charm", know:"Politics", big:true,d:"Speaks the room, whatever the room speaks."},
+  {k:"handler",    l:"Handler",         a:"charm", know:"Politics", big:true,d:"Runs the person on the inside, and keeps them running."},
+];
+const TECHS_ALL=TECHS.concat(TECHS_BIG);
+const TECH_BY_K={};TECHS_ALL.forEach(t=>TECH_BY_K[t.k]=t);
+function isBigTech(k){const t=TECH_BY_K[k];return !!(t&&t.big);}
 const SITES=[
   {k:"road",  l:"The street", x:14, y:50, ly:-10.5},
   {k:"watch", l:"The post",   x:20, y:20, ly:-10.5},
@@ -695,6 +732,11 @@ const TECH_SITE={
   lookout:"watch", overwatch:"watch", hacker:"watch", launderer:"watch", fixer:"watch",
   forger:"door", grifter:"door", face:"door", infiltrator:"door", pickpocket:"door",
   safecracker:"inside", demolitions:"inside", enforcer:"inside",
+  // the seven-place specialists
+  pilot:"exit", skipper:"exit", medic:"exit",
+  drone:"watch", signals:"watch", analyst:"watch", electrician:"watch",
+  climber:"door", linguist:"door", handler:"door", quarter:"road",
+  diver:"inside", tunneller:"inside", chemist:"inside",
 };
 function techSite(k){return TECH_SITE[k]||"inside";}
 const EXP=["Rookie","Operator","Professional","Veteran","Legend"];
@@ -742,17 +784,74 @@ const CATS=[
   {k:"vault",l:"Vault",w:{brains:3,tech:2,nerve:2},techs:["safecracker","hacker","wheelman"],know:["Finance"],tags:{underground:.5,night:.5},heat:24,
     v:["Crack the","Empty the","Open the"],n:["private vault","deposit-box floor","bullion room","evidence locker","clearing-house safe"]},
 ];
-const CAT_BY_K={};CATS.forEach(c=>CAT_BY_K[c.k]=c);
+// The eight kinds of ultra-complex operation. They are not on the ordinary board and no country
+// lists them: they arrive by name, once there are seven places to fill, and every one of them wants
+// more hands and more trades than a five-person crew has.
+const BIG_CATS=[
+  {k:"deepwater",l:"Deep water",w:{nerve:4,muscle:2,tech:2},big:true,heat:30,
+   terrain:["coast","port","islands","fjords","canal","delta","river","lakes"],
+   techs:["diver","skipper","smuggler","quarter","signals","medic","wheelman","climber"],
+   know:["Maritime","Logistics","Weapons","Networks"],tags:["water","night","violence"],
+   v:["Take the","Raise the","Cut loose the","Empty the"],
+   n:["cargo off the seabed","container three hulls down","wreck nobody reported","mooring at the deep berth","hold of the anchored tanker","strongroom under the waterline"]},
+  {k:"airlift",l:"Air lift",w:{nerve:4,tech:3,brains:2},big:true,heat:36,
+   techs:["pilot","drone","quarter","signals","smuggler","overwatch","medic","analyst"],
+   know:["Aviation","Logistics","Weapons","Politics"],tags:["air","night","heights"],
+   v:["Lift the","Fly out the","Put down on the","Take off with the"],
+   n:["whole consignment before dawn","people off the roof","crate from the strip nobody uses","load out of a closed airspace","pallets the manifest never had"]},
+  {k:"highrise",l:"High rise",w:{muscle:3,nerve:3,tech:3},big:true,heat:32,
+   terrain:["megacity","coast","mountains"],
+   techs:["climber","drone","overwatch","infiltrator","electrician","signals","safecracker","medic"],
+   know:["Logistics","Networks","Art","Finance"],tags:["heights","night"],
+   v:["Take the","Go over the","Open the","Come in through the"],
+   n:["forty-first floor","penthouse nobody has been inside","glass from the outside","roof plant and down","two floors that are not on the plan"]},
+  {k:"undercity",l:"Under the city",w:{muscle:4,tech:3,brains:2},big:true,heat:34,
+   techs:["tunneller","demolitions","electrician","signals","quarter","medic","safecracker","climber"],
+   know:["Logistics","Weapons","Networks","Finance"],tags:["underground","night"],
+   v:["Come up under the","Dig to the","Open the floor of the","Get beneath the"],
+   n:["clearing house","vault from the service tunnel","bullion floor","room with no doors","depository, a metre a night"]},
+  {k:"blackout",l:"Blackout",w:{tech:5,brains:3},big:true,heat:30,
+   techs:["electrician","signals","hacker","drone","analyst","quarter","overwatch","tunneller"],
+   know:["Networks","Logistics","Weapons","Finance"],tags:["night","underground"],
+   v:["Take down the","Blind the","Put out the","Own the"],
+   n:["district for eleven minutes","whole security grid","exchange and everything on it","ring main and the backup","coastal radar for one night"]},
+  {k:"longcon",l:"The long con",w:{charm:5,brains:3},big:true,heat:20,lang:true,
+   techs:["handler","linguist","face","forger","grifter","analyst","launderer","fixer"],
+   know:["Politics","Finance","Law","Art"],tags:["night"],
+   v:["Become the","Buy the","Turn the","Sit inside the"],
+   n:["board, from the inside, over a year","minister's own auditor","family that owns the bank","committee that signs it off","house and everything it holds"]},
+  {k:"labwork",l:"Lab work",w:{tech:4,brains:3,nerve:2},big:true,heat:38,
+   techs:["chemist","medic","cleaner","quarter","electrician","demolitions","signals","drone"],
+   know:["Medicine","Weapons","Networks","Logistics"],tags:["violence","night","underground"],
+   v:["Empty the","Take the","Shut down the","Walk out of the"],
+   n:["clean room","stock before the inspection","plant, and leave it reading as a fault","cold store and everything in it","facility nobody will admit exists"]},
+  {k:"ledger",l:"The whole ledger",w:{brains:5,tech:3,charm:2},big:true,heat:26,
+   techs:["analyst","launderer","hacker","quarter","forger","handler","linguist","safecracker"],
+   know:["Finance","Law","Networks","Politics"],tags:["night"],
+   v:["Take the","Read the","Move the","Close the"],
+   n:["whole year's settlement","names and what they are worth","entire book in one night","clearing position before it opens","fund, from four countries at once"]},
+];
+const CATS_ALL=CATS.concat(BIG_CATS);
+const CAT_BY_K={};CATS_ALL.forEach(c=>CAT_BY_K[c.k]=c);
+// Somebody who commissions a seven-person operation is not the same somebody who posts on a board.
+const BIG_CLIENTS=["the Committee's second table","a sovereign fund, at one remove","the Zurich Trustees",
+  "a name that is only a letterhead","the Board of the Ninth","an estate in probate, contested",
+  "the Consortium","a ministry that will deny it","the Syndic","an heir with lawyers"];
 const CLIENTS=["Ghost_Ledger","the Marrakesh Broker","the Quiet Auction","K.","the Widow of Trieste","Nine Fingers","a consulate, unofficially","the Notary","Blue Harbour Holdings","M. Voss","Sister Cassandra","the Committee","Dr. Sable","an heir","the Ferryman","old Ostrowski","a shipping line","Redacted_07"];
 
-const ROSTER_SIZE=5000;
+// Five thousand files drawn from the original sixteen trades, then a thousand more drawn only from
+// the fourteen specialists. The first five thousand are generated exactly as they always were —
+// same order, same rolls — so an existing save rebuilds the same people it was saved with.
+const ROSTER_CORE=5000;
+const ROSTER_BIG=1000;
+const ROSTER_SIZE=ROSTER_CORE+ROSTER_BIG;
 // seats in your crew: crewSeats() — four recruits plus you, six once the name is Respected
 const VET_COST=6000;
 
 /* --------------------------- CHARACTER GEN ---------------------------- */
 function genProfile(rng,nat,gender,opts){
   opts=opts||{};
-  const tech=opts.tech?TECH_BY_K[opts.tech]:pick(rng,TECHS);
+  const tech=opts.tech?TECH_BY_K[opts.tech]:pick(rng,opts.pool||TECHS);
   const role=opts.role||(chance(rng,0.25)?"commander":"soldier");
   const r=rng();
   const exp=r<0.40?1:r<0.70?2:r<0.87?3:r<0.97?4:5;
@@ -796,8 +895,8 @@ function genChar(rng,i,used){
   let guard=0;
   while(used.has(n)&&guard++<40){n=first+" "+String.fromCharCode(65+ri(rng,0,25))+". "+last;}
   used.add(n);
-  const p=genProfile(rng,nat,gender);
-  const feeBase=(p.exp*7000)+(avg(p.attrs)*260)+(p.know.length-1)*2500+p.edu*900+(p.tech==="hacker"||p.tech==="safecracker"||p.tech==="forger"?4000:0);
+  const p=genProfile(rng,nat,gender,{pool:i>=ROSTER_CORE?TECHS_BIG:TECHS});
+  const feeBase=(p.exp*7000)+(avg(p.attrs)*260)+(p.know.length-1)*2500+p.edu*900+(p.tech==="hacker"||p.tech==="safecracker"||p.tech==="forger"?4000:0)+(isBigTech(p.tech)?9000:0);
   const fee=Math.round(feeBase*(1+rng()*0.35)/500)*500;
   let cut=Math.round((BAL.cutBase+(p.exp-1)*BAL.cutPerExp+rng()*BAL.cutJitter)*1000)/1000;
   if(p.limits.includes("cut"))cut=Math.max(cut,0.1);
@@ -1238,7 +1337,7 @@ function rivalAhead(){return !!(rival()&&rival().standing>S.rep);}
 // The rival takes a posting off the board — the best one still there.
 function rivalWorks(rng){
   const rv=rival();if(!rv)return;
-  const open=S.jobs.filter(j=>!j.final);
+  const open=S.jobs.filter(j=>!j.final&&!j.big);
   if(open.length<5)return;
   if(!chance(rng,rivalAhead()?0.5:0.38))return;
   const j=open.slice().sort((a,b)=>b.tier-a.tier||b.payout-a.payout)[0];
@@ -1406,6 +1505,8 @@ function checkMilestones(){
   const push=(k,n)=>{if(M[k])return;M[k]=true;S.notices.push(n);logMsg(n.h+" — "+n.text,"good",true);};
   if(crewSeats()>=CREW_MAX_SEATS)push("seats6",{k:"Milestone · "+rankName(S.rep),h:"Two more seats",
     text:"The name is "+rankName(S.rep)+". Places six and seven are open: six soldiers, and you. Fill them from the roster — and from week 104, Feared, with all seven on the crew, you can found a second crew that works without you.",go:"roster",goText:"To the roster →"});
+  if(crewSeats()>=CREW_MAX_SEATS)push("bigops",{k:"Milestone · "+rankName(S.rep),h:"Work that needs seven",
+    text:"Seven places is what the ultra-complex operations ask for. "+BAL.bigCount+" of them exist — deep water, air lifts, high rises, tunnels, blackouts, long cons, lab work and whole ledgers — each wanting six or seven in the field, three to five trades and two or three kinds of knowledge. They are not on the ordinary board and no rival can take one; one or two stand on it at a time, by name, and each is spent when it is run. They want people a five-person crew never needed: divers, pilots, skippers, drone specialists, climbers, tunnellers, chemists, medics, electricians, signals, analysts, quartermasters, linguists and handlers. A thousand of those are on the roster.",go:"jobs",goText:"To the board →"});
   const fr=foundingRules();
   if(fr.more){
     const n=fr.n+2,ord=["","","second","third","fourth"][n],years=fr.week/52;
@@ -1502,6 +1603,30 @@ const BRIEF_OPEN={
   sabotage:["The {noun} in {city} has to stop working for a few hours, and it has to look like it stopped on its own.",
     "The client is paying for downtime. The {noun}, dark, and nobody standing near it.",
     "Break one specific thing in {city}, break nothing else, and be somewhere public when it breaks."],
+  deepwater:["It is under the water off {city}, it is heavy, and the people who put it there believed that was enough.",
+    "Whatever is down there is not on any manifest, and getting to it means being under the surface longer than anybody should be.",
+    "The {noun}: below the waterline, in the dark, with a boat overhead pretending to fish."],
+  airlift:["It leaves {country} by air or it does not leave at all, and nobody is filing a plan for it.",
+    "The client wants the {noun}, and wants it out of {city} before anybody on the ground has counted twice.",
+    "An airframe, a strip that is not on the current charts, and a weather window somebody has to be right about."],
+  highrise:["It is forty floors above {city} and every way in from the ground is watched, which leaves the outside.",
+    "The {noun}: high, glassed, and defended by the assumption that nobody comes in that way.",
+    "The client wants what is on the top floor of a building in {city} that was designed by somebody expecting this."],
+  undercity:["The way in is under {city}, and it takes weeks of nights before anybody is standing under the room.",
+    "The {noun} cannot be entered. It can, with enough time and enough people, be come up underneath.",
+    "Below the street, where the phones stop and the plans are a hundred years out of date."],
+  blackout:["For eleven minutes {city} has to be somebody else's problem, and everything happens in those minutes.",
+    "The {noun}: dark, with the backups dark too, and it has to read as a fault rather than a crew.",
+    "Power, alarms, radios and the response — all of it, at once, in one district of {city}."],
+  longcon:["This one is a year, not a night. You become somebody the {noun} already trusts, and then you are inside it.",
+    "The client is not paying for a break-in. They are paying for the {noun} to hand it over believing it was their idea.",
+    "Months of being other people in {city}, until the room opens from the inside for the right reason."],
+  labwork:["The {noun} is in a building that officially makes something else, and everyone in it is careful for a living.",
+    "What the client wants out of {city} is dangerous to move, dangerous to hold, and worse to be found with.",
+    "Clean rooms, a manifest that lies, and people who will notice the air pressure change."],
+  ledger:["The {noun} exists in four countries at once, and it has to be taken in all four on the same night.",
+    "This is not a room. It is a position — held in accounts, filings and one signature — and the client wants it closed.",
+    "The client wants the whole book out of {city}: the names, the amounts, and the year they cover."],
   vault:["The {noun} in {city} holds what the client says is theirs. Open it and prove them right.",
     "Steel, a time lock and one night. The {noun} is the entire job.",
     "The {noun} has never been opened by anybody who did not work there. The client would like that to change."],
@@ -1510,7 +1635,8 @@ const BRIEF_TIER=["",
   "It is a small operation — one door, one shift, nobody expecting anybody.",
   "It is watched, but not closely: a routine, a couple of people, and gaps you can time.",
   "It is properly held — overlapping shifts, a schedule somebody thought about, and people paid to notice.",
-  "Everything about it is difficult on purpose, and whoever set it up has seen crews like yours before."];
+  "Everything about it is difficult on purpose, and whoever set it up has seen crews like yours before.",
+  "It is held the way a country holds a thing: shifts that overlap on purpose, people whose only job is to watch the other people, and a plan for a crew exactly like yours turning up."];
 const BRIEF_TAG={water:"Part of it happens on the water.",air:"A leg of it is by air.",
   heights:"Some of it is well above the ground.",underground:"It goes below street level, where phones stop.",
   violence:"There will be people there who intend violence, whoever starts it.",night:"It happens after dark."};
@@ -1543,7 +1669,7 @@ function jobBrief(job){
   const rng=mulberry32(jobSeed(job));
   const v={noun:jobNoun(job),city:job.city,country:job.country,client:cap(job.client||"the client"),fee:money(job.payout)};
   const open=fill2(pick(rng,BRIEF_OPEN[job.cat]||BRIEF_OPEN.vault),v);
-  const tier=BRIEF_TIER[clamp(job.tier,1,4)];
+  const tier=BRIEF_TIER[clamp(job.tier,1,5)];
   const tags=(job.tags||[]).filter(t=>BRIEF_TAG[t]);
   const tag=tags.length?BRIEF_TAG[pick(rng,tags)]:"";
   const techs=(job.techs||[]).map(t=>TECH_BY_K[t]&&TECH_BY_K[t].l).filter(Boolean);
@@ -1563,7 +1689,15 @@ function refreshJobs(fill){
   const want=7+(hasRetainer("fixer")?2:0);
   while(S.jobs.filter(j=>!j.final).length<want&&guard++<40)S.jobs.push(makeJob(rng,0));
   const top=Math.min(3,rankInfo(S.rep).maxTier);
-  if(!S.jobs.some(j=>j.tier>=top)&&(fill||chance(rng,0.5)))S.jobs.push(makeJob(rng,2));
+  if(!S.jobs.some(j=>!j.big&&j.tier>=top)&&(fill||chance(rng,0.5)))S.jobs.push(makeJob(rng,2));
+  // the seven-place work: one or two standing on the board, drawn from the five hundred
+  if(bigOpen()){
+    const done=bigDone();
+    const have=S.jobs.filter(j=>j.big).length;
+    const want=1+(chance(rng,0.45)?1:0);
+    const free=bigCatalogue().filter(o=>!done[o.id]&&!clientBanned(o.client)&&!S.jobs.some(j=>j.id===o.id));
+    for(let i=have;i<want&&free.length;i++)S.jobs.unshift(bigPosting(free.splice(Math.floor(rng()*free.length),1)[0],rng));
+  }
   // the fixer writes one posting a week for the crew you actually have
   if(hasRetainer("fixer")){
     const mine=field().map(c=>c.tech);
@@ -1591,6 +1725,59 @@ const FINAL_STAGES=[
    title:"Everything, and out",kicker:"The last one",
    brief:"Having it is not the same as keeping it. Every border between here and anywhere is now a question with your face on it, and what you are carrying cannot be explained, declared, or put in a bank. This is the part nobody plans, because nobody gets this far. Move all of it, move the crew, and end in a country that will not be asked. Do this and the name at the top of the chart is never spoken aloud again."},
 ];
+/* --------------------- THE SEVEN-PLACE OPERATIONS ---------------------- */
+// Five hundred of them, and they are the same five hundred in every game: built once from a fixed
+// seed, so OP-317 is the same operation in the same city for everybody, countable, and finishable.
+// They are not on the ordinary board — no country lists them and the rival cannot take one — they
+// arrive by name once the sixth and seventh places open, and each one is consumed when it is run.
+const BIG_SEED=0x7A5C0DE;
+let BIG_CACHE=null;
+function bigCatalogue(){
+  if(BIG_CACHE)return BIG_CACHE;
+  const rng=mulberry32(BIG_SEED);
+  const out=[];
+  for(let i=0;i<BAL.bigCount;i++){
+    const cat=pick(rng,BIG_CATS);
+    let co=pick(rng,COUNTRIES),guard=0;
+    while(cat.terrain&&!cat.terrain.some(t=>co.terrain.includes(t))&&guard++<60)co=pick(rng,COUNTRIES);
+    const techs=[],pool=cat.techs.slice();
+    const nt=3+Math.floor(rng()*3);                     // three to five wanted trades
+    for(let j=0;j<nt&&pool.length;j++)techs.push(pool.splice(Math.floor(rng()*pool.length),1)[0]);
+    const know=[],kp=cat.know.slice();
+    const nk=2+(chance(rng,0.45)?1:0);                  // two or three kinds of knowledge
+    for(let j=0;j<nk&&kp.length;j++)know.push(kp.splice(Math.floor(rng()*kp.length),1)[0]);
+    const tags=cat.tags.filter(()=>chance(rng,0.55));
+    out.push({op:i+1,id:"OP"+String(i+1).padStart(3,"0"),big:true,tier:5,cat:cat.k,
+      country:co.name,city:pick(rng,co.cities),
+      need:chance(rng,0.45)?7:6,
+      techs,know,tags,weeks:3+Math.floor(rng()*3),
+      title:pick(rng,cat.v)+" "+pick(rng,cat.n),
+      client:pick(rng,BIG_CLIENTS),
+      seed:ri(rng,1,2000000000)});
+  }
+  BIG_CACHE=out;
+  return out;
+}
+function bigById(id){return bigCatalogue().find(o=>o.id===id)||null;}
+// Seven places, which is a Respected name. The same gate as the places themselves — asked of the
+// seats rather than the number, so it can never disagree with the card that opens them.
+function bigOpen(){return crewSeats()>=CREW_MAX_SEATS;}
+function bigDone(){return S.bigDone||(S.bigDone={});}
+function bigRun(){return Object.keys(bigDone()).length;}
+// What the room is worth and how hard it is held. Both are read at the moment it is offered, so
+// they answer the name you have now and the country's temperature this week.
+function bigPosting(op,rng){
+  const co=COUNTRY_BY_NAME[op.country];
+  const j=mulberry32(op.seed>>>0);
+  const diff=Math.max(60,Math.round(BAL.bigDiff+ri(j,-BAL.diffJitter,BAL.diffJitter)
+    +repPressure()*BAL.bigRepPressure+countryHeat(op.country)*BAL.countryPressure
+    +(op.need===7?BAL.bigNeed7:0)+(co.gate===2?5:0)+(co.auth?4:0)));
+  const base=BAL.payTier[5]*[0,0.65,0.8,1][co.eco]*((1-BAL.payWeeks)+BAL.payWeeks*op.weeks);
+  const payout=Math.round(base*(0.8+j()*0.6)*rankInfo(S.rep).pay/1000)*1000;
+  const heat=Math.round(BAL.bigHeat*(co.auth?1.2:1));
+  return Object.assign({},op,{diff,payout,heat,expires:S.week+ri(rng||j,6,10)});
+}
+
 /* ------------------------------ CASING -------------------------------- */
 // A room you have watched is not the room you were told about. Weeks spent on a posting before
 // taking it buy margin — and cost the weeks, the money, and the risk that somebody else takes
@@ -1841,6 +2028,20 @@ const TECH_BEAT={
   cleaner:[["brings bleach, gloves and patience","bring bleach, gloves and patience"],["books three hotel rooms under three names, all cleaned before checkout","book three hotel rooms under three names, all cleaned before checkout"],["makes a car disappear by lunch","make a car disappear by lunch"]],
   face:[["has the manager's private number by evening","have the manager's private number by evening"],["is invited to the reception without asking to be","are invited to the reception without asking to be"],["talks a way past the desk and leaves them smiling","talk a way past the desk and leave them smiling"]],
   smuggler:[["knows a man with a boat, and the man's brother with a truck","know a man with a boat, and the man's brother with a truck"],["has a container that clears every port in the region","have a container that clears every port in the region"],["knows which crossing the dogs are asleep at","know which crossing the dogs are asleep at"]],
+  drone:[["has the roof, the courtyard and both approaches on one screen","have the roof, the courtyard and both approaches on one screen"],["flies it at four in the morning, when the noise is somebody else's","fly it at four in the morning, when the noise is somebody else's"],["puts a camera on a ledge no ladder reaches","put a camera on a ledge no ladder reaches"]],
+  pilot:[["files a flight plan for somewhere nobody is going","file a flight plan for somewhere nobody is going"],["finds a strip on an old chart that is still flat","find a strip on an old chart that is still flat"],["says the weather window is Thursday, and it is Thursday","say the weather window is Thursday, and it is Thursday"]],
+  skipper:[["reads the tide table like a bus timetable","read the tide table like a bus timetable"],["buys a boat that has been repainted twice already","buy a boat that has been repainted twice already"],["knows which harbour master drinks where","know which harbour master drinks where"]],
+  diver:[["walks the seabed under the quay for three nights running","walk the seabed under the quay for three nights running"],["comes up under the hull with eleven minutes of air","come up under the hull with eleven minutes of air"],["cuts the netting and leaves it looking cut by the current","cut the netting and leave it looking cut by the current"]],
+  climber:[["goes up the outside because the inside is watched","go up the outside because the inside is watched"],["sets a line on the parapet at two and takes it down at five","set a line on the parapet at two and take it down at five"],["free-climbs the service corner and nobody looks up","free-climb the service corner and nobody looks up"]],
+  tunneller:[["starts three weeks early, a metre a night","start three weeks early, a metre a night"],["comes up through a floor nobody has checked since it was poured","come up through a floor nobody has checked since it was poured"],["shores it as it goes, because the alternative is a headline","shore it as it goes, because the alternative is a headline"]],
+  chemist:[["makes the residue read as a maintenance fault","make the residue read as a maintenance fault"],["works out what is in the drum before anybody opens it","work out what is in the drum before anybody opens it"],["turns the alarm's sensor into a very expensive paperweight","turn the alarm's sensor into a very expensive paperweight"]],
+  medic:[["packs a bag that assumes the worst version of the night","pack a bag that assumes the worst version of the night"],["puts a line in somebody in the back of a moving van","put a line in somebody in the back of a moving van"],["says who can carry on and who cannot, and is not argued with","say who can carry on and who cannot, and are not argued with"]],
+  electrician:[["finds the one breaker that takes the floor and not the alarm","find the one breaker that takes the floor and not the alarm"],["spends a day as a man in a hi-vis reading meters","spend a day as a man in a hi-vis reading meters"],["puts the building on its own generator, quietly","put the building on its own generator, quietly"]],
+  signals:[["listens to the patrol channel for a week and writes the routine down","listen to the patrol channel for a week and write the routine down"],["makes every phone in the building believe it has no signal","make every phone in the building believe it has no signal"],["moves their GPS four hundred metres and nobody queries it","move their GPS four hundred metres and nobody queries it"]],
+  analyst:[["finds the eleven minutes a year when the two shifts overlap wrong","find the eleven minutes a year when the two shifts overlap wrong"],["reads two years of filings and comes back with one date","read two years of filings and come back with one date"],["says the money moves on the second Tuesday, and it does","say the money moves on the second Tuesday, and it does"]],
+  quarter:[["has the kit in-country a week before anybody asks for it","have the kit in-country a week before anybody asks for it"],["buys everything twice, from two people, in two names","buy everything twice, from two people, in two names"],["knows what customs weighs and what customs opens","know what customs weighs and what customs opens"]],
+  linguist:[["answers in the dialect, which is not the language, and it lands","answer in the dialect, which is not the language, and it lands"],["reads the sign, the form and the argument at the next table","read the sign, the form and the argument at the next table"],["writes the cover story in a language the crew cannot check","write the cover story in a language the crew cannot check"]],
+  handler:[["has somebody inside who does not know they are inside","have somebody inside who does not know they are inside"],["meets the same clerk in the same café for six weeks","meet the same clerk in the same café for six weeks"],["knows exactly what their person will and will not do","know exactly what their person will and will not do"]],
 };
 const KNOW_BEAT={Finance:"the money trail",Law:"the paperwork",Networks:"the wiring",Logistics:"the timetable",Art:"the provenance",Politics:"who to call",Medicine:"the medical side",Weapons:"the hardware",Maritime:"the water",Aviation:"the air side"};
 const KNOW_HAS=[["{X} knows {k}: {y} is no mystery.","You know {k}: {y} is no mystery."],["{X} has done {k} before; {y} takes an afternoon.","You have done {k} before; {y} takes an afternoon."],["{X} reads {y} like a menu.","You read {y} like a menu."]];
@@ -2150,7 +2351,7 @@ function finishJob(P,choiceIdx,d){
   if(m>BAL.vClean)tier=4;else if(m>BAL.vSuccess)tier=3;else if(m>BAL.vMessy)tier=2;else if(m>BAL.vBotched)tier=1;else tier=0;
   if(twLose>=1&&tier>2)tier=2;
   const verdictName=["DISASTER","BOTCHED","MESSY","SUCCESS","CLEAN"][tier];
-  const base=job.final?100:[0,6,12,22,36][job.tier];
+  const base=job.final?100:[0,6,12,22,36,54][job.tier];
   let take=0,loyD=0,heatMul=0;
   if(tier===4){take=Math.round(job.payout*1.08);loyD=6;heatMul=0.5;}
   else if(tier===3){take=job.payout;loyD=3;heatMul=0.85;}
@@ -2246,7 +2447,7 @@ function finishJob(P,choiceIdx,d){
   if(rankAfter!==rankBefore)logMsg("Ranking: "+rankBefore+" → "+rankAfter+". "+rankInfo(S.rep).note,S.rep>repBefore?"good":"bad",true);
   // progression: everyone who went learns something
   const growth=[];
-  const xpBase=job.final?60:[0,10,18,28,40][job.tier];
+  const xpBase=job.final?60:[0,10,18,28,40,56][job.tier];
   const xpMul=[0.2,0.3,0.6,1,1.2][tier];
   const cat=CAT_BY_K[job.cat];
   const weighted=Object.keys(cat.w).sort((p,q)=>cat.w[q]-cat.w[p]);
@@ -2280,6 +2481,7 @@ function finishJob(P,choiceIdx,d){
   if(P.twist){narrative.push({t:"— —",x:"Then it goes wrong.",tone:"bad",twist:true});if(twLine)narrative.push(twLine);}
   post.lines.forEach(l=>narrative.push(l));
   S.jobs=S.jobs.filter(j=>j.id!==job.id);
+  if(job.big){bigDone()[job.id]=S.week;stats().big=(stats().big||0)+1;}
   if(S.cased)delete S.cased[job.id];       // the weeks are spent; the notes are no use to anyone now
   logMsg((P.crewName?P.crewName+" — ":"")+verdictName+" — "+job.title+" ("+job.city+", "+job.country+"). "+(net>0?"Net "+money(net)+".":"No pay.")+" Ranking "+(repDelta>=0?"+":"")+repDelta+".",tier>=3?"good":tier===2?"warn":"bad",true);
   if(job.final){
@@ -2733,15 +2935,15 @@ function tabsBar(){
 const ATTR_NAME={muscle:"Muscle",brains:"Brains",tech:"Tech",charm:"Charm",nerve:"Nerve"};
 const ATTR_DESC={muscle:"force, doors, the night guard",brains:"planning, locks, paperwork",tech:"networks, cameras, charges",charm:"talk, lies, doors that open for a smile",nerve:"composure, driving, borders"};
 function techBrief(k){
-  const t=TECH_BY_K[k];const wants=CATS.filter(c=>c.techs.includes(k)).map(c=>c.l);
+  const t=TECH_BY_K[k];const wants=CATS_ALL.filter(c=>c.techs.includes(k)).map(c=>c.l);
   return t.l.toUpperCase()+" — leans on "+ATTR_NAME[t.a]+"\n"+t.d+"\nComes with "+t.know+". Wanted by: "+(wants.join(", ")||"no job in particular")+". A wanted trade on the crew is +14 to that member on the job.";
 }
 function knowBrief(k){
-  const wants=CATS.filter(c=>c.know.includes(k)).map(c=>c.l);
+  const wants=CATS_ALL.filter(c=>c.know.includes(k)).map(c=>c.l);
   return k.toUpperCase()+" — "+KNOW_BEAT[k]+"\nWanted by: "+wants.join(", ")+". +5 on a job that wants it; +10 if the one who knows it went to university.";
 }
 function attrBrief(a){
-  const leads=CATS.filter(c=>Object.keys(c.w).sort((p,q)=>c.w[q]-c.w[p])[0]===a).map(c=>c.l);
+  const leads=CATS_ALL.filter(c=>Object.keys(c.w).sort((p,q)=>c.w[q]-c.w[p])[0]===a).map(c=>c.l);
   return ATTR_ABBR[a]+" — "+ATTR_NAME[a]+": "+ATTR_DESC[a]+".\nLeads: "+(leads.join(", ")||"—")+". Scored 12–98; grows a point at a time with good work.";
 }
 function techTip(k){return '<span class="tip" tabindex="0" data-tip="'+esc(techBrief(k))+'">'+TECH_BY_K[k].l+'</span>';}
@@ -3068,8 +3270,8 @@ function jobsList(){
     const techs=j.techs.map(t=>'<span class="tag spec tip '+(has(t)?"ok":"no")+'" tabindex="0" data-tip="'+esc(techBrief(t)+"\n"+(has(t)?"On your crew.":"Nobody on your crew has it."))+'">'+(has(t)?"✓ ":"✗ ")+TECH_BY_K[t].l+'</span>').join(" ");
     const kn=j.know.map(x=>'<span class="tag tip '+(knows(x)?"ok":"no")+'" tabindex="0" data-tip="'+esc(knowBrief(x)+"\n"+(knows(x)?"Someone on the crew knows it.":"Nobody on the crew knows it."))+'">'+(knows(x)?"✓ ":"✗ ")+'knows '+x+'</span>').join(" ");
     return '<div class="jobrow" data-act="open-job" data-id="'+j.id+'" data-country="'+esc(j.country)+'" role="button" tabindex="0">'
-      +'<div class="code">'+(j.final?"—":"№"+j.id.slice(1).padStart(3,"0"))+'<br>'+diffbar(j.diff,j.heat>22)+'</div>'
-      +'<div><div class="t">'+(j.final?'<span class="chip c-bad">Final score</span> ':'')+esc(j.title)+'</div>'
+      +'<div class="code">'+(j.final?"—":j.big?esc(j.id.slice(0,2)+"-"+j.id.slice(2)):"№"+j.id.slice(1).padStart(3,"0"))+'<br>'+diffbar(j.diff,j.heat>22)+'</div>'
+      +'<div><div class="t">'+(j.final?'<span class="chip c-bad">Final score</span> ':j.big?'<span class="chip c-ink">Operation</span> ':'')+esc(j.title)+'</div>'
         +'<div class="loc">'+co.flag+' '+esc(j.city)+', '+esc(j.country)+' · crew of '+j.need+' · <span dir="ltr">'+(j.final?BAL.finalWeeks:(j.weeks||1))+' wk</span> · '+esc(co.langs[0])+' · from '+esc(j.client)+(j.final?'':' · expires wk '+j.expires)+(casedWeeks(j)?' · <span style="color:var(--good)">cased '+casedWeeks(j)+'</span>':'')+'</div>'
         +'<div class="meta"><span class="tag">'+CAT_BY_K[j.cat].l+'</span>'+techs+' '+kn+' '+fit+'</div></div>'
       +'<div class="pay num">'+money(j.payout)+'<div class="loc" style="text-align:right">+'+j.heat+' heat</div></div></div>';
@@ -3181,7 +3383,8 @@ function jobPanel(j){
     +'</div>'
     +(localHeat>=20?'<div class="mono" style="font-size:11.5px;color:var(--stamp);margin-top:6px">'+esc(j.country)+' is watching for you — '+localHeat+' points of local heat, and every room here is harder for it. It cools a point a week.</div>':'')
     :'';
-  const h='<div class="panel-h" style="align-items:center"><div><div class="kicker">'+esc(co.name)+' · '+cat.l+(j.final?' · Final score':'')+'</div>'
+  const h='<div class="panel-h" style="align-items:center"><div><div class="kicker">'+esc(co.name)+' · '+cat.l
+    +(j.final?' · Final score':j.big?' · Operation '+j.op+' of '+BAL.bigCount:'')+'</div>'
     +'<h2 style="font-size:20px;margin-top:4px;text-transform:none;letter-spacing:.02em">'+esc(j.title)+'</h2></div><button class="btn ghost sm" data-act="close-job">← All postings</button></div>';
   // a crew you founded can take it instead of you — its own reckoning, its own report
   const others=crews().map(cr=>{const ac=assessJob(j,crewMembers(cr),cr.leadId||null);const busy=cr.jobWeek===S.week;const lead=crewLeader(cr);
@@ -3190,7 +3393,10 @@ function jobPanel(j){
       +'<div class="loc">'+ac.team.length+' of '+crewMembers(cr).length+' can go · crew '+ac.eff+' vs difficulty '+j.diff+' · '+(lead?'led by '+esc(lead.first):'<span style="color:var(--stamp)">leaderless (−10)</span>')+(busy?' · <span style="color:var(--stamp)">worked this week</span>':'')+(j.final?' · the final score is yours alone':'')+'</div></div>'
       +'<div><button class="btn sm" data-act="execute-crew" data-id="'+j.id+'" data-crew="'+cr.id+'" '+(ac.canRun&&!busy&&!j.final?"":"disabled")+'>Send →</button></div></div>';}).join("");
   const othersBlock=crews().length?'<hr class="rule"><div class="kicker">Other crews</div><div class="sel-help">A crew you founded can take this instead of you: its own reckoning, its own report, and your week stays yours. One job per crew per week. No twists — you are not there to decide.</div>'+others:'';
-  const b='<div class="panel-b">'+theJob+brief+'<div class="mono" style="font-size:12px;color:var(--muted)">The plan leans on '+wtxt+'.</div>'+chips+reqs
+  const bigNote=j.big?'<div class="warnbox" style="color:var(--ink-2);border-color:var(--ink)"><b>An ultra-complex operation — '+j.need+' in the field, '+j.techs.length+' trades wanted, '+j.know.length+' kinds of knowledge.</b> '
+    +'These are not on the ordinary board and nobody else can take one: they arrive by name because you have seven places. '
+    +bigRun()+' of '+BAL.bigCount+' run so far. Each one is spent when it is finished, whichever way it finishes.</div>':'';
+  const b='<div class="panel-b">'+bigNote+theJob+brief+'<div class="mono" style="font-size:12px;color:var(--muted)">The plan leans on '+wtxt+'.</div>'+chips+reqs
     +'<hr class="rule"><div class="kicker">Who goes</div>'+benchBar+checks+splitBlock+caseBlock
     +'<hr class="rule"><div class="kicker">The reckoning</div>'+factors+'<div style="margin-top:10px">'+odds+'</div>'+othersBlock
     +'<hr class="rule"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" data-act="close-job">Walk away</button>'
@@ -3231,7 +3437,7 @@ function tabRoster(){
   const opt=(v,l,cur)=>'<option value="'+esc(v)+'"'+(cur===v?" selected":"")+'>'+l+'</option>';
   const bar='<div class="rosterbar">'
     +'<div class="field"><label for="q">Search</label><input type="text" id="q" value="'+esc(f.q)+'" placeholder="name, country, language, knowledge" autocomplete="off" style="min-width:220px"></div>'
-    +'<div class="field"><label for="ftech">Trade</label><select id="ftech">'+opt("","All",f.tech)+TECHS.map(t=>opt(t.k,t.l,f.tech)).join("")+'</select></div>'
+    +'<div class="field"><label for="ftech">Trade</label><select id="ftech">'+opt("","All",f.tech)+TECHS_ALL.map(t=>opt(t.k,t.l,f.tech)).join("")+'</select></div>'
     +'<div class="field"><label for="frole">Role</label><select id="frole">'+opt("","Any",f.role)+opt("commander","Commander",f.role)+opt("soldier","Soldier",f.role)+'</select></div>'
     +'<div class="field"><label for="fnat">Nationality</label><select id="fnat">'+opt("","All",f.nat)+COUNTRIES.map(c=>opt(c.name,c.flag+" "+c.name,f.nat)).join("")+'</select></div>'
     +'<div class="field"><label for="fsort">Sort</label><select id="fsort">'+opt("fee","Fee, low first",f.sort)+opt("feeD","Fee, high first",f.sort)+opt("exp","Experience",f.sort)+opt("power","Raw skill",f.sort)+opt("name","Name",f.sort)+'</select></div>'
@@ -3324,6 +3530,7 @@ function tabLog(){
     +'<div class="b"><div class="k">Paid in cuts</div><div class="v num">'+money(st.cuts)+'</div></div>'
     +'<div class="b"><div class="k">Biggest score</div><div class="v num">'+money(st.biggest)+'</div></div>'
     +'<div class="b"><div class="k">Countries</div><div class="v num">'+statCountries()+'</div></div>'
+    +(bigOpen()||bigRun()?'<div class="b"><div class="k">Operations</div><div class="v num">'+bigRun()+' <span style="font-size:11px;color:var(--muted)">of '+BAL.bigCount+'</span></div></div>':'')
     +'<div class="b"><div class="k">Clean run</div><div class="v num">'+st.streak+(st.bestStreak>st.streak?' <span style="font-size:11px;color:var(--muted)">best '+st.bestStreak+'</span>':'')+'</div></div></div>'
     +'<div class="factors" style="margin-bottom:10px">'+VT.map(v=>'<span class="k">'+v[1]+'</span><span class="num">'+(st[v[0]]||0)+'</span>').join("")
       +'<span class="k">Twists called right</span><span class="num">'+(st.twistRight||0)+' of '+((st.twistRight||0)+(st.twistWrong||0))+'</span>'
@@ -3489,6 +3696,18 @@ const FM_GLYPH={
   crate:'<path d="M-2.4 -2 H2.4 V2 H-2.4 Z M-2.4 -2 L2.4 2 M2.4 -2 L-2.4 2"/>',
   cash:'<path d="M-2.8 -1.6 H2.8 V1.6 H-2.8 Z"/><circle r=".9"/>',
   phone:'<path d="M-2.4 -2.4 H-.4 L.2 -.6 L-.8 0 Q0 1.4 1.4 2.2 L2 1.2 L3 1.8 V2.6 Q.6 2.8 -1.4 .6 Q-2.8 -.8 -2.4 -2.4 Z"/>',
+  // the seven-place specialists
+  air:'<path d="M0 -2.8 L.7 -.6 L2.9 .2 L.7 .5 L.4 2.8 L0 1.4 L-.4 2.8 L-.7 .5 L-2.9 .2 L-.7 -.6 Z"/>',
+  rotor:'<circle r="1"/><path d="M-2.8 -2.2 H-1.2 M1.2 -2.2 H2.8 M-2.8 2.2 H-1.2 M1.2 2.2 H2.8 M-2 -2.2 V-1 L-.7 -.5 M2 -2.2 V-1 L.7 -.5 M-2 2.2 V1 L-.7 .5 M2 2.2 V1 L.7 .5"/>',
+  water:'<path d="M-3 -1.4 Q-1.5 -2.6 0 -1.4 Q1.5 -.2 3 -1.4 M-3 .6 Q-1.5 -.6 0 .6 Q1.5 1.8 3 .6 M-3 2.6 Q-1.5 1.4 0 2.6"/>',
+  boat:'<path d="M-2.8 .6 H2.8 L1.8 2.4 H-1.8 Z M0 .6 V-2.6 M0 -2.2 L2 -1 L0 -.4"/>',
+  rope:'<path d="M0 -2.8 V2.8 M-1.2 -2 L1.2 -1.2 M-1.2 -.4 L1.2 .4 M-1.2 1.2 L1.2 2"/>',
+  dig:'<path d="M-2.6 2.6 L.4 -.4 M-.8 -1.2 L1.6 -2.6 L2.6 -1.6 L1.2 .8 Z"/>',
+  flask:'<path d="M-1 -2.6 H1 M0 -2.6 V-.6 L2.2 2.6 H-2.2 L0 -.6 Z"/>',
+  cross:'<path d="M-.9 -2.6 H.9 V-.9 H2.6 V.9 H.9 V2.6 H-.9 V.9 H-2.6 V-.9 H-.9 Z"/>',
+  bolt:'<path d="M.8 -2.8 L-1.8 .4 H.2 L-.6 2.8 L2 -.4 H0 Z"/>',
+  wave:'<path d="M0 2.4 V.6"/><circle cy="2.4" r=".7"/><path d="M-1.4 -.2 Q0 -1.6 1.4 -.2 M-2.6 -1.4 Q0 -3.4 2.6 -1.4"/>',
+  chart:'<path d="M-2.6 2.4 V-2.6 M-2.6 2.4 H2.8 M-1.4 1.4 V-.4 M0 1.4 V-1.8 M1.4 1.4 V-.8"/>',
 };
 const FM_SITE_GLYPH={road:"walk",watch:"watch",door:"open",inside:"work",exit:"drive"};
 const FM_TECH_GLYPH={
@@ -3496,6 +3715,9 @@ const FM_TECH_GLYPH={
   lookout:"watch", overwatch:"watch", hacker:"wire", launderer:"cash", fixer:"phone",
   forger:"paper", grifter:"talk", face:"talk", infiltrator:"walk", pickpocket:"work",
   safecracker:"work", demolitions:"work", enforcer:"fist",
+  drone:"rotor", pilot:"air", skipper:"boat", diver:"water", climber:"rope",
+  tunneller:"dig", chemist:"flask", medic:"cross", electrician:"bolt", signals:"wave",
+  analyst:"chart", quarter:"crate", linguist:"talk", handler:"phone",
 };
 function fmGlyphFor(line,c){
   if(line&&line.act&&FM_GLYPH[line.act])return line.act;
@@ -4054,7 +4276,7 @@ function infoContext(){
 }
 const INFO={
   title:{h:"The Crew",t:[
-    "A game of global crime. <b>You are the criminals.</b> You command a crew of five — you and four places to fill from 5,000 files — and take the jobs clients post online, country by country.",
+    "A game of global crime. <b>You are the criminals.</b> You command a crew of five — you and four places to fill from 6,000 files, seven places once the name is big enough — and take the jobs clients post online, country by country.",
     "<b>New game</b> opens a dossier for you. <b>Continue</b> picks up the last game saved in this browser. Progress saves itself after every move.",
     "<b>Esc</b> or the three-line button opens the office: pause, sound, music, brightness, controls, and the door out. This <b>i</b> button explains whatever is on screen.",
     "The first time anyone plays, a tutorial walks through every screen. The second sitting opens with a short reminder. After that, both wait behind this button and in the controls book."]},
@@ -4094,7 +4316,7 @@ const INFO={
     "<b>The rest end them</b>, and each says how likely it is to go cleanly and what happens when it does not. A <b>cleaner</b> makes it an accident — the most expensive and the quietest. A stranger you never meet is cheaper and worse. Your enforcer tonight is cheapest, loudest, and half the time somebody sees; when it goes wrong it is your enforcer the police take.",
     "It works. A body does not talk, and the board notices what happens to people who leave your crew — <b>ranking +2</b> when it is clean. It also costs: <b>heat</b>, the detective's file, and <b>loyalty across everybody still with you</b>, because they can all count. Nobody is safe working for somebody who does that, and they know it."]},
   roster:{h:"The Roster",t:[
-    "5,000 files. <b>Search</b> by name, country, language or knowledge. Filter by <b>trade</b>, <b>role</b> and <b>nationality</b>; sort by fee, experience, raw skill or name. Show 30 more at the bottom.",
+    "6,000 files — five thousand of the original sixteen trades, and a thousand specialists who only matter once there are seven places. <b>Search</b> by name, country, language or knowledge. Filter by <b>trade</b>, <b>role</b> and <b>nationality</b>; sort by fee, experience, raw skill or name. Show 30 more at the bottom.",
     "<b>Hover a trade</b> (or MUS, BRN, TCH, CHM, NRV) for a brief: what it is, what it leans on, what it comes with, and which jobs want it. On a phone, tap it.",
     "<b>Temperament.</b> Two files in three carry a trait, and a trait is a fact about working with them, not a number on a bar. <b>Steady</b> never loses faith after a bad night. <b>Hothead</b> is worth +3 and costs +4 heat. <b>Careful</b> takes 4 heat off any job they work. <b>Quick study</b> learns at double speed; a <b>Mentor</b> is +2 and teaches everyone else half again as fast. <b>Mercenary</b> is +2 and takes 3% more. <b>Lucky</b> adds 4 to the night's roll, <b>Jinx</b> takes 3 off it and pulls twists towards the crew. A <b>Ghost</b> is never the one the police get their hands on.",
     "<b>Fee</b> is paid once, and only if they say yes. <b>Cut</b> is their share of every score. <b>Upkeep</b> is weekly. <b>File</b> opens the whole profile; <b>Go and ask</b> needs an open place, the fee — and a name they will sign with. Rookies, Operators and Professionals sign with anyone; a <b>Veteran</b> wants a Known crew, a <b>Legend</b> a Respected one. A file that won't sign yet says so under the fee.",
@@ -4313,7 +4535,7 @@ function officePanel(){
       +'<span class="k">Enter / Space</span><span>Open the posting you have selected.</span>'
       +'<span class="k">✓ / ✗</span><span>On a job file: who can go, and why not.</span>'
       +'<span class="k">Saving</span><span>Automatic, in this browser. Settings are kept separately and survive a new game.</span></div>'
-      +'<hr class="rule"><div class="mono" style="font-size:12px;line-height:1.8"><b>How it works.</b> You are the commander. Fill four places from 5,000 files — each has a passport, five attributes, a trade, knowledge, education, time in jail, time on the streets, and things they will not do. '
+      +'<hr class="rule"><div class="mono" style="font-size:12px;line-height:1.8"><b>How it works.</b> You are the commander. Fill four places from 6,000 files — each has a passport, five attributes, a trade, knowledge, education, time in jail, time on the streets, and things they will not do. '
       +'Clients post jobs online by country; each country has its own categories, language, money, politics and terrain. Everyone on the crew goes on every job, if they can get in and the job doesn\'t hit one of their limits. '
       +'Success pays and builds ranking; failure adds heat and gets people hurt or held. Build the name to the top of the board and the last score — three operations against the Committee — opens up.</div>'
       +'<hr class="rule"><div class="kicker">The player\'s handbook</div>'
@@ -4395,7 +4617,7 @@ function screenTitle(){
     +'<div class="eyebrow">Case file · Classified</div><h1>The Crew</h1>'
     +lineupHTML()
     +'<p class="tagline">Five places. Five thousand files. You are the criminals — the clients online are worse. A job in every country, a border in front of each one. Know your crew, or the job will teach you.</p></div>'
-    +'<div class="filecard panel"><div class="panel-h"><h2>Open a Dossier</h2><span class="kicker">5,000 operatives on file</span></div>'
+    +'<div class="filecard panel"><div class="panel-h"><h2>Open a Dossier</h2><span class="kicker">'+ROSTER_SIZE.toLocaleString()+' operatives on file</span></div>'
     +'<div class="panel-b"><div class="mono" style="font-size:13px;line-height:1.7;color:var(--ink-2)">'
       +'You are the name at the top of the police\'s chart. Everyone below is '+redact(6)+' — a passport, a set of hands, a record, a price, and a secret. '
       +'Some of them are '+redact(9)+'. Your job is to know which, before the border does.</div>'
@@ -4440,7 +4662,7 @@ function facePanel(){
 function screenCreate(){
   if(!draft){
     const r=freshRng();
-    draft={name:"",gender:"M",nat:pick(r,COUNTRIES).name,role:"commander",tech:pick(r,TECHS).k,avseed:ri(r,1,1e9),profile:null};
+    draft={name:"",gender:"M",nat:pick(r,COUNTRIES).name,role:"commander",tech:pick(r,TECHS_ALL).k,avseed:ri(r,1,1e9),profile:null};
     draft.face=randomFace(r,draft.gender);
     rollDraftProfile();
   }
@@ -4448,7 +4670,7 @@ function screenCreate(){
   draft.face=normFace(draft.face,draft.gender);
   const p=draft.profile;
   const natOpts=COUNTRIES.map(n=>'<option value="'+esc(n.name)+'"'+(draft.nat===n.name?" selected":"")+'>'+n.flag+' '+esc(n.name)+' · P'+n.tier+'</option>').join("");
-  const techOpts=TECHS.map(t=>'<option value="'+t.k+'"'+(draft.tech===t.k?" selected":"")+'>'+t.l+'</option>').join("");
+  const techOpts=TECHS_ALL.map(t=>'<option value="'+t.k+'"'+(draft.tech===t.k?" selected":"")+'>'+t.l+'</option>').join("");
   const g=(v,l,act,key)=>'<button class="genbtn'+(draft[key]===v?" on":"")+'" data-act="'+act+'" data-v="'+v+'">'+l+'</button>';
   const fake={attrs:p.attrs,edu:p.edu,jail:p.jail,streets:p.streets,know:p.know,langs:p.langs,limits:p.limits};
   return '<div class="wrap"><div class="hero" style="padding:34px 0 22px"><div class="eyebrow">New dossier</div><h1 style="font-size:clamp(38px,10vw,74px)">Who are you?</h1></div>'
@@ -4490,7 +4712,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 45 · 16 September 2026";
+const BUILD="build 46 · 16 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
@@ -4804,9 +5026,12 @@ function revengeResolve(i){
     if(m&&m.status==="crew"){m.status="gone";m._touched=true;leaveCrew(m);looseAdd(m,"poach");lines.push(m.first+" is working for "+cap(V.c)+" now.");}}
   if(e.weeks){for(let n=0;n<e.weeks&&!S.over;n++)weekTick(freshRng());refreshJobs(false);}
   // paying them off, or settling it, lifts the word as well
+  // every open line, not the first one found: a client who was banned twice over — once for a job
+  // of their own and once because somebody they drink with had a word — holds two rows, and
+  // lifting one of them leaves the player paid up and still not taking calls.
   if(e.clear){
-    const g=grudges().find(x=>x.c===V.c&&S.week<x.until);
-    if(g){g.until=S.week;lines.push(cap(V.c)+" will take your calls again.");}
+    const open=grudges().filter(x=>x.c===V.c&&S.week<x.until);
+    if(open.length){open.forEach(g=>{g.until=S.week;});lines.push(cap(V.c)+" will take your calls again.");}
   }
   const g2=grudges().find(x=>x.c===V.c&&x.kind==="blood");
   if(g2){g2.done=true;g2.revengeAt=0;}

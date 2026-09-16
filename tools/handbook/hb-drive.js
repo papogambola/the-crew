@@ -31,8 +31,39 @@ const ok=(c,m)=>{if(c){pass++;console.log("  ok   "+m);}else{fail++;console.log(
   ok(await pg.title()==="The Crew — Player's Handbook","title");
   const chs=await pg.$$eval(".chapter",n=>n.length);
   const secs=await pg.$$eval(".sec",n=>n.length);
-  ok(chs===19,"19 chapters ("+chs+")");
+  // the count comes off the page and is checked against the index, so a new chapter is not a failure
+  const idxChapters=await pg.$$eval(".ct-c",n=>n.length);
+  ok(chs>=19&&chs===idxChapters,chs+" chapters, and the contents lists every one of them");
   ok(secs>=70,secs+" sections");
+
+  // The handbook's job is to explain everything in the game. When the game grows a system, the
+  // failure mode is a handbook that still describes the game before it — so the counts checked
+  // here are read from the game's own constants rather than typed in.
+  console.log("\n— what the game actually contains —");
+  const D=JSON.parse(fs.readFileSync(path.join(DIR,"gamedata.json"),"utf8"));
+  const text=await pg.evaluate(()=>document.body.innerText.replace(/\s+/g," "));
+  ok(!!(await pg.$("#bigops")),"the operations have a chapter of their own");
+  for(const id of ["ops","opsopen","bigcats","opscrew","bigtechs"])
+    ok(!!(await pg.$("#"+id)),"  · #"+id+" is in it");
+  const missTech=D.TECHS_ALL.map(t=>t.l).filter(l=>text.indexOf(l)<0);
+  ok(missTech.length===0,"all "+D.TECHS_ALL.length+" trades are named on the page"
+    +(missTech.length?", missing: "+missTech.join(", "):""));
+  const missCat=D.BIG_CATS.map(c=>c.l).filter(l=>text.indexOf(l)<0);
+  ok(missCat.length===0,"and all "+D.BIG_CATS.length+" kinds an operation uses"
+    +(missCat.length?", missing: "+missCat.join(", "):""));
+  const bigRows=await pg.$$eval("#bigtechs table tbody tr",n=>n.length);
+  ok(bigRows===D.TECHS_BIG.length,"the specialists table has a row each ("+bigRows+")");
+  // a trade standing somewhere the handbook has no word for leaves an empty cell, not an error
+  const blank=await pg.evaluate(()=>[].slice.call(document.querySelectorAll("#techs table tbody tr,#bigtechs table tbody tr"))
+    .filter(r=>!r.cells[4]||!r.cells[4].textContent.trim()).map(r=>r.cells[0].textContent.trim()));
+  ok(blank.length===0,"every trade has a place on the plan"+(blank.length?", blank: "+blank.join(", "):""));
+  ok(text.indexOf(D.ROSTER_SIZE.toLocaleString("en-US"))>=0,
+    "the page says how many people are on file ("+D.ROSTER_SIZE.toLocaleString("en-US")+")");
+  ok(text.indexOf(String(D.BAL.bigCount))>=0&&/OP-001/.test(text),
+    "and how many operations there are ("+D.BAL.bigCount+"), by their code");
+  const stale=["5,000 people on file","All five thousand files","one of sixteen. Worth"]
+    .filter(n=>text.indexOf(n)>=0);
+  ok(stale.length===0,"nothing left describing the smaller game"+(stale.length?": "+stale.join("; "):""));
 
   console.log("\n— the index —");
   const dash=await pg.$$eval(".ct-p",n=>n.filter(x=>!/^\d+$/.test(x.textContent.trim())).length);
@@ -74,7 +105,7 @@ const ok=(c,m)=>{if(c){pass++;console.log("  ok   "+m);}else{fail++;console.log(
   ok(/^\d+ of \d+$/.test(count),"the count reads '"+count+"'");
   ok(marks>=5,marks+" occurrences highlighted");
   const hiddenChapters=await pg.$$eval(".chapter.hb-hide",n=>n.length);
-  ok(hiddenChapters>0&&hiddenChapters<19,hiddenChapters+" chapters folded away, "+(19-hiddenChapters)+" kept");
+  ok(hiddenChapters>0&&hiddenChapters<chs,hiddenChapters+" chapters folded away, "+(chs-hiddenChapters)+" kept");
   const emptyTable=await pg.evaluate(()=>[].slice.call(document.querySelectorAll(".chapter table:not(.hb-hide)"))
     .filter(t=>!t.querySelector("tbody tr:not(.hb-hide)")).length);
   ok(emptyTable===0,"no table head is left standing over nothing");
@@ -109,14 +140,14 @@ const ok=(c,m)=>{if(c){pass++;console.log("  ok   "+m);}else{fail++;console.log(
   await pg.waitForTimeout(250);
   const backChapters=await pg.$$eval(".chapter:not(.hb-hide)",n=>n.length);
   const backMarks=await pg.$$eval("mark",n=>n.length);
-  ok(backChapters===19&&backMarks===0,"clearing puts all 19 chapters and every line back");
+  ok(backChapters===chs&&backMarks===0,"clearing puts all "+chs+" chapters and every line back");
   ok(await pg.isVisible("#contents"),"and the contents comes back");
 
   await pg.fill("#q","heat");
   await pg.waitForTimeout(350);
   await pg.keyboard.press("Escape");
   await pg.waitForTimeout(250);
-  ok(await pg.$$eval(".chapter:not(.hb-hide)",n=>n.length)===19,"Escape clears it too");
+  ok(await pg.$$eval(".chapter:not(.hb-hide)",n=>n.length)===chs,"Escape clears it too");
 
   console.log("\n— go to the top, and back to the game —");
   await pg.evaluate(()=>window.scrollTo(0,5000));

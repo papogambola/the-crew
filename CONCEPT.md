@@ -4,7 +4,7 @@ Working foundation, saved September 14, 2026. This document records the creator'
 
 ## Core concept
 
-THE CREW is a PC game in which the player chooses from a roster of **5,000 characters** to build a **five-person crew, including the player character**: the player plus four other members.
+THE CREW is a PC game in which the player chooses from a roster of **6,000 characters** to build a **five-person crew, including the player character**: the player plus four other members.
 
 The crew is described as a **global crime interception team**. Clients publish jobs online (in-game), and the player chooses which jobs to accept around the world.
 
@@ -12,7 +12,7 @@ The central challenge is understanding the crew and choosing suitable jobs. Each
 
 ## Character roster and presentation
 
-- There are 5,000 characters to choose from. The number refers to the character roster.
+- There are 6,000 characters to choose from. The number refers to the character roster. (5,000 as first stated; 1,000 specialists added 16 September 2026.)
 - Characters are male or female. There is no neutral gender option or pronoun system.
 - The overall game should be very basic; the intended level of mechanical complexity has not yet been specified.
 - Earlier visual direction: a very simple, clean black THE CREW wordmark on a white background, with black-and-white face avatars and changeable characteristics.
@@ -319,3 +319,16 @@ The text above is kept as written. Decisions that close one of its open details 
   **The test that checked it found something better than a regression.** It measured the logotype at 82% of the column, not 97% — because it was loading the game over `file://`, where Anton cannot be fetched, so it was measuring the fallback face. Which raises the real question: the size is tuned to one font's metrics, and a *wider* fallback would run the title off the page. So `fitTitle()` measures the ink against the column on the screen it is actually on and brings the size down if it does not fit — the same reason `syncTopbarH()` exists, that the number is not knowable in advance. The drive now serves the game over HTTP with the real faces injected, and a second check sets a 520px Georgia and asserts the guard catches it: 355px, 1025px of ink in a 1028px column.
 
   A favicon went in with it, which is how the 404 in the drive's error log was noticed — the game had never had one. A fedora, in ink on paper. It took three attempts because a cubic's apex sits at `(Y0 + 3·Yc)/4`, so the first crown came out a third of the height it was drawn to be and the thing read as a flying saucer.
+- **16 September 2026 — Work that needs seven, and the people who do it.** From the creator: *"Once the option for 7 person crew opens it opens a few more options: 1. 500 more ultra complex jobs for minimum of 6 to maximum of 7 crew members. That includes new trades. 2. New trades that I came up with: Drone specialist, Pilot, Skipper, Diver. Please provide me with 10 more and create 1000 more characters with those trades."*
+
+  **The two halves are one thing, and the game says so.** A Respected name has always opened the last two places, and the honest complaint about that was that nothing on the board needed them — six people on a job written for four is four people and two spectators. So the milestone that announces the places is now immediately followed by the one that announces what they are for, in that order, and the handbook's section on places says the same sentence. The places are not a reward; they are a key.
+
+  **The ten the creator did not name** were chosen to finish a grid rather than to sound good. The four given — Drone specialist, Pilot, Skipper, Diver — are two pairs: something in the air and something in the water, one of each leaning on Tech and Nerve. The ten added complete it: a way up a building and a way under it (Climber, Tunneller), someone who makes the substance and someone who keeps people upright (Chemist, Medic), the building's power and the air around it (Electrician, Signals), the eleven unwatched minutes and the kit to use them (Analyst, Quartermaster), and the room's language and the person inside it (Linguist, Handler). Fourteen trades over five attributes and six kinds of knowledge, so no operation can be staffed out of one kind of person.
+
+  **1,000 more files, and every existing save is untouched.** A save stores the seed and an override per *changed* file; `buildRoster(seed)` regenerates the rest. So any shift in the order the generator consumes its random numbers silently rewrites everybody the player never touched. The new people are therefore appended — files 5,000 to 5,999, drawn from the specialist pool — and nothing before index 5,000 changes, because `pick(rng,arr)` spends exactly one `rng()` call whatever the array's length. That is not an argument, it is a measurement: `smoke37` loads the build that is live on Pages beside this one and compares all 15,000 files across three seeds.
+
+  **500 operations, and each one exists once.** They are generated from a fixed seed rather than stored, so 500 of them cost nothing in the file, and `S.bigDone` records which have been run. Tier 5: $2.4M base against tier 4's $950K, 3–5 weeks, 5 weeks of casing, 6 or 7 in the field, 3–5 trades, 2–3 kinds of knowledge. Eight kinds of their own, and the country follows the kind — a deep-water job is on a coast because it could not be anywhere else. No client posts them and **the rival never takes one**: every other posting on the board is a race, and these are the one thing that waits for you, which is what makes the counter on the file honest. It counts what you have spent, not what you have seen.
+
+  **The difficulty was wrong and had to be measured to find out.** At ranking 420 a strong seven blew 100% of them, because `bigDiff` and the full weight of `repPressure()` compound — the rooms are defended against your name *and* against being the kind of room that needs seven. A sweep against an ordinary tier-4 job as the benchmark (rather than judging the numbers in isolation, which is how the first version passed) settled it at `bigDiff: 122` with `bigRepPressure: 0.5`: an operation is meaningfully harder than the best ordinary work at every ranking, and winnable at all of them.
+
+  **A bug found by a flake, which was a real one.** `browser27` failed about one run in three on *"paying them back also lifts the ban"*. The test was measuring a global count that other events move — answering a revenge can run weeks off the clock, and another crew's bad night in those weeks bans somebody new. But underneath that, `eff.clear` used `find` where it needed `filter`: a client can hold two open lines at once (one for a job of their own, one because somebody they drink with had a word), and lifting one of them left the player paid up, told *"they will take your calls again"*, and still not taking calls. One word, and a node test that fails without it.

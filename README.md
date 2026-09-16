@@ -3,7 +3,7 @@
 A black-ink-on-white-paper game of global crime. You are the criminals. One file, no dependencies.
 
 You are the name at the top of the police's chart, and the commander of the crew. Fill the
-other four places from **5,000 operatives**, then take the jobs clients post online — country
+other four places from **6,000 operatives**, then take the jobs clients post online — country
 by country, each with its own language, money, politics, religion, terrain and job
 categories. Everyone on the crew goes on every job, if the border lets them in and the job
 doesn't hit one of their limits.
@@ -42,9 +42,10 @@ decisions at the end.
   a Nigerian name, a Finnish one a Finnish name, for a man or a woman, out of the same pool every
   file on the roster is named from. Change the passport and it rolls from the new one. The pools
   are regional rather than national, so Japan, China, South Korea and Singapore share one.
-- **5,000 operatives**, generated from a seed so a save stores only what changed. Every file
+- **6,000 operatives**, generated from a seed so a save stores only what changed. Every file
   carries: nationality and passport tier; five attributes (Muscle, Brains, Tech, Charm,
-  Nerve); a trade (16); experience rank; knowledge domains (10); education (six levels,
+  Nerve); a trade (30 — 16 ordinary, and 14 specialists that 1,000 of the files work);
+  experience rank; knowledge domains (10); education (six levels,
   from no schooling to doctorate); time in jail; time on the streets; languages; commander
   or soldier by nature; a fee, a cut and weekly upkeep; and things they will not do — cannot
   swim, will not fly, fear of heights, claustrophobic, no violence, won't work nights, banned
@@ -56,8 +57,8 @@ decisions at the end.
   to roll the lot. That is 3,000,000 faces for a man and 4,500,000 for a woman. The picture
   **stays on screen** while you work down the parts — ten sliders is taller than a laptop window,
   and choosing a nose you cannot see is not choosing anything.
-- **Trade, said once.** The sixteen lines of work — Safecracker, Wheelman, Face, Cleaner, Forger,
-  Enforcer and the rest — are **trades**, on the dossier and everywhere else, which is the word
+- **Trade, said once.** The sixteen ordinary lines of work — Safecracker, Wheelman, Face, Cleaner,
+  Forger, Enforcer and the rest — are **trades**, on the dossier and everywhere else, which is the word
   the live report already used. Choosing yours on the dossier prints the trade under the
   dropdown: what it is, what it leans on, and what knowledge it comes with. It is the first time
   anybody meets these words, so the screen says what they mean instead of leaving them to a job.
@@ -288,8 +289,27 @@ decisions at the end.
   yours, as is its payroll. A third crew at three years, a fourth at four, no more. People
   move between crews from their cards; dissolving a crew brings them back as far as your
   places allow.
+- **The 500 operations.** The same Respected name that opens the last two places opens the work
+  those places are for, and the game announces them together, in that order. **500 ultra-complex
+  operations**, coded `OP-001` to `OP-500`, wanting **six or seven in the field**, three to five
+  trades and two to three kinds of knowledge — more than one person can carry, which is the point
+  of the extra places. Tier 5: a $2.4M base fee against tier 4's $950K, three to five weeks on the
+  ground, five weeks you may case it, and difficulty 122 before the country and your own name are
+  added. Eight kinds of their own — deep water, air lift, high rise, under the city, blackout, the
+  long con, lab work, the whole ledger — and the country follows the kind, so a dive job is on a
+  coast. **No client posts them and the rival never takes one**: every other posting is a race,
+  these wait. One or two sit on the board at a time beside the ordinary work, and **each exists
+  once** — the file counts down *Operation N of 500* and the record in the Log keeps the total.
+- **Fourteen specialists.** Drone specialist, Pilot, Skipper, Diver, Climber, Tunneller, Chemist,
+  Medic, Electrician, Signals, Analyst, Quartermaster, Linguist and Handler — **1,000 more
+  operatives** on the roster who work them, bringing the files to 6,000. They are hireable from
+  week one and there is no reason to be: nothing on the open board asks for their trade, so they
+  are worth their attributes and nothing more, and cost $9K over the odds. Once the seventh place
+  opens they are most of what an operation asks for by name. The roster's trade filter lists all
+  thirty. A save made before they existed is unaffected — the roster is rebuilt from its seed, and
+  the first 5,000 files come out exactly as they did.
 - **Milestones, announced.** A box in the middle of the screen, once each: the two places a
-  Respected name opens; each year mark (weeks 104, 156, 208) when another crew is within reach,
+  Respected name opens; the operations those places open; each year mark (weeks 104, 156, 208) when another crew is within reach,
   with what is still missing; and the moment a second, third or fourth crew can actually be
   founded, with a button straight into founding it. Later closes it; the Crew tab and the case
   log keep the record.
@@ -478,10 +498,11 @@ computers that must not be stopped.
 ## The player's handbook
 
 `handbook.html`, beside the game, and `The-Crew-Handbook.pdf` rendered from the same page.
-Nineteen chapters: what the game is and how it is won and lost, where every screen is, the five
-attributes, the sixteen trades, experience, knowledge, schooling, temperament, limits, passports
-and borders, what people cost, loyalty, hiring and the recruitment trip, places and benching and a
-second crew, the board, tiers, the twelve kinds of job, countries and casing and difficulty, the
+Twenty chapters: what the game is and how it is won and lost, where every screen is, the five
+attributes, the sixteen trades and the fourteen specialists, experience, knowledge, schooling,
+temperament, limits, passports and borders, what people cost, loyalty, hiring and the recruitment
+trip, places and benching and a second crew, the board, tiers, the twelve kinds of job, the 500
+seven-place operations, countries and casing and difficulty, the
 whole reckoning formula and every factor in it, the night itself, money and the split, heat and
 the detective and the raid, the competition, the week that passes on its own, ranking, the record,
 the last score, the controls, twenty things worth knowing, and a glossary.
@@ -504,7 +525,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 45 · 16 September
+The footer of every screen, and the office header, carry a build stamp (`build 46 · 16 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

@@ -15,15 +15,18 @@ const CH=[];
 const ch=(id,t,k,secs)=>CH.push({id,t,k,secs});
 const S=(id,t,h)=>({id,t,h});
 
-/* -------------------------------- 1 ----------------------------------- */
+/* ---------------- 1 --------------------------------- */
 ch("start","What this is","The game in four minutes",[
   S("game","The game",
     p("You are the commander of a criminal crew. You are not the police, and there is nobody above you. "
       +"Clients post work on a board — by country, by kind, with a fee on it — and you decide which of that work your crew takes, who goes on it, and what happens when it goes wrong in the middle.")
     +p("A turn is a week. Taking a job spends one to three of them, casing a job spends one, laying low spends one. "
       +"Every week the payroll comes out of your float whether anybody worked or not, the heat falls a little, and the world does something you did not ask it to.")
-    +p("There are "+m("5,000")+" people on file. Five attributes each, a trade, a passport, a record, a price, and a secret. "
-      +"You will hire between four and six of them at a time, out of five thousand, and the difference between a good crew and a bad one is not their numbers — it is whether their numbers match the room you are sending them into.")),
+    +p("There are "+m(D.ROSTER_SIZE.toLocaleString("en-US"))+" people on file. Five attributes each, a trade, a passport, a record, a price, and a secret. "
+      +"You will hire between four and seven of them at a time, out of six thousand, and the difference between a good crew and a bad one is not their numbers — it is whether their numbers match the room you are sending them into.")
+    +p(m(D.ROSTER_CORE.toLocaleString("en-US"))+" of them work the sixteen ordinary trades. The other "+m(D.ROSTER_BIG.toLocaleString("en-US"))
+      +" are <a href=\"#bigtechs\">specialists</a> — pilots, divers, tunnellers, handlers — and nothing on the board wants one "
+      +"until your name opens the seventh place. See <a href=\"#ops\">the operations</a>.")),
   S("goal","The goal",
     p("Build the name. Everything in the game is downstream of your <b>ranking</b>: what clients post to you, what they pay, who will sign with you, whether the crew stays loyal, and how hard the police look.")
     +p("At ranking "+m(D.BAL.finalRep)+" the board has nothing left to offer you but the last score — three operations, in order, against the Committee. "
@@ -49,7 +52,7 @@ ch("start","What this is","The game in four minutes",[
     +p("<b>Nothing is graded that you did not choose.</b> The game does not invent a verdict. If it cannot know something, it says so rather than filling it in.")),
 ]);
 
-/* -------------------------------- 2 ----------------------------------- */
+/* ---------------- 2 --------------------------------- */
 ch("where","Where everything is","The screen, tab by tab",[
   S("top","The top bar",
     p("Pinned to the top of every screen, and it never scrolls away.")
@@ -64,7 +67,7 @@ ch("where","Where everything is","The screen, tab by tab",[
     +G.T(["Tab","What is on it"],[
       ["<b>Crew</b>","Who is on the books: their cards, attributes, trade, loyalty, cut, upkeep, temperament, limits and what they have been through. Retainers and the safe house are reached from here too, and so is founding a second crew."],
       ["<b>Jobs</b>","The board. Every posting open this week, its country, its fee, what it wants, and — once you open one — the job file: who can go, who cannot and why, the odds, the split, and the button that starts it."],
-      ["<b>Roster</b>","All five thousand files, filtered. This is where hiring happens."],
+      ["<b>Roster</b>","All six thousand files, filtered — every trade, including the fourteen an <a href=\"#ops\">operation</a> asks for. This is where hiring happens."],
       ["<b>Dashboard</b>","Six folded sections: the operation, the competition and the law, standing arrangements, the record, job recaps, and the case log. One opens at a time; opening one shuts the last."],
     ])),
   S("office","The office",
@@ -89,7 +92,7 @@ ch("where","Where everything is","The screen, tab by tab",[
     ])),
 ]);
 
-/* -------------------------------- 3 ----------------------------------- */
+/* ---------------- 3 --------------------------------- */
 ch("you","You","The commander",[
   S("dossier","Opening a dossier",
     p("The title screen is the game's front door: the name, five faces under it — five files drawn "
@@ -114,10 +117,10 @@ ch("you","You","The commander",[
       +"Every screen addresses you as the person who decides.")),
 ]);
 
-/* -------------------------------- 4 ----------------------------------- */
+/* ---------------- 4 --------------------------------- */
 ch("people","The people","Everything on a crew member's file",[
   S("attrs","The five attributes",
-    p("Every file has five, roughly 20 to 100, and they are the base of everything. A job leans on some of them and ignores the rest — see <a href=\"#cats\">the twelve kinds of job</a>.")
+    p("Every file has five, roughly 20 to 100, and they are the base of everything. A job leans on some of them and ignores the rest — see <a href=\"#cats\">the twelve kinds of job</a>, and <a href=\"#bigcats\">the eight</a> an operation uses.")
     +G.attrs()
     +p("The ceiling is "+m(D.BAL.attrCeil)+". Attributes grow slowly from work, and the growth lands on the attributes the job actually leaned on.")),
   S("techs","The sixteen trades",
@@ -127,6 +130,18 @@ ch("people","The people","Everything on a crew member's file",[
       +"Several of the trades also unlock answers nothing else can give you: a Forger gets people across a border they would be turned back from, "
       +"a Cleaner is the only person who can make a problem an accident, an Enforcer is the only one who can have a conversation, and a Fixer can arrange for somebody to be somewhere else for a long time.")
     +G.techs()),
+  S("bigtechs","The fourteen specialists",
+    p("Fourteen more trades exist, and they are not simply rarer versions of the sixteen — they are the trades that "
+      +"<a href=\"#ops\">an operation</a> asks for, and ordinary work on the board never does. "
+      +m(D.ROSTER_BIG.toLocaleString("en-US"))+" of the "+m(D.ROSTER_SIZE.toLocaleString("en-US"))
+      +" people on file work one of them.")
+    +p("They are on the roster from the first week and you may hire one whenever you like. There is no reason to. "
+      +"A Diver on a warehouse job is a stranger with a bottle of air: their trade is never the trade the client named, "
+      +"so they are worth their attributes and nothing more, and they cost "+money(9000)+" more to sign than somebody who is. "
+      +"Until the seventh place opens they are money spent on a room you cannot yet get into.")
+    +G.bigTechs()
+    +note("They are found the same way as anybody else — Roster, then the trade filter, which lists all thirty. "
+      +"The filter is the only screen that separates them; a specialist's dossier looks like everybody else's.")),
   S("exp","Experience",
     p("Five ranks, earned by going on jobs — never bought. Each rank is worth "+m("+11%")+" of everything the member's attributes are worth, which compounds with a good trade match rather than replacing it.")
     +G.exp()
@@ -188,7 +203,7 @@ ch("people","The people","Everything on a crew member's file",[
       +"a greedy member is likelier to take a cut of the score and vanish, and likelier to talk afterwards.")),
 ]);
 
-/* -------------------------------- 5 ----------------------------------- */
+/* ---------------- 5 --------------------------------- */
 ch("hiring","Hiring","The roster, the trip, the signature",[
   S("roster","The roster",
     p("Five thousand files, filterable by trade, experience, nationality, price and what they will not do. "
@@ -228,11 +243,14 @@ ch("hiring","Hiring","The roster, the trip, the signature",[
       +"which is a separate conversation that the game will make you have.")),
 ]);
 
-/* -------------------------------- 6 ----------------------------------- */
+/* ---------------- 6 --------------------------------- */
 ch("crew","The crew","Places, who goes, and a second crew",[
   S("seats","Places",
     p("You start with four soldiers' places and yourself — five. A <b>Respected</b> name (ranking "+m(RANK("Respected"))+") opens two more, for six soldiers and you. "
-      +"That is the ceiling: "+m(D.CREW_MAX_SEATS)+" soldiers, plus the commander.")),
+      +"That is the ceiling: "+m(D.CREW_MAX_SEATS)+" soldiers, plus the commander.")
+    +p("Those two places are not only more people. They are the only thing standing between you and "
+      +"<a href=\"#ops\">the "+D.BAL.bigCount+" operations</a> — work that needs six or seven in the field, written for trades "
+      +"that no ordinary posting asks for. The game announces both at the same moment, in that order: the places first, then what they are for.")),
   S("whogoes","Who goes",
     p("<b>Everybody on the books goes on every job</b>, unless something stops them. There is no picking a team. What there is instead is a list of reasons somebody cannot go:")
     +ul([
@@ -265,7 +283,7 @@ ch("crew","The crew","Places, who goes, and a second crew",[
       +"Its take is yours, its ranking is yours, its heat is yours — and so is its payroll.")),
 ]);
 
-/* -------------------------------- 7 ----------------------------------- */
+/* ---------------- 7 --------------------------------- */
 ch("board","The board","Where the work comes from",[
   S("postings","The postings",
     p("Seven postings are kept open at all times — nine with a fixer on retainer, and one of those nine is written for the crew you actually have. "
@@ -273,14 +291,16 @@ ch("board","The board","Where the work comes from",[
     +p("Clients post to a <b>name</b>. A Nobody sees tier 1 and 2 only; a Known crew sees tier 3; Respected and above see everything. "
       +"A client you have botched a job for stops posting to you at all.")),
   S("tiers","Tiers",
-    p("Four of them, and the tier decides the fee, how many weeks it holds the crew, how many people the client needs, and how long you are allowed to sit outside it first.")
+    p("Four of them on the open board, and the tier decides the fee, how many weeks it holds the crew, how many people the client needs, and how long you are allowed to sit outside it first.")
     +G.pay()
     +p("The fee is then multiplied by the country's economy (a poor country pays about two thirds), by your ranking's pay multiplier, and by a wide random band. "
-      +"Two postings of the same tier can differ by a factor of three.")),
+      +"Two postings of the same tier can differ by a factor of three.")
+    +note("There is a fifth tier. No client posts it and no rival takes it — see <a href=\"#ops\">the operations</a>.")),
   S("cats","The twelve kinds of job",
     p("Each kind leans on some attributes and not others. This table <i>is</i> the reason to read a posting before you open it: "
       +"a crew that is magnificent at one of these is ordinary at another.")
-    +G.cats()),
+    +G.cats()
+    +p("<a href=\"#ops\">Operations</a> add <a href=\"#bigcats\">eight more kinds</a>, which only they use.")),
   S("tags","What a job is",
     p("Six tags, and each of them is a limit somebody on your crew might have.")
     +G.T(["Tag","Reads as"],Object.keys(D.TAG_LABEL).map(k=>['<b>'+k+'</b>',D.TAG_LABEL[k]]))),
@@ -313,7 +333,45 @@ ch("board","The board","Where the work comes from",[
       +"A crew that does not keep improving does not stand still — it slides.")),
 ]);
 
-/* -------------------------------- 8 ----------------------------------- */
+/* ---------------- 8 --------------------------------- */
+ch("bigops","The operations","The "+D.BAL.bigCount+" that need seven",[
+  S("ops","What an operation is",
+    p("A <b>Respected</b> name (ranking "+m(RANK("Respected"))+") opens the last two places on your crew. It opens something else at the same time, "
+      +"and the two are one thing: work written for a crew of that size, which nobody could field before and which you could not have been offered.")
+    +p("There are "+m(D.BAL.bigCount)+" of them. They are numbered "+m("OP-001")+" to "+m("OP-"+D.BAL.bigCount)
+      +", they are marked <b>Operation</b> on the board, and <b>each one exists once</b>: run it and it is gone from your game for good. "
+      +"The job file counts them down for you — <i>Operation 3 of "+D.BAL.bigCount+"</i> — so you always know how much of it is left.")
+    +G.bigVs()
+    +p("Everything else about them works the way ordinary work works. The reckoning is the same arithmetic, the verdict bands are the same, "
+      +"the twist can still arrive, the split is the same split, and a botched one makes the same enemy. What is different is the size of all of it.")),
+  S("opsopen","How they arrive",
+    p("Once the seventh place is open, one or two operations sit on the board at any time, alongside the ordinary postings — "
+      +"they do not replace them. They expire like anything else, and a new one takes the place of one that lapses.")
+    +ul([
+      "<b>No client posts them.</b> They come from a short list of people who do not use the board.",
+      "<b>The rival never takes one.</b> Every other posting on the board is a race; these are not. They wait for you.",
+      "<b>A client you have fallen out with still keeps theirs off your board</b> — a grudge silences an operation the same way it silences a job.",
+      "<b>One you have run never comes back.</b> The counter on the file is the honest one: it counts what you have spent, not what you have seen.",
+    ])
+    +note("The record in the Log carries an <b>Operations</b> line from the week the first one opens, and it reads "
+      +m("n of "+D.BAL.bigCount)+" — the only number in the game that only goes one way.")),
+  S("bigcats","The eight kinds",
+    p("Operations use eight kinds of job of their own, and no ordinary posting ever uses them. Each is built around a place a crew of five could not reach.")
+    +G.bigCats()
+    +p("The country follows the kind rather than the other way round: <b>Deep water</b> and <b>Air lift</b> are written for coasts and for distance, "
+      +"so the map decides where they can happen. The seven-place operations ask for "+m("3")+" to "+m("5")+" trades and "+m("2")+" to "+m("3")
+      +" kinds of knowledge, which is more than any one person carries — that is what the extra places are for.")),
+  S("opscrew","What to take",
+    p("An operation names its trades, and most of what it names is a <a href=\"#bigtechs\">specialist</a>. "
+      +"That is the whole shape of the thing: six or seven in the field, three to five trades asked for by name, each worth "+m("+14")+" to whoever matches it. "
+      +"A crew of generalists can be sent on one; it will not be the crew the file was written for.")
+    +p("Read the file before you hire for it. The trades are listed on the posting, the roster's trade filter has all thirty in it, "
+      +"and a specialist you sign for a "+money(D.BAL.payTier[5])+" room is cheap at "+money(9000)+" over the odds.")
+    +note("Seven in the field is worth "+m("+"+D.BAL.bigNeed7)+" of difficulty over six. More people is not free — "
+      +"the operations that ask for seven are the ones that are hard because they need seven.")),
+]);
+
+/* ---------------- 9 --------------------------------- */
 ch("reckon","The reckoning","Exactly how a job is decided",[
   S("member","What one person is worth",
     p("For the job in front of them — not in general:")
@@ -369,7 +427,7 @@ ch("reckon","The reckoning","Exactly how a job is decided",[
     ])),
 ]);
 
-/* -------------------------------- 9 ----------------------------------- */
+/* ---------------- 10 -------------------------------- */
 ch("night","The night itself","The live report",[
   S("live","Reading the report",
     p("A job does not resolve into a number. It plays out: a clock in the top left, a line at a time, with the crew named and what each of them is doing named with them. "
@@ -391,7 +449,7 @@ ch("night","The night itself","The live report",[
       +"the bodies you were short, the weeks you did not spend watching it, the heat you carried in.")),
 ]);
 
-/* -------------------------------- 10 ---------------------------------- */
+/* ---------------- 11 -------------------------------- */
 ch("money","Money","Where it goes",[
   S("split","The split",
     p("The fee is not yours. Everybody who goes takes their percentage off the top and you keep the rest. The job file shows the whole thing before you commit:")
@@ -411,7 +469,7 @@ ch("money","Money","Where it goes",[
     p("From heat 20 upwards a file can be lost. It costs what the heat is worth — about "+money(3000)+" a point — and buys "+m("−20")+" heat and "+m("−12")+" off the detective's file.")),
 ]);
 
-/* -------------------------------- 11 ---------------------------------- */
+/* ---------------- 12 -------------------------------- */
 ch("heat","Heat and the law","Being looked for",[
   S("what","Heat",
     p("A number from 0 to 120 measuring how hard the world is looking at you. Jobs add it. It falls "+m("5")+" a week by itself, "+m("7")+", "+m("9")+" or "+m("11")+" with a safe house.")
@@ -431,7 +489,7 @@ ch("heat","Heat and the law","Being looked for",[
     +note("A thick file does not raid you. It brings the raid <i>forward</i>. Those are different problems and they have different answers: heat is bought down with a bribe or a quiet week, a file is bought down with a bribe or time.")),
 ]);
 
-/* -------------------------------- 12 ---------------------------------- */
+/* ---------------- 13 -------------------------------- */
 ch("rival","The competition","Somebody else is working the board",[
   S("who","The other outfit",
     p("Once you reach ranking 20, somebody else appears on the same board with their own boss, their own name and their own standing. They are not an event — they are a second player.")
@@ -450,7 +508,7 @@ ch("rival","The competition","Somebody else is working the board",[
     ])),
 ]);
 
-/* -------------------------------- 13 ---------------------------------- */
+/* ---------------- 14 -------------------------------- */
 ch("between","Between jobs","The week that passes on its own",[
   S("tick","What a week does",
     ol([
@@ -489,7 +547,7 @@ ch("between","Between jobs","The week that passes on its own",[
     ])),
 ]);
 
-/* -------------------------------- 14 ---------------------------------- */
+/* ---------------- 15 -------------------------------- */
 ch("rank","Ranking","The name, and what it buys",[
   S("ladder","The ladder",
     p("Eight names across "+m(D.BAL.finalRep)+" points. The last two rungs are most of the game.")
@@ -504,7 +562,7 @@ ch("rank","Ranking","The name, and what it buys",[
       +"and it makes every room harder, every police force more interested, and every posting on the board a fight. That is not a flaw in the design. That is the design.")),
 ]);
 
-/* -------------------------------- 15 ---------------------------------- */
+/* ---------------- 16 -------------------------------- */
 ch("record","The record","What you have done",[
   S("stats","The count",
     p("Every job, every verdict, every country, everything earned and everything paid out in cuts, the biggest single score, people hurt, taken and lost, "
@@ -514,7 +572,7 @@ ch("record","The record","What you have done",[
     +G.goals()),
 ]);
 
-/* -------------------------------- 16 ---------------------------------- */
+/* ---------------- 17 -------------------------------- */
 ch("final","The last score","Three operations against the Committee",[
   S("gate","Getting there",
     p("It does not appear until the <a href=\"#goal\">four conditions</a> are all true. The Dashboard ticks them off as they arrive. "
@@ -529,7 +587,7 @@ ch("final","The last score","Three operations against the Committee",[
     +note("Read what each stage wants and build for it before the first one opens. A crew assembled for tier-4 vault work is not a crew that can smuggle everything out of a country whose every border is a question with your face on it.")),
 ]);
 
-/* -------------------------------- 17 ---------------------------------- */
+/* ---------------- 18 -------------------------------- */
 ch("controls","Controls and the file cabinet","Keys, saving, settings",[
   S("keys","The keys",
     G.T(["Key","What it does"],[
@@ -549,7 +607,7 @@ ch("controls","Controls and the file cabinet","Keys, saving, settings",[
       +"five settings, because reading a job as it happens and pressing through one you already understand are different things.")),
 ]);
 
-/* -------------------------------- 18 ---------------------------------- */
+/* ---------------- 19 -------------------------------- */
 ch("knowing","Twenty things worth knowing","Everything above, put to use",[
   S("twenty","",
     '<ol class="twenty">'+[
@@ -576,7 +634,7 @@ ch("knowing","Twenty things worth knowing","Everything above, put to use",[
     ].map(x=>'<li>'+x+'</li>').join("")+'</ol>'),
 ]);
 
-/* -------------------------------- 19 ---------------------------------- */
+/* ---------------- 20 -------------------------------- */
 const GLOSS=[
   ["Bad blood","What a pair has lost by sharing botched nights. Costs the crew points on every job they are both on. Hover it in the job file to read which nights did it."],
   ["Bench","Keeping somebody off a job. Saves their cut. Does not save their wages."],
@@ -610,8 +668,8 @@ const GLOSS=[
   ["Roll","The "+m("±"+D.BAL.roll)+" the night adds to the margin."],
   ["Snag","The thing that goes wrong during a recruitment trip."],
   ["Split","Who takes what out of the fee."],
-  ["Tier","How big a posting is, 1 to 4. Decides the fee, the weeks, the people needed and how long you may case it."],
-  ["Trade","What somebody is — one of sixteen. Worth +14 when the client asked for it."],
+  ["Tier","How big a posting is, 1 to 4 on the open board and 5 for an <a href=\"#ops\">operation</a>. Decides the fee, the weeks, the people needed and how long you may case it."],
+  ["Trade","What somebody is — one of sixteen ordinary trades, or one of the fourteen <a href=\"#bigtechs\">specialists</a>. Worth +14 when the client asked for it."],
   ["Twist","The thing that goes wrong during a job, and the options it offers."],
   ["Upkeep","A crew member's weekly wages. Paid whether they work or not."],
   ["Vetting","Paying "+money(D.VET_COST)+" to find out whether a file is an informant."],
