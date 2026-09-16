@@ -303,24 +303,31 @@
   .tut-target{outline:3px solid var(--stamp);outline-offset:4px;box-shadow:0 0 0 8px rgba(154,43,30,.14)}
 
   /* ---- the live job report ---- */
-  /* where the crew are, beside the feed that says what they are doing */
-  .feedmap{position:relative;border:1px solid var(--line-2);background:var(--card);margin-top:8px}
+  /* the job on the world, zoomed to where it is, with the crew working on it */
+  .feedmap{position:relative;border:1px solid var(--line-2);background:var(--card);margin-top:8px;overflow:hidden}
   .fm-clock{position:absolute;left:0;top:0;z-index:2;background:var(--ink);color:var(--paper);
     font-size:13px;letter-spacing:.14em;padding:3px 8px 2px;line-height:1.2}
   .fm-svg{display:block;width:100%;height:auto}
-  .fm-road{fill:none;stroke:var(--ink);stroke-width:.7}
-  .fm-thin{stroke-width:.45;opacity:.55}
-  .fm-wall{fill:none;stroke:var(--ink);stroke-width:.9}
-  .fm-door{fill:none;stroke:var(--paper);stroke-width:2.2}
-  .fm-car{fill:none;stroke:var(--ink);stroke-width:.8}
-  .fm-path path{fill:none;stroke:var(--ink);stroke-width:.4;stroke-dasharray:1.6 1.8;opacity:.4}
-  .fm-site circle{fill:var(--paper);stroke:var(--ink);stroke-width:.6}
-  .fm-site text{font-family:var(--f-mono);font-size:2.6px;letter-spacing:.18em;fill:var(--muted);text-anchor:middle}
-  .fm-site.on circle{fill:var(--paper);stroke:var(--stamp);stroke-width:1.1}
+  .fm-grid{stroke:var(--line);stroke-width:.25;vector-effect:non-scaling-stroke;opacity:.7}
+  .fm-land{fill:var(--paper-2);stroke:var(--ink);stroke-width:1.1px;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+  .fm-water{fill:var(--card);stroke:var(--ink);stroke-width:.9px;vector-effect:non-scaling-stroke}
+  .fm-city-h{fill:none;stroke:var(--stamp);stroke-width:.8px;vector-effect:non-scaling-stroke;opacity:.35}
+  .fm-city-d{fill:var(--stamp)}
+  .fm-where{position:absolute;right:0;top:0;z-index:2;background:var(--paper);border-left:1px solid var(--line-2);
+    border-bottom:1px solid var(--line-2);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);padding:4px 8px 3px;line-height:1.2}
+  .fm-tether line{stroke:var(--ink);stroke-width:.7px;vector-effect:non-scaling-stroke;opacity:.28}
+  .fm-site circle{fill:var(--paper);stroke:var(--ink);stroke-width:1px;vector-effect:non-scaling-stroke}
+  .fm-site text{font-family:var(--f-mono);letter-spacing:.18em;fill:var(--muted);text-anchor:middle;
+    paint-order:stroke;stroke:var(--card);stroke-width:1.2px;stroke-linejoin:round}
+  .fm-site.on circle{stroke:var(--stamp);stroke-width:2px}
   .fm-site.on text{fill:var(--stamp)}
-  .fm-op{transition:transform .5s ease}
-  .fm-op circle{fill:var(--ink);stroke:var(--paper);stroke-width:.6}
-  .fm-op text{font-family:var(--f-disp);font-size:3px;fill:var(--paper);text-anchor:middle}
+  .fm-op{transition:transform .55s ease}
+  .fm-op-b{fill:var(--ink);stroke:var(--paper);stroke-width:.9}
+  .fm-op-g{fill:none;stroke:var(--paper);stroke-width:.85;stroke-linecap:round;stroke-linejoin:round}
+  .fm-op-g circle{fill:none}
+  .fm-op-n{font-family:var(--f-mono);font-size:3.1px;fill:var(--ink);text-anchor:middle;
+    paint-order:stroke;stroke:var(--paper);stroke-width:1.6px;stroke-linejoin:round}
   @media(prefers-reduced-motion:reduce){.fm-op{transition:none}}
   .ticker{max-height:320px;overflow:auto;border:1px solid var(--line-2);background:var(--card);padding:6px 10px;font-family:var(--f-mono);font-size:12.5px;line-height:1.5;margin-top:8px}
   .tk{display:flex;gap:10px;padding:4px 0;border-bottom:1px dotted var(--line)}
@@ -1818,16 +1825,16 @@ function narrate(job,a,tier,rng,x,mode,clock){
   let h=clock?clock.h:(job.tags.includes("night")?ri(rng,20,23):ri(rng,7,15)),m=clock?clock.m:ri(rng,0,59);
   const lines=[];
   const stood=[];                                 // {id,k}: who learned a trade the crew hasn't got
-  const push=(t,tone,at,who)=>{m+=ri(rng,4,26);if(m>=60){m-=60;h=(h+1)%24;}
+  const push=(t,tone,at,who,act)=>{m+=ri(rng,4,26);if(m>=60){m-=60;h=(h+1)%24;}
     const L={t:String(h).padStart(2,"0")+":"+String(m).padStart(2,"0"),x:t,tone:tone||""};
-    if(at)L.at=at;if(who)L.who=who;
+    if(at)L.at=at;if(who)L.who=who;if(act)L.act=act;
     lines.push(L);};
   S.recent=S.recent||[];
   const key=p=>typeof p==="string"?p:p[0];
   const fresh=pool=>{let cand=pool.filter(p=>!S.recent.includes(key(p)));if(!cand.length)cand=pool;const pk=pick(rng,cand);S.recent.push(key(pk));if(S.recent.length>60)S.recent.shift();return pk;};
   const pair=(p,c)=>typeof p==="string"?p:(c&&c.isPlayer?p[1]:p[0]);
   const nm=c=>c.isPlayer?"You":c.first;
-  const say=(pool,c,vars,tone,at)=>push(fill2(pair(fresh(pool),c),Object.assign({X:c?nm(c):"",P:cap(police(co))},vars||{})),tone,at||(c?techSite(c.tech):null),c?c.id:null);
+  const say=(pool,c,vars,tone,at,act)=>push(fill2(pair(fresh(pool),c),Object.assign({X:c?nm(c):"",P:cap(police(co))},vars||{})),tone,at||(c?techSite(c.tech):null),c?c.id:null,act);
   const someone=()=>team.length?pick(rng,team):null;
   // two missing trades are two people's weeks, not one person's — unless the crew is smaller
   // than the number of gaps, and then somebody covers two and still learns one thing.
@@ -1840,12 +1847,12 @@ function narrate(job,a,tier,rng,x,mode,clock){
     a.checks.forEach(c=>{
       if(c.ok){
         if(c.why==="local national")say(LOCAL,c.c,null,"","road");
-        else if(c.why.indexOf("papers")===0)say(PAPERS,c.c,null,"","road");
-      } else say(OUT,c.c,{why:c.why},"warn","road");
+        else if(c.why.indexOf("papers")===0)say(PAPERS,c.c,null,"","road","paper");
+      } else say(OUT,c.c,{why:c.why},"warn","road","down");
     });
     const speaker=team.find(c=>c.langs.some(l=>co.langs.includes(l)));
-    if(speaker)say(SPEAKS,speaker,{L:co.langs.find(l=>speaker.langs.includes(l))},"","road");
-    else if(team.length)say(NOSPEAK,someone(),{L:co.langs[0]},"warn","road");
+    if(speaker)say(SPEAKS,speaker,{L:co.langs.find(l=>speaker.langs.includes(l))},"","road","talk");
+    else if(team.length)say(NOSPEAK,someone(),{L:co.langs[0]},"warn","road","talk");
     // you can't be across the street and at the door: if your own trade is wanted, you work it
     const you=team.find(c=>c.isPlayer);
     if(you&&job.techs.includes(you.tech))push(fresh(YOU_INSIDE),"",techSite(you.tech),you.id);
@@ -1877,7 +1884,7 @@ function narrate(job,a,tier,rng,x,mode,clock){
       push(s,"bad","exit","*");
     }
     if(x.leaked)push("Someone talked. "+cap(police(co))+" were waiting two streets away.","bad","exit","*");
-    (x.fallout||[]).forEach(e=>push(e,"bad","exit"));
+    (x.fallout||[]).forEach(e=>push(e,"bad","exit",null,"down"));
     if(x.heatGain>0)push(fill2(fresh(MORNING),{P:cap(police(co)),thing:fresh(THINGS),n:x.heatGain}),x.heatGain>=20?"warn":"");
     else if(chance(rng,0.5))push(fresh(QUIET));
     if(x.take>0)push(fill2(fresh(SPLIT),{g:money(x.take),c:money(x.cuts),n:money(x.net)}),"good");
@@ -3285,53 +3292,113 @@ function modalRecruit(id){
   return modalWrap(h+b);
 }
 
-// The job as a place, drawn in the same ink as everything else: a street, a post across it, a
-// way in, the room, and the car. Not a picture of the city — the five places every feed line is
-// already written to happen in. The crew stand where their trade stands and move as the feed
-// names them, so the map is the same information as the text, seen at once instead of in order.
+// The job on the world, zoomed to where it is: the same ink, the same projection and the same
+// coastlines as the board's map, framed on the country the job is in. The crew stand around the
+// city as marks of what they are doing — an eye watching, a key at the door, a wheel at the car —
+// and the mark changes as the feed says what they are doing now.
+//
+// The map data is twenty-two coarse polygons for the whole world, so there is no street to zoom
+// to; the frame is the country in its region, which is as close as the ink goes.
+const FM_GLYPH={
+  walk:'<path d="M0 -2.6 a1 1 0 1 0 .01 0"/><path d="M0 -1.6 V.6 M0 .6 L-1.3 2.6 M0 .6 L1.3 2.6 M-1.5 -.4 H1.5"/>',
+  watch:'<path d="M-3 0 Q0 -2.4 3 0 Q0 2.4 -3 0 Z"/><circle r=".9"/>',
+  talk:'<path d="M-2.8 -2 H2.8 V1 H-.6 L-1.8 2.6 V1 H-2.8 Z"/>',
+  open:'<circle cy="-1.6" r="1.2"/><path d="M0 -.4 V2.6 M0 1.4 H1.4 M0 2.2 H1.1"/>',
+  work:'<circle r="2.2"/><path d="M0 -2.2 V-1.2 M0 2.2 V1.2 M-2.2 0 H-1.2 M2.2 0 H1.2"/>',
+  drive:'<circle r="2.5"/><circle r=".7"/><path d="M-2.5 0 H-.7 M2.5 0 H.7 M0 .7 V2.5"/>',
+  down:'<path d="M-2.4 -2.4 L2.4 2.4 M2.4 -2.4 L-2.4 2.4"/>',
+  wire:'<path d="M-2.8 -2 H2.8 V1.2 H-2.8 Z M-1.2 1.2 V2.6 M1.2 1.2 V2.6 M-2 2.6 H2"/>',
+  paper:'<path d="M-2 -2.6 H1.2 L2.2 -1.6 V2.6 H-2 Z M1.2 -2.6 V-1.6 H2.2"/>',
+  fist:'<path d="M-2.2 -.6 Q-2.2 -2.2 -.6 -2.2 H1 Q2.4 -2.2 2.4 -.6 V1 Q2.4 2.4 1 2.4 H-.8 Q-2.2 2.4 -2.2 1 Z"/><path d="M-2.2 -.2 H2.4"/>',
+  crate:'<path d="M-2.4 -2 H2.4 V2 H-2.4 Z M-2.4 -2 L2.4 2 M2.4 -2 L-2.4 2"/>',
+  cash:'<path d="M-2.8 -1.6 H2.8 V1.6 H-2.8 Z"/><circle r=".9"/>',
+  phone:'<path d="M-2.4 -2.4 H-.4 L.2 -.6 L-.8 0 Q0 1.4 1.4 2.2 L2 1.2 L3 1.8 V2.6 Q.6 2.8 -1.4 .6 Q-2.8 -.8 -2.4 -2.4 Z"/>',
+};
+const FM_SITE_GLYPH={road:"walk",watch:"watch",door:"open",inside:"work",exit:"drive"};
+const FM_TECH_GLYPH={
+  wheelman:"drive", smuggler:"crate", cleaner:"work",
+  lookout:"watch", overwatch:"watch", hacker:"wire", launderer:"cash", fixer:"phone",
+  forger:"paper", grifter:"talk", face:"talk", infiltrator:"walk", pickpocket:"work",
+  safecracker:"work", demolitions:"work", enforcer:"fist",
+};
+function fmGlyphFor(line,c){
+  if(line&&line.act&&FM_GLYPH[line.act])return line.act;
+  if(c&&FM_TECH_GLYPH[c.tech]&&line&&line.at&&line.at===techSite(c.tech))return FM_TECH_GLYPH[c.tech];
+  return (line&&FM_SITE_GLYPH[line.at])||"walk";
+}
+// How much of the world to show. The board's own map picks a zoom off the country's size; this
+// reads the same tiers so a job in Singapore is not framed like a job in Russia.
+function fmFrame(country){
+  const g=GEO[country];
+  if(!g)return {x:0,y:20,w:1000,h:400,cx:500,cy:220};
+  const p=proj(g[0],g[1]);
+  const w=g[2]===3?230:g[2]===2?150:100, h=w*0.44;
+  return {x:p[0]-w/2,y:p[1]-h/2,w,h,cx:p[0],cy:p[1]};
+}
+// The five places sit around the city, at a spread that follows the frame — close enough to read
+// as one place, far enough apart to tell who is where.
+function fmSitePos(k,F){
+  const u=F.w/100;
+  const off={road:[-17,10],watch:[-15,-10],door:[0,-1],inside:[16,-10],exit:[18,10]}[k]||[0,0];
+  return {x:F.cx+off[0]*u,y:F.cy+off[1]*u};
+}
 function feedMap(d){
   const team=(d.teamIds||[]).map(byId).filter(Boolean);
   if(!team.length)return "";
-  const pin=p=>'<g class="fm-site" data-site="'+p.k+'">'
-    +'<circle cx="'+p.x+'" cy="'+p.y+'" r="2.4"/>'
-    +'<text x="'+p.x+'" y="'+(p.y+(p.ly||-4.6))+'">'+esc(p.l.toUpperCase())+'</text></g>';
-  // everyone starts on the street, which is where the first line of every feed puts them
-  const dot=(c,i)=>{const st=SITE_BY_K.road,o=fmSpot(i,team.length);
-    return '<g class="fm-op" data-id="'+c.id+'" data-site="road" transform="translate('+(st.x+o.dx)+','+(st.y+o.dy)+')">'
-      +'<circle r="2.7"/><text y="1.05">'+esc((c.isPlayer?"Y":(c.first||"?")).charAt(0).toUpperCase())+'</text></g>';};
+  const F=fmFrame(d.job.country);
+  const u=F.w/100;
+  const pts=poly=>poly.map(p=>{const q=proj(p[1],p[0]);return q[0].toFixed(1)+","+q[1].toFixed(1);}).join(" ");
+  const land=LAND.map(p=>'<polygon class="fm-land" points="'+pts(p)+'"/>').join("");
+  const water=WATER.map(p=>'<polygon class="fm-water" points="'+pts(p)+'"/>').join("");
+  let grid="";
+  for(let lon=-180;lon<=180;lon+=10){const x=(lon+180)/360*1000;grid+='<line class="fm-grid" x1="'+x+'" y1="0" x2="'+x+'" y2="500"/>';}
+  for(let lat=-80;lat<=80;lat+=10){const y=(90-lat)/180*500;grid+='<line class="fm-grid" x1="0" y1="'+y+'" x2="1000" y2="'+y+'"/>';}
+  const site=k=>{const p=fmSitePos(k,F),S2=SITE_BY_K[k];
+    return '<g class="fm-site" data-site="'+k+'" transform="translate('+p.x.toFixed(1)+','+p.y.toFixed(1)+')">'
+      +'<circle r="'+(1.5*u).toFixed(2)+'"/>'
+      +'<text y="'+(-2.6*u).toFixed(2)+'" style="font-size:'+(1.5*u).toFixed(2)+'px">'+esc(S2.l.toUpperCase())+'</text></g>';};
+  const home=fmSitePos("road",F);
+  const op=(c,i)=>{const o=fmSpot(i,team.length,u);
+    return '<g class="fm-op" data-id="'+c.id+'" data-site="road" data-glyph="walk" transform="translate('+(home.x+o.dx).toFixed(1)+','+(home.y+o.dy).toFixed(1)+') scale('+(0.62*u).toFixed(3)+')">'
+      +'<circle class="fm-op-b" r="4.4"/><g class="fm-op-g">'+FM_GLYPH.walk+'</g>'
+      +'<text class="fm-op-n" y="8.6">'+esc(c.isPlayer?"YOU":(c.first||""))+'</text></g>';};
   return '<div class="feedmap"><div class="fm-clock mono" id="fm-clock">'+esc(d.narrative[0]?d.narrative[0].t:"--:--")+'</div>'
-    +'<svg class="fm-svg" viewBox="0 0 100 62" preserveAspectRatio="xMidYMid meet" aria-label="Where the crew are">'
-    // the street, the building, the room inside it, and the car at the kerb
-    +'<path class="fm-road" d="M2 56 H98"/><path class="fm-road fm-thin" d="M2 59 H98"/>'
-    +'<path class="fm-wall" d="M34 8 H92 V44 H34 Z"/>'
-    +'<path class="fm-wall fm-thin" d="M62 8 V44"/>'
-    +'<path class="fm-door" d="M34 34 V42"/>'
-    +'<path class="fm-wall fm-thin" d="M8 12 H30 V28 H8 Z"/>'
-    +'<rect class="fm-car" x="79" y="48" width="11" height="6" rx="1"/>'
-    +'<g class="fm-path">'+SITES.slice(0,-1).map((p,i)=>{const q=SITES[i+1];
-        return '<path d="M'+p.x+' '+p.y+' L'+q.x+' '+q.y+'"/>';}).join("")+'</g>'
-    +SITES.map(pin).join("")
-    +'<g class="fm-ops">'+team.map(dot).join("")+'</g>'
+    +'<div class="fm-where mono">'+esc(d.job.city)+' · '+esc(d.job.country)+'</div>'
+    +'<svg class="fm-svg" viewBox="'+F.x.toFixed(1)+' '+F.y.toFixed(1)+' '+F.w+' '+F.h+'" preserveAspectRatio="xMidYMid slice" aria-label="'+esc(d.job.city+", "+d.job.country)+' — where the crew are">'
+    +'<rect x="'+F.x.toFixed(1)+'" y="'+F.y.toFixed(1)+'" width="'+F.w+'" height="'+F.h+'" fill="var(--card)"/>'
+    +grid+land+water
+    +'<g class="fm-city" transform="translate('+F.cx.toFixed(1)+','+F.cy.toFixed(1)+')">'
+      +'<circle class="fm-city-h" r="'+(9*u).toFixed(2)+'"/><circle class="fm-city-d" r="'+(1*u).toFixed(2)+'"/></g>'
+    +'<g class="fm-tether"></g>'
+    +SITES.map(p=>site(p.k)).join("")
+    +'<g class="fm-ops">'+team.map(op).join("")+'</g>'
     +'</svg></div>';
 }
 // Several people stand in the same place, so they are spread evenly round it — the ring grows
 // with the number standing there, and one person stands on the spot rather than beside it.
-function fmSpot(i,n){
-  if(n<=1)return {dx:0,dy:4.4};
-  const r=n<=3?7.4:n<=5?9:10.6;
-  const a=(i/n)*Math.PI*2-Math.PI/2;
-  return {dx:Math.cos(a)*r,dy:Math.sin(a)*r*0.72+1.4};
+const FM_DROP=4.6;   // how far below the marker the crew stand, so the place keeps its name
+const FM_COLS=4, FM_GAPX=6.8, FM_GAPY=6.6;
+function fmSpot(i,n,u){
+  u=u||1;
+  const cols=Math.min(n||1,FM_COLS);
+  const col=i%cols, row=Math.floor(i/cols);
+  return {dx:(col-(cols-1)/2)*FM_GAPX*u, dy:(FM_DROP+row*FM_GAPY)*u};
 }
-// Put everybody where their site says, at whatever ring that site needs right now.
-function fmLayout(root){
+function fmLayout(root,F){
+  const u=F.w/100;
+  let tether="";
   SITES.forEach(p=>{
+    const at=fmSitePos(p.k,F);
     const here=[...root.querySelectorAll('.fm-op[data-site="'+p.k+'"]')];
-    here.forEach((el,i)=>{const o=fmSpot(i,here.length);
-      el.setAttribute("transform","translate("+(p.x+o.dx)+","+(p.y+o.dy)+")");});
+    here.forEach((el,i)=>{const o=fmSpot(i,here.length,u);
+      const x=at.x+o.dx, y=at.y+o.dy;
+      el.setAttribute("transform","translate("+x.toFixed(1)+","+y.toFixed(1)+") scale("+(0.62*u).toFixed(3)+")");
+      tether+='<line x1="'+at.x.toFixed(1)+'" y1="'+at.y.toFixed(1)+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'"/>';});
   });
+  const t=root.querySelector(".fm-tether");if(t)t.innerHTML=tether;
 }
-// One revealed line moves the map: the clock to its time, whoever it names to where it happens,
-// and the place itself lit. "*" is the whole crew — arriving, the job going wrong, getting out.
+// One revealed line moves the map: the clock to its time, whoever it names to where it happens
+// and to the mark of what they are doing, and the place itself lit. "*" is the whole crew.
 function feedMapStep(d,line){
   if(!line)return;
   const cl=document.getElementById("fm-clock");
@@ -3340,15 +3407,23 @@ function feedMapStep(d,line){
   if(!root)return;
   root.querySelectorAll(".fm-site.on").forEach(e=>e.classList.remove("on"));
   if(!line.at)return;
-  const p=SITE_BY_K[line.at];if(!p)return;
+  if(!SITE_BY_K[line.at])return;
   const here=root.querySelector('.fm-site[data-site="'+line.at+'"]');if(here)here.classList.add("on");
   const ops=[...root.querySelectorAll(".fm-op")];
-  const move=els=>els.forEach(el=>el.setAttribute("data-site",line.at));
+  const move=els=>els.forEach(el=>{
+    el.setAttribute("data-site",line.at);
+    const c=byId(el.getAttribute("data-id"));
+    const k=fmGlyphFor(line,c);
+    if(el.getAttribute("data-glyph")!==k){
+      el.setAttribute("data-glyph",k);
+      const g=el.querySelector(".fm-op-g");if(g)g.innerHTML=FM_GLYPH[k]||FM_GLYPH.walk;
+    }
+  });
   if(line.who==="*")move(ops);
   else if(line.who)move(ops.filter(el=>el.getAttribute("data-id")===String(line.who)));
-  // everybody, not only the one who moved: the ring at both ends of the move has changed size
-  fmLayout(root);
+  fmLayout(root,fmFrame(d.job.country));
 }
+
 function tickLine(l){return '<div class="tk '+(l.tone||"")+(l.twist?" tk-twist":"")+'"><span class="tk-t">'+esc(l.t)+'</span><span class="tk-x">'+esc(l.x)+'</span></div>';}
 let TICK=null;
 function tickerArm(){
@@ -4100,7 +4175,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 34 · 15 September 2026";
+const BUILD="build 35 · 16 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
