@@ -285,6 +285,8 @@
   .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-family:var(--f-mono);font-size:12px}
   .kv .k{color:var(--muted)}
   .foot-note{font-family:var(--f-mono);font-size:11px;color:var(--muted);text-align:center;margin-top:26px;line-height:1.6}
+  .foot-note a{color:var(--ink-2);text-underline-offset:3px}
+  .foot-note a:hover{color:var(--stamp)}
   .loy{height:6px;border:1px solid var(--ink);background:var(--paper-2);width:100%;position:relative}
   .loy>i{display:block;height:100%;background:var(--ink)}
   .loy.low>i{background:var(--stamp)}
@@ -3952,7 +3954,7 @@ const TUT_STEPS=[
   {tab:"jobs",openJob:true,sel:".check",h:"Who can go",t:"Every crew member, ✓ or ✗, with the reason: the border and their passport, a conviction, a limit the job trips, an injury. A forger on the crew gets weak passports through. Above, every requirement carries a tick or a cross — including the money: who calls this job small money."},
   {tab:"jobs",openJob:true,sel:".factors",h:"The reckoning",t:"Every factor with its number — crew size, who commands, language, a local national, knowledge, trades, heat — then the odds. Take the job and the report plays minute by minute; a week passes. On some jobs the report stops on a twist: six options, and one sets the crew free — the one the crew you brought can actually do. Choose badly and it costs blood, a place, heat and ranking."},
   {tab:"log",sel:".log",h:"The case log",t:"Everything that happened, week by week; the Week dropdown goes back to any past week, and every job you have run is on file above as a recap. Every few weeks something happens between jobs — a death, a disappearance, a resignation, a rival crew buying drinks, an old face, a detective — and asks for a decision with a price. The panel on the right says what your ranking buys and what the next name costs. Lay low a week here or on the Jobs board: −15 heat, ranking −1, upkeep still due."},
-  {tab:"log",sel:".burger",h:"The office",t:"Esc, or this button, on any screen: pause, sound, music, brightness, the controls book, your file, and the door out. The i button beside it explains whatever is on screen, and can run this tutorial again."},
+  {tab:"log",sel:".burger",h:"The office",t:"Esc, or this button, on any screen: pause, sound, music, brightness, the controls book, the player's handbook, your file, and the door out. The handbook is every rule and number in the game with a search bar over it. The i button beside it explains whatever is on screen, and can run this tutorial again."},
 ];
 const TUT_REMIND=[
   {tab:"crew",sel:".topbar",h:"Welcome back",t:"A short reminder, then the game is yours. Balance, week, ranking, heat. The ranking is your name, and the name decides what clients post, what they pay, who will sign, how many places you have and whether the crew stays. Heat at 100 is a raid; a week laid low cools it by 15 and costs a point of ranking."},
@@ -4117,6 +4119,19 @@ function chrome(){
     +(UI.info?infoHTML():"")
     +(TUT.on&&S&&!S.over?tutHTML():"");
 }
+/* The handbook is a separate page: every rule, number and screen in the game, with a search bar and
+   a clickable index. It sits beside the game on Pages and on disk; anywhere else — an artifact runs
+   on its own sandboxed origin — the only address that certainly reaches it is its own. */
+const HANDBOOK_URL="https://claude.ai/artifact/UYYQtiV9EfynY4pZTGvmMc";
+function handbookHref(){
+  try{
+    if(location.protocol==="file:")return "handbook.html";
+    const h=location.hostname;
+    if(/(^|\.)github\.io$/.test(h)||h==="localhost"||h==="127.0.0.1")return "handbook.html";
+  }catch(e){}
+  return HANDBOOK_URL;
+}
+function openHandbook(){try{window.open(handbookHref(),"_blank","noopener");}catch(e){location.href=handbookHref();}}
 function officeSVG(){
   const K="#111010";
   const on=SET.sound, vol=SET.volume;
@@ -4198,6 +4213,16 @@ function officeSVG(){
     +'<rect x="1248" y="758" width="214" height="52" rx="3" fill="#fff"/><rect x="1248" y="822" width="214" height="52" rx="3" fill="#fff"/>'
     +'<rect x="1320" y="778" width="70" height="12" rx="6" fill="#fff"/><rect x="1320" y="842" width="70" height="12" rx="6" fill="#fff"/>'
     +'<text x="1355" y="736" text-anchor="middle" class="office-small">FILES</text></g>'
+    // the shelf under the window: the player's handbook, and the books it keeps company with
+    +'<g class="hot" data-act="off-handbook"><title>The player\'s handbook — every rule and number in the game, with a search bar over it</title>'
+    +'<rect x="92" y="470" width="316" height="12" fill="#fff"/>'
+    +'<rect x="112" y="482" width="10" height="16" fill="#fff"/><rect x="378" y="482" width="10" height="16" fill="#fff"/>'
+    +'<rect x="112" y="412" width="28" height="58" fill="#fff"/>'
+    +'<rect x="144" y="402" width="34" height="68" fill="#fff"/><line x1="151" y1="416" x2="171" y2="416"/><line x1="151" y1="456" x2="171" y2="456"/>'
+    +'<rect x="182" y="418" width="24" height="52" fill="#fff"/>'
+    +'<polygon points="212,470 240,414 256,420 232,470" fill="#fff"/>'
+    +'<rect x="270" y="416" width="128" height="30" rx="3" fill="#fff"/>'
+    +'<text x="334" y="436" text-anchor="middle" class="office-small">HANDBOOK</text></g>'
     // the book: controls
     +'<g class="hot" data-act="off-controls"><title>Controls</title>'
     +'<polygon points="960,605 1150,598 1250,650 1060,660" fill="#fff"/><polygon points="1060,660 1250,650 1250,674 1060,684" fill="#fff"/>'
@@ -4216,6 +4241,7 @@ function officeHTML(){
     +'<span class="grp">Brightness <button data-act="off-bright-down" aria-label="Dimmer">−</button><span class="num" style="width:38px;text-align:center">'+SET.bright+'%</span><button data-act="off-bright-up" aria-label="Brighter">+</button></span>'
     +'<button class="btn ghost sm" data-act="off-lang">Language</button>'
     +'<button class="btn ghost sm" data-act="off-controls">Controls</button>'
+    +'<button class="btn ghost sm" data-act="off-handbook" title="Every rule and number in the game, with a search bar — opens in a new tab">Handbook</button>'
     +'<button class="btn ghost sm" data-act="off-tutor" title="The tutorial, any card, whenever you want">Tutorial</button>'
     +'<button class="btn ghost sm" data-act="off-cabinet" title="Carry the game to another browser, or keep a copy">Files</button>'
     +(S?'<button class="btn ghost sm" data-act="off-hat">Your file</button>':'')
@@ -4246,6 +4272,9 @@ function officePanel(){
       +'<hr class="rule"><div class="mono" style="font-size:12px;line-height:1.8"><b>How it works.</b> You are the commander. Fill four places from 5,000 files — each has a passport, five attributes, a trade, knowledge, education, time in jail, time on the streets, and things they will not do. '
       +'Clients post jobs online by country; each country has its own categories, language, money, politics and terrain. Everyone on the crew goes on every job, if they can get in and the job doesn\'t hit one of their limits. '
       +'Success pays and builds ranking; failure adds heat and gets people hurt or held. Build the name to the top of the board and the last score — three operations against the Committee — opens up.</div>'
+      +'<hr class="rule"><div class="kicker">The player\'s handbook</div>'
+      +'<div class="mono" style="font-size:12px;line-height:1.7;margin:6px 0">Nineteen chapters: every attribute, trade, limit, factor and verdict, what every number on every screen means, and where each thing is. A search bar at the top of it, and an index that says which page each subject is on. It opens in a new tab, and there is a PDF of it beside the game.</div>'
+      +'<button class="btn sm" data-act="off-handbook">Open the handbook →</button>'
       +(S&&!S.over?'<hr class="rule"><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" data-act="tut-start">Run the tutorial again</button><button class="btn ghost sm" data-act="tut-remind">The short reminder</button></span>':'');
   } else if(UI.panel==="tutor"){
     h="Recap";
@@ -4369,8 +4398,9 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 42 · 16 September 2026";
-function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
+const BUILD="build 43 · 16 September 2026";
+function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
+  +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
 function bind(){
@@ -4436,6 +4466,7 @@ document.addEventListener("click",e=>{
     case "off-bright-up": setBright(SET.bright+5); break;
     case "off-lang": UI.panel="lang"; render(); break;
     case "off-controls": UI.panel="controls"; render(); break;
+    case "off-handbook": e.preventDefault(); openHandbook(); break;
     case "off-tutor": UI.panel="tutor"; render(); break;
     case "off-cabinet": UI.panel="cabinet"; UI.impInfo=null; UI.impRaw=""; render(); break;
     case "exp-select": { const el=document.getElementById("expCode"); if(el&&el.select){el.focus();el.select();} break; }

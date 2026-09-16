@@ -10,6 +10,11 @@ doesn't hit one of their limits.
 
 Play it here: **https://papogambola.github.io/the-crew/** — every push to `main` redeploys it.
 
+The rules, in full: **https://papogambola.github.io/the-crew/handbook.html** — a player's handbook
+of nineteen chapters with a pinned search bar and a clickable index, and the same thing as a
+[PDF](The-Crew-Handbook.pdf). It is reached from inside the game too: the office's bookshelf, the
+Handbook button under it, the controls book, and the footer of every screen.
+
 The working foundation for the design is `CONCEPT.md`, kept as written, with a dated log of
 decisions at the end.
 
@@ -462,9 +467,36 @@ claims to be a Mac. A Windows or ChromeOS laptop **with a touch screen is a PC**
 normally. Nine device profiles are driven in a real browser on every change, and five of them are
 computers that must not be stopped.
 
+## The player's handbook
+
+`handbook.html`, beside the game, and `The-Crew-Handbook.pdf` rendered from the same page.
+Nineteen chapters: what the game is and how it is won and lost, where every screen is, the five
+attributes, the sixteen trades, experience, knowledge, schooling, temperament, limits, passports
+and borders, what people cost, loyalty, hiring and the recruitment trip, places and benching and a
+second crew, the board, tiers, the twelve kinds of job, countries and casing and difficulty, the
+whole reckoning formula and every factor in it, the night itself, money and the split, heat and
+the detective and the raid, the competition, the week that passes on its own, ranking, the record,
+the last score, the controls, twenty things worth knowing, and a glossary.
+
+Three things make it more than prose:
+
+- **A pinned search bar.** It searches every line, table row and glossary entry, highlights every
+  hit, folds away everything that does not match, and steps through the hits with ‹ › or Enter.
+  `/` focuses it, Escape clears it. Searching a heading brings its whole section back rather than
+  the heading alone.
+- **An index with real page numbers.** Every chapter and section, with the page it is on in the
+  PDF, and every line clickable. The numbers are not estimated: `hb-converge.sh` builds the page,
+  renders the PDF, reads the PDF back with `hb-pages.py` to find which page each heading actually
+  landed on, and rebuilds until nothing moves.
+- **Go to the top, Contents, and back to the game**, in the pinned bar and floating at the corner.
+
+Every number in it is read out of the game's own constants at build time — `hb-data.js` generates
+the tables from a dump of `BAL`, `RANKS`, `TECHS`, `CATS`, `GOALS`, `TRAITS`, `LIMITS`, `RETAINERS`
+and the rest — so the handbook cannot describe a game that no longer exists.
+
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 42 · 16 September
+The footer of every screen, and the office header, carry a build stamp (`build 43 · 16 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
