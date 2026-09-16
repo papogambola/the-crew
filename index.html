@@ -757,6 +757,13 @@ function buildRoster(seed){
   return arr;
 }
 function natOf(c){return COUNTRY_BY_NAME[c.nat];}
+// A name that goes with a passport. Same pools, same rule, as everyone else on the roster.
+function nameFor(rng,natName,gender){
+  const nat=COUNTRY_BY_NAME[natName];
+  const pool=NAMES[(nat&&nat.pool)||"Anglo"]||NAMES.Anglo;
+  const first=pick(rng,gender==="F"?pool.f:pool.m);
+  return first+" "+pick(rng,pool.s);
+}
 
 /* ------------------------------ AVATAR -------------------------------- */
 // Bold ink bust, matched to the reference sheet: solid black shirt, hair and
@@ -4142,7 +4149,9 @@ function screenCreate(){
     +'<div class="panel" style="max-width:820px;margin:0 auto"><div class="panel-b"><div class="create-grid">'
       +'<div><div class="facecol"><div class="bigav" id="bigav">'+avatar(draft.avseed,draft.gender,draft.face)+'</div></div>'+facePanel()+'</div>'
       +'<div>'
-        +'<div class="field" style="margin-bottom:12px"><label for="pname">Alias</label><input type="text" id="pname" maxlength="22" value="'+esc(draft.name)+'" placeholder="e.g. Vera Kessler" autocomplete="off"></div>'
+        +'<div class="field" style="margin-bottom:12px"><label for="pname" style="display:flex;justify-content:space-between;align-items:center;gap:8px">Alias'
+          +'<button class="btn ghost sm" data-act="reroll-name" title="A name that goes with your passport" style="padding:3px 8px">↻ Random</button></label>'
+          +'<input type="text" id="pname" maxlength="22" value="'+esc(draft.name)+'" placeholder="e.g. Vera Kessler" autocomplete="off"></div>'
         +'<div class="field" style="margin-bottom:12px"><label>Sex</label><div class="swatchrow">'+g("M","Male","draft-gender","gender")+g("F","Female","draft-gender","gender")+'</div></div>'
         +'<div class="field" style="margin-bottom:12px"><label>Role</label><div class="mono" style="font-size:13px"><b>Commander</b> — it\'s your crew. The places are for soldiers, and the odd commander-type who takes your orders badly but can lead when you can\'t get in.</div></div>'
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
@@ -4175,7 +4184,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 35 · 16 September 2026";
+const BUILD="build 36 · 16 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
@@ -4261,6 +4270,9 @@ document.addEventListener("click",e=>{
     case "continue": if(load()){if(tutOnEntry())tutGo(0);else render();} break;
     case "draft-gender": draft.gender=v; draft.face=normFace(draft.face,draft.gender); showCreate(); break;
     case "reroll-av": { const r=freshRng(); draft.avseed=ri(r,1,1e9); draft.face=randomFace(r,draft.gender); showCreate(); break; }
+    // The box writes straight into draft.name as it is typed and the select into draft.nat, so the
+    // passport and sex used here are the ones showing on the screen.
+    case "reroll-name": { draft.name=nameFor(freshRng(),draft.nat,draft.gender); showCreate(); break; }
     case "reroll-profile": rollDraftProfile(); showCreate(); break;
     case "confirm-create": {
       const nm=(draft.name||"").trim(); if(!nm)break;

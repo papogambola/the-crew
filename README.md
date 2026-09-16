@@ -18,6 +18,11 @@ decisions at the end.
 - **A five-person crew, you included.** You create your own file — alias, sex (male or
   female), nationality, trade — and the rest of your profile is rolled, re-rollable. You
   are the commander. Four places to fill from the roster.
+- **The alias rolls too.** A **↻ Random** on the Alias field, the same button as the one over the
+  face, and it gives a name that **goes with the passport you picked** — a Nigerian passport offers
+  a Nigerian name, a Finnish one a Finnish name, for a man or a woman, out of the same pool every
+  file on the roster is named from. Change the passport and it rolls from the new one. The pools
+  are regional rather than national, so Japan, China, South Korea and Singapore share one.
 - **5,000 operatives**, generated from a seed so a save stores only what changed. Every file
   carries: nationality and passport tier; five attributes (Muscle, Brains, Tech, Charm,
   Nerve); a trade (16); experience rank; knowledge domains (10); education (six levels,
@@ -422,7 +427,7 @@ computers that must not be stopped.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 35 · 16 September
+The footer of every screen, and the office header, carry a build stamp (`build 36 · 16 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
