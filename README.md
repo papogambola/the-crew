@@ -107,8 +107,9 @@ decisions at the end.
   it happens in, who it is about, and what they are doing, so **where somebody stands is what their
   trade is** — the wheelman never leaves the car, the lookout stays on the corner, the forger is at
   the way in, the safecracker is in the room. The lines after the crew have gone — the morning, the
-  quiet week, the split — name no place and leave the map where it stood. A recruitment trip is a
-  flight and a conversation, so it runs its own feed with no map.
+  quiet week, the split — name no place and leave the map where it stood. **A recruitment trip gets
+  the same map**, framed on the city you flew to, with four places of its own — off the plane, the
+  city, the table, the answer — and two people on it: you, and whoever you went to meet.
 - **Standing in for a trade you haven't got.** Take a job that wants a Safecracker with no
   safecracker on the books and somebody spends the week before learning enough of it to try —
   the report says who, by name. If the job comes off, that week is worth a point of brains, and
@@ -118,8 +119,13 @@ decisions at the end.
 - **Recruitment is a trip.** Nobody joins a crew because a fee was paid. **Go and ask** and you
   fly to wherever they live and put it to them in person: a week off the calendar, a live feed
   like a job — the border, the city, the bar with two doors, how they read you — and their
-  answer at the end of it. The fee is only paid if they sign; turn back, or get turned down,
-  and the money stays with you while the week does not.
+  answer at the end of it.
+- **Nothing is paid until the week is over.** The balance does not move when you set off, or
+  part-way through, or when the map shows you sitting down with them: it moves **once, at the end,
+  when the answer is in** — and the fee is only in it if they signed. Turn back, or get turned
+  down, and the fee stays with you. What a refused week still costs is what the week itself cost:
+  the room, the plane, and an envelope that changed hands in a back room, which is gone whether
+  anybody signs or not. The wages for the week come out at the same time, as they do for a job.
 - **Most of them are difficult, and the cheap ones are the worst.** Every trip ends with how
   hard that file was, as a percentage. It rises with greed, years inside, a temperament, a hard
   border, and **low numbers in the things that matter** — desperate people make a mess of a
@@ -427,7 +433,7 @@ computers that must not be stopped.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 36 · 16 September
+The footer of every screen, and the office header, carry a build stamp (`build 37 · 16 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

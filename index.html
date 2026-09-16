@@ -623,6 +623,18 @@ const SITES=[
   {k:"exit",  l:"The car",    x:84, y:52, ly:-11.5},
 ];
 const SITE_BY_K={};SITES.forEach(p=>SITE_BY_K[p.k]=p);
+const TRIP_SITES=[
+  {k:"land",  l:"Off the plane", x:-17, y:10},
+  {k:"city",  l:"The city",      x:-13, y:-10},
+  {k:"table", l:"The table",     x:9,   y:-9},
+  {k:"deal",  l:"The answer",    x:15,  y:10},
+];
+const TRIP_SITE_BY_K={};TRIP_SITES.forEach(p=>TRIP_SITE_BY_K[p.k]=p);
+const TRIP_SITE_GLYPH={land:"walk",city:"watch",table:"talk",deal:"paper"};
+// A feed is a job or a trip, and the two have different places. Everything downstream — where a
+// line happens, where an icon stands, what is lit — reads the list through here.
+function feedSites(d){return d&&d.cid?TRIP_SITES:SITES;}
+function feedSiteBy(d,k){return (d&&d.cid?TRIP_SITE_BY_K:SITE_BY_K)[k];}
 const TECH_SITE={
   wheelman:"exit", smuggler:"exit", cleaner:"exit",
   lookout:"watch", overwatch:"watch", hacker:"watch", launderer:"watch", fixer:"watch",
@@ -3331,7 +3343,7 @@ const FM_TECH_GLYPH={
 function fmGlyphFor(line,c){
   if(line&&line.act&&FM_GLYPH[line.act])return line.act;
   if(c&&FM_TECH_GLYPH[c.tech]&&line&&line.at&&line.at===techSite(c.tech))return FM_TECH_GLYPH[c.tech];
-  return (line&&FM_SITE_GLYPH[line.at])||"walk";
+  return (line&&(FM_SITE_GLYPH[line.at]||TRIP_SITE_GLYPH[line.at]))||"walk";
 }
 // How much of the world to show. The board's own map picks a zoom off the country's size; this
 // reads the same tiers so a job in Singapore is not framed like a job in Russia.
@@ -3346,13 +3358,17 @@ function fmFrame(country){
 // as one place, far enough apart to tell who is where.
 function fmSitePos(k,F){
   const u=F.w/100;
-  const off={road:[-17,10],watch:[-15,-10],door:[0,-1],inside:[16,-10],exit:[18,10]}[k]||[0,0];
+  const j={road:[-17,10],watch:[-15,-10],door:[0,-1],inside:[16,-10],exit:[18,10]}[k];
+  const t=TRIP_SITE_BY_K[k];
+  const off=j||(t?[t.x,t.y]:[0,0]);
   return {x:F.cx+off[0]*u,y:F.cy+off[1]*u};
 }
 function feedMap(d){
-  const team=(d.teamIds||[]).map(byId).filter(Boolean);
+  // a job is the crew; a trip is you and whoever you flew out to meet
+  const team=d.cid?[S.player,byId(d.cid)].filter(Boolean):(d.teamIds||[]).map(byId).filter(Boolean);
   if(!team.length)return "";
-  const F=fmFrame(d.job.country);
+  const F=fmFrame(d.cid?d.country:d.job.country);
+  const sites=feedSites(d);
   const u=F.w/100;
   const pts=poly=>poly.map(p=>{const q=proj(p[1],p[0]);return q[0].toFixed(1)+","+q[1].toFixed(1);}).join(" ");
   const land=LAND.map(p=>'<polygon class="fm-land" points="'+pts(p)+'"/>').join("");
@@ -3360,24 +3376,24 @@ function feedMap(d){
   let grid="";
   for(let lon=-180;lon<=180;lon+=10){const x=(lon+180)/360*1000;grid+='<line class="fm-grid" x1="'+x+'" y1="0" x2="'+x+'" y2="500"/>';}
   for(let lat=-80;lat<=80;lat+=10){const y=(90-lat)/180*500;grid+='<line class="fm-grid" x1="0" y1="'+y+'" x2="1000" y2="'+y+'"/>';}
-  const site=k=>{const p=fmSitePos(k,F),S2=SITE_BY_K[k];
+  const site=k=>{const p=fmSitePos(k,F),S2=feedSiteBy(d,k);
     return '<g class="fm-site" data-site="'+k+'" transform="translate('+p.x.toFixed(1)+','+p.y.toFixed(1)+')">'
       +'<circle r="'+(1.5*u).toFixed(2)+'"/>'
       +'<text y="'+(-2.6*u).toFixed(2)+'" style="font-size:'+(1.5*u).toFixed(2)+'px">'+esc(S2.l.toUpperCase())+'</text></g>';};
-  const home=fmSitePos("road",F);
+  const home=fmSitePos(sites[0].k,F);
   const op=(c,i)=>{const o=fmSpot(i,team.length,u);
-    return '<g class="fm-op" data-id="'+c.id+'" data-site="road" data-glyph="walk" transform="translate('+(home.x+o.dx).toFixed(1)+','+(home.y+o.dy).toFixed(1)+') scale('+(0.62*u).toFixed(3)+')">'
+    return '<g class="fm-op" data-id="'+c.id+'" data-site="'+sites[0].k+'" data-glyph="walk" transform="translate('+(home.x+o.dx).toFixed(1)+','+(home.y+o.dy).toFixed(1)+') scale('+(0.62*u).toFixed(3)+')">'
       +'<circle class="fm-op-b" r="4.4"/><g class="fm-op-g">'+FM_GLYPH.walk+'</g>'
       +'<text class="fm-op-n" y="8.6">'+esc(c.isPlayer?"YOU":(c.first||""))+'</text></g>';};
   return '<div class="feedmap"><div class="fm-clock mono" id="fm-clock">'+esc(d.narrative[0]?d.narrative[0].t:"--:--")+'</div>'
-    +'<div class="fm-where mono">'+esc(d.job.city)+' · '+esc(d.job.country)+'</div>'
-    +'<svg class="fm-svg" viewBox="'+F.x.toFixed(1)+' '+F.y.toFixed(1)+' '+F.w+' '+F.h+'" preserveAspectRatio="xMidYMid slice" aria-label="'+esc(d.job.city+", "+d.job.country)+' — where the crew are">'
+    +'<div class="fm-where mono">'+esc(d.cid?d.city:d.job.city)+' · '+esc(d.cid?d.country:d.job.country)+'</div>'
+    +'<svg class="fm-svg" viewBox="'+F.x.toFixed(1)+' '+F.y.toFixed(1)+' '+F.w+' '+F.h+'" preserveAspectRatio="xMidYMid slice" aria-label="'+esc((d.cid?d.city:d.job.city)+", "+(d.cid?d.country:d.job.country))+' — where they are">'
     +'<rect x="'+F.x.toFixed(1)+'" y="'+F.y.toFixed(1)+'" width="'+F.w+'" height="'+F.h+'" fill="var(--card)"/>'
     +grid+land+water
     +'<g class="fm-city" transform="translate('+F.cx.toFixed(1)+','+F.cy.toFixed(1)+')">'
       +'<circle class="fm-city-h" r="'+(9*u).toFixed(2)+'"/><circle class="fm-city-d" r="'+(1*u).toFixed(2)+'"/></g>'
     +'<g class="fm-tether"></g>'
-    +SITES.map(p=>site(p.k)).join("")
+    +sites.map(p=>site(p.k)).join("")
     +'<g class="fm-ops">'+team.map(op).join("")+'</g>'
     +'</svg></div>';
 }
@@ -3391,10 +3407,10 @@ function fmSpot(i,n,u){
   const col=i%cols, row=Math.floor(i/cols);
   return {dx:(col-(cols-1)/2)*FM_GAPX*u, dy:(FM_DROP+row*FM_GAPY)*u};
 }
-function fmLayout(root,F){
+function fmLayout(root,F,sites){
   const u=F.w/100;
   let tether="";
-  SITES.forEach(p=>{
+  (sites||SITES).forEach(p=>{
     const at=fmSitePos(p.k,F);
     const here=[...root.querySelectorAll('.fm-op[data-site="'+p.k+'"]')];
     here.forEach((el,i)=>{const o=fmSpot(i,here.length,u);
@@ -3414,7 +3430,7 @@ function feedMapStep(d,line){
   if(!root)return;
   root.querySelectorAll(".fm-site.on").forEach(e=>e.classList.remove("on"));
   if(!line.at)return;
-  if(!SITE_BY_K[line.at])return;
+  if(!feedSiteBy(d,line.at))return;
   const here=root.querySelector('.fm-site[data-site="'+line.at+'"]');if(here)here.classList.add("on");
   const ops=[...root.querySelectorAll(".fm-op")];
   const move=els=>els.forEach(el=>{
@@ -3428,7 +3444,7 @@ function feedMapStep(d,line){
   });
   if(line.who==="*")move(ops);
   else if(line.who)move(ops.filter(el=>el.getAttribute("data-id")===String(line.who)));
-  fmLayout(root,fmFrame(d.job.country));
+  fmLayout(root,fmFrame(d.cid?d.country:d.job.country),feedSites(d));
 }
 
 function tickLine(l){return '<div class="tk '+(l.tone||"")+(l.twist?" tk-twist":"")+'"><span class="tk-t">'+esc(l.t)+'</span><span class="tk-x">'+esc(l.x)+'</span></div>';}
@@ -3453,6 +3469,9 @@ function tickerArm(){
     feedMapStep(d,line);
     sfx("tick");
     if(line&&line.twist&&!d.resolved){clearInterval(TICK);TICK=null;d.awaiting=true;sfx("bad");render();return;}
+    // The end of a trip that nobody had to decide anything about: settle it here, where the
+    // player is watching, and let the feed carry straight on into what was decided.
+    if(S.modal.type==="trip"&&!d.resolved&&!d.snag&&S.pendingTrip&&d.revealed>=d.narrative.length)finishTrip(S.pendingTrip,null,d);
     if(S.modal.type==="trip"&&d.resolved&&d.revealed>=d.narrative.length){clearInterval(TICK);TICK=null;tickerFinish();return;}
     if(d.revealed>=d.narrative.length){clearInterval(TICK);TICK=null;tickerFinish();}
   },SPEEDS[speedIdx()][0]);
@@ -3467,6 +3486,7 @@ function tickerFinish(){
     const i=d.narrative.findIndex(l=>l.twist);
     d.revealed=i>=0?i+1:d.narrative.length;d.awaiting=true;render();return;
   }
+  if(S.modal.type==="trip"&&!d.resolved&&S.pendingTrip)finishTrip(S.pendingTrip,null,d);
   d.revealed=d.narrative.length;d.done=true;d.awaiting=false;
   if(S.modal.type==="trip"){sfx(d.outcome==="signed"?"coin":"bad");render();return;}
   sfx(d.tier>=3?"good":d.tier===2?"stamp":"bad");
@@ -3505,7 +3525,7 @@ function modalTrip(T){
         +'<span class="grp mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)">Speed <button class="btn ghost sm" data-act="speed-down" aria-label="Slower" style="padding:2px 8px">−</button><span class="num" style="width:58px;text-align:center">'+SPEEDS[speedIdx()][1]+'</span><button class="btn ghost sm" data-act="speed-up" aria-label="Faster" style="padding:2px 8px">+</button></span>'
         +'<button class="btn ghost sm" data-act="skip-ticker">'+(T.snag&&!T.resolved?"Skip to the meeting →":"Skip to the end →")+'</button></div>';
     }
-    return modalWrap(h+'<div class="modal-b">'+ticker+below+'</div>');
+    return modalWrap(h+'<div class="modal-b">'+feedMap(T)+ticker+below+'</div>');
   }
   const nums='<div class="num-grid">'
     +'<div class="b"><div class="k">Paid</div><div class="v num">'+money(-(T.paid||0))+'</div></div>'
@@ -4184,7 +4204,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 36 · 16 September 2026";
+const BUILD="build 37 · 16 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '+BUILD+'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */
@@ -4882,19 +4902,22 @@ function startTrip(c){
   let day=0;const DAYS=["MON","TUE","WED","THU","FRI","SAT","SUN"];
   let hh=ri(rng,8,19),mm=ri(rng,0,59);
   const lines=[];
-  const push=(t,tone)=>{mm+=ri(rng,20,180);while(mm>=60){mm-=60;hh++;}while(hh>=24){hh-=24;day++;}
-    lines.push({t:DAYS[day%7]+" "+String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0"),x:fill2(t,v),tone:tone||""});};
+  const push=(t,tone,at,who,act)=>{mm+=ri(rng,20,180);while(mm>=60){mm-=60;hh++;}while(hh>=24){hh-=24;day++;}
+    const L={t:DAYS[day%7]+" "+String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0"),x:fill2(t,v),tone:tone||""};
+    if(at)L.at=at;if(who)L.who=who;if(act)L.act=act;
+    lines.push(L);};
   v.cur=co?co.cur:"cash";
-  push(pick(rng,TRIP_OUT));
-  const pl=tripPlaceLine(co,rng);if(pl)push(pl);
-  push(pick(rng,TRIP_LOOK));
-  push(pick(rng,TRIP_READ));
-  if(kit.speaks)push(pick(rng,TRIP_TALK.lang));
-  if(kit.face&&chance(rng,0.7))push(pick(rng,TRIP_TALK.face));
-  else if(kit.charm>=62)push(pick(rng,TRIP_TALK.charm));
-  if(S.rep>=RANKS.find(r=>r[1]==="Known")[0])push(pick(rng,TRIP_TALK.rep));
-  else if(chance(rng,0.6))push(pick(rng,TRIP_TALK.nobody),"warn");
-  if(kit.jobs>=6&&chance(rng,0.5))push(pick(rng,TRIP_TALK.record));
+  // you land, you walk the city for a day, then you sit down with them
+  push(pick(rng,TRIP_OUT),"","land","*");
+  const pl=tripPlaceLine(co,rng);if(pl)push(pl,"","city");
+  push(pick(rng,TRIP_LOOK),"","city","YOU");
+  push(pick(rng,TRIP_READ),"","table","*");
+  if(kit.speaks)push(pick(rng,TRIP_TALK.lang),"","table","YOU","talk");
+  if(kit.face&&chance(rng,0.7))push(pick(rng,TRIP_TALK.face),"","table","YOU","phone");
+  else if(kit.charm>=62)push(pick(rng,TRIP_TALK.charm),"","table","YOU","talk");
+  if(S.rep>=RANKS.find(r=>r[1]==="Known")[0])push(pick(rng,TRIP_TALK.rep),"","table","YOU","talk");
+  else if(chance(rng,0.6))push(pick(rng,TRIP_TALK.nobody),"warn","table",c.id,"watch");
+  if(kit.jobs>=6&&chance(rng,0.5))push(pick(rng,TRIP_TALK.record),"","table",c.id,"paper");
   const trouble=tripTrouble(c);
   const snag=chance(rng,trouble)?tripSnagFor(c,rng):null;
   const P={cid:c.id,fee:c.fee,city,country:c.nat,pre:lines,day,hh,mm,week:S.week,
@@ -4904,8 +4927,7 @@ function startTrip(c){
   const T={cid:c.id,name:c.n,first:c.first,city,country:c.nat,week:S.week,fee:c.fee,
     narrative:lines.slice(),revealed:0,done:false,awaiting:false,resolved:false,
     snag:P.snag,trouble:P.trouble,outcome:null,lines:[]};
-  if(snag)T.narrative.push({t:"— —",x:fill2(snag.h,v)+".",tone:"bad",twist:true});
-  else finishTrip(P,null,T);
+  if(snag)T.narrative.push({t:"— —",x:fill2(snag.h,v)+".",tone:"bad",twist:true,at:"table",who:"*",act:"down"});
   save();
   return T;
 }
@@ -4971,13 +4993,13 @@ function finishTrip(P,choiceIdx,T){
     if(cutAdd)c.cut=Math.round((c.cut+cutAdd)*1000)/1000;
     if(loy)c.loyalty=clamp(c.loyalty+loy,0,100);
     stats().hired++;
-    out.push({t:"— —",x:fill2(pick(rng,TRIP_SIGN),v),tone:"good"});
-    out.push({t:"— —",x:fill2(pick(rng,TRIP_HOME),v),tone:"good"});
+    out.push({t:"— —",x:fill2(pick(rng,TRIP_SIGN),v),tone:"good",at:"deal",who:"*",act:"paper"});
+    out.push({t:"— —",x:fill2(pick(rng,TRIP_HOME),v),tone:"good",at:"deal",who:"*",act:"walk"});
     logMsg("Hired "+c.n+" — "+TECH_BY_K[c.tech].l+", "+c.nat+", "+(c.role==="commander"?"commander":"soldier")+" ("+money(spend)+", one week in "+P.city+").","");
   } else {
     // a refusal is not permanent, but it is not this month either
     c.coolUntil=S.week+ri(rng,6,14);c._touched=true;
-    out.push({t:"— —",x:fill2(pick(rng,TRIP_NO),v),tone:"bad"});
+    out.push({t:"— —",x:fill2(pick(rng,TRIP_NO),v),tone:"bad",at:"deal",who:"*",act:"down"});
     logMsg("No deal with "+c.n+" in "+P.city+". A week gone"+(spend?", "+money(spend)+" with it":"")+".","warn");
   }
   const rngW=freshRng();
