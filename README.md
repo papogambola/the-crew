@@ -54,6 +54,12 @@ decisions at the end.
   expiry. Your crew sits above the board in a strip so a posting can be judged without leaving;
   keys 1–4 jump between the tabs. **Crew · Jobs · Roster · Log pins under the top bar** and stays
   there however far down a board you are, so no tab is ever a scroll away.
+- **The job file says what it wants of you.** The header boxes carry **Crew needed** as a number —
+  what the job demands — with how many of yours can actually go under it, green when that is enough
+  and red when it is not. *Who goes* leads with the same thing in words: **this job needs N in the
+  field**, how many of your crew can go, and then why anybody is not going — kept out by the border,
+  the job or their own limits, or **benched, by you**, which are two different things and are
+  counted separately.
 - **The split, before you take the job.** The job file shows where the fee goes: a line for each
   person going with their percentage and their money, what the crew take between them, and what
   **you keep** — then the **wages** for the weeks the job holds the crew, and **what is left on
@@ -433,7 +439,7 @@ computers that must not be stopped.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 37 · 16 September
+The footer of every screen, and the office header, carry a build stamp (`build 38 · 16 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
