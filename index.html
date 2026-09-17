@@ -121,6 +121,8 @@
   .id .av{width:60px;height:72px;flex:none;border:1px solid var(--ink);background:#fff}
   .id .who{min-width:0;flex:1}
   .id .nm{font-family:var(--f-disp);font-size:16px;line-height:1.05;letter-spacing:.02em}
+  .nm-tr{font-weight:500;color:var(--ink-2)}
+  .nm-tr .tip{text-decoration-color:var(--ink-2)}
   .id .sub{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);margin-top:3px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
   .id .spec{font-family:var(--f-mono);font-size:11px;margin-top:6px;letter-spacing:.04em}
   .exp{display:inline-flex;gap:2px;margin-top:6px;vertical-align:middle}
@@ -3176,9 +3178,9 @@ function roleChip(c){return c.role==="commander"?'<span class="chip c-ink">Comma
 function idCardTop(c,extra){
   const nat=natOf(c);
   return '<div class="top"><div class="av">'+avatar(c.avseed,c.gender,c.face)+'</div>'
-    +'<div class="who"><div class="nm">'+esc(c.n)+(c.isPlayer?' <span class="chip c-bad" style="vertical-align:middle">You</span>':'')+'</div>'
+    +'<div class="who"><div class="nm">'+esc(c.n)+(c.isPlayer?' <span class="chip c-bad" style="vertical-align:middle">You</span> ':', ')+'<span class="nm-tr">'+techTip(c.tech)+'</span></div>'
     +'<div class="sub">'+flagSvg(nat)+' '+esc(nat.name)+' · '+(c.gender==="M"?"Male":"Female")+' <span class="tag pass" title="Passport tier '+nat.tier+' — '+TIER_WORD[nat.tier]+'">P'+nat.tier+'</span> '+roleChip(c)+(extra||'')+'</div>'
-    +'<div class="spec">'+techTip(c.tech)+' · '+EXP[c.exp-1]+'</div>'+pips(c.exp)+'</div></div>';
+    +'<div class="spec">'+EXP[c.exp-1]+'</div>'+pips(c.exp)+'</div></div>';
 }
 
 /* ---- CREW ---- */
@@ -3602,8 +3604,8 @@ function crewStrip(){
   const cards=crewAll().map(c=>{
     const nat=natOf(c);
     return '<div class="smc'+(c.status!=="crew"?" out":"")+'"><div class="sm-av">'+avatar(c.avseed,c.gender,c.face)+'</div><div class="sm-b">'
-      +'<div class="sm-n">'+esc(c.first)+(c.isPlayer?' <span class="chip c-bad">you</span>':'')+(c.status==="injured"?' <span class="chip c-warn">hurt</span>':'')+'</div>'
-      +'<div class="sm-l">'+flagSvg(nat)+' P'+nat.tier+' · <b>'+techTip(c.tech)+'</b> · '+EXP[c.exp-1]+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</div>'
+      +'<div class="sm-n">'+esc(c.first)+(c.isPlayer?' <span class="chip c-bad">you</span> ':', ')+'<span class="nm-tr">'+techTip(c.tech)+'</span>'+(c.status==="injured"?' <span class="chip c-warn">hurt</span>':'')+'</div>'
+      +'<div class="sm-l">'+flagSvg(nat)+' P'+nat.tier+' · '+EXP[c.exp-1]+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</div>'
       +'<div class="sm-a num">'+ATTRS.map(a=>ATTR_ABBR[a]+' '+c.attrs[a]).join(' · ')+'</div>'
       +'<div class="sm-l">'+c.langs.join(", ")+' · knows '+c.know.join(", ")+(c.limits.length?' · <span style="color:var(--stamp)">'+c.limits.map(k=>LIMIT_BY_K[k].l).join(", ")+'</span>':'')+'</div>'
       +'</div></div>';
@@ -4794,7 +4796,7 @@ const INFO={
     "<b>Your appearance</b> — under the picture, a slider for each part of the face: hair or hat, face shape, eyebrows, eyes, nose, mouth, ears, glasses, and facial hair or earrings, plus a scar. The picture redraws as you move them. <b>↻ Random</b> rolls every part at once. Three million faces for a man, four and a half million for a woman.",
     "<b>Your file</b> — five attributes, education, time in jail, time on the streets, knowledge, languages, anything you will not do, and a temperament — is rolled. <b>Another life</b> rolls it again. You are always the commander."]},
   crew:{h:"The Crew",t:[
-    "A crew of five. You are the first. Each card: flag and passport tier, trade and rank (the pips), the five attributes — Muscle, Brains, Tech, Charm, Nerve — then education, jail, streets, knowledge, languages, and in red what this one will <b>not</b> do.",
+    "A crew of five. You are the first. Each card: the name and the trade on the top line, flag and passport tier, rank (the pips), the five attributes — Muscle, Brains, Tech, Charm, Nerve — then education, jail, streets, knowledge, languages, and in red what this one will <b>not</b> do.",
     "<b>Loyalty</b> rises with success and bonuses, falls with failure and missed payroll. Under 35, after a big score, a member may skim the split and vanish. <b>Upkeep</b> is charged every week. <b>Cut loose</b> frees the place.",
     "Everyone on the crew goes on every job — if the border lets them in and the job doesn't trip one of their limits. A commander-type recruit takes your orders badly (−3 on a job you lead) but can run the crew on a job you can't get into.",
     "Loyalty also follows the name: a Nobody's crew loses a point a week, a Respected crew gains one. Every few weeks something happens between jobs — a death, a disappearance, a resignation, a rival crew buying drinks, an old face, a detective — and the least loyal member is usually the one it happens to. An <b>Enforcer</b> on the crew opens the hard answers.",
@@ -5221,7 +5223,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 52 · 17 September 2026";
+const BUILD="build 53 · 17 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
