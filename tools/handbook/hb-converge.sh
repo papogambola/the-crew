@@ -1,22 +1,15 @@
 #!/bin/sh
-# Build, render, read the real page numbers back, and repeat until the index stops moving.
+# Build the book, print it, and read the printed page numbers back.
+#
+# This used to be a loop: build, render the PDF, read the page numbers out of it, rebuild with
+# those numbers, repeat until nothing moved. It does not need to be, any more. The book paginates
+# itself into fixed-size leaves and prints one leaf per sheet, so the page an index line names is
+# the page it is on — by construction rather than by convergence. hb-pages.py is kept as the check
+# on that claim: hb-drive.js fails if a single heading came out on a different sheet than the
+# index promised.
 set -e
 cd "$(dirname "$0")"
-i=0
-while [ $i -lt 5 ]; do
-  i=$((i+1))
-  cp -f pages.json pages.prev.json 2>/dev/null || echo '{}' > pages.prev.json
-  node hb-build.js > /dev/null
-  node hb-pdf.js > /dev/null 2>&1
-  python3 hb-pages.py | head -3
-  if node -e "
-    const a=require('./pages.prev.json'),b=require('./pages.json');
-    const d=Object.keys(b).filter(k=>a[k]!==b[k]);
-    if(d.length){console.log('  pass $i: '+d.length+' moved');process.exit(1);}
-    console.log('  pass $i: converged');
-  "; then
-    node hb-build.js > /dev/null    # one last build so handbook.html carries the final numbers
-    exit 0
-  fi
-done
-echo "did not converge"; exit 1
+node hb-build.js
+node hb-pdf.js
+python3 hb-pages.py
+echo "built, printed, read back — hb-drive.js checks the index against it"

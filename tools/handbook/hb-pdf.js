@@ -33,18 +33,27 @@ const srv=http.createServer((req,res)=>{
   const ok=await pg.evaluate(()=>[["Anton",400],["Oswald",600],["Spectral",400],["IBM Plex Mono",400]]
     .map(f=>document.fonts.check(f[1]+" 16px '"+f[0]+"'")));
   if(ok.some(x=>!x))throw new Error("fonts not loaded: "+JSON.stringify(ok));
-  await pg.waitForTimeout(400);
+  // the fonts above were injected after the page booted, so the book measured itself against
+  // fallbacks; measure it again now that the real faces are in
+  await pg.evaluate(()=>window.bookRepaginate&&window.bookRepaginate());
+  await pg.waitForTimeout(500);
+  // The book has already paginated itself on screen. bookForPrint() puts every leaf back in the
+  // order you would turn them and hands back the page box, so the PDF is one sheet per leaf and
+  // PDF page N is book page N — which is what lets the index be checked rather than trusted.
+  const book=await pg.evaluate(()=>{
+    if(typeof window.bookForPrint!=="function")throw new Error("the book never paginated");
+    return window.bookForPrint();
+  });
+  if(!book||!book.pages)throw new Error("no pages to print");
+  await pg.waitForTimeout(150);
   await pg.pdf({
     path:path.join(DIR,"The-Crew-Handbook.pdf"),
-    format:"A4", printBackground:true,
-    margin:{top:"12mm",bottom:"16mm",left:"10mm",right:"10mm"},
-    displayHeaderFooter:true,
-    headerTemplate:'<div></div>',
-    footerTemplate:'<div style="width:100%;font-family:monospace;font-size:7.5pt;color:#726c60;padding:0 10mm;display:flex;justify-content:space-between">'
-      +'<span>THE CREW &middot; PLAYER\'S HANDBOOK</span><span class="pageNumber"></span></div>',
+    width:book.w+"px", height:book.h+"px",
+    printBackground:true,
+    margin:{top:"0",bottom:"0",left:"0",right:"0"},
   });
   if(errs.length)console.log("PAGE ERRORS:\n"+errs.join("\n"));
   await b.close();
   srv.close();
-  console.log("pdf written, fonts ok");
+  console.log("pdf written: "+book.pages+" pages at "+book.w+"x"+book.h+", fonts ok");
 })().catch(e=>{console.error(e);process.exit(1);});

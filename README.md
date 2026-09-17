@@ -497,8 +497,8 @@ computers that must not be stopped.
 
 ## The player's handbook
 
-`handbook.html`, beside the game, and `The-Crew-Handbook.pdf` rendered from the same page.
-Twenty chapters: what the game is and how it is won and lost, where every screen is, the five
+`handbook.html`, beside the game, and `The-Crew-Handbook.pdf` — 60 pages, printed from the same
+leaves the book turns on screen. Twenty chapters: what the game is and how it is won and lost, where every screen is, the five
 attributes, the sixteen trades and the fourteen specialists, experience, knowledge, schooling,
 temperament, limits, passports and borders, what people cost, loyalty, hiring and the recruitment
 trip, places and benching and a second crew, the board, tiers, the twelve kinds of job, the 500
@@ -507,17 +507,27 @@ whole reckoning formula and every factor in it, the night itself, money and the 
 the detective and the raid, the competition, the week that passes on its own, ranking, the record,
 the last score, the controls, twenty things worth knowing, and a glossary.
 
-Three things make it more than prose:
+**It is a book.** It opens as a closed one on a desk — a worn cream cover with the logotype, five
+of the game's own faces in a row, and `PLAYER'S HANDBOOK` between two rules. Click it and the
+cover swings open on its spine; inside is a two-page spread, and clicking a page turns it, with
+the leaf swinging across in perspective carrying the page you were on its front and the page you
+are going to on its back. Arrow keys, PageUp/PageDown, space, Home and End work too.
 
-- **A pinned search bar.** It searches every line, table row and glossary entry, highlights every
-  hit, folds away everything that does not match, and steps through the hits with ‹ › or Enter.
-  `/` focuses it, Escape clears it. Searching a heading brings its whole section back rather than
-  the heading alone.
-- **An index with real page numbers.** Every chapter and section, with the page it is on in the
-  PDF, and every line clickable. The numbers are not estimated: `hb-converge.sh` builds the page,
-  renders the PDF, reads the PDF back with `hb-pages.py` to find which page each heading actually
-  landed on, and rebuilds until nothing moves.
-- **Go to the top, Contents, and back to the game**, in the pinned bar and floating at the corner.
+- **The page is the unit of truth.** The content is emitted once and paginated in the browser into
+  fixed 560×752 leaves — tables split with the head repeated, headings are never left alone at the
+  foot of a page, and each chapter starts on a fresh one. The page size does not change with the
+  window; the whole book is scaled to fit instead, because a page that resized would mean "page 16"
+  was a different thing on every screen.
+- **An index with real page numbers.** Every chapter and section, with the page you will turn to,
+  and every line clickable. The numbers are not estimated and no longer converged towards: the book
+  knows what page everything is on, and the PDF prints one leaf per sheet, so PDF page N is book
+  page N by construction. `hb-pages.py` still reads the rendered PDF back, and `hb-drive.js` fails
+  if one heading came out on a different sheet than the index promised.
+- **A pinned search bar.** It searches every line, table row and glossary entry, marks every hit,
+  and turns the book to the one you are on, stepping through with ‹ › or Enter. `/` focuses it,
+  Escape clears it. A mark carries no padding, so marking hits cannot reflow a line and move a
+  page out from under the number the index just promised.
+- **Cover, Contents, and back to the game**, in the pinned bar.
 
 Every number in it is read out of the game's own constants at build time — `hb-data.js` generates
 the tables from a dump of `BAL`, `RANKS`, `TECHS`, `CATS`, `GOALS`, `TRAITS`, `LIMITS`, `RETAINERS`

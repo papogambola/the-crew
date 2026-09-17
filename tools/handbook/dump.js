@@ -48,6 +48,16 @@ const out={
   EXTRA_CREW_REP:(typeof EXTRA_CREW_REP!=="undefined"?EXTRA_CREW_REP:null),
   FM_TECH_GLYPH:(typeof FM_TECH_GLYPH!=="undefined"?FM_TECH_GLYPH:null),
   BUILD:(typeof BUILD!=="undefined"?BUILD:null),
+  // The five on the cover. A printed book has the same faces every time, so they are drawn once
+  // here from a fixed seed — by the game's own face builder, not a picture of one.
+  COVER_FACES:(function(){
+    if(typeof randomFace!=="function"||typeof avatar!=="function")return null;
+    const r=mulberry32(0x0C0FACE);
+    return [0,1,2,3,4].map(()=>{
+      const gender=r()<0.5?"M":"F";
+      return avatar(Math.floor(r()*1e9),gender,randomFace(r,gender));
+    });
+  })(),
 };
 fs.writeFileSync(path.join(__dirname,"gamedata.json"),JSON.stringify(out,null,1));
 console.log("dumped. keys with data:");

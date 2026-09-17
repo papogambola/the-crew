@@ -1,40 +1,59 @@
 /* Builds handbook.html out of hb-text.js (prose) and hb-data.js (the game's own tables).
-   Page numbers come from pages.json, which is written by reading the rendered PDF back — so the
-   index says the page the subject is actually on, not a guess. Run with no pages.json for pass 1. */
+
+   The handbook is a book: a closed cover you click to open, and pages you click to turn. The
+   content is emitted once into #source and paginated in the browser into fixed-size leaves, so
+   the page is the unit of truth — the index says the page you will actually turn to, and the PDF
+   prints one leaf per sheet, which makes the two agree by construction rather than by a loop that
+   renders the PDF and reads the numbers back out of it. */
 const fs=require("fs");
 const path=require("path");
 const {CH}=require("./hb-text.js");
 const G=require("./hb-data.js");
 const BUILD=G.D.BUILD;
-
-let PG={};
-try{PG=JSON.parse(fs.readFileSync(path.join(__dirname,"pages.json"),"utf8"));}catch(e){}
+const FACES=G.D.COVER_FACES||[];
 
 /* ------------------------------ numbering ------------------------------ */
 CH.forEach((c,i)=>{
   c.no=i+1;
   c.secs.forEach((s,j)=>{s.no=(i+1)+"."+(j+1);});
 });
-const pgOf=id=>PG[id]!=null?String(PG[id]):"—";
 
 /* ------------------------------- contents ------------------------------ */
+/* The page numbers are written in by the paginator once it knows them. "—" is what a build that
+   never met a browser leaves behind, and the drive fails if any of them survive. */
 const contents='<section id="contents" class="contents">'
   +'<h2 class="ct-h">Contents</h2>'
-  +'<p class="ct-note">Every subject in this handbook, and the page it is on. Click any line to jump straight to it.</p>'
+  +'<p class="ct-note">Every subject in this handbook, and the page it is on. Click any line to turn straight to it.</p>'
   +CH.map(c=>'<div class="ct-ch"><a class="ct-c" href="#'+c.id+'" data-jump="'+c.id+'"><span class="ct-n">'+c.no+'</span>'
-      +'<span class="ct-t">'+c.t+'</span><span class="ct-l"></span><span class="ct-p" data-pg="'+c.id+'">'+pgOf(c.id)+'</span></a>'
+      +'<span class="ct-t">'+c.t+'</span><span class="ct-l"></span><span class="ct-p" data-pg="'+c.id+'">—</span></a>'
     +c.secs.filter(s=>s.t).map(s=>'<a class="ct-s" href="#'+s.id+'" data-jump="'+s.id+'"><span class="ct-n">'+s.no+'</span>'
-      +'<span class="ct-t">'+s.t+'</span><span class="ct-l"></span><span class="ct-p" data-pg="'+s.id+'">'+pgOf(s.id)+'</span></a>').join("")
+      +'<span class="ct-t">'+s.t+'</span><span class="ct-l"></span><span class="ct-p" data-pg="'+s.id+'">—</span></a>').join("")
     +'</div>').join("")
   +'</section>';
 
 /* ------------------------------- chapters ------------------------------ */
-const chapters=CH.map(c=>'<section class="chapter" id="'+c.id+'" data-ch="'+c.id+'">'
-  +'<header class="ch-h"><div class="ch-n">'+c.no+'</div><h2>'+c.t+'</h2>'
+/* The ids live on the elements that end up inside a leaf — the chapter's header and each
+   section's heading — because after pagination those are what a link has to find. */
+const chapters=CH.map(c=>'<section class="chapter" data-ch="'+c.id+'" data-title="'+c.t.replace(/"/g,"&quot;")+'">'
+  +'<header class="ch-h" id="'+c.id+'"><div class="ch-n">'+c.no+'</div><h2>'+c.t+'</h2>'
     +'<div class="ch-k">Chapter '+c.no+' · '+c.k+'</div></header>'
-  +c.secs.map(s=>'<section class="sec" id="'+s.id+'">'
-      +(s.t?'<h3><span class="s-n">'+s.no+'</span>'+s.t+'</h3>':'')+s.h+'</section>').join("")
+  +c.secs.map(s=>'<section class="sec">'
+      +(s.t?'<h3 id="'+s.id+'"><span class="s-n">'+s.no+'</span>'+s.t+'</h3>':'')+s.h+'</section>').join("")
   +'</section>').join("");
+
+/* --------------------------------- cover -------------------------------- */
+const coverFaces=FACES.map(svg=>'<div class="cv-face">'+svg+'</div>').join("");
+const cover='<div class="cv-in">'
+  +'<div class="cv-eyebrow">Case file · Classified</div>'
+  +'<div class="cv-rule top"></div>'
+  +'<div class="cv-title"><span>The</span><span>Crew</span></div>'
+  +'<div class="cv-faces">'+coverFaces+'</div>'
+  +'<div class="cv-rule"></div>'
+  +'<div class="cv-sub">Player’s<br>Handbook</div>'
+  +'<div class="cv-rule"></div>'
+  +'<div class="cv-tick"></div>'
+  +'<div class="cv-foot">A crew of five<br>Thousands of jobs</div>'
+  +'</div>';
 
 /* --------------------------------- CSS --------------------------------- */
 const CSS=`
@@ -43,6 +62,7 @@ const CSS=`
   --ink:#111010; --ink-2:#4a463e; --muted:#726c60;
   --line:#d9d5c8; --line-2:#c4bfae;
   --stamp:#9a2b1e; --good:#2f6b34; --warn:#8a6212;
+  --cover:#e9e4d5; --desk:#8f8f8d;
   --f-logo:"Anton","Impact","Oswald","Arial Narrow",sans-serif;
   --f-disp:"Oswald","Arial Narrow",system-ui,sans-serif;
   --f-body:"Spectral","Iowan Old Style",Georgia,serif;
@@ -50,18 +70,23 @@ const CSS=`
   color-scheme:light;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--paper-2);color:var(--ink);font-family:var(--f-body);font-size:14.5px;line-height:1.72;
-  -webkit-font-smoothing:antialiased}
+html,body{margin:0;height:100%}
+body{background:var(--desk);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;overflow:hidden;
+  background-image:
+    radial-gradient(circle at 20% 15%,rgba(255,255,255,.07),transparent 45%),
+    radial-gradient(circle at 80% 82%,rgba(0,0,0,.10),transparent 52%),
+    repeating-linear-gradient(37deg,rgba(0,0,0,.022) 0 2px,transparent 2px 4px),
+    repeating-linear-gradient(-51deg,rgba(255,255,255,.018) 0 3px,transparent 3px 6px);}
 a{color:inherit}
 
 /* ---- the pinned bar ---- */
 .bar{position:fixed;top:0;left:0;right:0;z-index:60;background:var(--paper);border-bottom:2px solid var(--ink);
-  display:flex;align-items:center;gap:14px;padding:9px 18px;box-shadow:0 8px 20px -18px rgba(17,16,16,.7)}
+  display:flex;align-items:center;gap:14px;padding:9px 18px;box-shadow:0 10px 26px -20px rgba(0,0,0,.9)}
 .bar .brand{font-family:var(--f-logo);font-size:21px;letter-spacing:.5px;white-space:nowrap;line-height:1}
 .bar .brand small{font-family:var(--f-disp);font-weight:600;font-size:11px;letter-spacing:2.2px;display:block;color:var(--muted);margin-top:2px}
 .sbox{flex:1;display:flex;align-items:center;gap:8px;border:1.5px solid var(--ink);background:var(--card);
-  padding:0 10px;height:36px;max-width:640px;position:relative}
+  padding:0 10px;height:36px;max-width:620px;position:relative}
 .sbox svg{flex:0 0 14px;opacity:.65}
 #q{flex:1;border:0;outline:0;background:transparent;font-family:var(--f-mono);font-size:13px;color:var(--ink);height:34px}
 #q::placeholder{color:var(--muted)}
@@ -77,271 +102,613 @@ a{color:inherit}
 .nbtn.solid{background:var(--ink);color:var(--paper)}
 .nbtn.solid:hover{background:var(--stamp);border-color:var(--stamp)}
 
-/* ---- the page ---- */
-/* 718px is the printable width of an A4 page at these margins, so what is measured on screen is
-   what the PDF gets. max-width only matters on a screen narrower than the page, where it stops the
-   whole document scrolling sideways. */
-.sheet{width:718px;max-width:100%;margin:0 auto;background:var(--card);
-  border-left:1px solid var(--line);border-right:1px solid var(--line);padding:0 0 60px}
-body{overflow-x:hidden}
-.pad{padding:0 34px}
-main{padding-top:74px}
+/* ---- the desk the book sits on ---- */
+.desk{position:fixed;inset:56px 0 0;display:flex;align-items:center;justify-content:center;perspective:2800px}
 
-/* ---- cover ---- */
-.cover{height:1017px;display:flex;flex-direction:column;justify-content:center;padding:0 54px;position:relative}
-.cover .eyebrow{font-family:var(--f-disp);font-weight:600;letter-spacing:4px;text-transform:uppercase;font-size:11px;color:var(--muted)}
-.cover h1{font-family:var(--f-logo);font-size:92px;line-height:.92;margin:14px 0 0;letter-spacing:1px}
-.cover h1 span{display:block;font-size:34px;letter-spacing:5px;margin-top:16px;font-family:var(--f-disp);font-weight:700}
-.cover hr{border:0;border-top:2px solid var(--ink);margin:26px 0}
-.cover p{font-size:15px;line-height:1.8;max-width:520px}
-.cover .stamp{position:absolute;right:54px;bottom:96px;border:2.5px solid var(--stamp);color:var(--stamp);
-  font-family:var(--f-disp);font-weight:700;letter-spacing:3px;font-size:13px;padding:9px 15px;transform:rotate(-7deg);text-transform:uppercase}
-.cover .foot{position:absolute;left:54px;bottom:54px;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+/* ---- the closed book ---- */
+.closed{position:relative;cursor:pointer;transform-origin:left center;transform-style:preserve-3d;
+  scale:var(--fit,1);
+  transition:transform .8s cubic-bezier(.4,.05,.2,1),opacity .45s .28s;
+  background:var(--cover);color:var(--ink);border-radius:3px 7px 7px 3px;
+  box-shadow:0 2px 0 rgba(0,0,0,.15),0 26px 60px -22px rgba(0,0,0,.85),
+             inset 0 0 90px rgba(120,100,70,.16), inset 0 0 0 1px rgba(90,75,50,.2);
+  background-image:
+    radial-gradient(ellipse at 22% 12%,rgba(140,120,85,.16),transparent 42%),
+    radial-gradient(ellipse at 84% 72%,rgba(140,120,85,.2),transparent 46%),
+    radial-gradient(ellipse at 50% 100%,rgba(90,75,50,.16),transparent 55%),
+    repeating-linear-gradient(94deg,rgba(120,100,70,.035) 0 3px,transparent 3px 7px);}
+/* the spine edge, and the rubbed corners the cover has */
+.closed::before{content:"";position:absolute;left:0;top:0;bottom:0;width:13px;border-radius:3px 0 0 3px;
+  background:linear-gradient(90deg,rgba(80,66,44,.3),rgba(80,66,44,.05) 60%,transparent);pointer-events:none}
+.closed::after{content:"";position:absolute;inset:0;border-radius:3px 7px 7px 3px;pointer-events:none;
+  background:
+    radial-gradient(circle at 0 0,rgba(255,255,255,.55) 0 16px,transparent 17px),
+    radial-gradient(circle at 100% 0,rgba(255,255,255,.5) 0 14px,transparent 15px),
+    radial-gradient(circle at 0 100%,rgba(255,255,255,.5) 0 15px,transparent 16px),
+    radial-gradient(circle at 100% 100%,rgba(255,255,255,.55) 0 17px,transparent 18px);
+  mix-blend-mode:soft-light}
+body.opening .closed{transform:rotateY(-158deg);opacity:0}
+.cv-in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  padding:6% 9% 5%;text-align:center;backface-visibility:hidden}
+.cv-in>*{flex:none}
+.cv-eyebrow{font-family:var(--f-disp);font-weight:600;letter-spacing:.4em;text-transform:uppercase;
+  font-size:calc(var(--cw) * .026);color:var(--ink)}
+.cv-rule{height:2px;background:var(--ink);width:74%;margin:calc(var(--cw) * .026) 0}
+.cv-rule.top{margin-top:calc(var(--cw) * .018)}
+.cv-title{font-family:var(--f-logo);font-weight:400;line-height:.82;letter-spacing:.005em;
+  font-size:calc(var(--cw) * .255);text-transform:uppercase;display:flex;flex-direction:column;
+  margin:calc(var(--cw) * .006) 0 calc(var(--cw) * .042)}
+.cv-title span:last-child{font-size:calc(var(--cw) * .312);letter-spacing:-.012em}
+.cv-faces{display:flex;gap:calc(var(--cw) * .022);justify-content:center}
+.cv-face{width:calc(var(--cw) * .107);aspect-ratio:100/120;border:2px solid var(--ink);background:#fff;
+  padding:3px;display:flex;align-items:center;justify-content:center}
+.cv-face svg{width:100%;height:100%;display:block}
+.cv-sub{font-family:var(--f-disp);font-weight:700;letter-spacing:.32em;text-transform:uppercase;
+  font-size:calc(var(--cw) * .054);line-height:1.32;margin:calc(var(--cw) * .008) 0}
+.cv-tick{width:calc(var(--cw) * .07);height:3px;background:var(--ink);
+  margin:calc(var(--cw) * .04) 0 calc(var(--cw) * .034)}
+.cv-foot{font-family:var(--f-disp);font-weight:600;letter-spacing:.26em;text-transform:uppercase;
+  font-size:calc(var(--cw) * .027);line-height:1.85;margin-top:auto}
+.opencue{position:fixed;left:0;right:0;bottom:11px;text-align:center;font-family:var(--f-mono);
+  font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.8);
+  animation:breathe 2.6s ease-in-out infinite;pointer-events:none;z-index:50}
+body.open .opencue,body.opening .opencue{display:none}
+@keyframes breathe{50%{opacity:.4}}
 
-/* ---- contents ---- */
-.contents{padding:40px 34px 24px}
-.ct-h{font-family:var(--f-logo);font-size:40px;margin:0;letter-spacing:.5px}
-.ct-note{font-size:13px;color:var(--ink-2);margin:4px 0 20px;border-bottom:2px solid var(--ink);padding-bottom:14px}
-.ct-ch{margin-bottom:13px}
+/* ---- the open book ---- */
+.book{position:relative;display:none;transform-style:preserve-3d;
+  transform:scale(var(--fit,1));transform-origin:center center}
+body.open .book{display:block}
+body.open .closed{display:none}
+.spread{position:relative;display:flex;transform-style:preserve-3d;
+  filter:drop-shadow(0 30px 56px rgba(0,0,0,.6))}
+.slot{background:var(--card);position:relative;overflow:hidden;flex:none}
+.slot.left{border-radius:4px 0 0 4px;box-shadow:inset -22px 0 26px -24px rgba(60,48,30,.85)}
+.slot.right{border-radius:0 4px 4px 0;box-shadow:inset 22px 0 26px -24px rgba(60,48,30,.85)}
+/* the gutter: two leaves meeting at a spine, not one sheet with a line drawn down it */
+.spine{position:absolute;left:50%;top:0;bottom:0;width:26px;transform:translateX(-50%);pointer-events:none;z-index:3;
+  background:linear-gradient(90deg,transparent,rgba(60,48,30,.12) 42%,rgba(60,48,30,.22) 50%,rgba(60,48,30,.12) 58%,transparent)}
+/* the block of leaves you have not got to, stacked at the outer edges */
+.edge{position:absolute;top:6px;bottom:6px;width:0;pointer-events:none;z-index:0}
+.edge.l{left:-7px;border-left:7px solid var(--paper-2);box-shadow:-1px 0 0 rgba(60,48,30,.35),-4px 0 0 rgba(255,255,255,.5),-5px 0 0 rgba(60,48,30,.2)}
+.edge.r{right:-7px;border-right:7px solid var(--paper-2);box-shadow:1px 0 0 rgba(60,48,30,.35),4px 0 0 rgba(255,255,255,.5),5px 0 0 rgba(60,48,30,.2)}
+
+.leaf{position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:var(--card);
+  padding:30px 34px 20px}
+.leaf-b{flex:1;overflow:hidden;position:relative}
+.leaf-f{flex:none;display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+  border-top:1px solid var(--line);margin-top:10px;padding-top:7px}
+.leaf-f .pn{font-size:11px;color:var(--ink-2)}
+.slot.left .leaf-f,.flip .back .leaf-f{flex-direction:row-reverse}
+
+/* the leaf being turned */
+.flip{position:absolute;top:0;transform-style:preserve-3d;transform-origin:left center;z-index:5;
+  pointer-events:none;display:none}
+body.turning .flip{display:block}
+.flip .face{position:absolute;inset:0;backface-visibility:hidden;background:var(--card);overflow:hidden;
+  box-shadow:0 0 34px -6px rgba(60,48,30,.5)}
+.flip .back{transform:rotateY(180deg)}
+
+/* Clicking a page turns it — handled on the spread itself, because an overlay that catches the
+   click would also catch every link on the page, and the contents is nothing but links. These
+   are the marks that say which way; they take no pointer events at all. */
+.spread{cursor:pointer}
+.zone{position:absolute;top:50%;width:26px;height:26px;margin-top:-13px;z-index:6;
+  pointer-events:none;opacity:.2;transition:opacity .16s;
+  border-top:2px solid #fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.zone.prev{left:-40px;border-left:2px solid #fff;transform:rotate(-45deg)}
+.zone.next{right:-40px;border-right:2px solid #fff;transform:rotate(45deg)}
+.spread:hover .zone{opacity:.75}
+.zone.off{opacity:0 !important}
+
+.pager{position:fixed;left:0;right:0;bottom:11px;text-align:center;font-family:var(--f-mono);font-size:11px;
+  letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.78);z-index:50;pointer-events:none}
+.pager b{font-weight:500;color:#fff}
+body:not(.open) .pager{opacity:0}
+
+/* ---- the page itself: the same ink on paper as the game ---- */
+.titlepage{text-align:center;display:flex;flex-direction:column;justify-content:center;height:100%}
+.titlepage h1{font-family:var(--f-logo);font-weight:400;font-size:52px;line-height:.92;margin:0;letter-spacing:.5px;text-transform:uppercase}
+.titlepage .tp-sub{font-family:var(--f-disp);font-weight:700;letter-spacing:.3em;text-transform:uppercase;font-size:14px;margin-top:13px}
+.titlepage hr{border:0;border-top:2px solid var(--ink);margin:20px 12%}
+.titlepage p{font-size:13px;margin:0 0 9px}
+.titlepage .tp-foot{font-family:var(--f-mono);font-size:10px;color:var(--muted);margin-top:22px;letter-spacing:.1em}
+.titlepage .stamp{border:2.5px solid var(--stamp);color:var(--stamp);display:inline-block;
+  font-family:var(--f-disp);font-weight:700;letter-spacing:3px;font-size:11px;padding:7px 13px;
+  transform:rotate(-7deg);text-transform:uppercase;margin:12px auto 0}
+
+.ct-h{font-family:var(--f-logo);font-size:34px;margin:0;letter-spacing:.5px;font-weight:400;text-transform:uppercase}
+.ct-note{font-size:12px;color:var(--ink-2);margin:4px 0 15px;border-bottom:2px solid var(--ink);padding-bottom:10px}
+.ct-ch{margin-bottom:9px}
 .ct-c{display:flex;align-items:baseline;gap:8px;text-decoration:none;font-family:var(--f-disp);font-weight:700;
-  font-size:15.5px;letter-spacing:.3px;padding:3px 0 4px;border-bottom:1px solid var(--line)}
-.ct-s{display:flex;align-items:baseline;gap:8px;text-decoration:none;font-family:var(--f-body);font-size:12.5px;
-  color:var(--ink-2);padding:1.5px 0 1.5px 30px}
+  font-size:13.5px;letter-spacing:.3px;padding:3px 0 4px;border-bottom:1px solid var(--line)}
+.ct-s{display:flex;align-items:baseline;gap:8px;text-decoration:none;font-family:var(--f-body);font-size:11.5px;
+  color:var(--ink-2);padding:1px 0 1px 24px}
 .ct-c:hover,.ct-s:hover{color:var(--stamp)}
-.ct-c .ct-n{min-width:24px;font-size:12px;color:var(--ink)}
-.ct-n{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);min-width:34px;flex:0 0 auto}
-.ct-l{flex:1;border-bottom:1px dotted var(--line-2);transform:translateY(-3px);min-width:14px}
+.ct-c .ct-n{min-width:20px;font-size:11px;color:var(--ink)}
+.ct-n{font-family:var(--f-mono);font-size:9.5px;color:var(--muted);min-width:28px;flex:0 0 auto}
+.ct-l{flex:1;border-bottom:1px dotted var(--line-2);transform:translateY(-3px);min-width:10px}
 .ct-c .ct-l{border-bottom:0}
-.ct-p{font-family:var(--f-mono);font-size:11.5px;min-width:22px;text-align:right;flex:0 0 auto}
+.ct-p{font-family:var(--f-mono);font-size:11px;min-width:20px;text-align:right;flex:0 0 auto}
 .ct-c .ct-p{font-weight:500}
 
-/* ---- chapters ---- */
-.chapter{padding:0 34px}
-.ch-h{border-top:3px solid var(--ink);border-bottom:1px solid var(--line-2);padding:16px 0 12px;margin:36px 0 22px;position:relative}
-.ch-n{font-family:var(--f-logo);font-size:52px;line-height:.8;color:var(--line-2);position:absolute;right:0;top:12px}
-.ch-h h2{font-family:var(--f-logo);font-size:33px;margin:0;letter-spacing:.4px;padding-right:60px}
-.ch-k{font-family:var(--f-disp);font-weight:600;letter-spacing:2.4px;text-transform:uppercase;font-size:10.5px;color:var(--muted);margin-top:5px}
-.sec{margin-bottom:26px}
-.sec h3{font-family:var(--f-disp);font-weight:700;font-size:16.5px;letter-spacing:.3px;margin:22px 0 8px;
-  border-bottom:1px solid var(--line);padding-bottom:5px;display:flex;gap:9px;align-items:baseline}
-.s-n{font-family:var(--f-mono);font-size:11px;color:var(--muted);font-weight:400}
-p{margin:0 0 10px}
-.aside{border-left:3px solid var(--ink);background:var(--paper-2);padding:9px 12px;font-size:13.5px;margin:12px 0}
-ul,ol{margin:0 0 12px;padding-left:22px}
-li{margin-bottom:5px}
-ol.steps{padding-left:20px}
-ol.twenty{padding-left:24px;counter-reset:none}
-ol.twenty li{margin-bottom:9px}
-.mono{font-family:var(--f-mono);font-size:.92em}
+.ch-h{border-top:3px solid var(--ink);border-bottom:1px solid var(--line-2);padding:12px 0 10px;margin:0 0 16px;position:relative}
+.ch-n{font-family:var(--f-logo);font-weight:400;font-size:44px;line-height:.8;color:var(--line-2);position:absolute;right:0;top:9px}
+.ch-h h2{font-family:var(--f-logo);font-weight:400;font-size:28px;margin:0;letter-spacing:.4px;padding-right:54px;text-transform:uppercase}
+.ch-k{font-family:var(--f-disp);font-weight:600;letter-spacing:2.2px;text-transform:uppercase;font-size:9.5px;color:var(--muted);margin-top:5px}
+h3{font-family:var(--f-disp);font-weight:700;font-size:14.5px;letter-spacing:.3px;margin:15px 0 6px;
+  border-bottom:1px solid var(--line);padding-bottom:4px;display:flex;gap:8px;align-items:baseline}
+.sec>h3:first-child{margin-top:0}
+.s-n{font-family:var(--f-mono);font-size:10px;color:var(--muted);font-weight:400}
+p{margin:0 0 8px}
+.aside{border-left:3px solid var(--ink);background:var(--paper-2);padding:7px 10px;font-size:12px;margin:9px 0}
+ul,ol{margin:0 0 9px;padding-left:19px}
+li{margin-bottom:4px}
+ol.steps{padding-left:17px}
+ol.twenty li{margin-bottom:7px}
+.mono{font-family:var(--f-mono);font-size:.9em}
 b,strong{font-weight:600}
-.formula{border:1px solid var(--line-2);background:var(--paper-2);padding:11px 14px;margin:10px 0;font-family:var(--f-mono);font-size:12px;line-height:1.85}
-
-/* ---- tables ---- */
-table{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:12.2px;line-height:1.6}
-th{font-family:var(--f-disp);font-weight:600;letter-spacing:1.4px;text-transform:uppercase;font-size:9.5px;color:var(--muted);
-  text-align:left;border-bottom:1.5px solid var(--ink);padding:4px 7px 4px 0;vertical-align:bottom}
-td{border-bottom:1px solid var(--line);padding:5px 7px 5px 0;vertical-align:top}
+.formula{border:1px solid var(--line-2);background:var(--paper-2);padding:8px 11px;margin:8px 0;
+  font-family:var(--f-mono);font-size:10.5px;line-height:1.75}
+table{width:100%;border-collapse:collapse;margin:8px 0 11px;font-size:11px;line-height:1.5}
+th{font-family:var(--f-disp);font-weight:600;letter-spacing:1.1px;text-transform:uppercase;font-size:8.5px;color:var(--muted);
+  text-align:left;border-bottom:1.5px solid var(--ink);padding:4px 6px 4px 0;vertical-align:bottom}
+td{border-bottom:1px solid var(--line);padding:4px 6px 4px 0;vertical-align:top}
 td:last-child,th:last-child{padding-right:0}
 tbody tr:last-child td{border-bottom:1.5px solid var(--ink)}
 .stamp{color:var(--stamp)}
 .note{color:var(--muted);font-style:italic}
-
-/* ---- glossary ---- */
-dl.gloss{margin:8px 0}
-dl.gloss .gl{margin-top:9px;break-inside:avoid}
-dl.gloss dt{font-family:var(--f-disp);font-weight:600;font-size:13px;letter-spacing:.3px}
-dl.gloss dd{margin:1px 0 0;padding-left:16px;font-size:13px;color:var(--ink-2);border-left:1px solid var(--line)}
+dl.gloss{margin:5px 0}
+dl.gloss .gl{margin-top:7px}
+dl.gloss dt{font-family:var(--f-disp);font-weight:600;font-size:12px;letter-spacing:.3px}
+dl.gloss dd{margin:1px 0 0;padding-left:13px;font-size:11.5px;color:var(--ink-2);border-left:1px solid var(--line)}
 
 /* ---- search ---- */
-mark{background:#ffe9a8;color:var(--ink);padding:0 1px;box-shadow:inset 0 -1px 0 #d8b23c}
+/* A mark carries no padding: it must not change a line's metrics, or marking a hit would
+   repaginate the book under the reader and the page the index promised would stop being true. */
+mark{background:#ffe9a8;color:var(--ink);padding:0;box-shadow:inset 0 -1px 0 #d8b23c}
 mark.on{background:var(--stamp);color:var(--paper);box-shadow:none}
-.hb-hide{display:none !important}
-.nores{display:none;padding:60px 34px;text-align:center}
-body.searching .nores.show{display:block}
-.nores b{font-family:var(--f-disp);font-size:18px;letter-spacing:.4px}
-.nores p{color:var(--muted);font-size:13px}
-body.searching .contents,body.searching .cover{display:none}
-.hint{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.nores{display:none;position:fixed;left:0;right:0;top:52%;transform:translateY(-50%);z-index:58;
+  text-align:center;padding:26px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.65)}
+body.nohits .nores{display:block}
+body.nohits .book,body.nohits .closed{opacity:.16}
+.nores b{font-family:var(--f-disp);font-size:19px;letter-spacing:.4px}
+.nores p{color:rgba(255,255,255,.85);font-size:13px}
 
-/* ---- floating buttons ---- */
-.float{position:fixed;right:22px;bottom:22px;z-index:55;display:flex;flex-direction:column;gap:8px;
-  opacity:0;pointer-events:none;transition:opacity .18s}
-.float.show{opacity:1;pointer-events:auto}
-.float button{font-family:var(--f-disp);font-weight:600;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;
-  border:1.5px solid var(--ink);background:var(--card);color:var(--ink);padding:9px 13px;cursor:pointer;
-  box-shadow:0 8px 20px -14px rgba(17,16,16,.8)}
-.float button:hover{background:var(--ink);color:var(--paper)}
+/* ---- the stack the paginator fills; never seen ---- */
+#store{position:absolute;left:-20000px;top:0;visibility:hidden}
+body.ready #store{display:none}
+#source{display:none}
 
-/* ---- print ---- */
+@media(prefers-reduced-motion:reduce){
+  .closed,.flip{transition:none !important}
+  .opencue{animation:none}
+}
+
+/* ---- print: one leaf, one sheet. hb-pdf.js calls bookForPrint() first, which puts every leaf
+   back in order, so what is printed is the book in the order you would turn it. ---- */
 @media print{
-  @page{size:A4;margin:12mm 10mm 16mm}
-  html{scroll-behavior:auto}
-  body{background:#fff;font-size:11.4pt}
-  .bar,.float,.nores{display:none !important}
-  main{padding-top:0}
-  .sheet{width:auto;border:0;background:#fff;padding:0}
-  .pad,.chapter,.contents{padding-left:0;padding-right:0}
-  .cover{height:1017px;padding:0 10px}
-  .contents{padding-top:0;break-after:page}
-  .chapter{break-before:page}
-  .ch-h{margin-top:0}
+  @page{margin:0}
+  html,body{height:auto;overflow:visible;background:#fff}
+  .bar,.desk,.pager,.nores{display:none !important}
+  body.ready #store{display:block !important}
+  #store{position:static;left:auto;visibility:visible;margin:0;padding:0}
+  .leaf{break-after:page;page-break-after:always;box-shadow:none;background:#fff}
+  .leaf:last-child{break-after:auto;page-break-after:auto}
+  .leaf-b{overflow:visible}
   a{text-decoration:none}
-  tr,li,.aside,.formula{break-inside:avoid}
-  h3,thead{break-after:avoid}
-  p{orphans:2;widows:2}
 }
 `;
 
-/* -------------------------------- script -------------------------------- */
+/* --------------------------------- JS ---------------------------------- */
+/* Written without template literals so it can live inside one. */
 const JS=`
-(function(){
-  "use strict";
-  /* Back to the game. index.html is right wherever this file is served beside the game — Pages, or
-     a copy on disk. Anywhere else (an artifact runs on its own sandboxed origin, which is not
-     claude.ai and is not predictable) the only address that certainly reaches the game is the
-     artifact's, and it has to open in a new tab because a sandboxed frame may not navigate itself. */
-  var GAME_ARTIFACT="https://claude.ai/artifact/4epD8iym482mpSqEj7ZJhN";
-  window.gameHref=function(host,proto){
-    if(proto==="file:")return "index.html";
-    return /(^|\\.)github\\.io$/.test(host||"")||host==="localhost"||host==="127.0.0.1"?"index.html":GAME_ARTIFACT;
+"use strict";
+var LEAVES=[],PAGE_OF={},SPREAD=0,TURNING=false,GEO={w:0,h:0};
+var HITS=[],HIT=-1;
+var $=function(s){return document.querySelector(s);};
+var body=document.body;
+
+/* ------------------------------ geometry ------------------------------- */
+/* A book has a page size. If the page grew and shrank with the window the pagination would too,
+   and "page 16" would mean a different thing on every screen — the index would be promising
+   something it cannot keep, and the PDF would disagree with what is on screen. So the page is
+   fixed and the whole book is scaled to fit, which is what holding a book closer actually is. */
+var PAGE={w:560,h:752};
+function fit(){
+  var vw=window.innerWidth,vh=window.innerHeight;
+  var s=Math.min((vw-150)/(PAGE.w*2),(vh-140)/PAGE.h);
+  s=Math.max(0.5,Math.min(s,1.35));
+  document.documentElement.style.setProperty("--fit",s);
+}
+
+/* ------------------------------ pagination ----------------------------- */
+/* Walk the source in order, drop each block on the current leaf, and start a new leaf the moment
+   it does not fit. A block taller than a whole page is split where it can be — table rows — and
+   otherwise left to overflow, because a silently missing paragraph is worse than a full page. */
+function atoms(src){
+  var out=[];
+  [].forEach.call(src.children,function(sec){
+    if(sec.classList.contains("titlepage")){out.push({el:sec,brk:1,solo:1,chap:""});return;}
+    if(sec.classList.contains("contents")){
+      out.push({el:sec.querySelector(".ct-h"),brk:1,chap:"Contents"});
+      out.push({el:sec.querySelector(".ct-note"),chap:"Contents"});
+      [].forEach.call(sec.querySelectorAll(".ct-ch"),function(g){out.push({el:g,chap:"Contents"});});
+      return;
+    }
+    if(!sec.classList.contains("chapter"))return;
+    var title=sec.getAttribute("data-title")||"";
+    out.push({el:sec.querySelector("header.ch-h"),brk:1,chap:title});
+    [].forEach.call(sec.querySelectorAll(".sec"),function(s){
+      [].forEach.call(s.children,function(el){out.push({el:el,chap:title});});
+    });
+  });
+  return out;
+}
+
+function newLeaf(chap){
+  var leaf=document.createElement("div");
+  leaf.className="leaf";
+  leaf.style.width=GEO.w+"px";leaf.style.height=GEO.h+"px";
+  var b=document.createElement("div");b.className="leaf-b";
+  var f=document.createElement("div");f.className="leaf-f";
+  f.innerHTML='<span class="rh"></span><span class="pn">'+(LEAVES.length+1)+'</span>';
+  f.querySelector(".rh").textContent=chap||"";
+  leaf.appendChild(b);leaf.appendChild(f);
+  $("#store").appendChild(leaf);
+  LEAVES.push(leaf);
+  return leaf;
+}
+
+/* A run of like things — contents lines, a list, a glossary — splits between its children rather
+   than jumping whole to the next page and leaving a third of this one empty. */
+function splitKids(el,bd,chap){
+  var kids=[].slice.call(el.children);
+  if(kids.length<2)return bd;
+  if(el.parentNode)el.parentNode.removeChild(el);
+  var cur=el.cloneNode(false);bd.appendChild(cur);
+  for(var i=0;i<kids.length;i++){
+    cur.appendChild(kids[i]);
+    if(bd.scrollHeight>bd.clientHeight&&cur.children.length>1){
+      cur.removeChild(kids[i]);
+      bd=newLeaf(chap).querySelector(".leaf-b");
+      cur=el.cloneNode(false);bd.appendChild(cur);
+      cur.appendChild(kids[i]);
+    }
+  }
+  return bd;
+}
+function splittable(el){
+  return el.tagName==="TABLE"||el.tagName==="UL"||el.tagName==="OL"||el.tagName==="DL"
+    ||el.classList.contains("ct-ch");
+}
+function splitAny(el,bd,chap){
+  if(el.tagName==="TABLE")return splitRows(el,bd,chap);
+  if(splittable(el))return splitKids(el,bd,chap);
+  return bd;
+}
+
+/* a table longer than a page: fill, break, and repeat the head on the next one */
+function splitRows(el,bd,chap){
+  var head=el.querySelector("thead"),rows=[].slice.call(el.querySelectorAll("tbody > tr"));
+  if(!rows.length)return bd;
+  var mk=function(){
+    var t=el.cloneNode(false);
+    if(head)t.appendChild(head.cloneNode(true));
+    var tb=document.createElement("tbody");t.appendChild(tb);
+    return {t:t,tb:tb};
   };
-  var back=document.getElementById("back");
-  try{
-    back.href=window.gameHref(location.hostname,location.protocol);
-    if(back.href!=="index.html"&&/^https?:/.test(back.getAttribute("href"))){back.target="_blank";back.rel="noopener";}
-  }catch(e){ back.href="index.html"; }
-
-  /* ---------------- search ---------------- */
-  var q=document.getElementById("q"), count=document.getElementById("scount"),
-      prev=document.getElementById("sprev"), next=document.getElementById("snext"), clr=document.getElementById("sclr"),
-      nores=document.querySelector(".nores");
-  var BLOCKS=[].slice.call(document.querySelectorAll(
-    ".chapter p, .chapter li, .chapter tbody tr, .chapter .gl, .chapter .formula div"));
-  var HEADS=[].slice.call(document.querySelectorAll(".chapter h3, .chapter .ch-h"));
-  BLOCKS.concat(HEADS).forEach(function(b){ b.dataset.o=b.innerHTML; });
-  var hits=[], at=-1, timer=null;
-
-  function restore(){
-    BLOCKS.concat(HEADS).forEach(function(b){ if(b.innerHTML!==b.dataset.o)b.innerHTML=b.dataset.o; b.classList.remove("hb-hide"); });
-    document.querySelectorAll(".chapter,.sec,.chapter table").forEach(function(s){ s.classList.remove("hb-hide"); });
-    document.body.classList.remove("searching");
-    nores.classList.remove("show");
-    hits=[];at=-1;count.textContent="";prev.disabled=next.disabled=true;
+  if(el.parentNode)el.parentNode.removeChild(el);
+  var cur=mk();bd.appendChild(cur.t);
+  for(var i=0;i<rows.length;i++){
+    cur.tb.appendChild(rows[i]);
+    if(bd.scrollHeight>bd.clientHeight&&cur.tb.children.length>1){
+      cur.tb.removeChild(rows[i]);
+      bd=newLeaf(chap).querySelector(".leaf-b");
+      cur=mk();bd.appendChild(cur.t);
+      cur.tb.appendChild(rows[i]);
+    }
   }
-  function mark(el,rx){
-    var w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null), t=[], n;
-    while((n=w.nextNode()))t.push(n);
-    var found=0;
-    t.forEach(function(node){
-      var s=node.nodeValue; rx.lastIndex=0;
-      if(!rx.test(s))return;
-      rx.lastIndex=0;
-      var frag=document.createDocumentFragment(), last=0, mres;
-      while((mres=rx.exec(s))){
-        if(mres.index>last)frag.appendChild(document.createTextNode(s.slice(last,mres.index)));
-        var mk=document.createElement("mark");mk.textContent=mres[0];frag.appendChild(mk);
-        last=mres.index+mres[0].length;found++;
-        if(rx.lastIndex===mres.index)rx.lastIndex++;
+  return bd;
+}
+
+/* Pagination moves blocks out of the source and into leaves, so it eats what it reads. Rather
+   than put the source back afterwards — which has to be exactly right every time, and is only
+   ever one missed case from a book with no contents in it — the source is lifted out of the
+   document once and kept as a template. Every run works on a fresh copy of it, so running twice
+   is the same as running once, and there is only ever one of each id in the document. */
+var TEMPLATE=null;
+function paginate(){
+  var store=$("#store");
+  if(!TEMPLATE){
+    var src=$("#source");
+    TEMPLATE=src.cloneNode(true);
+    src.parentNode.removeChild(src);
+  }
+  var work=TEMPLATE.cloneNode(true);
+  body.classList.remove("ready");
+  /* The two leaves on show are not on the stack, so clearing the stack alone leaves them alive —
+     and put() then files them back in, ahead of the new book. That is a whole spread printed
+     twice and every page after it off by two. Throw the old pages away first. */
+  [].forEach.call(document.querySelectorAll("#slotL,#slotR,#flip .front,#flip .back"),
+    function(e){e.textContent="";});
+  store.textContent="";LEAVES=[];PAGE_OF={};HITS=[];HIT=-1;
+  GEO={w:PAGE.w,h:PAGE.h};
+  var list=atoms(work),leaf=null,bd=null,lastChap="";
+  for(var i=0;i<list.length;i++){
+    var a=list[i];
+    if(!a.el)continue;
+    if(!leaf||a.brk){leaf=newLeaf(a.chap);bd=leaf.querySelector(".leaf-b");}
+    lastChap=a.chap;
+    bd.appendChild(a.el);
+    if(bd.scrollHeight>bd.clientHeight){
+      if(bd.children.length===1){
+        bd=splitAny(a.el,bd,a.chap);           /* taller than an empty page: split it where it can */
+      }else if(splittable(a.el)){
+        bd=splitAny(a.el,bd,a.chap);           /* fill the rest of this page, carry on over the leaf */
+      }else{
+        bd.removeChild(a.el);
+        /* never leave a heading standing alone at the foot of a page */
+        var carry=[];
+        while(bd.lastElementChild&&/^H[23]$/.test(bd.lastElementChild.tagName))
+          carry.push(bd.removeChild(bd.lastElementChild));
+        bd=newLeaf(a.chap).querySelector(".leaf-b");
+        while(carry.length)bd.appendChild(carry.pop());
+        bd.appendChild(a.el);
+        if(bd.scrollHeight>bd.clientHeight&&bd.children.length===1)bd=splitAny(a.el,bd,a.chap);
       }
-      if(last<s.length)frag.appendChild(document.createTextNode(s.slice(last)));
-      node.parentNode.replaceChild(frag,node);
-    });
-    return found;
+      leaf=LEAVES[LEAVES.length-1];
+    }
+    if(a.solo)leaf=null;
   }
-  function run(){
-    var s=q.value.trim();
-    if(s.length<2){restore();return;}
-    restore();
-    document.body.classList.add("searching");
-    var rx=new RegExp(s.replace(/[.*+?^\${}()|[\\]\\\\]/g,"\\\\$&"),"gi");
-    var total=0;
-    BLOCKS.forEach(function(b){
-      rx.lastIndex=0;
-      if(rx.test(b.textContent||"")){ total+=mark(b,rx); } else { b.classList.add("hb-hide"); }
-    });
-    // A heading is not a result on its own — it is the name of one. When a heading matches, the
-    // thing the reader wanted is everything under it, so the whole section (or chapter) comes back.
-    HEADS.forEach(function(h){
-      rx.lastIndex=0;
-      if(!rx.test(h.textContent||""))return;
-      total+=mark(h,rx);
-      var scope=h.classList.contains("ch-h")?h.closest(".chapter"):h.closest(".sec");
-      if(scope)scope.querySelectorAll(".hb-hide").forEach(function(x){x.classList.remove("hb-hide");});
-    });
-    document.querySelectorAll(".sec").forEach(function(sec){
-      if(!sec.querySelector("mark"))sec.classList.add("hb-hide");
-    });
-    document.querySelectorAll(".chapter").forEach(function(c){
-      if(!c.querySelector("mark"))c.classList.add("hb-hide");
-    });
-    // a table head with every row hidden under it is a label for nothing
-    document.querySelectorAll(".chapter table").forEach(function(t){
-      if(!t.querySelector("tbody tr:not(.hb-hide)"))t.classList.add("hb-hide");
-    });
-    hits=[].slice.call(document.querySelectorAll(".chapter:not(.hb-hide) mark"));
-    at=-1;
-    var chs=document.querySelectorAll(".chapter:not(.hb-hide)").length;
-    count.textContent=hits.length?(hits.length+" match"+(hits.length===1?"":"es")+" in "+
-      chs+" chapter"+(chs===1?"":"s")):"nothing found";
-    nores.classList.toggle("show",!hits.length);
-    prev.disabled=next.disabled=!hits.length;
-    if(hits.length)go(0);
-  }
-  function go(i){
-    if(!hits.length)return;
-    if(at>=0&&hits[at])hits[at].classList.remove("on");
-    at=(i+hits.length)%hits.length;
-    hits[at].classList.add("on");
-    var r=hits[at].getBoundingClientRect();
-    window.scrollTo({top:window.scrollY+r.top-160,behavior:"smooth"});
-    count.textContent=(at+1)+" of "+hits.length;
-  }
-  q.addEventListener("input",function(){clearTimeout(timer);timer=setTimeout(run,120);});
-  q.addEventListener("keydown",function(e){
-    if(e.key==="Enter"){e.preventDefault();go(at+(e.shiftKey?-1:1));}
-    if(e.key==="Escape"){q.value="";restore();}
+  /* a spread is two leaves, so an odd count gets a blank at the back */
+  if(LEAVES.length%2)newLeaf(lastChap);
+  LEAVES.forEach(function(lf,i){
+    lf.setAttribute("data-pg",i+1);
+    [].forEach.call(lf.querySelectorAll("[id]"),function(e){PAGE_OF[e.id]=i;});
   });
-  next.addEventListener("click",function(){go(at+1);});
-  prev.addEventListener("click",function(){go(at-1);});
-  clr.addEventListener("click",function(){q.value="";restore();q.focus();});
+  [].forEach.call(document.querySelectorAll(".ct-p"),function(e){
+    var p=PAGE_OF[e.getAttribute("data-pg")];
+    e.textContent=p==null?"—":String(p+1);
+  });
+  body.classList.add("ready");
+  sizeBook();
+  show(Math.min(SPREAD,spreads()-1),true);
+  var q=$("#q");
+  if(q&&q.value.trim())search(q.value);   /* the marks went with the old leaves */
+}
+
+function sizeBook(){
+  [].forEach.call(document.querySelectorAll(".slot,.flip .face"),function(e){
+    e.style.width=GEO.w+"px";e.style.height=GEO.h+"px";});
+  var f=$("#flip");f.style.width=GEO.w+"px";f.style.height=GEO.h+"px";
+  var c=$("#closed");
+  var cw=Math.round(GEO.w*1.06);
+  c.style.width=cw+"px";c.style.height=Math.round(GEO.h*1.04)+"px";
+  c.style.setProperty("--cw",cw+"px");
+  fit();
+}
+
+/* ------------------------------- turning ------------------------------- */
+function spreads(){return Math.max(1,Math.ceil(LEAVES.length/2));}
+/* A leaf is always somewhere in the document — in a slot, in the flipper, or back on the stack.
+   Emptying a slot with textContent="" detaches whatever was in it, and since only the two leaves
+   of the current spread are put back, every turn used to drop a page out of the document. It
+   still looked right, because turning back re-appends it; but the page stopped being findable —
+   by an anchor, by a jump from the index, by anything that asks the document where something is. */
+function stack(el){var st=$("#store");while(el&&el.firstChild)st.appendChild(el.firstChild);}
+function put(sel,leaf){var s=$(sel);stack(s);if(leaf)s.appendChild(leaf);}
+function show(i,quiet){
+  SPREAD=Math.max(0,Math.min(i,spreads()-1));
+  put("#slotL",LEAVES[SPREAD*2]);put("#slotR",LEAVES[SPREAD*2+1]);
+  var a=SPREAD*2+1,b=Math.min(SPREAD*2+2,LEAVES.length);
+  $("#pager").innerHTML='<b>'+a+'–'+b+'</b> of '+LEAVES.length+' &nbsp;·&nbsp; click a page to turn it';
+  $("#zprev").classList.toggle("off",SPREAD===0);
+  $("#znext").classList.toggle("off",SPREAD>=spreads()-1);
+  if(!quiet)try{history.replaceState(null,"","#p"+(SPREAD*2+1));}catch(e){}
+}
+function noMotion(){
+  try{return window.matchMedia("(prefers-reduced-motion: reduce)").matches;}catch(e){return false;}
+}
+/* The leaf that swings across carries the page you were reading on its front and the page you
+   are turning to on its back, which is what a leaf of a book is. */
+function turn(dir){
+  if(TURNING)return;
+  var to=SPREAD+dir;
+  if(to<0||to>=spreads())return;
+  if(noMotion()){show(to);return;}
+  TURNING=true;
+  var flip=$("#flip"),front=flip.querySelector(".front"),back=flip.querySelector(".back");
+  front.textContent="";back.textContent="";
+  var fLeaf=dir>0?LEAVES[SPREAD*2+1]:LEAVES[SPREAD*2];
+  var bLeaf=dir>0?LEAVES[to*2]:LEAVES[to*2+1];
+  if(fLeaf)front.appendChild(fLeaf);
+  if(bLeaf)back.appendChild(bLeaf);
+  if(dir>0)put("#slotR",LEAVES[to*2+1]);else put("#slotL",LEAVES[to*2]);
+  flip.style.transition="none";
+  flip.style.left=dir>0?"auto":"0";
+  flip.style.right=dir>0?"0":"auto";
+  flip.style.transformOrigin=dir>0?"left center":"right center";
+  flip.style.transform="rotateY(0deg)";
+  body.classList.add("turning");
+  flip.getBoundingClientRect();
+  flip.style.transition="transform .56s cubic-bezier(.36,.06,.24,1)";
+  flip.style.transform="rotateY("+(dir>0?-180:180)+"deg)";
+  var t,done=function(){
+    flip.removeEventListener("transitionend",done);clearTimeout(t);
+    body.classList.remove("turning");
+    flip.style.transition="none";flip.style.transform="rotateY(0deg)";
+    stack(front);stack(back);
+    TURNING=false;show(to);
+  };
+  t=setTimeout(done,780);
+  flip.addEventListener("transitionend",done);
+}
+function goPage(n){
+  var s=Math.floor(n/2);
+  if(s===SPREAD)return;
+  if(Math.abs(s-SPREAD)===1)turn(s>SPREAD?1:-1);else show(s);
+}
+function goId(id){
+  if(PAGE_OF[id]==null)return false;
+  openBook();goPage(PAGE_OF[id]);
+  return true;
+}
+
+/* -------------------------------- search ------------------------------- */
+function clearMarks(){
+  [].forEach.call(document.querySelectorAll("mark"),function(m){
+    var p=m.parentNode;if(!p)return;
+    p.replaceChild(document.createTextNode(m.textContent),m);p.normalize();
+  });
+  HITS=[];HIT=-1;
+}
+function markIn(root,term){
+  var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:function(n){
+    if(!n.nodeValue)return NodeFilter.FILTER_REJECT;
+    var p=n.parentNode;
+    if(p&&/^(SCRIPT|STYLE|MARK)$/.test(p.tagName))return NodeFilter.FILTER_REJECT;
+    return n.nodeValue.toLowerCase().indexOf(term)>=0?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
+  }});
+  var nodes=[],n,made=[];
+  while((n=w.nextNode()))nodes.push(n);
+  nodes.forEach(function(node){
+    var s=node.nodeValue,low=s.toLowerCase(),at=0,frag=document.createDocumentFragment(),i;
+    while((i=low.indexOf(term,at))>=0){
+      if(i>at)frag.appendChild(document.createTextNode(s.slice(at,i)));
+      var m=document.createElement("mark");m.textContent=s.slice(i,i+term.length);
+      frag.appendChild(m);made.push(m);at=i+term.length;
+    }
+    if(at<s.length)frag.appendChild(document.createTextNode(s.slice(at)));
+    if(node.parentNode)node.parentNode.replaceChild(frag,node);
+  });
+  return made;
+}
+function search(raw){
+  clearMarks();
+  var term=(raw||"").trim().toLowerCase();
+  body.classList.remove("nohits");
+  if(term.length<2){$("#scount").textContent="";setBtns();return;}
+  LEAVES.forEach(function(leaf,i){
+    markIn(leaf,term).forEach(function(m){HITS.push({m:m,p:i});});
+  });
+  if(!HITS.length){$("#scount").textContent="0 of 0";body.classList.add("nohits");setBtns();return;}
+  goHit(0);
+}
+function goHit(k){
+  if(!HITS.length)return;
+  HIT=(k+HITS.length)%HITS.length;
+  HITS.forEach(function(h){h.m.classList.remove("on");});
+  HITS[HIT].m.classList.add("on");
+  $("#scount").textContent=(HIT+1)+" of "+HITS.length;
+  openBook();show(Math.floor(HITS[HIT].p/2));
+  setBtns();
+}
+function setBtns(){$("#sprev").disabled=HITS.length<2;$("#snext").disabled=HITS.length<2;}
+
+/* -------------------------------- opening ------------------------------ */
+function openBook(){
+  if(body.classList.contains("open"))return;
+  if(noMotion()){body.classList.add("open");return;}
+  body.classList.add("opening");
+  setTimeout(function(){body.classList.add("open");body.classList.remove("opening");},600);
+}
+function closeBook(){body.classList.remove("open","opening");show(0,true);}
+
+/* --------------------------------- wire -------------------------------- */
+function wire(){
+  $("#closed").addEventListener("click",openBook);
+  $("#closed").addEventListener("keydown",function(e){
+    if(e.key==="Enter"||e.key===" "){e.preventDefault();openBook();}});
+  var spread=document.querySelector(".spread");
+  spread.addEventListener("click",function(e){
+    if(e.target.closest&&e.target.closest("a,button,input,select,textarea"))return;
+    var r=spread.getBoundingClientRect();
+    turn(e.clientX<r.left+r.width/2?-1:1);
+  });
+  document.addEventListener("click",function(e){
+    if(!e.target.closest)return;
+    var a=e.target.closest("[data-jump]");
+    if(a){e.preventDefault();goId(a.getAttribute("data-jump"));return;}
+    var link=e.target.closest('.leaf a[href^="#"]');
+    if(link){e.preventDefault();goId(link.getAttribute("href").slice(1));}
+  });
+  $("#bcover").addEventListener("click",closeBook);
+  $("#bcon").addEventListener("click",function(){if(!goId("contents")){openBook();goPage(1);}});
+  $("#q").addEventListener("input",function(){search(this.value);});
+  $("#snext").addEventListener("click",function(){goHit(HIT+1);});
+  $("#sprev").addEventListener("click",function(){goHit(HIT-1);});
+  $("#sclr").addEventListener("click",function(){$("#q").value="";search("");$("#q").focus();});
   document.addEventListener("keydown",function(e){
-    if(e.key==="/"&&document.activeElement!==q){e.preventDefault();q.focus();q.select();}
-    if(e.key==="Escape"&&document.activeElement!==q&&document.body.classList.contains("searching")){q.value="";restore();}
+    var typing=e.target&&e.target.id==="q";
+    if(e.key==="/"&&!typing){e.preventDefault();$("#q").focus();return;}
+    if(typing){
+      if(e.key==="Enter"){e.preventDefault();goHit(HIT+(e.shiftKey?-1:1));}
+      if(e.key==="Escape"){$("#q").value="";search("");$("#q").blur();}
+      return;
+    }
+    if(e.key==="ArrowRight"||e.key==="PageDown"||e.key===" "){e.preventDefault();openBook();turn(1);}
+    else if(e.key==="ArrowLeft"||e.key==="PageUp"){e.preventDefault();turn(-1);}
+    else if(e.key==="Home"){e.preventDefault();show(0);}
+    else if(e.key==="End"){e.preventDefault();show(spreads()-1);}
+    else if(e.key==="Escape")closeBook();
   });
+  window.addEventListener("resize",fit);   /* the book does not repaginate: it is the same book */
+}
 
-  /* ---------------- top / contents ---------------- */
-  var fl=document.querySelector(".float");
-  function toTop(){window.scrollTo({top:0,behavior:"smooth"});}
-  document.getElementById("ftop").addEventListener("click",toTop);
-  document.getElementById("btop").addEventListener("click",toTop);
-  document.getElementById("fcon").addEventListener("click",function(){
-    if(document.body.classList.contains("searching")){q.value="";restore();}
-    document.getElementById("contents").scrollIntoView({behavior:"smooth",block:"start"});
-  });
-  document.getElementById("bcon").addEventListener("click",function(){
-    if(document.body.classList.contains("searching")){q.value="";restore();}
-    document.getElementById("contents").scrollIntoView({behavior:"smooth",block:"start"});
-  });
-  window.addEventListener("scroll",function(){ fl.classList.toggle("show",window.scrollY>420); },{passive:true});
-
-  /* a jump from the contents while a search is running has to clear the search first */
-  document.querySelectorAll("[data-jump]").forEach(function(a){
-    a.addEventListener("click",function(e){
-      e.preventDefault();
-      if(document.body.classList.contains("searching")){q.value="";restore();}
-      var el=document.getElementById(a.dataset.jump);
-      if(el)window.scrollTo({top:el.getBoundingClientRect().top+window.scrollY-84,behavior:"smooth"});
-      history.replaceState(null,"","#"+a.dataset.jump);
-    });
-  });
+/* Where the game is — the same rule the game uses to find the handbook. */
+(function(){
+  var a=document.getElementById("back");
+  try{
+    var h=location.hostname,file=location.protocol==="file:";
+    if(!(file||/(^|\\.)github\\.io$/.test(h)||h==="localhost"||h==="127.0.0.1"))
+      a.href="https://claude.ai/artifact/4epD8iym482mpSqEj7ZJhN";
+  }catch(e){}
 })();
+
+/* Every page here is measured, so wait for the faces the book is set in. */
+function boot(){
+  paginate();wire();
+  /* Pagination is a measurement, so it is only true for the faces it measured. A font that
+     arrives after this — a slow CDN, or a stylesheet injected later — changes every line's
+     height and leaves the last block on each page hanging over the edge. Measure again when
+     one lands; the reader keeps their place, because paginate() shows the spread it was on. */
+  try{
+    if(document.fonts&&document.fonts.addEventListener)
+      document.fonts.addEventListener("loadingdone",function(){paginate();});
+  }catch(e){}
+  if(location.hash&&/^#p\\d+$/.test(location.hash)){openBook();goPage(parseInt(location.hash.slice(2),10)-1);}
+}
+if(document.fonts&&document.fonts.ready&&document.fonts.ready.then)
+  document.fonts.ready.then(boot,boot);
+else window.addEventListener("load",boot);
+
+/* hb-pdf.js calls this before printing: every leaf back in #store, in the order you turn them. */
+window.bookForPrint=function(){
+  var f=$("#flip");
+  stack($("#slotL"));stack($("#slotR"));stack(f.querySelector(".front"));stack(f.querySelector(".back"));
+  var store=$("#store");
+  /* Two pixels of slack. A leaf exactly as tall as the sheet rounds over it by a sub-pixel and
+     spills onto the next one, and from there every page drifts — which is how 58 leaves printed
+     as 62 sheets with two page-feet on some of them. */
+  LEAVES.forEach(function(l){l.style.height=(GEO.h-2)+"px";l.style.overflow="hidden";store.appendChild(l);});
+  return {pages:LEAVES.length,w:GEO.w,h:GEO.h};
+};
+window.bookPages=function(){return LEAVES.length;};
+window.bookPageOf=function(id){return PAGE_OF[id]==null?null:PAGE_OF[id]+1;};
+window.bookSpread=function(){return SPREAD;};
+window.bookOpen=function(){return document.body.classList.contains("open");};
+window.bookTurn=function(d){turn(d);};
+window.bookRepaginate=function(){paginate();return LEAVES.length;};
+window.bookGoPage=function(n){openBook();goPage(n-1);return SPREAD;};
 `;
 
 /* --------------------------------- page --------------------------------- */
 const html=`<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <title>The Crew — Player's Handbook</title>
-<meta name="description" content="Every rule, number and screen in The Crew, with a search bar and a clickable index.">
+<meta name="description" content="Every rule, number and screen in The Crew — a book you open and turn, with a pinned search bar and a clickable index.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f6f4ee'/%3E%3Crect x='6' y='4' width='20' height='24' fill='none' stroke='%23111010' stroke-width='2.5'/%3E%3Cpath d='M10 11h12M10 16h12M10 21h7' stroke='%23111010' stroke-width='2'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@500;600;700&family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>${CSS}</style>
@@ -358,36 +725,51 @@ const html=`<!doctype html>
     <button class="sbtn" id="sclr" title="Clear (Esc)" aria-label="Clear search">✕</button>
   </div>
   <div class="nav">
-    <button class="nbtn" id="btop">↑ Top</button>
+    <button class="nbtn" id="bcover">Cover</button>
     <button class="nbtn" id="bcon">Contents</button>
     <a class="nbtn solid" id="back" href="index.html">← The game</a>
   </div>
 </div>
 
-<main><div class="sheet">
+<div class="desk">
+  <div class="closed" id="closed" role="button" tabindex="0" aria-label="Open the handbook">
+    ${cover}
+  </div>
+  <div class="opencue">Click the book to open it</div>
 
-<section class="cover">
-  <div class="eyebrow">Case file · Classified</div>
-  <h1>The Crew<span>Player's Handbook</span></h1>
+  <div class="book" id="book">
+    <div class="spread">
+      <div class="edge l"></div><div class="edge r"></div>
+      <div class="slot left" id="slotL"></div>
+      <div class="slot right" id="slotR"></div>
+      <div class="spine"></div>
+      <div class="zone prev" id="zprev" title="Previous page"></div>
+      <div class="zone next" id="znext" title="Next page"></div>
+      <div class="flip" id="flip"><div class="face front"></div><div class="face back"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="pager" id="pager"></div>
+<div class="nores"><b>Nothing in the handbook says that.</b><p>Try a shorter word — the search looks at every line, every table row and every glossary entry.</p></div>
+
+<div id="store"></div>
+
+<div id="source">
+<section class="titlepage">
+  <h1>The Crew</h1>
+  <div class="tp-sub">Player's Handbook</div>
   <hr>
-  <p>Every rule the game plays by, every number on every screen, and where to find all of it.
-     We are the criminals. A crew of five, thousands of jobs, and a border in front of every one of them.</p>
+  <p>Every rule the game plays by, every number on every screen, and where to find all of it.</p>
+  <p>We are the criminals. A crew of five, thousands of jobs, and a border in front of every one of them.</p>
   <p>Nothing in this handbook is invented. Every figure in it is read out of the game itself.</p>
-  <div class="stamp">For the commander</div>
-  <div class="foot">${BUILD} · ${CH.length} chapters</div>
+  <div><span class="stamp">For the commander</span></div>
+  <div class="tp-foot">${BUILD} · ${CH.length} chapters</div>
 </section>
 
 ${contents}
 
 ${chapters}
-
-<div class="nores"><b>Nothing in the handbook says that.</b><p>Try a shorter word — the search looks at every line, every table row and every glossary entry.</p></div>
-
-</div></main>
-
-<div class="float">
-  <button id="ftop">↑ Top</button>
-  <button id="fcon">Contents</button>
 </div>
 
 <script>${JS}</script>
@@ -397,9 +779,8 @@ ${chapters}
 const out=path.join(__dirname,"handbook.html");
 fs.writeFileSync(out,html);
 
-/* What hb-pages.py looks for in the rendered PDF. A chapter is found by its kicker, which appears
-   nowhere else in the document; a section by its number and title, which appears twice — in the
-   contents and in the body — and the body one is always the later of the two. */
+/* What hb-pages.py looks for in the rendered PDF, so the index can be checked against the book
+   that actually came out rather than simply trusted. */
 const heads=[];
 CH.forEach(c=>{
   heads.push({id:c.id,find:"Chapter "+c.no+" ·",once:true});
@@ -407,4 +788,4 @@ CH.forEach(c=>{
 });
 fs.writeFileSync(path.join(__dirname,"headings.json"),JSON.stringify(heads,null,0));
 console.log("wrote "+out+"  "+(html.length/1024).toFixed(1)+"KB  "+CH.length+" chapters, "+
-  CH.reduce((n,c)=>n+c.secs.filter(s=>s.t).length,0)+" sections, page numbers "+(Object.keys(PG).length?"from pages.json":"NOT YET SET"));
+  CH.reduce((n,c)=>n+c.secs.filter(s=>s.t).length,0)+" sections, "+FACES.length+" faces on the cover");
