@@ -50,6 +50,12 @@ decisions at the end.
   or soldier by nature; a fee, a cut and weekly upkeep; and things they will not do — cannot
   swim, will not fly, fear of heights, claustrophobic, no violence, won't work nights, banned
   from the EU, wanted in the United States, won't work under authoritarian rule, demands 15%.
+- **The icon in the tab is one of the crew.** Not a picture pasted in: `tools/favicon.js` loads the
+  game's own `avatarBody()` and draws a specific face — spiked hair, heavy brows, a long nose, a
+  mouth that is not pleased — so the tab is the same ink as every dossier on the roster. Run
+  `node tools/favicon.js` after changing the face builder, and `--check` fails if what is in
+  `index.html` is no longer what the code would draw. The framing is cropped to the head and
+  shoulders because a whole bust at 16px is a smudge.
 - **Faces, built part by part.** Every portrait is a set of choices: hair or hat (six styles for
   a man, fifteen for a woman), face shape, eyebrows, eyes, nose, mouth, ears, glasses, facial
   hair or earrings, and a scar. A roster file rolls them from its seed. **You** move a slider for
@@ -543,7 +549,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 46 · 16 September
+The footer of every screen, and the office header, carry a build stamp (`build 47 · 17 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
