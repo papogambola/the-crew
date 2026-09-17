@@ -430,7 +430,7 @@ ch("reckon","The reckoning","Exactly how a job is decided",[
 ch("night","The night itself","The live report",[
   S("live","Reading the report",
     p("A job does not resolve into a number. It plays out: a clock in the top left, a line at a time, with the crew named and what each of them is doing named with them. "
-      +"You can run it at five speeds, or press through it as fast as you can read.")),
+      +"You can run it at five speeds, hold it where it is with Pause, or press through it as fast as you can read.")),
   S("map","The map",
     p("Beside the report is the world, drawn in ink — the country the job is in, with the sites of the job on it and your people standing at them, as faces, with a small symbol for what they are doing.")
     +p("The plan has five positions, and which one somebody stands at follows from their trade:")
