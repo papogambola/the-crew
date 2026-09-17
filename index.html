@@ -2105,6 +2105,9 @@ const QUIET=["By morning, nothing. Not a line in the paper.","Nobody reports any
 const SPLIT=["The split: {g} gross, {c} to the crew, {n} to you.","The client pays in full: {g}. The crew takes {c}; {n} is yours.","{g} lands. After the crew's {c}, you keep {n}.","{g} comes in. {c} goes out to the crew. {n} stays.","Paid: {g}. The crew's share is {c}, and {n} is what's left for you.","{g} on the table. {c} across it to the crew; {n} back to you.","The fee is {g}. Cuts come to {c}. You keep {n}.","{g}, in full, on time. {c} to the crew, {n} to you.","Counted twice: {g} in, {c} to the crew, {n} yours.","{g} lands in an account that isn't yours. After {c} in cuts, {n} is."];
 const NOPAY=["No payment. The client doesn't return the call.","The client's number is dead by morning. No fee.","No fee — the client says 'next time', which means never.","The client has gone quiet, and the money with them.","No fee. The client's office is a phone shop now.","The payment is 'being processed', which is a phrase for never.","No money. The client blames the outcome, and nobody can argue.","The client pays in promises. Promises don't split.","Nothing. The client's lawyer answers the phone, which is worse than nobody.","No fee. The client's people say they never heard of you.","Not a cent. The client sends a message with no words in it.","The client is in hospital, or says so. No fee."];
 function fill2(s,v){return String(s).replace(/\{(\w+)\}/g,(_,k)=>v[k]!==undefined?v[k]:"{"+k+"}");}
+// A draw that remembers: the last sixty lines drawn anywhere stay out of the pool, so a line read
+// on this trip is not read on the next. The report does the same inside narrate().
+function freshPick(rng,pool){S.recent=S.recent||[];const key=p=>typeof p==="string"?p:p[0];let cand=pool.filter(p=>!S.recent.includes(key(p)));if(!cand.length)cand=pool;const pk=pick(rng,cand);S.recent.push(key(pk));if(S.recent.length>60)S.recent.shift();return pk;}
 // The report in two halves: "pre" is the arrival and the plan, "post" is the work and what it cost.
 // A twist can sit between them. The clock carries over.
 function narrate(job,a,tier,rng,x,mode,clock){
@@ -2186,86 +2189,170 @@ function narrate(job,a,tier,rng,x,mode,clock){
 /* ------------------------------ TWISTS -------------------------------- */
 // Mid-job: the report stops, six options, one sets the crew free — the one the crew you
 // brought can actually do. Wrong calls cost time, money, blood or a place.
+// The line that stops the feed before a twist. One of these, chosen with the twist.
+const TWIST_CUE=["Then it goes wrong.","And then it doesn't go to plan.","Then, the thing nobody drew.","Then the night turns.","And then a problem.","Then something the file didn't have.","Then it stops being simple.","Then the part nobody rehearsed."];
+// s is the setup: one string, or several to choose from, because the same twist read the same
+// way every time it came round, and it comes round often.
 const TWISTS=[
   {k:"engine",cats:["vault","recovery","extraction","escort","smuggling","interception"],h:"The engine won't turn",
-   s:"Sirens two streets over — and the van won't start. Everyone is looking at you.",
+   s:["Sirens two streets over — and the van won't start. Everyone is looking at you.","The key turns and nothing else does. Sirens, closer than they were. Four faces, one question.","The van coughs, and coughs, and doesn't catch. Somewhere behind you a siren picks up the address."],
    opts:[
     {t:"Hot-wire the second car",req:{tech:["wheelman"]},pri:1,ok:"{X} has the second car running before the sirens turn the corner. Clear.",slow:"{X} gets the second car going. It takes a minute longer than it should have.",bad:"Nobody knows the wiring. Two minutes of sparks, and the sirens are on the block.",wrong:{dm:-16,hurt:1,heat:8}},
     {t:"Call the fixer's cousin for a car",req:{tech:["fixer"]},pri:2,ok:"A taxi with no meter arrives in ninety seconds. Clear.",slow:"A taxi with no meter arrives. Four minutes is a long time on a kerb.",bad:"There is no cousin to call. You wait for a car that never comes.",wrong:{dm:-18,hurt:1,heat:10}},
     {t:"Walk out past the patrol on the forged papers",req:{tech:["forger"]},pri:3,ok:"Four tourists with perfect papers walk past two officers. Clear.",slow:"The papers hold, but the walk is long and the take stays in the van.",bad:"The papers are real; the faces aren't. Names are taken.",wrong:{dm:-24,jail:1,heat:12}},
     {t:"Run for it on foot, split up",pri:9,bad:"Four people running is a description. One of them is caught.",wrong:{dm:-26,jail:1,heat:14}},
     {t:"Wait it out inside",pri:9,bad:"The building is searched floor by floor. You are on the third.",wrong:{dm:-30,jail:1,hurt:1,heat:16}},
-    {t:"Abort — leave the take, walk away slow",pri:5,fallback:true,lose:1,ok:"You leave it. Nobody is taken; nobody is paid for the night."},
+    {t:"Abort — leave the take, walk away slow",pri:5,fallback:true,lose:1,bad:"You walk away slow, from a van somebody could have started. One of you is stopped on the corner and asked what the bag was.",ok:"You leave it. Nobody is taken; nobody is paid for the night."},
    ]},
   {k:"inside",cats:["vault","recovery","infiltration","cyber","forgery","negotiation","surveillance"],h:"The inside man wants more",
-   s:"The inside man calls: double his cut, or he calls the police in ten minutes.",
+   s:["The inside man calls: double his cut, or he calls the police in ten minutes.","A text from the inside man: the price has doubled, and there is a clock on it. Ten minutes.","The inside man is on the phone, and the voice is new: twice the money by ten past, or he dials three digits."],
    opts:[
     {t:"Talk him down",req:{tech:["face","grifter"]},pri:1,ok:"{X} talks for nine minutes. He takes his original cut and an apology.",slow:"{X} talks him down. It takes the whole ten minutes and a favour.",bad:"Nobody on the crew can talk like that. He hangs up and dials.",wrong:{dm:-22,jail:1,heat:12}},
     {t:"Send someone to sit with him until it's done",req:{tech:["enforcer"]},pri:2,ok:"{X} keeps him company. He doesn't call anyone.",slow:"{X} sits with him. He stays quiet; the job runs a man short.",bad:"Nobody is built for that conversation. He makes the call.",wrong:{dm:-20,jail:1,heat:10}},
     {t:"Cut his phone — and the building's",req:{tech:["hacker"]},pri:3,ok:"{X} kills his phone and the building's. He can't call anyone.",slow:"{X} kills the phones. Late — he had time for one call, and it wasn't the police.",bad:"Nobody can touch the phones. He makes the call.",wrong:{dm:-20,jail:1,heat:10}},
-    {t:"Pay double",pri:5,fallback:true,lose:0.3,ok:"You pay. It hurts; it works."},
+    {t:"Pay double",pri:5,fallback:true,lose:0.3,bad:"You pay double to a man who could have been talked down. He takes it, and he remembers that you pay.",ok:"You pay. It hurts; it works."},
     {t:"Threaten him over the phone",pri:9,bad:"He hangs up and dials. Sirens in eight minutes.",wrong:{dm:-26,jail:1,heat:14}},
     {t:"Ignore him",pri:9,bad:"He wasn't bluffing.",wrong:{dm:-30,jail:1,hurt:1,heat:16}},
    ]},
   {k:"plan",cats:["vault","recovery","sabotage","cyber","infiltration"],h:"The plan is last year's",
-   s:"The floor plan is last year's. The room you want has moved a floor, and the clock hasn't.",
+   s:["The floor plan is last year's. The room you want has moved a floor, and the clock hasn't.","The corridor on the plan is a wall. The room you came for is somewhere above or below it, and the clock is still running.","Somebody refitted the building since the plan was drawn. The door you want is not where the door is."],
    opts:[
     {t:"Go down through the ceiling",req:{tech:["demolitions"]},pri:1,ok:"{X} measures twice and the ceiling opens like a door. Clear.",slow:"{X} makes a hole. It takes longer than a door would have.",bad:"Nobody knows how. You make noise and a hole in the wrong place.",wrong:{dm:-18,hurt:1,heat:10}},
     {t:"Pull the new plan from the manager's terminal",req:{tech:["hacker"]},pri:2,ok:"{X} has this year's plan in four minutes. Clear.",slow:"{X} finds the plan. Eleven minutes of the clock gone.",bad:"Nobody can get into the terminal. You guess.",wrong:{dm:-16,hurt:1,heat:8}},
     {t:"Walk into the manager's office and ask",req:{tech:["face","grifter","infiltrator"]},pri:3,ok:"{X} asks a night manager for directions and gets them, with a coffee. Clear.",slow:"{X} gets directions, and a manager who remembers a face.",bad:"Nobody on the crew can bluff a manager. Security is called.",wrong:{dm:-22,jail:1,heat:12}},
     {t:"Try every door on the floor",req:{tech:["safecracker"]},pri:4,ok:"{X} opens six doors in eleven minutes; the seventh is the one. Clear.",slow:"{X} opens doors until the right one. The clock nearly runs out.",bad:"Six locked doors and nobody who can open them.",wrong:{dm:-18,heat:8}},
     {t:"Split up and search",pri:9,bad:"Four people on four floors. One of them meets a guard.",wrong:{dm:-26,jail:1,heat:12}},
-    {t:"Abort — out the way you came",pri:5,fallback:true,lose:1,ok:"You leave with nothing and with everyone."},
+    {t:"Abort — out the way you came",pri:5,fallback:true,lose:1,bad:"You leave by the way you came, past a ceiling somebody could have opened. Empty-handed, and seen on the stairs.",ok:"You leave with nothing and with everyone."},
    ]},
   {k:"checkpoint",cats:["smuggling","interception","escort","extraction"],h:"A checkpoint where none was",
-   s:"A checkpoint on the only road, and the paperwork is in yesterday's name.",
+   s:["A checkpoint on the only road, and the paperwork is in yesterday's name.","Cones, a barrier and two officers, on a road that had none of them this morning. The manifest is in the wrong name.","The road narrows to one lane and a man with a torch. The papers in the glovebox say something the cargo doesn't."],
    opts:[
     {t:"Re-paper it in the back seat",req:{tech:["forger"]},pri:1,ok:"{X} rewrites the manifest with a borrowed pen. The officer stamps it. Clear.",slow:"{X} fixes the papers. The officer wonders why you needed a minute.",bad:"Nobody can fix paper that fast. The officer keeps the manifest.",wrong:{dm:-22,jail:1,heat:12}},
     {t:"Take the track the dogs don't work",req:{tech:["smuggler"]},pri:2,ok:"{X} knows a farm road. Twenty minutes longer, no checkpoint. Clear.",slow:"{X} finds a way around. It costs an hour and a tyre.",bad:"Nobody knows the back roads. You drive in circles and back to the checkpoint.",wrong:{dm:-18,hurt:1,heat:10}},
     {t:"Call the sergeant who owes a favour",req:{tech:["fixer"]},pri:3,ok:"{X} makes a call. The barrier lifts. Clear.",slow:"{X} makes a call; the barrier lifts, eventually, for a price.",bad:"There is no sergeant to call. The barrier stays down.",wrong:{dm:-18,jail:1,heat:10}},
     {t:"Bore the officer into waving you through",req:{tech:["grifter","face"]},pri:4,ok:"{X} explains the paperwork for so long the officer waves you on. Clear.",slow:"{X} talks the officer round. He writes down the plate.",bad:"Nobody talks well enough. The officer opens the back.",wrong:{dm:-24,jail:1,heat:12}},
     {t:"Force it",pri:9,bad:"The barrier breaks. So does the plan. Gunfire.",wrong:{dm:-30,jail:1,hurt:1,heat:18}},
-    {t:"Turn back",pri:5,fallback:true,lose:0.5,ok:"You turn back. Half the cargo reaches the buyer by another route, a week late."},
+    {t:"Turn back",pri:5,fallback:true,lose:0.5,bad:"You turn back from a barrier that could have been talked, papered or driven around. The turn is noticed, and followed for a while.",ok:"You turn back. Half the cargo reaches the buyer by another route, a week late."},
    ]},
   {k:"radio",cats:["negotiation","forgery","recovery","infiltration","surveillance"],h:"A police radio in the buyer's car",
-   s:"In the buyer's car, under a coat: a police radio, switched on.",
+   s:["In the buyer's car, under a coat: a police radio, switched on.","The buyer's driver gets out to smoke, and on the passenger seat, half under a jacket, is a police radio, and it is live.","The buyer's car has a radio that isn't for music. It's on, and it's quiet in the way those radios are quiet."],
    opts:[
     {t:"Have the lookout read the street before you move",req:{tech:["lookout"]},pri:1,ok:"{X} counts two plain cars and a van. You move the meeting; the van doesn't follow. Clear.",slow:"{X} reads the street. You move late, and one car follows for a while.",bad:"Nobody is watching the street. The van is already behind you.",wrong:{dm:-24,jail:1,heat:12}},
     {t:"Swap the goods for the decoy and finish the deal",req:{tech:["forger","pickpocket"]},pri:2,ok:"{X} makes the swap under a table. They buy the decoy; you keep the goods and the fee. Clear.",slow:"{X} makes the swap. They notice a day later.",bad:"Nobody can make a swap like that. They buy the real thing and arrest you for it.",wrong:{dm:-24,jail:1,heat:12}},
     {t:"Change the venue, now",req:{tech:["fixer","face"]},pri:3,ok:"{X} moves the meeting to a place with two exits and a cousin at the door. Clear.",slow:"{X} moves the meeting. The other side is late and nervous.",bad:"Nobody has a second venue. You do the deal where they chose.",wrong:{dm:-20,jail:1,heat:10}},
     {t:"Draw on them",pri:9,bad:"Nobody draws faster than a radio. Everybody is taken.",wrong:{dm:-32,jail:1,hurt:1,heat:20}},
     {t:"Finish the deal as planned",pri:9,bad:"The deal finishes. So does the night, in a cell.",wrong:{dm:-28,jail:1,heat:16}},
-    {t:"Walk away with the goods",pri:5,fallback:true,lose:1,ok:"You keep the goods and lose the fee. Nobody is taken."},
+    {t:"Walk away with the goods",pri:5,fallback:true,lose:1,bad:"You walk, with the goods and without the fee, past a street somebody could have read. The walk is watched.",ok:"You keep the goods and lose the fee. Nobody is taken."},
    ]},
   {k:"down",cats:["extraction","escort","sabotage","interception"],h:"{M} is hit",
-   s:"{M} is hit. Moving {M} means leaving the take; leaving {M} means leaving {M}.",
+   s:["{M} is hit. Moving {M} means leaving the take; leaving {M} means leaving {M}.","{M} goes down and doesn't get up. There is one car, one bag, and a choice nobody wanted to make out loud.","{M} is bleeding, and not slowly. The take is in the other room. You can carry one of them."],
    opts:[
     {t:"Patch and carry — both",req:{tech:["cleaner"],know:["Medicine"]},pri:1,ok:"{X} stops the bleeding with a belt and a shirt; the take goes in the same car. Clear.",slow:"{X} stops the bleeding. The take is heavier than it was.",bad:"Nobody knows what to do with a wound. You carry {M} and lose the take.",wrong:{dm:-16,hurt:1,heat:6,lose:1}},
     {t:"Carry {M} and the take",req:{tech:["enforcer"]},pri:2,ok:"{X} carries {M} and the bag. Nobody argues. Clear.",slow:"{X} carries {M}. The bag comes in a second trip that nearly doesn't happen.",bad:"Nobody can carry both. You choose {M}, and the take stays.",wrong:{dm:-14,hurt:1,lose:1,heat:6}},
     {t:"Leave {M} with a phone for an ambulance",pri:9,bad:"The ambulance comes with a patrol car. {M} is treated, then held.",wrong:{dm:-14,jail:1,heat:10}},
     {t:"Call an ambulance and wait",pri:9,bad:"Everyone waits with {M}. Everyone is taken with {M}.",wrong:{dm:-30,jail:1,heat:16}},
-    {t:"Leave the take, carry {M} out",pri:5,fallback:true,lose:1,ok:"You leave the take and carry {M}. Nobody is taken."},
+    {t:"Leave the take, carry {M} out",pri:5,fallback:true,lose:1,bad:"You leave the take that somebody could have carried, and {M} is carried badly. Nobody is paid, and {M} does not thank you.",ok:"You leave the take and carry {M}. Nobody is taken."},
     {t:"Split up",pri:9,bad:"{M} is left with one person and no plan. Both are found.",wrong:{dm:-26,jail:1,hurt:1,heat:14}},
    ]},
   {k:"alarm",cats:["vault","cyber","sabotage","surveillance","recovery"],h:"The alarm goes early",
-   s:"The alarm trips forty seconds before the plan said it could. Response time: six minutes.",
+   s:["The alarm trips forty seconds before the plan said it could. Response time: six minutes.","A bell, inside the wall, that wasn't supposed to ring for another forty seconds. Six minutes until a car.","The panel goes red early. Somebody in a control room is picking up a phone. Six minutes, give or take."],
    opts:[
     {t:"Kill the alarm at the panel",req:{tech:["hacker"]},pri:1,ok:"{X} kills it at the panel and tells the monitoring company it was a fault. Clear.",slow:"{X} kills it. The company sends a car anyway, slowly.",bad:"Nobody can touch the panel. It keeps ringing.",wrong:{dm:-20,jail:1,heat:12}},
     {t:"Take what's in hand — overwatch calls the window",req:{tech:["overwatch"]},pri:2,ok:"{X} calls it from the roof: four minutes, one car. You leave with what you have. Clear.",slow:"{X} calls the window. You leave with less than you came for.",bad:"Nobody is watching the street. You leave blind.",wrong:{dm:-16,hurt:1,heat:10}},
     {t:"Leave now, the long way",req:{tech:["wheelman"]},pri:3,ok:"{X} takes the long way out and the response car takes the short way in. Clear.",slow:"{X} drives. The long way is very long tonight.",bad:"Nobody knows a long way. You meet the response car at the corner.",wrong:{dm:-22,jail:1,heat:12}},
     {t:"Rush the rest of the plan",pri:9,bad:"Six minutes of plan in three. Somebody drops something; somebody is cut.",wrong:{dm:-20,hurt:1,heat:12}},
     {t:"Freeze and wait for it to stop",pri:9,bad:"It doesn't stop. The car does.",wrong:{dm:-30,jail:1,heat:16}},
-    {t:"Abort with nothing",pri:5,fallback:true,lose:1,ok:"You leave with nothing and with everyone."},
+    {t:"Abort with nothing",pri:5,fallback:true,lose:1,bad:"You leave with nothing, from an alarm that could have been silenced. The response car passes you on the way out, and slows.",ok:"You leave with nothing and with everyone."},
    ]},
   {k:"tail",cats:["surveillance","infiltration","escort","negotiation","forgery","smuggling"],h:"The grey car",
-   s:"A grey car has been behind you since the second roundabout. It is not lost.",
+   s:["A grey car has been behind you since the second roundabout. It is not lost.","The same grey saloon, three cars back, for the last four turns. Nobody drives like that by accident.","A grey car took the last turn with you, and the one before. Its driver is not looking at the road."],
    opts:[
     {t:"The lookout calls it; you drop it in the market",req:{tech:["lookout"]},pri:1,ok:"{X} calls the turn. The grey car meets a fruit cart and a one-way street. Clear.",slow:"{X} calls it. You lose the car, and forty minutes.",bad:"Nobody can read a tail. The grey car is still there at the job.",wrong:{dm:-22,jail:1,heat:12}},
     {t:"Lose it",req:{tech:["wheelman"]},pri:2,ok:"{X} loses it in three turns and a car park. Clear.",slow:"{X} loses it, eventually, and a wing mirror.",bad:"Nobody drives like that. The grey car follows you home.",wrong:{dm:-20,heat:14}},
     {t:"Have a word with the driver at the lights",req:{tech:["enforcer"]},pri:3,ok:"{X} walks back at the lights and says one sentence. The grey car turns off. Clear.",slow:"{X} has a word. The driver has a radio; the word is heard by more people than intended.",bad:"Nobody on the crew has that kind of word. The driver has a badge.",wrong:{dm:-26,jail:1,heat:14}},
     {t:"Confront them",pri:9,bad:"Two of them, one of you, and a badge. Somebody is taken.",wrong:{dm:-26,jail:1,heat:14}},
     {t:"Ignore it",pri:9,bad:"The grey car sees the whole job. Then its friends do.",wrong:{dm:-30,jail:1,heat:18}},
-    {t:"Call it off for today",pri:5,fallback:true,lose:0.5,ok:"You drive to a restaurant and eat slowly. The job happens tomorrow, for half."},
+    {t:"Call it off for today",pri:5,fallback:true,lose:0.5,bad:"You call it off from a car that could have been lost. Tomorrow the grey car is there again, and it has brought a friend.",ok:"You drive to a restaurant and eat slowly. The job happens tomorrow, for half."},
+   ]},
+  {k:"guard",cats:["vault","infiltration","recovery","sabotage","surveillance"],h:"A guard who isn't on the roster",
+   s:["A torch on the stairs. The roster said nobody until four; the torch says otherwise.","Footsteps in a corridor that was empty on every night you watched it. He is whistling, which means he hasn't seen you yet.","A guard, on the wrong floor, at the wrong hour, with a radio on his belt and a coffee in his hand."],
+   opts:[
+    {t:"Send the enforcer to have a quiet word",req:{tech:["enforcer"]},pri:1,ok:"{X} meets him on the landing. He decides he saw nothing, and means it. Clear.",slow:"{X} deals with him. It takes longer than a word should, and there is a mark on the wall.",bad:"Nobody on the crew is built for that. He sees four people and a bag, and reaches for the radio.",wrong:{dm:-22,jail:1,heat:12}},
+    {t:"Talk him into believing you belong there",req:{tech:["face","grifter","infiltrator"]},pri:2,ok:"{X} is the contractor from the lift company, annoyed at the hour. He apologises. Clear.",slow:"{X} talks him round. He wants a name for his log, and gets one that will not hold for long.",bad:"Nobody can bluff a man with a torch. He asks for a pass, and there isn't one.",wrong:{dm:-20,jail:1,heat:10}},
+    {t:"Lift his radio and keys as he passes",req:{tech:["pickpocket"]},pri:3,ok:"{X} brushes past him in the dark. He has no radio and no keys and doesn't know it yet. Clear.",slow:"{X} gets the radio. He notices the keys are gone before you are, and starts looking.",bad:"Nobody has hands like that. He feels the touch and turns round.",wrong:{dm:-18,jail:1,heat:10}},
+    {t:"Rush him",pri:9,bad:"He is faster to the radio than four people are to the stairs. A name is said into it.",wrong:{dm:-26,jail:1,hurt:1,heat:14}},
+    {t:"Hide and hope",pri:9,bad:"He finds the bag first, then the people it belongs to.",wrong:{dm:-28,jail:1,heat:14}},
+    {t:"Abort — out the back, empty-handed",pri:5,fallback:true,lose:1,bad:"You go out the back from a guard who could have been handled. He is quicker to the radio than you are to the door.",ok:"You go down the fire stairs while he goes up the main ones. Nobody is taken, nothing is paid."},
+   ]},
+  {k:"buyer",cats:["forgery","negotiation","smuggling","recovery","interception"],h:"The buyer is late",
+   s:["The buyer is forty minutes late and the goods are in the car, in a street with cameras. Every minute is a photograph.","The buyer's man calls: an hour, maybe two. You are sitting on the goods, in public, with a car that is starting to look parked.","The buyer hasn't come. The goods are in the boot, the boot is in a car park, and the car park has a man in a booth who has looked at you twice."],
+   opts:[
+    {t:"Have the lookout hold the street while you wait",req:{tech:["lookout"]},pri:1,ok:"{X} watches the street for an hour and calls it clean every ten minutes. The buyer comes. Clear.",slow:"{X} watches the street. A patrol goes past twice; the second time, slowly.",bad:"Nobody is watching. By the time the buyer comes, so has somebody else.",wrong:{dm:-20,jail:1,heat:12}},
+    {t:"Have the fixer find a second buyer, tonight",req:{tech:["fixer"]},pri:2,ok:"{X} makes three calls. A different buyer, a different car park, the same money. Clear.",slow:"{X} finds another buyer. Less money, and a long drive.",bad:"Nobody has a second buyer's number. You wait, in the open.",wrong:{dm:-16,heat:10}},
+    {t:"Move the goods to a lock-up and reschedule",req:{tech:["cleaner","quarter","smuggler"]},pri:3,ok:"{X} has a lock-up with a roof and no camera. The goods sleep there; the deal happens tomorrow. Clear.",slow:"{X} finds somewhere. Moving it twice costs an hour and a scratched crate.",bad:"There is nowhere to put it. It stays in the car, and the car stays in the street.",wrong:{dm:-16,heat:10}},
+    {t:"Wait in the car with the engine running",pri:9,bad:"An hour of an engine running is a thing people notice. One of them has a uniform.",wrong:{dm:-24,jail:1,heat:14}},
+    {t:"Leave the goods in the car and come back later",pri:9,bad:"The car is towed. The goods go with it, to a compound with a police desk.",wrong:{dm:-28,heat:12,lose:1}},
+    {t:"Call it off, keep the goods",pri:5,fallback:true,lose:1,bad:"You leave with the goods, from a street somebody could have watched for you. The buyer's man sees you go, and says so to somebody.",ok:"You drive away with the goods and without the fee. Nobody is taken."},
+   ]},
+  {k:"dog",cats:["smuggling","extraction","recovery","interception","sabotage"],h:"The dog",
+   s:["A dog at the fence that nobody mentioned, and it has decided about you.","Something big and quiet on the other side of the gate, watching, not yet barking. It was not in the file.","A dog on a chain long enough to matter, between the crew and the door."],
+   opts:[
+    {t:"The chemist has something for it",req:{tech:["chemist","medic"]},pri:1,ok:"{X} throws a rag over the fence. The dog is asleep in ninety seconds and fine by morning. Clear.",slow:"{X} sorts the dog. It takes two rags and five minutes of noise.",bad:"Nobody has anything for a dog. It has something for you.",wrong:{dm:-18,hurt:1,heat:8}},
+    {t:"The smuggler knows dogs",req:{tech:["smuggler","handler"]},pri:2,ok:"{X} walks up to the fence talking nonsense, and the dog decides you are the boring kind of stranger. Clear.",slow:"{X} settles the dog. It barks twice first, and a light goes on somewhere.",bad:"Nobody knows dogs. It knows you.",wrong:{dm:-18,hurt:1,heat:8}},
+    {t:"Go over somewhere the dog isn't",req:{tech:["climber","drone"]},pri:3,ok:"{X} finds the corner the chain doesn't reach and the wall it can't see. Clear.",slow:"{X} finds another way in. It is a long way round and a long way up.",bad:"Nobody can find another way in. There is the dog's way, and the dog.",wrong:{dm:-16,hurt:1,heat:8}},
+    {t:"Run past it",pri:9,bad:"Nobody outruns a dog. Somebody finds that out.",wrong:{dm:-24,hurt:1,heat:12}},
+    {t:"Deal with it, loudly",pri:9,bad:"The noise wakes the street. The street wakes the police.",wrong:{dm:-26,jail:1,heat:16}},
+    {t:"Go round the long way and lose an hour",pri:5,fallback:true,lose:0.5,bad:"You go the long way round a dog that could have been settled. The long way has a fence, and the fence has a light.",ok:"You go the long way. It costs an hour, and the hour costs half the take."},
+   ]},
+  {k:"power",cats:["vault","cyber","sabotage","surveillance","infiltration","forgery"],h:"The power goes",
+   s:["Every light in the building goes out at once, and so does the plan that needed them on.","The screens go black, the lift stops between floors, and somewhere a battery-backed alarm starts thinking about it.","The street goes dark, the building goes dark, and four people stand very still in it."],
+   opts:[
+    {t:"The electrician finds the generator",req:{tech:["electrician"]},pri:1,ok:"{X} has the building on its own generator in three minutes, and the alarm never wakes. Clear.",slow:"{X} finds the generator. It takes ten minutes of dark, and the dark is loud.",bad:"Nobody knows where a generator would be. You work by phone light, badly.",wrong:{dm:-18,hurt:1,heat:8}},
+    {t:"Change the plan to one that works in the dark",req:{tech:["hacker","safecracker"]},pri:2,ok:"{X} says the dark is a gift: no cameras, no locks that need power. It is. Clear.",slow:"{X} makes a new plan in the dark. It is slower than the old one by a long way.",bad:"Nobody knows how to work without the lights. Things are dropped.",wrong:{dm:-16,hurt:1,heat:8}},
+    {t:"Overwatch calls the street while you wait",req:{tech:["overwatch","lookout"]},pri:3,ok:"{X} says the whole district is dark and nobody is coming for one building. The power is back in twenty. Clear.",slow:"{X} calls it. The wait is longer than called, and a van comes to look at the substation.",bad:"Nobody knows if this is the street or the building. You wait blind.",wrong:{dm:-20,jail:1,heat:10}},
+    {t:"Carry on in the dark",pri:9,bad:"The plan was drawn for a lit building. Somebody falls. Something breaks.",wrong:{dm:-22,hurt:1,heat:10}},
+    {t:"Wait for it to come back",pri:9,bad:"It comes back with a maintenance crew and a police escort.",wrong:{dm:-28,jail:1,heat:14}},
+    {t:"Leave with what's in hand",pri:5,fallback:true,lose:0.6,bad:"You leave in a dark that somebody could have lit, with half the bags and a torch that goes on at the wrong moment.",ok:"You take what is in the bags and leave by the stairs. Some of it was the point; most of it wasn't."},
+   ]},
+  {k:"phone",cats:["extraction","escort","surveillance","negotiation","recovery"],h:"A phone in the bag",
+   s:["Something in the bag is ringing. Nobody on the crew put a phone in the bag.","A buzz from under the seat, from a phone nobody owns. Somebody is calling it, and somebody knows where it is.","The bag has a phone in it that was not there when the bag was packed. It has a signal, and a caller."],
+   opts:[
+    {t:"Signals finds the tracker and kills it",req:{tech:["signals","hacker"]},pri:1,ok:"{X} has it in bits in forty seconds and the SIM in a drain. Whoever is calling is calling a puddle. Clear.",slow:"{X} kills it. It had been talking for a while before it stopped.",bad:"Nobody knows what to do with it. It keeps ringing, and keeps reporting.",wrong:{dm:-22,jail:1,heat:14}},
+    {t:"The cleaner dumps it somewhere useful",req:{tech:["cleaner","pickpocket"]},pri:2,ok:"{X} drops it in the pocket of a man boarding a coach to the coast. Whoever follows it follows him. Clear.",slow:"{X} gets rid of it. Somewhere close, which is not the same as somewhere useful.",bad:"Nobody thinks to move it. It travels with you, to the safe house.",wrong:{dm:-24,jail:1,heat:16}},
+    {t:"Change the route, now",req:{tech:["wheelman","analyst"]},pri:3,ok:"{X} turns off the plan and onto a road nobody would pick. The phone goes in a bin at a petrol station. Clear.",slow:"{X} changes the route. The phone has already said where you were heading.",bad:"Nobody knows another route. You drive the planned one with a phone that knows it.",wrong:{dm:-20,jail:1,heat:12}},
+    {t:"Answer it",pri:9,bad:"A voice asks who this is. Then the voice knows.",wrong:{dm:-24,jail:1,heat:14}},
+    {t:"Throw it out of the window and carry on",pri:9,bad:"It lands on the route. Whoever is watching now has the route.",wrong:{dm:-22,jail:1,heat:14}},
+    {t:"Stop, strip everything, start again",pri:5,fallback:true,lose:0.5,bad:"You stop on a verge to strip the bags, with a phone somebody could have killed in forty seconds. It has already said where the verge is.",ok:"You pull over, empty every bag onto a verge, and leave the phone in the grass. An hour gone; half the night with it."},
+   ]},
+  {k:"boat",cats:["smuggling","extraction","recovery","escort"],h:"The boat isn't there",
+   s:["The quay is empty. The boat that was to be here at two is not here at two, or at half past.","The mooring is bare rope and a gull. No boat, no message, and a tide that will not wait.","There is a boat at the quay. It is the wrong boat, and its crew is asleep and not yours."],
+   opts:[
+    {t:"The skipper finds another way off the water",req:{tech:["skipper","diver"]},pri:1,ok:"{X} knows a fisherman two coves along who owes something. You are at sea by three. Clear.",slow:"{X} finds a boat. It is slower and smaller, and it is nearly dawn when it leaves.",bad:"Nobody knows the coast. You stand on a quay waiting for a boat that has been sold.",wrong:{dm:-22,jail:1,heat:12}},
+    {t:"The smuggler's man with a truck",req:{tech:["smuggler","fixer"]},pri:2,ok:"{X} makes a call. A truck comes instead of a boat; the border it crosses is a different one. Clear.",slow:"{X} finds a truck. It is a long drive and a nervous driver.",bad:"Nobody has a man with a truck. You are on foot on a coast road at three in the morning.",wrong:{dm:-20,jail:1,heat:12}},
+    {t:"The pilot's strip up the coast",req:{tech:["pilot"]},pri:3,ok:"{X} has a strip forty minutes north and a plane that will start. Clear.",slow:"{X} gets you airborne. Late, and low on fuel.",bad:"Nobody flies. The sea stays the only way out, and there is no boat on it.",wrong:{dm:-20,jail:1,heat:10}},
+    {t:"Wait on the quay",pri:9,bad:"The boat doesn't come. A patrol launch does.",wrong:{dm:-28,jail:1,heat:16}},
+    {t:"Swim for the other boat",pri:9,bad:"The water is colder than it looked and the other boat has a crew. Somebody doesn't make it aboard.",wrong:{dm:-26,hurt:1,jail:1,heat:12}},
+    {t:"Drive inland, try another border next week",pri:5,fallback:true,lose:0.5,bad:"You drive inland from a coast somebody knew a way off. The inland road has a checkpoint the coast did not.",ok:"You drive inland and sit on the cargo for a week. Half of it is still worth something by then."},
+   ]},
+  {k:"kid",cats:["sabotage","vault","recovery","interception","forgery","surveillance"],h:"A kid on a bike",
+   s:["A kid on a bike has stopped at the end of the street and is watching, and is not going anywhere.","There is a boy of about twelve on the wall opposite, eating crisps and looking straight at the van.","A kid with a bike and a phone, at the corner, taking an interest. Kids remember plates."],
+   opts:[
+    {t:"Give the kid a job",req:{tech:["face","grifter","handler"]},pri:1,ok:"{X} hands the kid twenty and a task: watch that corner and shout if a police car comes. The kid is crew now. Clear.",slow:"{X} talks to the kid. The kid takes the money and tells a friend, and the friend tells a friend.",bad:"Nobody knows how to talk to a kid. He takes a photo and goes home.",wrong:{dm:-18,heat:12}},
+    {t:"The lookout reads him and waits",req:{tech:["lookout","overwatch"]},pri:2,ok:"{X} says bored, not curious: four minutes. In four minutes the kid is gone. Clear.",slow:"{X} calls it. The kid stays longer than called, and the clock runs.",bad:"Nobody can read a child. You wait, and he doesn't leave.",wrong:{dm:-16,heat:10}},
+    {t:"A word with the family, through the fixer",req:{tech:["fixer"]},pri:3,ok:"{X} knows the kid's uncle, and the uncle needs the kid at home. Clear.",slow:"{X} finds the family. It takes a phone call and a favour that will be asked back.",bad:"Nobody knows the family. The kid stays on his wall.",wrong:{dm:-16,heat:10}},
+    {t:"Chase him off",pri:9,bad:"He goes home fast and comes back with a parent and a phone number for the police.",wrong:{dm:-24,jail:1,heat:14}},
+    {t:"Ignore him",pri:9,bad:"By morning the police have a description that includes the colour of everyone's shoes.",wrong:{dm:-20,heat:16}},
+    {t:"Pack up, come back tomorrow",pri:5,fallback:true,lose:0.5,bad:"You pack up in front of a kid who could have been talked to. He tells his mother what he saw, and his mother tells a neighbour with a uniform.",ok:"You pack up like men who have finished a shift. Tomorrow the kid is at school, and the job is worth half."},
+   ]},
+  {k:"envelope",cats:["negotiation","forgery","cyber","recovery","smuggling"],h:"The money is short",
+   s:["The envelope is light by a third, and the buyer's man is already smiling.","You count it twice. It is not what was said, and the man who handed it over is waiting to see what you do about that.","The money is on the table and it is the wrong shape. Two-thirds of a fee, and a face that knows it."],
+   opts:[
+    {t:"The enforcer makes the position clear",req:{tech:["enforcer"]},pri:1,ok:"{X} stands up. The rest of the money is in the car, it turns out. Clear.",slow:"{X} makes the point. The money comes, and so does a grudge.",bad:"Nobody on the crew can stand up like that. The smile widens.",wrong:{dm:-16,heat:8,lose:0.33}},
+    {t:"Talk it back up",req:{tech:["face","grifter"]},pri:2,ok:"{X} explains, kindly, what happens to buyers who short a crew, and the buyer's man agrees it would be a shame. Full fee. Clear.",slow:"{X} gets most of it back, and a promise about the rest that nobody believes.",bad:"Nobody talks like that. You take the short money and the lesson.",wrong:{dm:-14,heat:6,lose:0.33}},
+    {t:"The launderer takes the rest in kind",req:{tech:["launderer","analyst"]},pri:3,ok:"{X} takes the difference in an invoice, a car and a favour, and comes out ahead on paper. Clear.",slow:"{X} makes up the difference. It takes a week and a lawyer.",bad:"Nobody knows how to take money that isn't cash. The gap stays a gap.",wrong:{dm:-14,heat:6,lose:0.33}},
+    {t:"Take the goods back by force",pri:9,bad:"They have more people in the car than you thought. Gunfire, and a car park with one exit.",wrong:{dm:-30,jail:1,hurt:1,heat:18}},
+    {t:"Refuse and wait for the rest",pri:9,bad:"The rest never comes. The police do; somebody made a call while you waited.",wrong:{dm:-26,jail:1,heat:14}},
+    {t:"Take what's there",pri:5,fallback:true,lose:0.33,bad:"You take two-thirds from a man somebody could have stood up to, and he tells the next buyer what you settle for.",ok:"You take two-thirds and leave with everyone. It is a bad price and a whole crew."},
    ]},
 ];
 function reqMet(req,team){
@@ -2283,7 +2370,7 @@ function makeTwist(job,team,rng){
   const sub={M:M?M.first:"one of the crew"};
   const opts=T.opts.map(o=>Object.assign({},o,{t:fill2(o.t,sub)}));
   for(let i=opts.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));const tmp=opts[i];opts[i]=opts[j];opts[j]=tmp;}
-  return {k:T.k,h:fill2(T.h,sub),s:fill2(T.s,sub),opts,mId:M?M.id:null};
+  return {k:T.k,h:fill2(T.h,sub),s:fill2(pick(rng,[].concat(T.s)),sub),cue:pick(rng,TWIST_CUE),opts,mId:M?M.id:null};
 }
 function twistCorrect(tw,team){
   let best=null;
@@ -2335,7 +2422,7 @@ function startJob(job,opts){
     crewId:cr?cr.id:null,crewName:cr?cr.name:null,leadId:cr?cr.leadId||null:null,memberIds:members?members.map(c=>c.id):null};
   S.pendingJob=P;
   const d={id:job.id+"-w"+S.week+(cr?"-c"+cr.id:""),week:S.week,job:P.job,crew:P.crewName,narrative:pre.lines.slice(),revealed:0,done:false,twist:twist?{h:twist.h,s:twist.s,opts:twist.opts.map(o=>o.t)}:null,awaiting:false,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}};
-  if(twist)d.narrative.push({t:"— —",x:"Then it goes wrong.",tone:"bad",twist:true});
+  if(twist)d.narrative.push({t:"— —",x:twist.cue||"Then it goes wrong.",tone:"bad",twist:true});
   else finishJob(P,null,d);
   save();
   return d;
@@ -2487,7 +2574,7 @@ function finishJob(P,choiceIdx,d){
   bondUpdate(team,tier,job);
   const post=narrate(job,a,tier,rng,{leaked:P.leaked,fallout,betrayals,heatGain,take,cuts,net},"post",P.clock);
   const narrative=P.pre.slice();
-  if(P.twist){narrative.push({t:"— —",x:"Then it goes wrong.",tone:"bad",twist:true});if(twLine)narrative.push(twLine);}
+  if(P.twist){narrative.push({t:"— —",x:P.twist.cue||"Then it goes wrong.",tone:"bad",twist:true});if(twLine)narrative.push(twLine);}
   post.lines.forEach(l=>narrative.push(l));
   S.jobs=S.jobs.filter(j=>j.id!==job.id);
   if(job.big){bigDone()[job.id]=S.week;stats().big=(stats().big||0)+1;}
@@ -2779,7 +2866,7 @@ function load(){
     // a job left mid-decision picks up exactly there: the report so far, then the six options
     const P=S.pendingJob;
     if(P&&P.twist&&Array.isArray(P.pre)){
-      const narrative=P.pre.slice();narrative.push({t:"— —",x:"Then it goes wrong.",tone:"bad",twist:true});
+      const narrative=P.pre.slice();narrative.push({t:"— —",x:P.twist.cue||"Then it goes wrong.",tone:"bad",twist:true});
       S.modal={type:"result",data:{id:P.jobId+"-w"+P.week,week:P.week,job:P.job,narrative,revealed:narrative.length,done:false,
         twist:{h:P.twist.h,s:P.twist.s,opts:P.twist.opts.map(o=>o.t)},awaiting:true,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}}};
     } else if(P){S.pendingJob=null;}
@@ -4722,7 +4809,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 48 · 17 September 2026";
+const BUILD="build 49 · 17 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
@@ -5237,6 +5324,15 @@ const TRIP_OUT=[
   "You go by train where you can. Trains ask fewer questions than airports.",
   "A cheap seat, an aisle, a book you do not read. {city} by evening.",
   "You take the long way — a connection through somewhere nobody would fly to on purpose.",
+  "A dawn flight, a window seat, and a city you have never seen from above. {city}, by lunch.",
+  "You drive, because a hire car has no passenger list. Two days, one border, no questions.",
+  "You fly in under a name that has a dentist's appointment next week, in case anyone checks.",
+  "The overnight train. You share a compartment with a man who talks about tractors, and it is restful.",
+  "Economy, the middle seat, a neighbour who sleeps on your shoulder. {city} does not care how you arrived.",
+  "One flight, one taxi, one hotel that takes cash. You are in {city} with a day in hand.",
+  "You come in by ferry, because ferries are for people with nothing to hide, and that is what you are this week.",
+  "The flight is delayed four hours. You read the file on {F} twice and learn nothing new either time.",
+  "You arrive in {city} in the rain, which suits it, with a suitcase that is mostly empty.",
 ];
 const TRIP_LOOK=[
   "The address in the file is a shop that closed. The number behind it still rings.",
@@ -5247,23 +5343,35 @@ const TRIP_LOOK=[
   "A car park on the fourth level. {F} is already there when you arrive.",
   "A bench by the water. {F} brings coffee for two and a newspaper for nobody.",
   "The back room of a garage. Somebody is working on an engine and does not look up.",
+  "{F} names a bookmaker's on a street with no name. You find it by the smell.",
+  "A hotel bar that has been expensive since before either of you was born. {F} chose it; {F} is paying, which is a message.",
+  "You meet at the station buffet, where nobody sits long enough to listen.",
+  "A rooftop bar, half full of people taking photographs of themselves. Nobody photographs you.",
+  "The meeting is in a launderette. {F} is folding shirts and does not stop.",
+  "A bench in a cemetery, which {F} says is the one place in {city} where nobody asks questions.",
+  "A restaurant with no menu. {F} orders for both of you, and the food is very good.",
+  "A taxi rank at midnight. {F} is the driver of the third cab.",
+  "{F} says a football ground, a stand and a row. The match is a bad one and the talk is good.",
+  "You are given a time and a bridge. {F} arrives from the other side, on foot, unhurried.",
 ];
 // One beat that is about the country and nowhere else, built from what the file on it says.
+// Each condition has a few ways of saying itself, so the same country reads differently twice.
 function tripPlaceLine(co,rng){
   if(!co)return "";
   const bits=[];
-  if(co.gate===2)bits.push("The visa took a week and a story. The man at the desk in {city} reads it twice and stamps it anyway.");
-  else if(co.gate===1)bits.push("The border is a queue and a question about business. Business is a conference nobody can check.");
-  else bits.push("You are through the border in ninety seconds. Nobody asks a thing.");
-  if(co.auth)bits.push("There is a camera on every corner in {city} and a second one watching the first.");
-  if(co.terrain.indexOf("megacity")>=0)bits.push("Nine million people, which is the best cover there is.");
-  if(co.terrain.indexOf("islands")>=0)bits.push("A ferry, then a smaller ferry. Nobody comes to {city} by accident.");
-  if(co.terrain.indexOf("mountains")>=0)bits.push("The road climbs for two hours. There is exactly one way in and the same way out.");
-  if(co.terrain.indexOf("desert")>=0)bits.push("Forty degrees at four in the afternoon. Nobody meets anybody before dark.");
-  if(co.eco===1)bits.push("Everything costs nothing and everybody wants paying in {cur}.");
-  else if(co.eco===3)bits.push("The coffee alone costs what a week does elsewhere. {cur}, and they keep the receipt.");
-  bits.push("You change money badly, twice, so that nobody has a record of one large exchange.");
-  return pick(rng,bits);
+  const one=arr=>bits.push(pick(rng,arr));
+  if(co.gate===2)one(["The visa took a week and a story. The man at the desk in {city} reads it twice and stamps it anyway.","Two forms, a photograph and an interview about a conference. The stamp, when it comes, is a relief.","The visa is real and the reason for it isn't. Nobody at the desk in {city} can tell the difference."]);
+  else if(co.gate===1)one(["The border is a queue and a question about business. Business is a conference nobody can check.","Passport, purpose, how long. Business, a week. The stamp is already in the air.","The officer at {city} wants a hotel name. You have one, and it exists."]);
+  else one(["You are through the border in ninety seconds. Nobody asks a thing.","A nod, a stamp, a door. The country does not care why you came.","No queue, no question. You could have brought anything."]);
+  if(co.auth)one(["There is a camera on every corner in {city} and a second one watching the first.","Uniforms in pairs on every square, and a policeman in every hotel lobby who is not a guest.","You are photographed at the airport, the hotel and the café. You smile at none of them."]);
+  if(co.terrain.indexOf("megacity")>=0)one(["Nine million people, which is the best cover there is.","{city} is too big to be watched. That is the whole of its charm.","A city so large nobody is a stranger, because everybody is."]);
+  if(co.terrain.indexOf("islands")>=0)one(["A ferry, then a smaller ferry. Nobody comes to {city} by accident.","The last boat of the day, and everybody on it knows everybody but you.","{city} is a harbour and a hill. Nobody arrives here unnoticed, so you make sure to be boring."]);
+  if(co.terrain.indexOf("mountains")>=0)one(["The road climbs for two hours. There is exactly one way in and the same way out.","Switchbacks, then snow, then {city}, which is smaller than its name.","The bus stops at a pass with a shrine on it. Everyone crosses themselves. You do too."]);
+  if(co.terrain.indexOf("desert")>=0)one(["Forty degrees at four in the afternoon. Nobody meets anybody before dark.","The heat is a wall you walk into leaving the airport. {city} does its business at night.","Dust on everything, including the coffee. The meeting waits for the sun to go."]);
+  if(co.eco===1)one(["Everything costs nothing and everybody wants paying in {cur}.","A hotel room for the price of a coffee at home, and a coffee for the price of a look.","{cur}, in small notes, and a lot of them. You carry a bag for the money."]);
+  else if(co.eco===3)one(["The coffee alone costs what a week does elsewhere. {cur}, and they keep the receipt.","{city} charges for air. You pay in {cur} and try not to count.","The hotel wants a card. You give it cash and a smile, and the smile costs extra."]);
+  one(["You change money badly, twice, so that nobody has a record of one large exchange.","You buy a local SIM from a man who does not want to see a passport.","You walk the city for a day with nothing to do, which is the job.","You eat where the taxi drivers eat, and learn more than the file had."]);
+  return freshPick(rng,bits);
 }
 const TRIP_READ=[
   "{F} is smaller than the file says, and reads you before you have sat down.",
@@ -5272,20 +5380,48 @@ const TRIP_READ=[
   "{F} does not ask what the job is. {F} asks who else is on the crew.",
   "{F} orders nothing and keeps both hands on the table.",
   "{F} talks for ten minutes about nothing at all, watching what you do with the time.",
+  "{F} is exactly what the file says, which is rarer than it should be.",
+  "{F} looks at your hands before your face, and then at the door.",
+  "{F} brings a dog, which sits under the table and takes an interest in your shoes.",
+  "{F} has done this before, many times, and lets you see that.",
+  "{F} is younger than the photograph and older than the voice on the phone.",
+  "{F} asks about the flight, the hotel and the weather, and none of the answers matter.",
+  "{F} wants to know who told you the name, and you tell the truth, because {F} already knows.",
+  "{F} takes the chair with its back to the wall, and you take the other one, and that is settled.",
+  "{F} has a scar the file didn't mention and a laugh it didn't either.",
+  "{F} is tired in the way people are when they have been waiting for a call like yours.",
 ];
 const TRIP_TALK={
   lang:["You do it in {L}, which {F} was not expecting, and it changes the room.",
-    "You speak {L} badly and {F} lets you, which is its own kind of answer."],
+    "You speak {L} badly and {F} lets you, which is its own kind of answer.",
+    "You order in {L}, and {F} stops looking at the door.",
+    "{F} tests you with a phrase from home. You have the answer, and it is the right one.",
+    "The waiter speaks to you in {L}, you answer in {L}, and {F} sits back."],
   rep:["{F} has heard the name. {F} does not say where, and you do not ask.",
-    "“I know what your crew did,” {F} says. It is not a compliment, and it is not a refusal."],
+    "“I know what your crew did,” {F} says. It is not a compliment, and it is not a refusal.",
+    "{F} asks about a job you did two years ago, by its city. The name has travelled.",
+    "“Your crew,” says {F}, and does not finish the sentence, because it does not need finishing.",
+    "{F} has a friend who worked with you once. The friend said enough."],
   nobody:["{F} has not heard of you, and says so, in the voice people use for that.",
-    "“Who are you, exactly,” {F} says, and it is not a question."],
+    "“Who are you, exactly,” {F} says, and it is not a question.",
+    "{F} asks who you are working for, and does not believe the answer, which is that nobody is.",
+    "“I have never heard of you,” {F} says, and waits to be told why that should change.",
+    "{F} looks at you like a stranger, because you are one."],
   face:["{G} does the talking. {G} is better at it than you and everybody at the table knows it.",
-    "You bring {G}, who talks about the weather until {F} relaxes."],
+    "You bring {G}, who talks about the weather until {F} relaxes.",
+    "{G} tells a story about a border and a goat, and by the end of it {F} is laughing and the fee is agreed.",
+    "You let {G} lead. {G} finds the one thing {F} wants to hear, and says it.",
+    "{G} and {F} know a man in common. After that it is two friends and a spare."],
   charm:["You are good at this. It is the one thing the file on you would say.",
-    "You let {F} do most of it, and agree in the right places."],
+    "You let {F} do most of it, and agree in the right places.",
+    "You make {F} laugh once, early, and the rest is easy.",
+    "You listen more than you talk, and {F} notices, and likes it.",
+    "You say the fee out loud before {F} asks, and {F} respects that."],
   record:["You put the record on the table. {n} jobs. {F} reads it twice.",
-    "{F} asks what happened to the last person in this trade. You tell the truth, and it helps."],
+    "{F} asks what happened to the last person in this trade. You tell the truth, and it helps.",
+    "{F} asks how many came home from the last one. All of them, you say, and it is true.",
+    "You tell {F} about the one that went wrong, first. It is the right order.",
+    "{F} names a city. You name the job, the crew and what it paid. {F} nods."],
 };
 const TRIP_SIGN=[
   "{F} signs nothing, because nobody signs anything. {F} says a day and a place.",
@@ -5293,14 +5429,34 @@ const TRIP_SIGN=[
   "“All right,” says {F}. That is the whole of it.",
   "{F} finishes the coffee, stands, and asks where the crew is working next.",
   "{F} writes a number on a receipt and pushes it across. That is the yes.",
+  "{F} says nothing, finishes the drink, and asks what week.",
+  "{F} shakes your hand once, hard, and the deal is that.",
+  "“Send the flight,” {F} says, which is a yes with a condition.",
+  "{F} asks two questions about the crew and one about the money, and is satisfied by the answers.",
+  "{F} looks at the envelope, does not touch it, and says where to be on Monday.",
+  "{F} says yes in the voice people use for a thing already decided.",
+  "{F} takes the fee and the bill, which is a kind of yes you do not argue with.",
 ];
 const TRIP_HOME=["You are back by Friday, with one more name on the books.",
   "The flight home is the first time you sleep all week.",
   "You come home the slow way and nobody follows you.",
-  "By the weekend {F} is on the payroll and the crew has a trade it did not have."];
+  "By the weekend {F} is on the payroll and the crew has a trade it did not have.",
+  "Home on the Friday, with a name and a number and no photograph, because {F} does not do photographs.",
+  "You sleep on the plane for the first time in your life.",
+  "The border on the way back asks nothing. It never does, going home.",
+  "{F} is on a flight a day behind yours and arrives before you have unpacked.",
+  "A week gone, one seat filled. The crew is what it was, plus one.",
+  "You fly home with an empty envelope and a full crew."];
 const TRIP_NO=["You fly home with the fee still in your pocket, which is no comfort at all.",
   "The week is gone. That is what it cost.",
-  "You come home with nothing, and a week off the calendar."];
+  "You come home with nothing, and a week off the calendar.",
+  "No. {F} says it kindly, which does not make the flight home shorter.",
+  "You come home with the fee, a bad meal and a lesson about {F}.",
+  "Seven days, two flights, and the same crew you left with.",
+  "{F} says maybe, which is what no sounds like from a polite person.",
+  "The seat on the plane home is the same seat. The crew is the same crew.",
+  "A week in {city} and nothing to show for it but a tan and a receipt.",
+  "You leave {city} with the money and without the name. There are other names."];
 
 // How much trouble this file is to recruit. Both ends of the roster are difficult, for opposite
 // reasons: the desperate and the unreliable make a mess of it, and a Legend makes you earn it.
@@ -5341,16 +5497,17 @@ function tripKit(c){
   };
 }
 // The snags. Each is a real meeting going wrong, with options the crew you have can or cannot
-// take — and one of them is always to get on a plane and keep your money.
+// take — and one of them is always to get on a plane and keep your money. s is one setup or
+// several to choose from.
 const TRIP_SNAGS=[
-  {k:"noshow",h:"Nobody comes",s:"{F} does not arrive. The phone rings out. You are in a bar in {city} with a fee in your pocket and no idea whether you have been stood up or sold.",
+  {k:"noshow",h:"Nobody comes",s:["{F} does not arrive. The phone rings out. You are in a bar in {city} with a fee in your pocket and no idea whether you have been stood up or sold.","The bar closes at one. {F} has not come, has not called, and the number in the file now rings a fax machine.","Three hours at a table for two. The waiter has stopped asking. {F} is somewhere in {city}, or isn't."],
    opts:[
     {t:"Wait it out — another day, another hotel",pri:2,eff:{money:-3000},ok:"{F} turns up thirty hours late with no explanation and no apology. It is not a good start, and it is a start.",sign:true},
     {t:"Have the fixer ask who moved them",req:{tech:"fixer"},pri:1,ok:"{X} makes two calls. {F} was picked up on Tuesday over something small and released. You are waiting outside when it happens.",sign:true,eff:{money:-5000}},
     {t:"Go to the address in the file",pri:3,ok:"{F} is at home, and is not pleased to learn you know that. It works, and it is remembered.",sign:true,eff:{heat:6,loy:-8}},
     {t:"Go home",pri:9,ok:"You leave the city the same night. Whatever happened to {F}, it is not your week any more.",sign:false},
    ]},
-  {k:"price",h:"The number has moved",s:"{F} listened to all of it and then named a figure well above the file. “That was last year's price,” {F} says, and waits.",
+  {k:"price",h:"The number has moved",s:["{F} listened to all of it and then named a figure well above the file. “That was last year's price,” {F} says, and waits.","{F} hears the fee and laughs, not unkindly, and names a figure with another digit on it.","“The number in your file is old,” {F} says, and slides a napkin across with a newer one."],
    opts:[
     {t:"Pay it",pri:3,ok:"You pay it. {F} is worth it or {F} is not; either way the crew is one bigger.",sign:true,eff:{moneyMul:0.55}},
     {t:"Talk them down",req:{attr:"charm",min:58},pri:1,ok:"You talk for twenty minutes and end at the original number plus a dinner. {F} respects it more than the money.",sign:true,eff:{money:-2000}},
@@ -5358,46 +5515,68 @@ const TRIP_SNAGS=[
     {t:"Offer a bigger cut instead of a bigger fee",pri:2,ok:"{F} takes two points more of every score rather than cash today. Cheaper this week; more expensive for years.",sign:true,eff:{cut:0.02}},
     {t:"Walk",pri:9,ok:"You put the money away and stand up. {F} lets you go, which tells you the figure was never real.",sign:false},
    ]},
-  {k:"plusone",h:"{F} brings somebody",s:"{F} arrives with a second person who is not introduced, sits down anyway, and does not take their coat off.",
+  {k:"plusone",h:"{F} brings somebody",s:["{F} arrives with a second person who is not introduced, sits down anyway, and does not take their coat off.","There are two chairs and {F} brings three people. The third one watches the door and never says a word.","{F} has a friend along. The friend is introduced as nobody, which is the kind of nobody who is somebody."],
    opts:[
     {t:"Have the enforcer make the position clear",req:{tech:"enforcer"},pri:1,ok:"{X} says four words. The second person remembers an appointment. {F} does not mention it again.",sign:true},
     {t:"Talk as though there are two of you and three of them",req:{attr:"nerve",min:60},pri:2,ok:"You carry on as if nothing is unusual, and by the end the second person is the one who looks out of place.",sign:true},
     {t:"Say nothing and take the meeting anyway",pri:4,ok:"It goes fine. Whoever that was now knows your face, your alias and roughly what you are building.",sign:true,eff:{heat:9}},
     {t:"Refuse and leave",pri:9,ok:"“On your own, or not at all.” {F} does not follow you out.",sign:false},
    ]},
-  {k:"watched",h:"Somebody is watching the bar",s:"The same car has been outside for forty minutes, and {F} noticed it before you did. Either {F} is being watched, or you are.",
+  {k:"watched",h:"Somebody is watching the bar",s:["The same car has been outside for forty minutes, and {F} noticed it before you did. Either {F} is being watched, or you are.","A man at the bar has drunk one beer for an hour and looked at the mirror more than the beer.","Two men in a van outside with the engine off and no delivery to make. {F} saw them first."],
    opts:[
     {t:"Move it — new place, one hour",pri:2,ok:"You finish the drink, leave separately and meet under a motorway. The car is still outside a bar with nobody in it.",sign:true,eff:{money:-2000}},
     {t:"Walk out on the forger's papers",req:{tech:"forger"},pri:1,ok:"{X} has papers for both of you by the time the bill comes. Two businessmen leave; nobody follows businessmen.",sign:true},
     {t:"Sit tight and finish it",pri:4,ok:"You finish the conversation with the car still there. It is a good conversation. It is also, probably, on somebody's file now.",sign:true,eff:{heat:14,det:6}},
     {t:"Abort — leave the city tonight",pri:9,ok:"You are on a train within the hour. Whatever that was, it is behind you, and so is {F}.",sign:false},
    ]},
-  {k:"test",h:"{F} wants to know who you are",s:"“Before anything,” {F} says, “tell me about the last job, and tell me what happened to the people on it.”",
+  {k:"test",h:"{F} wants to know who you are",s:["“Before anything,” {F} says, “tell me about the last job, and tell me what happened to the people on it.”","“Names,” says {F}. “The last crew. What happened to each of them.” {F} waits, and is not in a hurry.","{F} puts a phone on the table, face down, and asks about the last job as if the answer will be checked."],
    opts:[
     {t:"Put the record on the table",req:{jobs:8},pri:1,ok:"You go through it honestly, the bad ones included. {F} listens to all of it and puts a hand out.",sign:true},
     {t:"Let somebody who was there tell it",req:{tech:"face"},pri:2,ok:"{G} tells it better than it happened, and nothing {G} says is technically untrue.",sign:true},
     {t:"Lie",pri:4,ok:"You invent a clean record. {F} signs, and will find out, and will remember that you were the kind of person who did that.",sign:true,eff:{loy:-14}},
     {t:"Tell them it is none of their business",pri:9,ok:"“Then it is not my crew,” says {F}, and is gone before the coffee arrives.",sign:false},
    ]},
-  {k:"setup",h:"It is not a meeting",s:"There are three of them and one of you, the door behind you is now shut, and the man who was cleaning glasses has stopped.",
+  {k:"setup",h:"It is not a meeting",s:["There are three of them and one of you, the door behind you is now shut, and the man who was cleaning glasses has stopped.","The bar empties in the time it takes to order. {F} is not at the table. Three men are, and the door has a chair against it.","It is a back room, and the back room has no back. {F} is somewhere else; the people here are not."],
    opts:[
     {t:"Let the enforcer handle the room",req:{tech:"enforcer"},pri:1,ok:"{X} puts one of them through a table and the other two reconsider. {F} — who set it up — decides you are worth working for after all.",sign:true,eff:{heat:10}},
     {t:"Hand over the envelope and walk",pri:3,ok:"You give them the fee and leave with everything you arrived with except the money. It is the cheapest ending available.",sign:false,eff:{moneyAll:true}},
     {t:"Talk your way out",req:{attr:"charm",min:66},pri:2,ok:"You convince them you are the wrong man, and that the right one is worth more. They let you go to find him.",sign:false},
     {t:"Go through the kitchen",pri:4,ok:"You are out the back before the third one moves. You lose the fee, a sleeve and some skin.",sign:false,eff:{moneyAll:true,hurtYou:true,heat:8}},
    ]},
-  {k:"drunk",h:"{F} is not what the file says",s:"{F} has been drinking since lunch and the file's photograph is eight years old. Whatever this was, it is not what you flew for.",
+  {k:"drunk",h:"{F} is not what the file says",s:["{F} has been drinking since lunch and the file's photograph is eight years old. Whatever this was, it is not what you flew for.","{F} is four drinks in at two in the afternoon and calls you by somebody else's name.","The photograph in the file is a decade old, and the decade has not been kind. {F} orders another."],
    opts:[
     {t:"Sign them anyway, cheap",pri:3,ok:"{F} agrees to anything, including a smaller fee. You will find out on a job whether there is anything left in there.",sign:true,eff:{moneyMul:-0.35,attrHit:true}},
     {t:"Come back tomorrow and see who turns up",pri:2,ok:"Sober, {F} is closer to the file, and is quietly ashamed. That is worth more than the day it cost.",sign:true,eff:{weeks:1,loy:6}},
     {t:"Pay for the drinks and go",pri:9,ok:"You settle the tab, which is enormous, and leave {F} explaining something to the barman.",sign:false,eff:{money:-1500}},
    ]},
-  {k:"police",h:"A check at the hotel",s:"Two officers in the lobby at seven in the morning, going room by room. It is routine. You are not.",
+  {k:"police",h:"A check at the hotel",s:["Two officers in the lobby at seven in the morning, going room by room. It is routine. You are not.","A knock at seven. Two uniforms and a list, and your name on it under a different name.","The hotel manager calls up: the police are asking about foreign guests, and would you come down."],
    opts:[
     {t:"The forger's papers",req:{tech:"forger"},pri:1,ok:"You are a surveyor from a country nobody has strong feelings about. They wish you a good stay.",sign:true},
     {t:"Answer in {L}",req:{lang:true},pri:2,ok:"You answer in {L} without thinking about it, and they stop thinking about you.",sign:true},
     {t:"Pay the one who is doing the talking",pri:3,ok:"It costs, and it works, and now one officer in {city} would recognise you in a queue.",sign:true,eff:{money:-12000,heat:8,det:5}},
     {t:"Leave by the fire stairs and don't come back",pri:9,ok:"You are in a taxi before they reach the third floor. {F} is still in the city; you are not.",sign:false,eff:{heat:5}},
+   ]},
+  {k:"rival",h:"Somebody got here first",s:["There is a second envelope on the table, and it is not yours. Another crew made {F} an offer on Tuesday.","{F} has already had a better week than this one: another crew, another fee, and a decision that is nearly made.","A rival crew has been through {city} a day ahead of you. {F} mentions it before the coffee comes."],
+   opts:[
+    {t:"Match it",pri:3,ok:"You match the number and add a little. {F} takes yours because you are the one at the table.",sign:true,eff:{moneyMul:0.35}},
+    {t:"Talk about the work, not the money",req:{attr:"charm",min:60},pri:1,ok:"You tell {F} what the crew does and how it does it. The other envelope stays on the table, and {F} leaves it there.",sign:true},
+    {t:"Let {G} sell the crew",req:{tech:"face"},pri:1,ok:"{G} describes a crew that anyone would want to join, and it is mostly this one. {F} signs.",sign:true},
+    {t:"Have the fixer find out whose envelope it is",req:{tech:"fixer"},pri:2,ok:"{X} makes a call. It is a crew that will not exist by spring, and {F} would rather hear that from you than find out.",sign:true,eff:{money:-4000}},
+    {t:"Walk",pri:9,ok:"You leave the envelope and the table. {F} will work for somebody else this year.",sign:false},
+   ]},
+  {k:"hospital",h:"{F} is in hospital",s:["{F} is in a hospital across town with a broken arm and a police guard on the ward, which is a story nobody tells you.","A message at the hotel: {F} is on the fourth floor of the general hospital and would rather you did not visit. You visit.","{F} answers the phone from a hospital bed. It is nothing, {F} says, in the voice of somebody with a broken something."],
+   opts:[
+    {t:"Visit, with flowers and papers",req:{tech:"forger"},pri:1,ok:"{X} papers you as a cousin from abroad. The guard on the ward lets a cousin in. Twenty minutes, and a yes.",sign:true},
+    {t:"Wait for the discharge",pri:2,ok:"You take a room and wait a week. {F} walks out on the Thursday with a cast and a decision.",sign:true,eff:{weeks:1}},
+    {t:"Send the fee in with a nurse",pri:3,ok:"A nurse carries an envelope and a message. {F} sends back a yes and keeps the envelope, and the nurse keeps a little of it.",sign:true,eff:{money:-3000,loy:-4}},
+    {t:"Go home",pri:9,ok:"You leave {city} with the fee and a card you did not send.",sign:false},
+   ]},
+  {k:"family",h:"{F} has a family now",s:["{F} brings the kids to the meeting, which is a way of saying something without saying it.","{F}'s partner sits in on the meeting and asks the questions {F} would not.","{F} has a house, a mortgage and a school run, and lays all three on the table before the fee."],
+   opts:[
+    {t:"Talk to the partner",req:{attr:"charm",min:58},pri:1,ok:"You answer the partner's questions, all of them, honestly. The partner decides for {F}, and the answer is yes.",sign:true},
+    {t:"Offer a bigger cut and a promise about the crew",pri:2,ok:"{F} takes two points more of every score, and a promise that nobody comes back hurt if it can be helped. Nobody can help it always.",sign:true,eff:{cut:0.02}},
+    {t:"Say it's the same work as ever",pri:4,ok:"{F} signs anyway. The partner does not, and that is a conversation {F} will be having for years.",sign:true,eff:{loy:-10}},
+    {t:"Wish them well and go",pri:9,ok:"You say the right things and leave the fee in your pocket. Some people are better left at home.",sign:false},
    ]},
 ];
 function tripSnagFor(c,rng){
@@ -5435,21 +5614,21 @@ function startTrip(c){
     lines.push(L);};
   v.cur=co?co.cur:"cash";
   // you land, you walk the city for a day, then you sit down with them
-  push(pick(rng,TRIP_OUT),"","land","*");
+  push(freshPick(rng,TRIP_OUT),"","land","*");
   const pl=tripPlaceLine(co,rng);if(pl)push(pl,"","city");
-  push(pick(rng,TRIP_LOOK),"","city","YOU");
-  push(pick(rng,TRIP_READ),"","table","*");
-  if(kit.speaks)push(pick(rng,TRIP_TALK.lang),"","table","YOU","talk");
-  if(kit.face&&chance(rng,0.7))push(pick(rng,TRIP_TALK.face),"","table","YOU","phone");
-  else if(kit.charm>=62)push(pick(rng,TRIP_TALK.charm),"","table","YOU","talk");
-  if(S.rep>=RANKS.find(r=>r[1]==="Known")[0])push(pick(rng,TRIP_TALK.rep),"","table","YOU","talk");
-  else if(chance(rng,0.6))push(pick(rng,TRIP_TALK.nobody),"warn","table",c.id,"watch");
-  if(kit.jobs>=6&&chance(rng,0.5))push(pick(rng,TRIP_TALK.record),"","table",c.id,"paper");
+  push(freshPick(rng,TRIP_LOOK),"","city","YOU");
+  push(freshPick(rng,TRIP_READ),"","table","*");
+  if(kit.speaks)push(freshPick(rng,TRIP_TALK.lang),"","table","YOU","talk");
+  if(kit.face&&chance(rng,0.7))push(freshPick(rng,TRIP_TALK.face),"","table","YOU","phone");
+  else if(kit.charm>=62)push(freshPick(rng,TRIP_TALK.charm),"","table","YOU","talk");
+  if(S.rep>=RANKS.find(r=>r[1]==="Known")[0])push(freshPick(rng,TRIP_TALK.rep),"","table","YOU","talk");
+  else if(chance(rng,0.6))push(freshPick(rng,TRIP_TALK.nobody),"warn","table",c.id,"watch");
+  if(kit.jobs>=6&&chance(rng,0.5))push(freshPick(rng,TRIP_TALK.record),"","table",c.id,"paper");
   const trouble=tripTrouble(c);
   const snag=chance(rng,trouble)?tripSnagFor(c,rng):null;
   const P={cid:c.id,fee:c.fee,city,country:c.nat,pre:lines,day,hh,mm,week:S.week,
     postSeed:ri(rng,1,2000000000),trouble:Math.round(trouble*100),
-    snag:snag?{k:snag.k,h:fill2(snag.h,v),s:fill2(snag.s,v),opts:snag.opts.map(o=>fill2(o.t,Object.assign({},v,{G:kit.face?kit.face.first:"somebody",X:""})))}:null};
+    snag:snag?{k:snag.k,h:fill2(snag.h,v),s:fill2(pick(rng,[].concat(snag.s)),v),opts:snag.opts.map(o=>fill2(o.t,Object.assign({},v,{G:kit.face?kit.face.first:"somebody",X:""})))}:null};
   S.pendingTrip=P;
   const T={cid:c.id,name:c.n,first:c.first,city,country:c.nat,week:S.week,fee:c.fee,
     narrative:lines.slice(),revealed:0,done:false,awaiting:false,resolved:false,
@@ -5520,13 +5699,13 @@ function finishTrip(P,choiceIdx,T){
     if(cutAdd)c.cut=Math.round((c.cut+cutAdd)*1000)/1000;
     if(loy)c.loyalty=clamp(c.loyalty+loy,0,100);
     stats().hired++;
-    out.push({t:"— —",x:fill2(pick(rng,TRIP_SIGN),v),tone:"good",at:"deal",who:"*",act:"paper"});
-    out.push({t:"— —",x:fill2(pick(rng,TRIP_HOME),v),tone:"good",at:"deal",who:"*",act:"walk"});
+    out.push({t:"— —",x:fill2(freshPick(rng,TRIP_SIGN),v),tone:"good",at:"deal",who:"*",act:"paper"});
+    out.push({t:"— —",x:fill2(freshPick(rng,TRIP_HOME),v),tone:"good",at:"deal",who:"*",act:"walk"});
     logMsg("Hired "+c.n+" — "+TECH_BY_K[c.tech].l+", "+c.nat+", "+(c.role==="commander"?"commander":"soldier")+" ("+money(spend)+", one week in "+P.city+").","");
   } else {
     // a refusal is not permanent, but it is not this month either
     c.coolUntil=S.week+ri(rng,6,14);c._touched=true;
-    out.push({t:"— —",x:fill2(pick(rng,TRIP_NO),v),tone:"bad",at:"deal",who:"*",act:"down"});
+    out.push({t:"— —",x:fill2(freshPick(rng,TRIP_NO),v),tone:"bad",at:"deal",who:"*",act:"down"});
     logMsg("No deal with "+c.n+" in "+P.city+". A week gone"+(spend?", "+money(spend)+" with it":"")+".","warn");
   }
   const rngW=freshRng();
