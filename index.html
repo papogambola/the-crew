@@ -5112,7 +5112,7 @@ function lineupHTML(){
   return '<div class="lineup" aria-hidden="true">'
     +f.map(x=>'<div class="lu"><div class="lu-av">'+avatar(x.seed,x.gender,x.face)+'</div></div>').join("")
     +'</div><div class="lineup-rule"></div>'
-    +'<div class="lineup-cap">A crew of five · thousands of jobs</div>';
+    +'<div class="lineup-cap">Build your crew · Choose your jobs · Live with the consequences</div>';
 }
 
 function screenTitle(){
@@ -5218,7 +5218,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 50 · 17 September 2026";
+const BUILD="build 51 · 17 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
