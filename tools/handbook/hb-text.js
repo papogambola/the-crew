@@ -523,6 +523,12 @@ ch("between","Between jobs","The week that passes on its own",[
       "A raid, if the heat has reached the number.",
       "Every "+m("3 to 7")+" weeks, something that is not a job.",
     ])),
+  S("paper","The week's paper",
+    p("Every week opens with the paper: three to five headlines from around the world, drawn off the save and the week, so the same week always prints the same page. "
+      +"Most of it is colour — an election called, a port fogged in, a cup final. In some weeks one or two headlines reach the board, and the paper says so with "
+      +m("On the board")+" under the story: dockers on strike shut a port and put a quarter on the fee for smuggling there; a summit makes every job in the country harder and hotter; "
+      +"a bank holiday makes the vaults easier; a controllers' strike grounds everything by air for the week. A posting the paper touches carries "+m("In the news")+" on the board "
+      +"and says what changed on its file; a posting the paper shut cannot be run until next week. Next week's paper undoes this week's. The button in the top bar opens the paper again.")),
   S("events","Things that are not jobs",
     p("Eight kinds, each with several ways out, each with its odds written on it.")
     +G.events()

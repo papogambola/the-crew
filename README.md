@@ -243,6 +243,16 @@ decisions at the end.
   is the only answer that is certain, and the only one that also lifts the ban; paying a police
   desk settles a file, and paying your own man settles your own man. The board warns you it is
   coming: *and one of them is not finished with you*.
+- **The week's paper.** Every week opens with the news: three to five headlines from around
+  the world, drawn off the save and the week so a reload prints the same page. Most of it is
+  colour. In some weeks one or two headlines reach the board, marked **On the board** under the
+  story — a dock strike shuts a port and puts a quarter on the fee for smuggling there, a summit
+  makes every job in that country harder and hotter, a bank holiday makes the vaults easier, a
+  controllers' strike grounds everything by air for the week, a currency crash cuts every fee in
+  the country by a fifth. A posting the paper touches carries **In the news** on the board and
+  says what changed on its file; one the paper shut cannot be run until next week. Next week's
+  paper undoes this week's. The button in the top bar opens the paper again, and the news track
+  plays under it.
 - **Between jobs.** Every three to seven weeks something happens that is not a job: a death on
   holiday, a member gone without a word, one who wants out, one who has joined another crew
   and is buying yours drinks (someone may leave every week until it stops), an old face who
@@ -350,7 +360,7 @@ decisions at the end.
   tracks rotate under the live job report, one per job; three score the verdict — the quietest
   for a success, a middle one for a messy job, the loudest for a disaster — and loop while the
   report is open. A recruitment trip — go and ask — runs under the **trip pool** from the flight
-  out until the answer, and the week's news pop-up between jobs runs under the **news pool** while
+  out until the answer, and the week's paper runs under the **news pool** while
   it is up: each pool is drawn at random, a fresh tune each time one ends, never the one just
   played, and hands back to the hour of suspense when the screen closes. Each pool holds one tune
   today (`tension.mp3`, `news.mp3`, which loop); `tools/split_tunes.py` cuts a compilation on the
@@ -563,7 +573,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 56 · 17 September
+The footer of every screen, and the office header, carry a build stamp (`build 57 · 17 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

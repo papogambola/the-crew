@@ -438,6 +438,19 @@
   .twist-opt:disabled{color:var(--muted);border-color:var(--line-2);cursor:not-allowed;background:var(--paper-2)}
   .twist-opt.on{background:var(--ink);color:var(--paper)}
   .twist-opt.on b{color:var(--paper)}
+  /* ---- the week's paper ---- */
+  .modal.paper{max-width:640px;border-width:3px;outline:1px solid var(--ink);outline-offset:4px;background:var(--card)}
+  .nw-head{padding:14px 18px 10px;border-bottom:3px double var(--ink);text-align:center}
+  .nw-mast{font-family:var(--f-logo);font-size:44px;line-height:1;letter-spacing:.08em;color:var(--ink)}
+  .nw-date{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+  .nw-body{padding:6px 18px 4px}
+  .nw-item{padding:10px 0;border-bottom:1px solid var(--line)}
+  .nw-item:last-child{border-bottom:0}
+  .nw-h{font-family:var(--f-disp);font-size:19px;line-height:1.2;letter-spacing:.01em;text-wrap:balance}
+  .nw-hit .nw-h{font-weight:700}
+  .nw-sub{font-family:var(--f-mono);font-size:12px;color:var(--ink-2);margin-top:5px;line-height:1.6}
+  .nw-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 18px 14px;border-top:1px solid var(--line-2);flex-wrap:wrap}
+  .newsbtn{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;white-space:nowrap}
   /* ---- a milestone, announced in the middle of the screen ---- */
   .scrim.center{align-items:center}
   .modal.notice{max-width:560px;border-width:3px;outline:1px solid var(--ink);outline-offset:4px;animation:pop .2s ease-out}
@@ -1780,6 +1793,9 @@ function jobBrief(job){
 
 function refreshJobs(fill){
   const rng=mulberry32((S.seed^(S.week*2654435761))>>>0);
+  try{refreshJobsInner(fill,rng);}finally{newsSync();}
+}
+function refreshJobsInner(fill,rng){
   S.jobs=S.jobs.filter(j=>j.final||j.expires>=S.week);
   let guard=0;
   const want=7+(hasRetainer("fixer")?2:0);
@@ -2023,7 +2039,7 @@ function assessJob(job,members,leadId){
   const pAbove=t=>clamp((hi-t)/(hi-lo),0,1);
   const pGood=pAbove(BAL.vClean),pWin=pAbove(BAL.vSuccess),pFailish=pAbove(BAL.vMessy),pDis=pAbove(BAL.vBotched);
   return {team,checks,factors,power:Math.round(power),eff:Math.round(eff),margin:Math.round(margin),heatCut,
-    canRun:team.length>0&&team.length>=job.need,
+    canRun:team.length>0&&team.length>=job.need&&!(job.news&&job.news.closed),
     pClean:Math.round(pGood*100),pOk:Math.round((pFailish-pGood)*100),pFail:Math.round((pDis-pFailish)*100),pDis:Math.round((1-pDis)*100),
     pSuccess:Math.round((pWin-pGood)*100),pMessy:Math.round((pFailish-pWin)*100)};
 }
@@ -3054,7 +3070,9 @@ function render(){
   if(!S){musicRoute();root.innerHTML=screenTitle()+chrome();bind();fitTitle();return;}
   // a milestone reached is announced first; something that happened between jobs waits for a decision next
   checkMilestones();checkGoals();
+  newsSync();
   if(!TUT.on){   // nothing pops up under a tutorial; it all waits for the last card
+    if(S.news&&S.newsRead!==S.week&&!S.modal&&!S.over){S.modal={type:"news"};sfx("open");}
     if(S.notices&&S.notices.length&&!S.modal&&!S.over){S.modal={type:"notice"};sfx("stamp");}
     if(S.loose&&S.loose.length&&!S.modal&&!S.event&&!S.over){S.modal={type:"loose"};sfx("bad");}
     if(S.revenge&&!S.modal&&!S.over){S.modal={type:"revenge"};sfx("bad");}
@@ -3116,6 +3134,7 @@ function topbar(){
     +'<div class="heatwrap"><div class="stat" style="min-width:0"><span class="l">Heat '+Math.round(S.heat)+(S.heat>=100?" ⚠":"")+'</span>'
       +'<div class="heatbar'+(hot?" hot":"")+'"><i style="width:'+clamp(S.heat,0,100)+'%"></i></div></div></div>'
     +'<div class="spacer"></div>'
+    +(S.news?'<button class="btn ghost sm newsbtn" data-act="news-open" title="This week\'s paper">📰 The week'+(S.news.effects.length?' <span class="chip c-bad">'+S.news.effects.length+'</span>':'')+'</button>':'')
     +'</div></div>';
 }
 function tabsBar(){
@@ -3465,7 +3484,7 @@ function jobsList(){
       +'<div class="code">'+(j.final?"—":j.big?esc(j.id.slice(0,2)+"-"+j.id.slice(2)):"№"+j.id.slice(1).padStart(3,"0"))+'<br>'+diffbar(j.diff,j.heat>22)+'</div>'
       +'<div><div class="t">'+(j.final?'<span class="chip c-bad">Final score</span> ':j.big?'<span class="chip c-ink">Operation</span> ':'')+esc(j.title)+'</div>'
         +'<div class="loc">'+flagSvg(co)+' '+esc(j.city)+', '+esc(j.country)+' · crew of '+j.need+' · <span dir="ltr">'+(j.final?BAL.finalWeeks:(j.weeks||1))+' wk</span> · '+esc(co.langs[0])+' · from '+esc(j.client)+(j.final?'':' · expires wk '+j.expires)+(casedWeeks(j)?' · <span style="color:var(--good)">cased '+casedWeeks(j)+'</span>':'')+'</div>'
-        +'<div class="meta"><span class="tag">'+CAT_BY_K[j.cat].l+'</span>'+techs+' '+kn+' '+fit+'</div></div>'
+        +'<div class="meta"><span class="tag">'+CAT_BY_K[j.cat].l+'</span>'+techs+' '+kn+' '+fit+(j.news?' <span class="chip '+(j.news.closed?"c-bad":"c-warn")+' tip" tabindex="0" data-tip="'+esc(j.news.hits.join("\n"))+'">In the news · '+esc(newsWord(j.news))+'</span>':'')+'</div></div>'
       +'<div class="pay num">'+money(j.payout)+'<div class="loc" style="text-align:right">+'+j.heat+' heat</div></div></div>';
   }).join("");
   return '<div class="panel">'+head+banLine+filt+rows+'</div>';
@@ -3483,7 +3502,8 @@ function jobPanel(j){
     +esc(co.pol)+'; '+esc(co.rel.toLowerCase())+'. Terrain: '+co.terrain.join(", ")+'. '
     +(co.gate===2?'Strict border — weak passports and old convictions get turned back without papers. ':co.gate===1?'Visa border — limited passports need a forger aboard. ':'Open border. ')
     +(co.eco===1?'Money goes far here, but the fee is lower.':co.eco===3?'Rich ground; expect the client to pay well and the police to be well funded.':'')
-    +'</div>';
+    +'</div>'
+    +(j.news?'<div class="brief" style="border-left-color:var(--stamp)"><span class="client">In the news this week.</span> '+j.news.hits.map((h,i)=>esc(h)+' <b>'+esc(j.news.subs[i])+'</b>').join(" ")+(j.news.closed?' <b>This posting cannot be run until next week.</b>':'')+'</div>':'');
   // every requirement, checked against the crew that can actually go: green tick or red cross
   const has=t=>a.team.some(c=>c.tech===t),knows=k=>a.team.some(c=>c.know.includes(k));
   const speaks=a.team.some(c=>c.langs.some(l=>co.langs.includes(l)));
@@ -3592,7 +3612,7 @@ function jobPanel(j){
     +'<hr class="rule"><div class="kicker">Who goes</div>'+benchBar+checks+splitBlock+caseBlock
     +'<hr class="rule"><div class="kicker">The reckoning</div>'+factors+'<div style="margin-top:10px">'+odds+'</div>'+othersBlock
     +'<hr class="rule"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" data-act="close-job">Walk away</button>'
-    +'<button class="btn stamp" data-act="execute" data-id="'+j.id+'" '+(a.canRun?"":"disabled")+'>'+(a.canRun?"Take the job →":"Needs "+j.need+" in the field")+'</button></div></div>';
+    +'<button class="btn stamp" data-act="execute" data-id="'+j.id+'" '+(a.canRun?"":"disabled")+'>'+(a.canRun?"Take the job →":j.news&&j.news.closed?"Shut this week — see the paper":"Needs "+j.need+" in the field")+'</button></div></div>';
   return '<div class="panel">'+h+b+'</div>';
 }
 // Your crew, compact, above the postings — so a job can be judged without leaving the board.
@@ -3813,6 +3833,7 @@ function renderModal(){
   if(m.type==="event")return modalEvent();
   if(m.type==="found")return modalFound();
   if(m.type==="notice")return modalNotice();
+  if(m.type==="news")return modalNews();
   if(m.type==="loose")return modalLoose();
   if(m.type==="revenge")return modalRevenge();
   return "";
@@ -4633,6 +4654,128 @@ function sfx(name){
   }catch(e){}
 }
 
+/* ------------------------------- THE NEWS ------------------------------ */
+// The week's paper. Every week, a few headlines from around the world; in some weeks one or two of
+// them reach the board — a fee up, a room harder, a border shut for the week. The paper is drawn
+// off the save's seed and the week, so a reload shows the same paper, and it is the first thing on
+// the screen when a week begins. {co} is a country, {ci} a city in it, {co2} another country.
+const NEWS_COLOUR=[
+  "Snap election called in {co}; polls in three weeks.","Dockers in {ci} vote to strike from Monday.","Heatwave: {ci} records its hottest night.",
+  "{co}'s central bank raises rates for the third time this year.","A minister resigns in {co}. Nobody says why.","Ferry strike leaves {ci} without a boat for a day.",
+  "The {ci} marathon closes the centre on Sunday.","A museum in {ci} reports a break-in. Nothing taken, it says.","Cup final in {ci}: the city is elsewhere.",
+  "Fog grounds flights at {ci} for six hours.","{co} signs a border deal with {co2}.","Storm warning along the coast of {co}.",
+  "{co}'s currency slips again against the dollar.","The police chief in {ci} steps down 'for family reasons'.","Train drivers in {co} strike on Thursday.",
+  "A record night at auction in {ci}: a bronze goes for eleven million.","{ci} hosts the summit; the airport shuts for the motorcades.","A power cut leaves half of {ci} dark for an evening.",
+  "New scanners at the {ci} port start work this week.","A shipping line moves its hub from {ci} to {co2}.","Tax amnesty in {co}: the banks are busy.",
+  "Floods on the plains of {co}; three roads closed.","A casino opens in {ci}. The mayor cuts the ribbon.","Art fair week in {ci}: the trade is in town.",
+  "Interpol names {co} in a report on stolen art.","Fuel protests block the ring road in {ci}.","An earthquake, small, in {co}. Nobody hurt.",
+  "{co} lifts visa rules for {co2}.","A film crew takes over the old quarter of {ci} for a month.","Bank holiday in {co} on Monday.",
+  "The {ci} police get new radios. The old ones are for sale.","Customs in {co} seize a container of cigarettes and say so twice.","A famous chef opens in {ci}. Booked until spring.",
+  "Wildfires near {ci}; the smoke reaches the city.","A rail tunnel through the mountains of {co} opens after nine years.","Ice on the {ci} harbour; the small boats stay in.",
+  "Rain for a week, says the forecast for {ci}.","A jewellery show in {ci} draws the trade and the trade's shadows.","{co} election: the count goes on all night.",
+  "A journalist in {ci} publishes a list of police informants.","The {ci} derby ends in a riot and three arrests.","{ci} appoints a night mayor.",
+  "A diplomatic row between {co} and {co2}; ambassadors recalled.","Cruise season opens in {ci}: four thousand a day off the boats.","Scaffolding goes up round the cathedral in {ci}.",
+  "{co} announces a crackdown on money laundering. Again.","A general in {co} retires, unexpectedly, on a Tuesday.","Sea fog shuts the {ci} port for a morning.",
+  "Ten years of the {ci} tram: free rides all week.","{co}'s lottery rolls over to a record.","A bridge in {ci} closes for inspection; the detour is an hour.",
+  "{co} and {co2} agree to share customs data. Eventually.","A strike at the {ci} airport is called off at midnight.","The {ci} stock exchange has its worst day since spring.",
+  "A stolen painting turns up in a lock-up outside {ci}.","{co} bans drones over its ports.","A warship visits {ci}; the harbour front is closed to cars.",
+  "The mayor of {ci} is questioned about a contract. He is very calm.","A new prison opens outside {ci}, already full.","A helicopter crashes in the hills of {co}; two dead, no names.",
+];
+// A headline that reaches the board. scope: the jobs it touches; eff: what it does to them.
+const NEWS_EFFECTS=[
+  {k:"dockstrike",h:"Dockers in {ci} walk out; the port is shut all week.",sub:"Smuggling and interception in {co}: fee +25%, harder.",scope:{country:true,cat:["smuggling","interception"]},eff:{pay:.25,diff:8}},
+  {k:"summit",h:"{ci} hosts the summit: motorcades, snipers on the roofs, streets closed at random.",sub:"Every job in {co}: harder, and more heat.",scope:{country:true},eff:{diff:10,heat:8}},
+  {k:"election",h:"Election week in {co}: everybody wants a favour and nobody wants it written down.",sub:"Negotiation, infiltration and papers in {co}: fee +20%.",scope:{country:true,cat:["negotiation","infiltration","forgery"]},eff:{pay:.2}},
+  {k:"policestrike",h:"The police in {co} strike over pay; the army is on the streets, badly.",sub:"Every job in {co}: easier, less heat.",scope:{country:true},eff:{diff:-10,heat:-6}},
+  {k:"crackdown",h:"Border crackdown in {co}: every lorry opened, every passport read twice.",sub:"Smuggling, escort and extraction in {co}: harder, more heat.",scope:{country:true,cat:["smuggling","escort","extraction"]},eff:{diff:12,heat:6}},
+  {k:"crash",h:"{co}'s currency loses a fifth of its value overnight.",sub:"Every job in {co} pays 20% less this week.",scope:{country:true},eff:{pay:-.2}},
+  {k:"artfair",h:"Art fair week in {ci}: the trade is in town, and so is everything it owns.",sub:"Recovery and papers in {co}: fee +30%.",scope:{country:true,cat:["recovery","forgery"]},eff:{pay:.3}},
+  {k:"holiday",h:"Bank holiday in {co}: the banks close, and so do the eyes on them.",sub:"Vault and cyber in {co}: easier.",scope:{country:true,cat:["vault","cyber"]},eff:{diff:-8}},
+  {k:"storm",h:"Storm season: gales across the shipping lanes, small craft warned off everywhere.",sub:"Every job on the water: harder.",scope:{tag:"water"},eff:{diff:12}},
+  {k:"atc",h:"Air traffic controllers strike from Monday to Sunday, across the continent.",sub:"Nothing by air this week.",scope:{tag:"air"},eff:{closed:true}},
+  {k:"worm",h:"A worm is eating bank networks from Lisbon to Manila; every desk is on a phone.",sub:"Cyber, everywhere: fee +30%, harder.",scope:{cat:["cyber"]},eff:{pay:.3,diff:10}},
+  {k:"heatwave",h:"Heatwave in {ci}: forty degrees, short tempers, generators failing by the hour.",sub:"Sabotage, cyber and surveillance in {co}: fee +15%.",scope:{country:true,cat:["sabotage","cyber","surveillance"]},eff:{pay:.15}},
+  {k:"football",h:"Cup final in {ci}: every policeman in the country is at the ground.",sub:"Every job in {co}: less heat.",scope:{country:true},eff:{heat:-8}},
+  {k:"interpol",h:"Interpol opens a joint operation across the EU: shared files, shared cameras.",sub:"Every job in the EU: more heat.",scope:{eu:true},eff:{heat:5}},
+  {k:"auction",h:"A record auction in {ci}: the lots are moving, and so are the buyers.",sub:"Recovery and negotiation in {co}: fee +25%.",scope:{country:true,cat:["recovery","negotiation"]},eff:{pay:.25}},
+  {k:"fog",h:"Fog closes {ci}'s airport and harbour, and the forecast says all week.",sub:"Nothing by air or on the water in {co} this week.",scope:{country:true,tag:["water","air"]},eff:{closed:true}},
+  {k:"amnesty",h:"Tax amnesty in {co}: the vaults are full and the guards are new.",sub:"Vault in {co}: fee +20%, a little harder.",scope:{country:true,cat:["vault"]},eff:{pay:.2,diff:6}},
+  {k:"informants",h:"A newspaper in {ci} prints a list of police informants. The list is long.",sub:"Every job in {co}: easier, less heat.",scope:{country:true},eff:{diff:-4,heat:-5}},
+  {k:"curfew",h:"Curfew in {ci} after a night of riots; the army on every corner.",sub:"Extraction, escort and surveillance in {co}: harder.",scope:{country:true,cat:["extraction","escort","surveillance"]},eff:{diff:10}},
+  {k:"lorries",h:"Lorry drivers block the motorways from the coast to the capital, everywhere at once.",sub:"Interception and escort, everywhere: harder, fee +15%.",scope:{cat:["interception","escort"]},eff:{diff:10,pay:.15}},
+];
+function newsRng(){return mulberry32((S.seed^Math.imul(S.week,2654435761)^0x5eed)>>>0);}
+function newsVars(rng,co){
+  const co2=pick(rng,COUNTRIES.filter(c=>c!==co));
+  return {co:co.name,ci:pick(rng,co.cities),co2:co2.name};
+}
+function newsDraw(){
+  const rng=newsRng();
+  const board=S.jobs.filter(j=>!j.final);
+  // a country with a posting on the board, mostly, so the paper is about somewhere that matters
+  const pickCo=()=>board.length&&chance(rng,0.8)?COUNTRY_BY_NAME[pick(rng,board).country]:pick(rng,COUNTRIES);
+  const r=rng();const ne=S.week<2?0:r<0.55?0:r<0.9?1:2;
+  const effects=[];const pool=NEWS_EFFECTS.slice();
+  for(let i=0;i<ne&&pool.length;i++){
+    const E=pool.splice(Math.floor(rng()*pool.length),1)[0];
+    const co=E.scope.country?pickCo():pick(rng,COUNTRIES);
+    const v=newsVars(rng,co);
+    effects.push({k:E.k,h:fill2(E.h,v),sub:fill2(E.sub,v),country:E.scope.country?co.name:null,cat:E.scope.cat||null,tag:E.scope.tag||null,eu:!!E.scope.eu,eff:E.eff});
+  }
+  const n=3+ri(rng,0,2);
+  const items=effects.map((e,i)=>({h:e.h,sub:e.sub,effect:i}));
+  const used={};
+  while(items.length<n){const t=pick(rng,NEWS_COLOUR);if(used[t])continue;used[t]=1;items.push({h:fill2(t,newsVars(rng,pick(rng,COUNTRIES))),effect:null});}
+  for(let i=items.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));const t=items[i];items[i]=items[j];items[j]=t;}
+  S.news={week:S.week,items,effects};
+}
+function newsHits(e,j){
+  if(e.country&&j.country!==e.country)return false;
+  if(e.eu&&!(COUNTRY_BY_NAME[j.country]&&COUNTRY_BY_NAME[j.country].eu))return false;
+  if(e.cat&&!e.cat.includes(j.cat))return false;
+  if(e.tag){const tags=[].concat(e.tag);if(!tags.some(t=>(j.tags||[]).includes(t)))return false;}
+  return true;
+}
+// The board carries the week's paper: every posting is priced and weighed off its own numbers
+// plus whatever the headlines do to it, so next week's paper undoes this week's.
+function newsApply(){
+  if(!S||!S.news)return;
+  S.jobs.forEach(j=>{
+    if(!j.base)j.base={payout:j.payout,diff:j.diff,heat:j.heat};
+    let pay=0,diff=0,heat=0,closed=null;const hits=[];
+    if(!j.final)S.news.effects.forEach(e=>{if(newsHits(e,j)){pay+=e.eff.pay||0;diff+=e.eff.diff||0;heat+=e.eff.heat||0;if(e.eff.closed)closed=e.h;hits.push(e);}});
+    j.payout=Math.max(1000,Math.round(j.base.payout*(1+pay)/1000)*1000);
+    j.diff=j.base.diff+diff;
+    j.heat=Math.max(0,j.base.heat+heat);
+    j.news=hits.length?{pay,diff,heat,closed,hits:hits.map(e=>e.h),subs:hits.map(e=>e.sub)}:null;
+  });
+}
+function newsSync(){if(!S)return;if(!S.news||S.news.week!==S.week)newsDraw();newsApply();}
+function newsClose(){if(S){S.newsRead=S.week;if(S.modal&&S.modal.type==="news")S.modal=null;}}
+// What a headline does to a posting, in a few words for a chip or a line.
+function newsWord(n){
+  if(n.closed)return "shut this week";
+  const w=[];
+  if(n.pay)w.push("fee "+(n.pay>0?"+":"−")+Math.round(Math.abs(n.pay)*100)+"%");
+  if(n.diff)w.push(n.diff>0?"harder":"easier");
+  if(n.heat)w.push(n.heat>0?"more heat":"less heat");
+  return w.join(" · ");
+}
+function modalNews(){
+  const N=S.news;if(!N)return "";
+  const items=N.items.map(it=>{const e=it.effect!=null?N.effects[it.effect]:null;
+    return '<div class="nw-item'+(e?" nw-hit":"")+'"><div class="nw-h">'+esc(it.h)+'</div>'
+      +(e?'<div class="nw-sub"><span class="chip c-bad">On the board</span> '+esc(e.sub)+'</div>':'')+'</div>';}).join("");
+  const touched=S.jobs.filter(j=>j.news).length;
+  const foot=N.effects.length
+    ?(touched?touched+' posting'+(touched>1?'s':'')+' on the board '+(touched>1?'are':'is')+' priced by this week\'s paper.':'Nothing on the board is touched by it this week.')
+    :'Nothing in it reaches the board this week.';
+  return '<div class="scrim" data-act="news-close"><div class="modal paper" role="dialog" aria-modal="true" aria-label="The week\'s news">'
+    +'<div class="nw-head"><div class="nw-mast">THE WEEK</div><div class="nw-date mono">Week '+String(N.week).padStart(2,"0")+' · the world, this week · '+N.items.length+' stories</div></div>'
+    +'<div class="nw-body">'+items+'</div>'
+    +'<div class="nw-foot"><span class="mono" style="font-size:11.5px;color:var(--muted)">'+esc(foot)+'</span>'
+    +'<button class="btn stamp" data-act="news-close">'+(N.effects.length&&touched?"To the board →":"Fold it up →")+'</button></div></div></div>';
+}
 /* ------------------------------ MUSIC --------------------------------- */
 // Sixteen tracks from the creator: eleven rotate under the live job report, three score the
 // verdict, one runs under a recruitment trip and one under the week's news. The hour of
@@ -4646,7 +4789,7 @@ const TRACKS={
   // just played. A pool of one loops. tools/split_tunes.py cuts a compilation into tunes and
   // rewrites these two lines.
   trip:["music/tension.mp3"],      // the recruitment trip — go and ask — from the flight out to the answer
-  news:["music/news.mp3"],         // the week's news: the pop-up between jobs, while it is open
+  news:["music/news.mp3"],         // the week's paper, while it is open
 };
 // A pool of tunes, in a random order that never repeats the last one. A pool of one loops.
 function musicShuffle(pool,label){
@@ -4667,7 +4810,7 @@ function musicRoute(){
     if(!musicWant||musicWant.pool!==TRACKS.trip)musicShuffle(TRACKS.trip,"the meeting — tension");
     return;
   }
-  if(S&&S.modal&&S.modal.type==="event"){if(!musicWant||musicWant.pool!==TRACKS.news)musicShuffle(TRACKS.news,"the week's news");return;}
+  if(S&&S.modal&&S.modal.type==="news"){if(!musicWant||musicWant.pool!==TRACKS.news)musicShuffle(TRACKS.news,"the week's news");return;}
   musicAmbient();
 }
 const SPEEDS=[[4500,"Slowest"],[3000,"Slow"],[2000,"Normal"],[1300,"Fast"],[800,"Fastest"]];
@@ -5248,7 +5391,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 56 · 17 September 2026";
+const BUILD="build 57 · 17 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
@@ -5381,6 +5524,8 @@ document.addEventListener("click",e=>{
     case "crew-dissolve": { const cid=+t.getAttribute("data-crew"); if(UI.confirmDissolve===cid)crewDissolve(cid); else {UI.confirmDissolve=cid;render();} break; }
     case "found-open": UI.found={lead:null,ids:[]}; S.modal={type:"found"}; render(); break;
     case "notice-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){noticeDone();render();} break;
+    case "news-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){newsClose();save();render();} break;
+    case "news-open": if(S&&S.news&&!S.modal){S.modal={type:"news"};render();} break;
     case "notice-go": noticeDone(); if(k==="found"){UI.found={lead:null,ids:[]};S.modal={type:"found"};} else if(k){S.tab=k;S.jobOpen=null;} render(); window.scrollTo(0,0); break;
     case "found-lead": if(UI.found){UI.found.lead=UI.found.lead===id?null:id;UI.found.ids=UI.found.ids.filter(x=>x!==id);} render(); break;
     case "found-pick": if(UI.found){const f=UI.found;if(f.ids.includes(id))f.ids=f.ids.filter(x=>x!==id);else if(f.ids.length<4)f.ids.push(id);} render(); break;
@@ -5403,6 +5548,7 @@ document.addEventListener("keydown",e=>{
     else if(S&&S.modal){
       if(S.modal.type==="event"){if(S.event&&S.event.outcome){S.event=null;S.modal=null;save();render();}}
       else if(S.modal.type==="notice"){noticeDone();render();}
+      else if(S.modal.type==="news"){newsClose();save();render();}
       else if(S.modal.type==="loose"||S.modal.type==="revenge"){}
       else if(isFeed(S.modal.type)&&S.modal.data.awaiting){}
       else if(isFeed(S.modal.type)&&!S.modal.data.done)tickerFinish();
