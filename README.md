@@ -126,12 +126,19 @@ decisions at the end.
   speeds, Slowest to Fastest, on the report itself and in the office. The field
   roster marks who came back: **GONE** in red on anyone who walked with the money, **TAKEN** on
   anyone the police held, **HURT** on the injured.
-- **And the map, running with it.** Above the text, the world map you already know from the Jobs
-  board — the same projection, the same coastlines — **framed on the country the job is in**, with
-  the city marked, its name in one corner and the **clock in the other**, reading the time of the
-  line on screen. Around the city are the five places a job happens in — the street, the post, the
-  way in, the room, the car — and every operator stands at one of them, each tied to their place by
-  a hairline so there is never a doubt who is where.
+- **And the plan, running beside it.** The feed reads down the left of the screen; on the right,
+  pinned while the feed scrolls, is a **plan of the place** — not the world, the place: the streets
+  and the building with its strongroom on a vault job, the quay, the stacks and the ship alongside
+  on a port job, the road, the ridge and the stop on an interception, the switchbacks and the
+  barrier on a pass, the fence, the sheds and the tanks on a sabotage, the strip and the hangar on an
+  air lift. It is drawn from the posting itself — its kind, its tags, the country's terrain (a
+  coast, a river, hills, a railway) — off a seed taken from the posting, so a job always draws the
+  same plan and no two jobs draw one alike. The country's flag and the city sit in one corner and
+  the **clock in the other**, reading the time of the line on screen. The five places a job happens
+  in — the street, the post, the way in, the room, the car, named for what they are on that plan —
+  sit where the plan puts them, and every operator stands at one of them, each tied to their place
+  by a hairline so there is never a doubt who is where. A recruitment trip draws the city you flew
+  into the same way.
 - **The icons are the operators' own faces** — the same ink bust their crew card carries, clipped
   into a disc, with their name under it. **What they are doing rides as a small mark on the corner
   of the face**: a mark that **changes with the line** — a

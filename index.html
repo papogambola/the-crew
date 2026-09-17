@@ -37,6 +37,7 @@
   }
   .wrap{max-width:1060px;margin:0 auto;padding:0 16px 64px}
   .mono{font-family:var(--f-mono)}
+  .flag{display:inline-block;width:18px;height:12px;vertical-align:-1px;border:1px solid rgba(17,16,16,.4);background:#fff;box-sizing:content-box}
   .num{font-variant-numeric:tabular-nums}
   h1,h2,h3{font-family:var(--f-disp);font-weight:600;margin:0;letter-spacing:.02em;text-wrap:balance;line-height:1.05}
   button{font-family:inherit;color:inherit;cursor:pointer}
@@ -371,8 +372,8 @@
     color:var(--muted);padding:4px 8px 3px;line-height:1.2}
   .fm-tether line{stroke:var(--ink);stroke-width:.7px;vector-effect:non-scaling-stroke;opacity:.28}
   .fm-site circle{fill:var(--paper);stroke:var(--ink);stroke-width:1px;vector-effect:non-scaling-stroke}
-  .fm-site text{font-family:var(--f-mono);letter-spacing:.18em;fill:var(--muted);text-anchor:middle;
-    paint-order:stroke;stroke:var(--card);stroke-width:1.2px;stroke-linejoin:round}
+  .fm-site text{font-family:var(--f-mono);letter-spacing:.18em;fill:var(--ink);text-anchor:middle;font-weight:500;
+    paint-order:stroke;stroke:var(--paper-2);stroke-width:1.6px;stroke-linejoin:round}
   .fm-site.on circle{stroke:var(--stamp);stroke-width:2px}
   .fm-site.on text{fill:var(--stamp)}
   .fm-op{transition:transform .55s ease}
@@ -384,6 +385,31 @@
   .fm-op-n{font-family:var(--f-mono);font-size:2.8px;fill:var(--ink);text-anchor:middle;
     paint-order:stroke;stroke:var(--paper);stroke-width:1.6px;stroke-linejoin:round}
   @media(prefers-reduced-motion:reduce){.fm-op{transition:none}}
+  /* the live screen: the feed on the left, the plan on the right, pinned while the feed scrolls */
+  .modal.feed{max-width:1060px}
+  .feed-cols{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start}
+  .feed-side{position:sticky;top:0}
+  .feed-side .feedmap{margin-top:0}
+  .feed-main .ticker{margin-top:0;max-height:min(66vh,640px)}
+  @media(max-width:920px){.feed-cols{grid-template-columns:1fr}.feed-side{position:static;order:-1}}
+  .fm-flag{width:16px;height:11px;vertical-align:-1px;margin-right:5px}
+  /* the plan: streets, water, the building, in ink */
+  .sc-ground{fill:var(--paper-2)}
+  .sc-block{fill:var(--paper);stroke:var(--ink);stroke-width:.5px;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+  .sc-inner{fill:var(--paper-2);stroke:var(--ink);stroke-width:.4px;vector-effect:non-scaling-stroke}
+  .sc-target{fill:var(--paper);stroke:var(--ink);stroke-width:1.5px;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+  .sc-strong{fill:var(--paper);stroke:var(--ink);stroke-width:2px;vector-effect:non-scaling-stroke}
+  .sc-line{fill:none;stroke:var(--ink);stroke-width:.6px;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
+  .sc-thin{fill:none;stroke:var(--ink);stroke-width:.35px;vector-effect:non-scaling-stroke;opacity:.7}
+  .sc-hatch{stroke:var(--ink);stroke-width:.3px;vector-effect:non-scaling-stroke;opacity:.5}
+  .sc-road-e{fill:none;stroke:var(--ink);stroke-linejoin:round;stroke-linecap:round;opacity:.8}
+  .sc-road{fill:none;stroke:var(--paper-2);stroke-linejoin:round;stroke-linecap:round}
+  .sc-water{fill:var(--card);stroke:var(--ink);stroke-width:.7px;vector-effect:non-scaling-stroke}
+  .sc-fence{fill:none;stroke:var(--ink);stroke-width:.5px;vector-effect:non-scaling-stroke;stroke-dasharray:1.2 .9}
+  .sc-tree{fill:var(--paper);stroke:var(--ink);stroke-width:.4px;vector-effect:non-scaling-stroke}
+  .sc-dash{fill:none;stroke:var(--ink);stroke-width:.45px;vector-effect:non-scaling-stroke;stroke-dasharray:1.5 1.1}
+  .sc-solid{fill:var(--ink);stroke:none}
+  .sc-text{font-family:var(--f-mono);fill:var(--muted);letter-spacing:.12em;paint-order:stroke;stroke:var(--paper-2);stroke-width:.8px;stroke-linejoin:round}
   .ticker{max-height:320px;overflow:auto;border:1px solid var(--line-2);background:var(--card);padding:6px 10px;font-family:var(--f-mono);font-size:12.5px;line-height:1.5;margin-top:8px}
   .tk{display:flex;gap:10px;padding:4px 0;border-bottom:1px dotted var(--line)}
   .tk:last-child{border-bottom:0}
@@ -657,6 +683,74 @@ const COUNTRIES=[
   ["Indonesia","🇮🇩","SoutheastAsian",3,["Indonesian"],"IDR Rp","Muslim majority","Presidential republic",1,["islands","jungle","coast","megacity"],1,0,0,["smuggling","interception","escort","negotiation"],["Jakarta","Surabaya","Medan"]],
 ].map(r=>({name:r[0],flag:r[1],pool:r[2],tier:r[3],langs:r[4],cur:r[5],rel:r[6],pol:r[7],eco:r[8],terrain:r[9],gate:r[10],eu:!!r[11],auth:!!r[12],cats:r[13],cities:r[14]}));
 const COUNTRY_BY_NAME={};COUNTRIES.forEach(c=>COUNTRY_BY_NAME[c.name]=c);
+/* ------------------------------- FLAGS -------------------------------- */
+// Drawn, not typed. The country table carried flag emoji, and Windows has no flag emoji at all —
+// every PC showed two letters where the screenshots showed a flag. Each flag here is a few
+// rectangles in a 30×20 field, with the emblem simplified to what still reads at 18 pixels.
+const FL_R=(x,y,w,h,c)=>'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="'+c+'"/>';
+const FL_C=(cx,cy,r,c)=>'<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+c+'"/>';
+const FL_P=(d,c,s,w)=>'<path d="'+d+'" fill="'+(c||"none")+'"'+(s?' stroke="'+s+'" stroke-width="'+(w||1)+'" stroke-linejoin="round" stroke-linecap="round"':'')+'/>';
+function FL_H(cs,ws){ws=ws||cs.map(()=>1);const t=ws.reduce((a,b)=>a+b,0);let y=0,o="";cs.forEach((c,i)=>{const h=20*ws[i]/t;o+=FL_R(0,+y.toFixed(2),30,+h.toFixed(2),c);y+=h;});return o;}
+function FL_V(cs,ws){ws=ws||cs.map(()=>1);const t=ws.reduce((a,b)=>a+b,0);let x=0,o="";cs.forEach((c,i)=>{const w=30*ws[i]/t;o+=FL_R(+x.toFixed(2),0,+w.toFixed(2),20,c);x+=w;});return o;}
+function FL_STAR(cx,cy,r,c,n,s,w){n=n||5;let d="";for(let i=0;i<n*2;i++){const a=-Math.PI/2+i*Math.PI/n,rr=i%2?r*0.42:r;d+=(i?"L":"M")+(cx+rr*Math.cos(a)).toFixed(2)+" "+(cy+rr*Math.sin(a)).toFixed(2);}return FL_P(d+"Z",c,s,w);}
+function FL_CROSS(cx,t,c){return FL_R(+(cx-t/2).toFixed(2),0,t,20,c)+FL_R(0,+(10-t/2).toFixed(2),30,t,c);}
+function FL_UK(){return FL_R(0,0,30,20,"#012169")+FL_P("M0 0L30 20M30 0L0 20","none","#fff",3.4)+FL_P("M0 0L30 20M30 0L0 20","none","#C8102E",1.2)+FL_CROSS(15,6,"#fff")+FL_CROSS(15,3.6,"#C8102E");}
+const FLAG_SPEC={
+  "United States":()=>{let o="";for(let i=0;i<13;i++)o+=FL_R(0,+(i*20/13).toFixed(2),30,+(20/13+.05).toFixed(2),i%2?"#fff":"#B22234");return o+FL_R(0,0,12,10.77,"#3C3B6E");},
+  "United Kingdom":FL_UK,
+  "Canada":()=>FL_V(["#FF0000","#fff","#FF0000"],[1,2,1])+FL_P("M15 4.2l1.1 2.2 1.4-.6-.4 2.4 1.9-1.1-.4 2.2 2.2.4-1.5 1.4 2 1.1-2.4.5.3 1.9-2.2-.5-.7 1.9h-2.6l-.7-1.9-2.2.5.3-1.9-2.4-.5 2-1.1-1.5-1.4 2.2-.4-.4-2.2 1.9 1.1-.4-2.4 1.4.6z","#FF0000"),
+  "Australia":()=>FL_R(0,0,30,20,"#012169")+'<svg x="0" y="0" width="15" height="10" viewBox="0 0 30 20">'+FL_UK()+'</svg>'+FL_STAR(7.5,15,2.4,"#fff",7)+FL_STAR(22.5,4,1.2,"#fff",7)+FL_STAR(19,9.5,1.1,"#fff",7)+FL_STAR(26,8,1.1,"#fff",7)+FL_STAR(23.5,15.5,1.2,"#fff",7)+FL_STAR(25,11.5,.7,"#fff",5),
+  "Ireland":()=>FL_V(["#169B62","#fff","#FF883E"]),
+  "Germany":()=>FL_H(["#000","#DD0000","#FFCE00"]),
+  "Netherlands":()=>FL_H(["#AE1C28","#fff","#21468B"]),
+  "Switzerland":()=>FL_R(0,0,30,20,"#D52B1E")+FL_R(12.6,4.2,4.8,11.6,"#fff")+FL_R(9.2,7.6,11.6,4.8,"#fff"),
+  "Sweden":()=>FL_R(0,0,30,20,"#006AA7")+FL_CROSS(11,4,"#FECC00"),
+  "Norway":()=>FL_R(0,0,30,20,"#BA0C2F")+FL_CROSS(11,5,"#fff")+FL_CROSS(11,2.4,"#00205B"),
+  "Denmark":()=>FL_R(0,0,30,20,"#C8102E")+FL_CROSS(11,3.2,"#fff"),
+  "Finland":()=>FL_R(0,0,30,20,"#fff")+FL_CROSS(11,4.4,"#002F6C"),
+  "France":()=>FL_V(["#0055A4","#fff","#EF4135"]),
+  "Italy":()=>FL_V(["#009246","#fff","#CE2B37"]),
+  "Spain":()=>FL_H(["#AA151B","#F1BF00","#AA151B"],[1,2,1])+FL_R(6.6,7.4,3.2,5.2,"#AA151B")+FL_R(7.4,8.2,1.6,2,"#F1BF00"),
+  "Portugal":()=>FL_V(["#006600","#FF0000"],[2,3])+FL_C(12,10,3.6,"#FFE500")+FL_C(12,10,2.6,"#006600")+FL_C(12,10,1.9,"#FF0000")+FL_C(12,10,1,"#fff"),
+  "Greece":()=>{let o="";for(let i=0;i<9;i++)o+=FL_R(0,+(i*20/9).toFixed(2),30,+(20/9+.05).toFixed(2),i%2?"#fff":"#0D5EAF");return o+FL_R(0,0,11.1,11.1,"#0D5EAF")+FL_R(4.5,0,2.2,11.1,"#fff")+FL_R(0,4.45,11.1,2.2,"#fff");},
+  "Poland":()=>FL_H(["#fff","#DC143C"]),
+  "Czechia":()=>FL_H(["#fff","#D7141A"])+FL_P("M0 0L15 10L0 20Z","#11457E"),
+  "Russia":()=>FL_H(["#fff","#0039A6","#D52B1E"]),
+  "Ukraine":()=>FL_H(["#0057B7","#FFD700"]),
+  "Serbia":()=>FL_H(["#C6363C","#0C4076","#fff"])+FL_P("M9.4 5.4h4.4v5.6q0 2.4-2.2 3.4q-2.2-1-2.2-3.4z","#C6363C","#fff",.5)+FL_R(9.4,4.2,4.4,1.2,"#F2D174"),
+  "Mexico":()=>FL_V(["#006847","#fff","#CE1126"])+FL_C(15,10.6,2.2,"#9C7A3C")+FL_C(15,9.2,1.1,"#3C7A3C"),
+  "Colombia":()=>FL_H(["#FCD116","#003893","#CE1126"],[2,1,1]),
+  "Argentina":()=>FL_H(["#74ACDF","#fff","#74ACDF"])+FL_C(15,10,2.2,"#F6B40E"),
+  "Chile":()=>FL_H(["#fff","#D52B1E"])+FL_R(0,0,10,10,"#0039A6")+FL_STAR(5,5,3,"#fff"),
+  "Panama":()=>FL_R(0,0,30,20,"#fff")+FL_R(15,0,15,10,"#D21034")+FL_R(0,10,15,10,"#005293")+FL_STAR(7.5,5,3,"#005293")+FL_STAR(22.5,15,3,"#D21034"),
+  "Brazil":()=>FL_R(0,0,30,20,"#009B3A")+FL_P("M15 2.2L27 10L15 17.8L3 10Z","#FEDF00")+FL_C(15,10,4.6,"#002776")+FL_P("M10.7 11.4Q15 8.4 19.3 10.6","none","#fff",.8),
+  "Nigeria":()=>FL_V(["#008751","#fff","#008751"]),
+  "Ghana":()=>FL_H(["#CE1126","#FCD116","#006B3F"])+FL_STAR(15,10,3,"#000"),
+  "Kenya":()=>FL_H(["#000","#fff","#BB0000","#fff","#006600"],[6,1,6,1,6])+'<ellipse cx="15" cy="10" rx="3.2" ry="5.6" fill="#BB0000" stroke="#fff" stroke-width=".8"/>'+FL_P("M12 3.4L18 16.6M18 3.4L12 16.6","none","#fff",.7)+'<ellipse cx="15" cy="10" rx="1" ry="2.6" fill="#000"/>',
+  "South Africa":()=>FL_R(0,0,30,10,"#E03C31")+FL_R(0,10,30,10,"#001489")+FL_P("M0 2.2L11 10L0 17.8","none","#fff",5.6)+FL_R(11,7.2,19,5.6,"#fff")+FL_P("M0 2.2L11 10L0 17.8","none","#007A4D",3.6)+FL_R(11,8.2,19,3.6,"#007A4D")+FL_P("M0 3.8L7.4 10L0 16.2Z","#000","#FFB81C",1),
+  "Morocco":()=>FL_R(0,0,30,20,"#C1272D")+FL_STAR(15,10.4,4.2,"none",5,"#006233",.9),
+  "Egypt":()=>FL_H(["#CE1126","#fff","#000"])+FL_P("M15 6.6l1.8 1.4-.6 2.2 1 2.4h-4.4l1-2.4-.6-2.2z","#C09300"),
+  "Lebanon":()=>FL_H(["#ED1C24","#fff","#ED1C24"],[1,2,1])+FL_P("M15 5.2l3.6 6.8h-2.2v2.6h-2.8v-2.6h-2.2z","#00A651"),
+  "U.A.E.":()=>FL_R(0,0,30,20,"#fff")+FL_R(7.5,0,22.5,6.67,"#00732F")+FL_R(7.5,13.33,22.5,6.67,"#000")+FL_R(0,0,7.5,20,"#FF0000"),
+  "Saudi Arabia":()=>FL_R(0,0,30,20,"#006C35")+FL_P("M7 8q3-1.8 6 0t6 0t4 0","none","#fff",.9)+FL_R(7.5,12.4,13,.9,"#fff")+FL_R(19.5,11.9,2.4,1.9,"#fff"),
+  "Turkey":()=>FL_R(0,0,30,20,"#E30A17")+FL_C(11,10,5,"#fff")+FL_C(12.3,10,4,"#E30A17")+FL_STAR(17.6,10,2.1,"#fff"),
+  "Israel":()=>FL_R(0,0,30,20,"#fff")+FL_R(0,2.8,30,2.6,"#0038B8")+FL_R(0,14.6,30,2.6,"#0038B8")+FL_P("M15 5.4L18.9 12.2H11.1Z","none","#0038B8",.9)+FL_P("M15 14.6L11.1 7.8H18.9Z","none","#0038B8",.9),
+  "China":()=>FL_R(0,0,30,20,"#DE2910")+FL_STAR(5,5,3.2,"#FFDE00")+FL_STAR(10,2,1,"#FFDE00")+FL_STAR(12,4.6,1,"#FFDE00")+FL_STAR(12,7.6,1,"#FFDE00")+FL_STAR(10,10,1,"#FFDE00"),
+  "Japan":()=>FL_R(0,0,30,20,"#fff")+FL_C(15,10,6,"#BC002D"),
+  "South Korea":()=>FL_R(0,0,30,20,"#fff")+FL_P("M9 10a6 6 0 0 1 12 0z","#C60C30")+FL_P("M9 10a6 6 0 0 0 12 0z","#003478")+FL_C(12,10,3,"#C60C30")+FL_C(18,10,3,"#003478")
+    +'<g stroke="#000" stroke-width=".9"><g transform="rotate(-33 5 4.5)"><path d="M2.5 3.2h5M2.5 4.6h5M2.5 6h5"/></g><g transform="rotate(33 25 4.5)"><path d="M22.5 3.2h5M22.5 4.6h5M22.5 6h5"/></g><g transform="rotate(33 5 15.5)"><path d="M2.5 14h5M2.5 15.4h5M2.5 16.8h5"/></g><g transform="rotate(-33 25 15.5)"><path d="M22.5 14h5M22.5 15.4h5M22.5 16.8h5"/></g></g>',
+  "Singapore":()=>FL_H(["#EF3340","#fff"])+FL_C(5.6,5,3.4,"#fff")+FL_C(6.9,5,2.9,"#EF3340")+FL_STAR(9.4,3.2,.8,"#fff")+FL_STAR(11,4.6,.8,"#fff")+FL_STAR(10.4,6.6,.8,"#fff")+FL_STAR(8.2,6.6,.8,"#fff")+FL_STAR(7.6,4.6,.8,"#fff"),
+  "India":()=>FL_H(["#FF9933","#fff","#138808"])+'<circle cx="15" cy="10" r="2.4" fill="none" stroke="#000080" stroke-width=".7"/>'+FL_P("M15 7.6v4.8M12.6 10h4.8M13.3 8.3l3.4 3.4M16.7 8.3l-3.4 3.4","none","#000080",.4),
+  "Pakistan":()=>FL_R(0,0,30,20,"#01411C")+FL_R(0,0,7.5,20,"#fff")+FL_C(18.5,10,5,"#fff")+FL_C(20,9,4.4,"#01411C")+FL_STAR(22,6.4,1.7,"#fff"),
+  "Thailand":()=>FL_H(["#A51931","#fff","#2D2A4A","#fff","#A51931"],[1,1,2,1,1]),
+  "Vietnam":()=>FL_R(0,0,30,20,"#DA251D")+FL_STAR(15,10.4,5.6,"#FFFF00"),
+  "Philippines":()=>FL_H(["#0038A8","#CE1126"])+FL_P("M0 0L15 10L0 20Z","#fff")+FL_C(5,10,2.2,"#FCD116")+FL_STAR(2,2.2,.9,"#FCD116")+FL_STAR(2,17.8,.9,"#FCD116")+FL_STAR(11.6,10,.9,"#FCD116"),
+  "Indonesia":()=>FL_H(["#FF0000","#fff"]),
+};
+function flagInner(co){const f=co&&FLAG_SPEC[co.name];return f?f():FL_R(0,0,30,20,"#c8c4bc");}
+// An inline flag for a line of text, and one for inside an SVG (the maps).
+function flagSvg(co,cls){if(!co)return "";return '<svg class="flag'+(cls?" "+cls:"")+'" viewBox="0 0 30 20" preserveAspectRatio="none" role="img" aria-label="'+esc(co.name)+'">'+flagInner(co)+'</svg>';}
+function flagAt(co,x,y,w){if(!co)return "";const h=w*2/3;return '<svg x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" viewBox="0 0 30 20" preserveAspectRatio="none">'+flagInner(co)+'<rect x=".3" y=".3" width="29.4" height="19.4" fill="none" stroke="rgba(17,16,16,.6)" stroke-width=".7"/></svg>';}
 const TIER_WORD=["","strong","strong","limited","weak"];
 const EXTRA_LANGS=["English","English","English","Spanish","French","Arabic","Russian","Mandarin","German","Portuguese","Italian","Turkish","Hindi","Swahili"];
 
@@ -3083,7 +3177,7 @@ function idCardTop(c,extra){
   const nat=natOf(c);
   return '<div class="top"><div class="av">'+avatar(c.avseed,c.gender,c.face)+'</div>'
     +'<div class="who"><div class="nm">'+esc(c.n)+(c.isPlayer?' <span class="chip c-bad" style="vertical-align:middle">You</span>':'')+'</div>'
-    +'<div class="sub">'+nat.flag+' '+esc(nat.name)+' · '+(c.gender==="M"?"Male":"Female")+' <span class="tag pass" title="Passport tier '+nat.tier+' — '+TIER_WORD[nat.tier]+'">P'+nat.tier+'</span> '+roleChip(c)+(extra||'')+'</div>'
+    +'<div class="sub">'+flagSvg(nat)+' '+esc(nat.name)+' · '+(c.gender==="M"?"Male":"Female")+' <span class="tag pass" title="Passport tier '+nat.tier+' — '+TIER_WORD[nat.tier]+'">P'+nat.tier+'</span> '+roleChip(c)+(extra||'')+'</div>'
     +'<div class="spec">'+techTip(c.tech)+' · '+EXP[c.exp-1]+'</div>'+pips(c.exp)+'</div></div>';
 }
 
@@ -3155,7 +3249,7 @@ function modalFound(){
   if(f.lead&&!cmdrs.some(c=>c.id===f.lead))f.lead=null;
   f.ids=f.ids.filter(id=>id!==f.lead&&ready.some(c=>c.id===id));
   const lead=f.lead?byId(f.lead):null;
-  const row=(c,act,on,dis)=>'<button class="twist-opt'+(on?' on':'')+'" data-act="'+act+'" data-id="'+c.id+'" '+(dis?"disabled":"")+'><b>'+(on?"✓":"·")+'</b> <span>'+esc(c.n)+' <span class="mono" style="color:var(--muted)">'+natOf(c).flag+' '+TECH_BY_K[c.tech].l+' · '+EXP[c.exp-1]+(c.role==="commander"?' · cmd +'+c.cmd:'')+' · loyalty '+c.loyalty+'</span></span></button>';
+  const row=(c,act,on,dis)=>'<button class="twist-opt'+(on?' on':'')+'" data-act="'+act+'" data-id="'+c.id+'" '+(dis?"disabled":"")+'><b>'+(on?"✓":"·")+'</b> <span>'+esc(c.n)+' <span class="mono" style="color:var(--muted)">'+flagSvg(natOf(c))+' '+TECH_BY_K[c.tech].l+' · '+EXP[c.exp-1]+(c.role==="commander"?' · cmd +'+c.cmd:'')+' · loyalty '+c.loyalty+'</span></span></button>';
   const h='<div class="modal-h"><div><div class="kicker">'+(crews().length?"Another crew":"A second crew")+' · week '+S.week+'</div><h2 style="font-size:22px;margin-top:4px">Found a crew</h2></div><button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
   const b='<div class="modal-b"><div class="kicker">The commander</div><div class="sel-help">A commander by nature runs it, with a command score of their own. The crew takes the name.</div><div class="twist-opts">'+cmdrs.map(c=>row(c,"found-lead",f.lead===c.id,false)).join("")+'</div>'
     +'<hr class="rule"><div class="kicker">Four soldiers · '+f.ids.length+' of 4</div><div class="sel-help">Anyone ready on your crew. They leave your places; you fill them again from the roster.</div><div class="twist-opts">'+ready.filter(c=>c.id!==f.lead).map(c=>row(c,"found-pick",f.ids.includes(c.id),!f.ids.includes(c.id)&&f.ids.length>=4)).join("")+'</div>'
@@ -3293,7 +3387,7 @@ function mapSVG(){
     focus='<defs><radialGradient id="hole"><stop offset="52%" stop-color="#000"/><stop offset="100%" stop-color="#fff"/></radialGradient>'
       +'<mask id="dimmask"><rect x="0" y="20" width="1000" height="400" fill="#fff"/><circle cx="500" cy="220" r="110" fill="url(#hole)"/></mask></defs>'
       +'<rect x="0" y="20" width="1000" height="400" class="map-dim" mask="url(#dimmask)"/>'
-      +'<circle cx="500" cy="220" r="46" class="map-ring"/>'
+      +'<circle cx="500" cy="220" r="46" class="map-ring"/>'+flagAt(COUNTRY_BY_NAME[cn],486,234,28)
       +'<text x="500" y="308" text-anchor="middle" class="map-label">'+esc(cn.toUpperCase())+'</text>'
       +'<text x="500" y="328" text-anchor="middle" class="map-sub">'+sub+'</text>';
   }
@@ -3368,7 +3462,7 @@ function jobsList(){
     return '<div class="jobrow" data-act="open-job" data-id="'+j.id+'" data-country="'+esc(j.country)+'" role="button" tabindex="0">'
       +'<div class="code">'+(j.final?"—":j.big?esc(j.id.slice(0,2)+"-"+j.id.slice(2)):"№"+j.id.slice(1).padStart(3,"0"))+'<br>'+diffbar(j.diff,j.heat>22)+'</div>'
       +'<div><div class="t">'+(j.final?'<span class="chip c-bad">Final score</span> ':j.big?'<span class="chip c-ink">Operation</span> ':'')+esc(j.title)+'</div>'
-        +'<div class="loc">'+co.flag+' '+esc(j.city)+', '+esc(j.country)+' · crew of '+j.need+' · <span dir="ltr">'+(j.final?BAL.finalWeeks:(j.weeks||1))+' wk</span> · '+esc(co.langs[0])+' · from '+esc(j.client)+(j.final?'':' · expires wk '+j.expires)+(casedWeeks(j)?' · <span style="color:var(--good)">cased '+casedWeeks(j)+'</span>':'')+'</div>'
+        +'<div class="loc">'+flagSvg(co)+' '+esc(j.city)+', '+esc(j.country)+' · crew of '+j.need+' · <span dir="ltr">'+(j.final?BAL.finalWeeks:(j.weeks||1))+' wk</span> · '+esc(co.langs[0])+' · from '+esc(j.client)+(j.final?'':' · expires wk '+j.expires)+(casedWeeks(j)?' · <span style="color:var(--good)">cased '+casedWeeks(j)+'</span>':'')+'</div>'
         +'<div class="meta"><span class="tag">'+CAT_BY_K[j.cat].l+'</span>'+techs+' '+kn+' '+fit+'</div></div>'
       +'<div class="pay num">'+money(j.payout)+'<div class="loc" style="text-align:right">+'+j.heat+' heat</div></div></div>';
   }).join("");
@@ -3383,7 +3477,7 @@ function jobPanel(j){
   const wtxt=Object.entries(cat.w).map(([k,v])=>ATTR_ABBR[k]+'×'+v).join("  ");
   const theJob='<div class="jobbrief"><div class="kicker">The job</div><p>'+esc(jobBrief(j))+'</p></div>';
   const brief='<div class="brief"><span class="client">Posted by '+esc(j.client)+'.</span> '
-    +co.flag+' '+esc(j.city)+', '+esc(j.country)+' — '+esc(co.langs.join(" / "))+' spoken; pays in '+esc(co.cur)+'. '
+    +flagSvg(co)+' '+esc(j.city)+', '+esc(j.country)+' — '+esc(co.langs.join(" / "))+' spoken; pays in '+esc(co.cur)+'. '
     +esc(co.pol)+'; '+esc(co.rel.toLowerCase())+'. Terrain: '+co.terrain.join(", ")+'. '
     +(co.gate===2?'Strict border — weak passports and old convictions get turned back without papers. ':co.gate===1?'Visa border — limited passports need a forger aboard. ':'Open border. ')
     +(co.eco===1?'Money goes far here, but the fee is lower.':co.eco===3?'Rich ground; expect the client to pay well and the police to be well funded.':'')
@@ -3407,7 +3501,7 @@ function jobPanel(j){
     return Object.assign({sat:true,c},entry(c,j,a.team.some(y=>y.tech==="forger")));});
   const checks=allChecks.map(x=>{const c=x.c,sat=x.sat&&x.ok;
     return '<div class="check'+(x.ok?"":" out")+(sat?" sat":"")+'"><div class="av">'+avatar(c.avseed,c.gender,c.face)+'</div>'
-      +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12.5px">'+(c.isPlayer?"You":esc(c.n))+' '+natOf(c).flag+' <span class="mono" style="color:var(--muted);font-size:10.5px">'+TECH_BY_K[c.tech].l+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</span></div>'
+      +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12.5px">'+(c.isPlayer?"You":esc(c.n))+' '+flagSvg(natOf(c))+' <span class="mono" style="color:var(--muted);font-size:10.5px">'+TECH_BY_K[c.tech].l+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</span></div>'
       +'<div class="why">'+(sat?'sitting this one out'+(c.isPlayer?' — a commander-type runs it':'')+(c.cut?' · keeps '+money(Math.round(j.payout*c.cut))+' in the split':''):esc(x.why))+'</div></div>'
       +(x.ok?'<button class="btn ghost sm" data-act="bench" data-id="'+c.id+'" title="'+(sat?"Send "+(c.isPlayer?"yourself":c.first)+" on this job":(c.isPlayer?"Stay behind":"Leave "+c.first+" behind")+" — no cut, no experience, and no way to get hurt")+'">'+(sat?"Send":"Bench")+'</button>':'<div class="mark">✗</div>')+'</div>';}).join("");
   const onCrew=crewAll().length, benched=bench.length;
@@ -3509,7 +3603,7 @@ function crewStrip(){
     const nat=natOf(c);
     return '<div class="smc'+(c.status!=="crew"?" out":"")+'"><div class="sm-av">'+avatar(c.avseed,c.gender,c.face)+'</div><div class="sm-b">'
       +'<div class="sm-n">'+esc(c.first)+(c.isPlayer?' <span class="chip c-bad">you</span>':'')+(c.status==="injured"?' <span class="chip c-warn">hurt</span>':'')+'</div>'
-      +'<div class="sm-l">'+nat.flag+' P'+nat.tier+' · <b>'+techTip(c.tech)+'</b> · '+EXP[c.exp-1]+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</div>'
+      +'<div class="sm-l">'+flagSvg(nat)+' P'+nat.tier+' · <b>'+techTip(c.tech)+'</b> · '+EXP[c.exp-1]+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</div>'
       +'<div class="sm-a num">'+ATTRS.map(a=>ATTR_ABBR[a]+' '+c.attrs[a]).join(' · ')+'</div>'
       +'<div class="sm-l">'+c.langs.join(", ")+' · knows '+c.know.join(", ")+(c.limits.length?' · <span style="color:var(--stamp)">'+c.limits.map(k=>LIMIT_BY_K[k].l).join(", ")+'</span>':'')+'</div>'
       +'</div></div>';
@@ -3535,7 +3629,7 @@ function tabRoster(){
     +'<div class="field"><label for="q">Search</label><input type="text" id="q" value="'+esc(f.q)+'" placeholder="name, country, language, knowledge" autocomplete="off" style="min-width:220px"></div>'
     +'<div class="field"><label for="ftech">Trade</label><select id="ftech">'+opt("","All",f.tech)+TECHS_ALL.map(t=>opt(t.k,t.l,f.tech)).join("")+'</select></div>'
     +'<div class="field"><label for="frole">Role</label><select id="frole">'+opt("","Any",f.role)+opt("commander","Commander",f.role)+opt("soldier","Soldier",f.role)+'</select></div>'
-    +'<div class="field"><label for="fnat">Nationality</label><select id="fnat">'+opt("","All",f.nat)+COUNTRIES.map(c=>opt(c.name,c.flag+" "+c.name,f.nat)).join("")+'</select></div>'
+    +'<div class="field"><label for="fnat">Nationality</label><select id="fnat">'+opt("","All",f.nat)+COUNTRIES.map(c=>opt(c.name,c.name,f.nat)).join("")+'</select></div>'
     +'<div class="field"><label for="fsort">Sort</label><select id="fsort">'+opt("fee","Fee, low first",f.sort)+opt("feeD","Fee, high first",f.sort)+opt("exp","Experience",f.sort)+opt("power","Raw skill",f.sort)+opt("name","Name",f.sort)+'</select></div>'
     +'<span class="count num">'+total.toLocaleString()+' match · showing '+shown.length+'</span></div>';
   const cards=shown.map(c=>'<div class="id">'+vetStamp(c)+idCardTop(c)
@@ -3601,7 +3695,7 @@ function tabLog(){
   const left='<div class="panel"><div class="panel-h"><h2>Case Log</h2>'+wsel+'</div><div class="panel-b"><div class="log">'
     +(lines.length?lines.map(l=>'<div class="logline '+l.tone+(l.big?" big":"")+'"><span class="wk">'+String(l.wk).padStart(2,"0")+'</span><span class="tx">'+esc(l.t)+'</span></div>').join(""):'<div class="empty">Nothing logged'+(wk!==null?' in week '+wk:' yet')+'.</div>')
     +'</div></div></div>';
-  const right='<div class="panel"><div class="panel-h"><h2>The Operation</h2><span class="kicker">'+esc(S.player.n)+' · '+natOf(S.player).flag+'</span></div><div class="panel-b">'
+  const right='<div class="panel"><div class="panel-h"><h2>The Operation</h2><span class="kicker">'+esc(S.player.n)+' · '+flagSvg(natOf(S.player))+'</span></div><div class="panel-b">'
     +'<div class="kv">'+status.map(r=>'<span class="k">'+r[0]+'</span><span class="num">'+r[1]+'</span>').join("")+'</div>'
     +'<hr class="rule"><div class="kicker">Ranking — what the name buys</div>'
     +'<div class="mono" style="font-size:13px;margin-top:6px"><b>'+esc(rkNow.name)+'</b> · '+S.rep+' points</div>'
@@ -3724,7 +3818,7 @@ function renderModal(){
 // Both the job report and the recruitment trip play out line by line in the same ticker.
 function isFeed(t){return t==="result"||t==="trip";}
 function feedData(){return S&&S.modal&&isFeed(S.modal.type)?S.modal.data:null;}
-function modalWrap(inner){return '<div class="scrim" data-act="scrim"><div class="modal" role="dialog" aria-modal="true">'+inner+'</div></div>';}
+function modalWrap(inner,cls){return '<div class="scrim" data-act="scrim"><div class="modal'+(cls?" "+cls:"")+'" role="dialog" aria-modal="true">'+inner+'</div></div>';}
 
 function modalRecruit(id){
   const c=byId(id);if(!c)return "";
@@ -3738,7 +3832,7 @@ function modalRecruit(id){
   const h='<div class="modal-h"><div><div class="kicker">'+(c.isPlayer?"Your file":"Personnel file · "+c.id)+'</div><h2 style="font-size:22px;margin-top:4px">'+esc(c.n)+'</h2></div><button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
   const b='<div class="modal-b"><div style="display:flex;gap:16px;flex-wrap:wrap">'
     +'<div style="width:130px;flex:none"><div style="border:1px solid var(--ink);background:#fff;aspect-ratio:100/120;max-width:100%">'+avatar(c.avseed,c.gender,c.face)+'</div>'
-      +'<div class="mono" style="font-size:10px;color:var(--muted);text-align:center;margin-top:4px">'+nat.flag+' '+esc(nat.name)+'</div></div>'
+      +'<div class="mono" style="font-size:10px;color:var(--muted);text-align:center;margin-top:4px">'+flagSvg(nat)+' '+esc(nat.name)+'</div></div>'
     +'<div style="flex:1;min-width:220px">'
       +'<div class="kv"><span class="k">Role</span><span>'+(c.isPlayer?"Commander — it's your crew (+"+c.cmd+")":c.role==="commander"?"Commander by nature — takes orders badly, can lead if you can't get in (+"+c.cmd+")":"Soldier — does the work")+'</span>'
         +'<span class="k">Trade</span><span>'+t.l+' — '+t.d+'</span>'
@@ -3820,45 +3914,363 @@ function fmGlyphFor(line,c){
   if(c&&FM_TECH_GLYPH[c.tech]&&line&&line.at&&line.at===techSite(c.tech))return FM_TECH_GLYPH[c.tech];
   return (line&&(FM_SITE_GLYPH[line.at]||TRIP_SITE_GLYPH[line.at]))||"walk";
 }
-// How much of the world to show. The board's own map picks a zoom off the country's size; this
-// reads the same tiers so a job in Singapore is not framed like a job in Russia.
-function fmFrame(country){
-  const g=GEO[country];
-  if(!g)return {x:0,y:20,w:1000,h:400,cx:500,cy:220};
-  const p=proj(g[0],g[1]);
-  const w=g[2]===3?230:g[2]===2?150:100, h=w*0.44;
-  return {x:p[0]-w/2,y:p[1]-h/2,w,h,cx:p[0],cy:p[1]};
+/* --------------------------- THE JOB, AS A PLAN ------------------------ */
+// The live map is a plan of the place, not the world: the streets and the building on a vault job,
+// the quay and the stacks on a port job, the road and the ridge on an interception, the runway on
+// an air lift. It is drawn from the posting itself — its kind, its tags, the country's terrain —
+// off a seed taken from the posting, so a job always draws the same plan and no two draw one alike.
+// Every plan is 100 wide and 84 high, in ink, and puts the five places somewhere that means something.
+const SC_W=100,SC_H=84;
+const SC_CACHE={};
+const f1=v=>(+v).toFixed(1);
+function fmHash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function scRot(a,cx,cy){const r=a*Math.PI/180,c=Math.cos(r),s=Math.sin(r);return (x,y)=>({x:cx+(x-cx)*c-(y-cy)*s,y:cy+(x-cx)*s+(y-cy)*c});}
+function scClamp(p,m){m=m||9;return {x:Math.min(SC_W-m,Math.max(m,p.x)),y:Math.min(SC_H-13,Math.max(m+3,p.y))};}
+const scRect=(x,y,w,h,cls,extra)=>'<rect class="'+cls+'" x="'+f1(x)+'" y="'+f1(y)+'" width="'+f1(w)+'" height="'+f1(h)+'"'+(extra||"")+'/>';
+const scPath=(d,cls,extra)=>'<path class="'+cls+'" d="'+d+'"'+(extra||"")+'/>';
+const scCirc=(x,y,r,cls)=>'<circle class="'+cls+'" cx="'+f1(x)+'" cy="'+f1(y)+'" r="'+f1(r)+'"/>';
+const scLine=(x1,y1,x2,y2,cls)=>'<line class="'+cls+'" x1="'+f1(x1)+'" y1="'+f1(y1)+'" x2="'+f1(x2)+'" y2="'+f1(y2)+'"/>';
+const scText=(x,y,t,size,anchor)=>'<text class="sc-text" x="'+f1(x)+'" y="'+f1(y)+'" text-anchor="'+(anchor||"middle")+'" style="font-size:'+(size||2.2)+'px">'+esc(t)+'</text>';
+function scHatch(x,y,w,h,step,slant){let o="";for(let yy=y+step;yy<y+h-.2;yy+=step)o+=scLine(x+.5,yy,x+w-.5,slant?Math.min(y+h-.3,yy+step*.7):yy,"sc-hatch");return o;}
+function scTrees(rng,x,y,w,h,n){let o="";for(let i=0;i<n;i++)o+=scCirc(x+1.2+rng()*(w-2.4),y+1.2+rng()*(h-2.4),.7+rng()*.6,"sc-tree");return o;}
+function scCompass(x,y){return '<g transform="translate('+x+','+y+')">'+scPath("M0 -3.6L1.3 1.6L0 .6L-1.3 1.6Z","sc-solid")+scCirc(0,0,4.2,"sc-thin")+scText(0,-5,"N",2.2)+'</g>';}
+function scScale(x,y,label){return scPath("M"+f1(x)+" "+f1(y)+"h10M"+f1(x)+" "+f1(y-.9)+"v1.8M"+f1(x+5)+" "+f1(y-.6)+"v1.2M"+f1(x+10)+" "+f1(y-.9)+"v1.8","sc-line")+scText(x+5,y-1.6,label,2);}
+function scRoad(d,w){return scPath(d,"sc-road-e",' style="stroke-width:'+f1((w||2.4)+.8)+'px"')+scPath(d,"sc-road",' style="stroke-width:'+f1(w||2.4)+'px"');}
+// a road through waypoints, smoothed through the midpoints
+function scWayPath(pts){let d="M"+f1(pts[0].x)+" "+f1(pts[0].y);for(let i=1;i<pts.length-1;i++){const m={x:(pts[i].x+pts[i+1].x)/2,y:(pts[i].y+pts[i+1].y)/2};d+=" Q"+f1(pts[i].x)+" "+f1(pts[i].y)+" "+f1(m.x)+" "+f1(m.y);}const L=pts[pts.length-1];d+=" L"+f1(L.x)+" "+f1(L.y);return d;}
+function scLPath(x,y,w,h,left,top,cw,ch){
+  if(left&&top)return "M"+f1(x+cw)+" "+f1(y)+"H"+f1(x+w)+"V"+f1(y+h)+"H"+f1(x)+"V"+f1(y+ch)+"H"+f1(x+cw)+"Z";
+  if(!left&&top)return "M"+f1(x)+" "+f1(y)+"H"+f1(x+w-cw)+"V"+f1(y+ch)+"H"+f1(x+w)+"V"+f1(y+h)+"H"+f1(x)+"Z";
+  if(left)return "M"+f1(x)+" "+f1(y)+"H"+f1(x+w)+"V"+f1(y+h)+"H"+f1(x+cw)+"V"+f1(y+h-ch)+"H"+f1(x)+"Z";
+  return "M"+f1(x)+" "+f1(y)+"H"+f1(x+w)+"V"+f1(y+h-ch)+"H"+f1(x+w-cw)+"V"+f1(y+h)+"H"+f1(x)+"Z";
 }
-// The five places sit around the city, at a spread that follows the frame — close enough to read
-// as one place, far enough apart to tell who is where.
+// a small car on the road, and a truck
+function scCar(x,y,a){return '<g transform="translate('+f1(x)+','+f1(y)+') rotate('+f1(a||0)+')">'+scRect(-1.4,-.7,2.8,1.4,"sc-block")+scLine(-.5,-.7,-.5,.7,"sc-thin")+scLine(.6,-.7,.6,.7,"sc-thin")+'</g>';}
+function scTruck(x,y,a){return '<g transform="translate('+f1(x)+','+f1(y)+') rotate('+f1(a||0)+')">'+scRect(-3.2,-1,4.6,2,"sc-block")+scRect(1.6,-.8,1.6,1.6,"sc-block")+'</g>';}
+
+// Terrain the plan sits on: the sea along one edge, a river across, hills in a corner, a railway.
+// Each says where nothing can be built, and each is drawn from what the country's file says.
+function scTerrain(rng,co,o){
+  o=o||{};const ter=co?co.terrain:[];const T={svg:"",over:"",avoid:[],river:null,sea:null};
+  const seaOk=ter.some(t=>["coast","port","islands","fjords","delta"].includes(t));
+  const sea=o.sea!==false&&seaOk&&rng()<(o.seaP==null?.6:o.seaP);
+  const river=!sea&&(ter.some(t=>["river","delta","canal","lakes","rivers","fjords"].includes(t))?rng()<.85:rng()<.16);
+  const hills=ter.includes("mountains")&&rng()<.7&&o.hills!==false;
+  const rail=o.rail!==false&&((ter.includes("megacity")&&rng()<.6)||rng()<.18);
+  if(sea){
+    const ph=rng()*6;
+    if(rng()<.6){const sy=x=>68+2.6*Math.sin(x/9+ph)+1.3*Math.sin(x/3.1+ph*2);let d="M-2 "+f1(sy(-2));for(let x=0;x<=102;x+=3)d+=" L"+x+" "+f1(sy(x));d+=" L102 90 L-2 90 Z";
+      T.over+=scPath(d,"sc-water");T.avoid.push((x,y)=>y>sy(x)-1.6);T.sea={side:"b",at:sy};
+      for(let i=0;i<8;i++){const wx=3+rng()*88,wy=sy(wx)+4+rng()*9;T.over+=scPath("M"+f1(wx)+" "+f1(wy)+"q1.4-1 2.8 0t2.8 0","sc-thin");}
+    } else {const sx=y=>74+2.4*Math.sin(y/8+ph)+1.2*Math.sin(y/3.3+ph);let d="M"+f1(sx(-2))+" -2";for(let y=0;y<=86;y+=3)d+=" L"+f1(sx(y))+" "+y;d+=" L104 86 L104 -2 Z";
+      T.over+=scPath(d,"sc-water");T.avoid.push((x,y)=>x>sx(y)-1.6);T.sea={side:"r",at:sx};
+      for(let i=0;i<8;i++){const wy=3+rng()*76,wx=sx(wy)+4+rng()*10;T.over+=scPath("M"+f1(wx)+" "+f1(wy)+"q1.4-1 2.8 0t2.8 0","sc-thin");}}
+  } else if(river){
+    const a=rng()*50-25,R=scRot(a,50,42),inv=scRot(-a,50,42),yy=rng()<.5?16+rng()*6:66+rng()*6,half=2.4+rng()*1.4;
+    const pts=[[-40,yy-half],[140,yy-half],[140,yy+half],[-40,yy+half]].map(p=>R(p[0],p[1]));
+    T.over+='<polygon class="sc-water" points="'+pts.map(p=>f1(p.x)+","+f1(p.y)).join(" ")+'"/>';
+    T.avoid.push((x,y)=>Math.abs(inv(x,y).y-yy)<half+1.6);T.river={a,yy,half,R,inv};
+  }
+  if(hills){const hx=rng()<.5?-8:108,hy=rng()<.5?-6:90;for(let r=9;r<=44;r+=6.5)T.svg+=scCirc(hx+rng()*2,hy+rng()*2,r,"sc-thin");T.avoid.push((x,y)=>Math.hypot(x-hx,y-hy)<46);T.hill={x:hx,y:hy};}
+  if(rail){const a=rng()*26-13,R=scRot(a,50,42),inv=scRot(-a,50,42),yy=rng()<.5?7:77;const p1=R(-30,yy),p2=R(130,yy);
+    T.over+=scLine(p1.x,p1.y,p2.x,p2.y,"sc-line");const dx=p2.x-p1.x,dy=p2.y-p1.y,L=Math.hypot(dx,dy),nx=-dy/L,ny=dx/L;
+    for(let t=0;t<=1;t+=2.2/L){const px=p1.x+dx*t,py=p1.y+dy*t;if(px<-1||px>101||py<-1||py>85)continue;T.over+=scLine(px-nx*.9,py-ny*.9,px+nx*.9,py+ny*.9,"sc-thin");}
+    T.avoid.push((x,y)=>Math.abs(inv(x,y).y-yy)<3.2);}
+  return T;
+}
+// A street grid turned a few degrees so no two plans sit square, with the building the job is about
+// on the main street and the one across from it for the post. Returns the target cell and the cell
+// opposite, in grid coordinates, and R to put a grid point on the page.
+function scStreets(rng,o){
+  o=o||{};
+  const rot=Math.round(rng()*22-11),R=scRot(rot,50,42);
+  const MAIN=42,gapM=3.6,gap=2.1;
+  const rows=[];let y=MAIN+gapM/2;for(let i=0;i<6;i++){const h=i?8+rng()*7:13+rng()*4;rows.push({y,h,side:1});y+=h+gap;}
+  y=MAIN-gapM/2;for(let i=0;i<6;i++){const h=i?8+rng()*7:10+rng()*3;rows.push({y:y-h,h,side:-1});y-=h+gap;}
+  const cols=[];let x=-34,big=false;while(x<134){const w=(!big&&x+12>44)?(big=true,17+rng()*4):9+rng()*9;cols.push({x,w});x+=w+(rng()<.16?3.4:gap);}
+  const avoid=(px,py)=>(o.avoid||[]).some(f=>f(px,py));
+  const cells=[];
+  rows.forEach(r=>cols.forEach(c=>{const cx=c.x+c.w/2,cy=r.y+r.h/2,p=R(cx,cy);
+    if(p.x<-10||p.x>110||p.y<-10||p.y>94)return;if(avoid(p.x,p.y))return;
+    cells.push({x:c.x,y:r.y,w:c.w,h:r.h,cx,cy,side:r.side,p});}));
+  const below=cells.filter(c=>c.side===1&&Math.abs(c.y-(MAIN+gapM/2))<.2&&c.w>=(o.targetW||10)&&c.h>=(o.targetH||8));
+  const target=below.sort((a,b)=>Math.hypot(a.p.x-50,a.p.y-49)-Math.hypot(b.p.x-50,b.p.y-49))[0]||cells.sort((a,b)=>Math.hypot(a.p.x-50,a.p.y-49)-Math.hypot(b.p.x-50,b.p.y-49))[0];
+  const above=cells.filter(c=>c.side===-1&&Math.abs(c.y+c.h-(MAIN-gapM/2))<.2&&c!==target);
+  const across=above.sort((a,b)=>Math.abs(a.cx-target.cx)-Math.abs(b.cx-target.cx))[0]||null;
+  let g="";
+  cells.forEach(c=>{
+    if(c===target||c===across)return;
+    const r=rng(),i=.7,x=c.x+i,y=c.y+i,w=c.w-2*i,h=c.h-2*i;
+    if(r<.07){g+=scTrees(rng,c.x,c.y,c.w,c.h,3+Math.floor(rng()*5));return;}
+    if(r<.32){const cw=w*(.35+rng()*.25),ch=h*(.35+rng()*.25);g+=scPath(scLPath(x,y,w,h,rng()<.5,rng()<.5,cw,ch),"sc-block");}
+    else if(r<.5){g+=scRect(x,y,w,h,"sc-block")+scRect(x+w*.3,y+h*.3,w*.4,h*.4,"sc-inner");}
+    else if(r<.7){const s=w*(.4+rng()*.2);g+=scRect(x,y,s-.5,h,"sc-block")+scRect(x+s+.5,y,w-s-.5,h,"sc-block");}
+    else g+=scRect(x,y,w,h,"sc-block");
+  });
+  if(across){const i=.7;g+=scRect(across.x+i,across.y+i,across.w-2*i,across.h-2*i,"sc-block")+scRect(across.x+across.w*.36,across.y+across.h*.36,across.w*.28,across.h*.28,"sc-inner");}
+  // the main street: parked cars, crossings either side of the target, trees along the far kerb
+  let s="";
+  for(let px=target.cx-44;px<target.cx+44;px+=5.5+rng()*3){if(rng()<.5)s+=scRect(px,MAIN-gapM/2+.35,1.7,.8,"sc-line");if(rng()<.5)s+=scRect(px+2,MAIN+gapM/2-1.15,1.7,.8,"sc-line");}
+  for(let k=-1;k<=1;k+=2)s+=scPath("M"+f1(target.cx+k*(target.w/2+1.1))+" "+f1(MAIN-gapM/2)+"v"+gapM,"sc-dash");
+  return {rot,R,MAIN,gapM,gap,target,across,cells,svg:'<g transform="rotate('+rot+' 50 42)">'+g+s+'</g>'};
+}
+// The bridge where the main street crosses the river, if it does.
+function scBridge(G,T){
+  if(!T.river)return "";let lo=null,hi=null;
+  for(let x=-30;x<=130;x+=1){const p=G.R(x,G.MAIN);if(Math.abs(T.river.inv(p.x,p.y).y-T.river.yy)<T.river.half+1.4){if(lo===null)lo=x;hi=x;}}
+  if(lo===null)return "";
+  return '<g transform="rotate('+G.rot+' 50 42)">'+scRect(lo-1.2,G.MAIN-G.gapM/2-.4,hi-lo+2.4,G.gapM+.8,"sc-block")+scLine(lo-1.2,G.MAIN-G.gapM/2+.5,hi+1.2,G.MAIN-G.gapM/2+.5,"sc-thin")+scLine(lo-1.2,G.MAIN+G.gapM/2-.5,hi+1.2,G.MAIN+G.gapM/2-.5,"sc-thin")+'</g>';
+}
+// The building itself, by what the job is: a strongroom for a vault, a core for an office, flats
+// for an extraction, a garden for a villa. Drawn in grid coordinates.
+function scTargetBuilding(rng,t,kind,tags){
+  const i=.5,x=t.x+i,y=t.y+i,w=t.w-2*i,h=t.h-2*i;let g=scRect(x,y,w,h,"sc-target");
+  const door=scRect(t.cx-1.1,y-.2,2.2,.6,"sc-solid");
+  if(kind==="bank"){
+    const sw=w*.42,sh=h*.4;const sx=x+w-sw-1.2,sy=y+h-sh-1.2;
+    g+=scRect(sx,sy,sw,sh,"sc-strong")+scHatch(sx,sy,sw,sh,1.1,true)+scRect(x+1.2,y+h-3.6,2.6,2.6,"sc-inner")+scLine(x+1.2,y+h-1,x+3.8,y+h-3.6,"sc-thin")
+      +scRect(x+1.2,y+1.2,w*.35,2.2,"sc-inner")+scText(sx+sw/2,sy-.8,"STRONGROOM",1.4);
+    if(tags.includes("underground")){g+=scPath("M"+f1(x-8)+" "+f1(y+h+3)+"q4-2 "+f1(sx-x+8)+" "+f1(sy-y-h-3+sh/2),"sc-dash")+scText(x-8,y+h+5.4,"TUNNEL",1.4);}
+  } else if(kind==="tower"){
+    g+=scRect(t.cx-w*.16,t.cy-h*.16,w*.32,h*.32,"sc-strong")+scCirc(t.cx+w*.28,t.cy-h*.24,1.6,"sc-thin")+scText(t.cx+w*.28,t.cy-h*.24+.5,"H",1.6)
+      +scHatch(x,y,w,h,2.2,false)+scText(t.cx,y+h+2.4,"PLAZA",1.4);
+  } else if(kind==="flats"){
+    for(let k=0;k<3;k++)g+=scRect(x+1+k*(w-2)/3,y+h*.42,(w-2)/3-.6,h*.5,"sc-inner");
+    g+=scRect(x+w*.3,y+1,w*.4,h*.3,"sc-inner")+scText(t.cx,y+h*.28,"COURT",1.3);
+  } else if(kind==="villa"){
+    g=scRect(x,y,w,h,"sc-thin")+scTrees(rng,x,y,w,h*.5,4)+scRect(x+w*.22,y+h*.5,w*.56,h*.42,"sc-target")+scPath("M"+f1(t.cx)+" "+f1(y)+"V"+f1(y+h*.5),"sc-dash");
+    return g+scRect(t.cx-1.1,y-.2,2.2,.6,"sc-solid");
+  } else if(kind==="office"){
+    g+=scRect(t.cx-w*.14,t.cy-h*.14,w*.28,h*.28,"sc-inner")+scLine(x,y+h*.5,x+w,y+h*.5,"sc-thin")+scLine(t.cx,y,t.cx,y+h,"sc-thin");
+  } else if(kind==="hall"){
+    g+=scRect(x+1.5,y+2.2,w-3,h-3.8,"sc-inner")+scText(t.cx,t.cy+.6,"FLOOR",1.4);
+  }
+  return g+door;
+}
+// The plan for a job in a city: the grid, the terrain, the building, the five places.
+function scCity(rng,job,co,kind){
+  const tags=job.tags||[];
+  const T=scTerrain(rng,co,{});
+  const G=scStreets(rng,{avoid:T.avoid,targetW:kind==="tower"?14:12});
+  const t=G.target,R=G.R,MAIN=G.MAIN;
+  const bld=scTargetBuilding(rng,t,kind,tags);
+  const dir=rng()<.5?-1:1;
+  const sites={
+    road:scClamp(R(t.cx-(t.w/2+9)*dir,MAIN)),
+    watch:scClamp(G.across?R(G.across.cx+4*dir,G.across.cy-1):R(t.cx-16,MAIN-9)),
+    door:R(t.cx-t.w*.18*dir,t.y+1.2),
+    inside:R(t.cx+t.w*.2*dir,t.cy+2.6),
+    exit:scClamp(R(t.cx+36*dir,MAIN)),
+  };
+  const labels=kind==="bank"?{inside:"THE STRONGROOM",door:"THE DOOR"}:kind==="tower"?{inside:"THE FLOOR",door:"THE LOBBY",exit:"THE RAMP"}:kind==="flats"?{inside:"THE FLAT",door:"THE STAIRS"}:kind==="villa"?{inside:"THE HOUSE",door:"THE GATE"}:kind==="hall"?{inside:"THE TABLE",door:"THE DOOR"}:{};
+  const car=R(t.cx+30*dir,MAIN);
+  const svg=T.svg+G.svg+'<g transform="rotate('+G.rot+' 50 42)">'+bld+'</g>'+T.over+scBridge(G,T)
+    +scCar(car.x,car.y,G.rot)+scCompass(93,77)+scScale(4,79,"100 m");
+  return {sites,labels,svg};
+}
+// A port: the quay, the stacks, the cranes, the ship alongside, the gate.
+function scPort(rng,job,co,deep){
+  const qy=56+rng()*6;let g="";
+  g+=scPath("M-2 "+f1(qy)+"H102V90H-2Z","sc-water");
+  for(let i=0;i<12;i++){const wx=2+rng()*90,wy=qy+6+rng()*20;g+=scPath("M"+f1(wx)+" "+f1(wy)+"q1.4-1 2.8 0t2.8 0","sc-thin");}
+  // two piers, a ship alongside the long one
+  const p1x=14+rng()*8,p2x=66+rng()*10;
+  g+=scRect(p1x,qy-.5,5,20,"sc-block")+scRect(p2x,qy-.5,7,15,"sc-block");
+  for(let yy=qy+2;yy<qy+19;yy+=3)g+=scCirc(p1x-.7,yy,.35,"sc-solid")+scCirc(p2x+7.7,yy,.35,"sc-solid");
+  for(let xx=3;xx<98;xx+=4.5)g+=scCirc(xx,qy+.9,.35,"sc-solid");
+  const shx=p1x+7,shy=qy+3;
+  g+=scPath("M"+f1(shx)+" "+f1(shy)+"h26q5 0 6 4q-1 4-6 4h-26q-3-4 0-8z","sc-target")+scRect(shx+4,shy+2,6,4,"sc-inner")+scLine(shx+12,shy+1.2,shx+28,shy+1.2,"sc-thin")+scText(shx+16,shy+10.6,"ALONGSIDE",1.4);
+  // the stacks: rows of containers
+  let stacks=[];
+  for(let sx=6;sx<60;sx+=16+rng()*6){const rows=2+Math.floor(rng()*3),cols=5+Math.floor(rng()*5);const sy=qy-4-rows*2.2;stacks.push({x:sx+cols*1.9/2,y:sy+rows*2.2/2});
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(rng()<.85)g+=scRect(sx+c*1.9,sy+r*2.2,1.7,2,"sc-block");}
+  // cranes on rails along the quay
+  g+=scLine(2,qy-1.6,98,qy-1.6,"sc-thin");
+  for(let cx=p1x+10+rng()*10,k=0;k<2;k++,cx+=26+rng()*10){g+=scRect(cx-1.4,qy-3.2,2.8,3,"sc-block")+scLine(cx,qy-3.2,cx,qy-11,"sc-line")+scLine(cx-2,qy-11,cx+9,qy-13.5,"sc-line")+scLine(cx,qy-11,cx+9,qy-13.5,"sc-thin");}
+  // warehouses with sawtooth roofs, the fence, the gate and the gatehouse, the road in
+  const whs=[];
+  for(let wx=20,k=0;wx<86&&k<3;k++){const ww=18+rng()*10,wh=10+rng()*6,wy=18+rng()*4;whs.push({x:wx,y:wy,w:ww,h:wh});g+=scRect(wx,wy,ww,wh,"sc-block")+scHatch(wx,wy,ww,wh,2.4,true);wx+=ww+5+rng()*6;}
+  const gate=14+rng()*40;
+  g+=scLine(-2,12,gate-3,12,"sc-fence")+scLine(gate+3,12,102,12,"sc-fence")+scRect(gate+3.2,9.4,3.2,2.6,"sc-block")+scLine(gate-3,12,gate+3,12,"sc-line");
+  g+=scRoad("M"+f1(gate)+" -2V"+f1(qy-16)+"H96",2.6)+scRoad("M-2 24H"+f1(gate-8)+"V10H"+f1(gate),2.2);
+  g+=scTruck(gate,qy-16,0)+scTruck(88,qy-16,0);
+  const w0=whs.sort((a,b)=>b.w-a.w)[0];
+  const stack=stacks[Math.floor(rng()*stacks.length)]||{x:30,y:qy-6};
+  const hold=rng()<.5;
+  const sites={road:{x:9,y:24},watch:{x:w0.x+w0.w/2,y:w0.y+w0.h/2},door:{x:gate,y:12},inside:deep?{x:shx+40,y:qy+14}:hold?{x:shx+13,y:shy+4}:stack,exit:{x:92,y:qy-16}};
+  if(deep)g+=scCirc(shx+40,qy+14,1.2,"sc-line")+scCirc(shx+40,qy+14,3.2,"sc-thin")+scText(shx+40,qy+19.5,"THE WRECK",1.4);
+  const labels={road:"THE ROAD",watch:"THE ROOF",door:"THE GATE",inside:deep?"THE WATER":hold?"THE HOLD":"THE STACK",exit:"THE TRUCK"};
+  return {sites,labels,svg:g+scCompass(93,77)+scScale(4,79,"100 m")};
+}
+// A road across open country: fields, a wood, a village, a bridge, and the place it is stopped.
+function scRoute(rng,job,co,mountain){
+  const ter=co?co.terrain:[];let g="";
+  // fields, hedged
+  for(let k=0;k<7;k++){const fx=-6+rng()*96,fy=-6+rng()*84,fw=14+rng()*20,fh=10+rng()*16;g+='<g transform="rotate('+f1(rng()*40-20)+' '+f1(fx+fw/2)+' '+f1(fy+fh/2)+')">'+scRect(fx,fy,fw,fh,"sc-thin")+(rng()<.5?scHatch(fx,fy,fw,fh,1.8,false):"")+'</g>';}
+  // a wood
+  const wx=rng()<.5?6:70,wy=rng()<.5?6:60;g+=scTrees(rng,wx,wy,24,18,12);
+  // the road
+  const pts=[];let px=-4,py=50+rng()*20;
+  while(px<104){pts.push({x:px,y:py});px+=14+rng()*10;py+=(rng()*26-13)*(mountain?1.4:1);py=Math.max(14,Math.min(72,py));}
+  if(mountain){for(let r=8;r<=60;r+=7)g+=scCirc(112,-8,r+rng()*3,"sc-thin");}
+  const rd=scWayPath(pts);
+  if(mountain){g+=scRoad(rd,2.4);const t=pts[Math.floor(pts.length*.7)];g+=scRect(t.x-6,t.y-2.2,12,4.4,"sc-inner")+scText(t.x,t.y-3,"TUNNEL",1.4);}
+  else g+=scRoad(rd,2.4);
+  // a river across, and the bridge
+  if(rng()<.6&&!mountain){const rx=30+rng()*40;g+=scPath("M"+f1(rx)+" -2q4 20 -2 40t3 48","sc-water",' style="stroke-width:4px;fill:none"');const on=pts.reduce((b,p)=>Math.abs(p.x-rx)<Math.abs(b.x-rx)?p:b);g+=scRect(rx-4,on.y-2.2,8,4.4,"sc-block");}
+  // a village near one end
+  const vx=rng()<.5?8:74,vy=rng()<.5?12:62;for(let k=0;k<6;k++)g+=scRect(vx+rng()*18,vy+rng()*12,2+rng()*3,2+rng()*2.5,"sc-block");
+  // the stop: a lay-by and a barrier, the truck, the ridge above it
+  const i=Math.max(1,Math.floor(pts.length/2)),stop=pts[i],nxt=pts[i+1]||stop,ang=Math.atan2(nxt.y-stop.y,nxt.x-stop.x)*180/Math.PI;
+  g+=scRect(stop.x-4,stop.y+1.8,8,1.8,"sc-inner")+scLine(stop.x+5,stop.y-2.4,stop.x+5,stop.y+2.4,"sc-line")+scRect(stop.x+5.4,stop.y-3.4,1.8,1.8,"sc-block");
+  const truck={x:(stop.x+pts[i-1].x)/2,y:(stop.y+pts[i-1].y)/2};g+=scTruck(truck.x,truck.y,ang);
+  const ridge={x:stop.x+(stop.y>42?-2:2),y:stop.y+(stop.y>42?-16:16)};
+  for(let r=4;r<=12;r+=3)g+=scCirc(ridge.x,ridge.y,r,"sc-thin");
+  g+=scCar(pts[pts.length-1].x-6,pts[pts.length-1].y,0);
+  const sites={road:scClamp(pts[0]),watch:scClamp(ridge),door:scClamp(stop),inside:scClamp(truck),exit:scClamp(pts[pts.length-1])};
+  const labels={road:"THE ROAD",watch:"THE RIDGE",door:"THE STOP",inside:"THE TRUCK",exit:"THE CAR"};
+  return {sites,labels,svg:g+scCompass(93,77)+scScale(4,79,"1 km")};
+}
+// A mountain pass: the road climbs in switchbacks to a hut and a barrier, and down the far side.
+function scPass(rng,job,co){
+  let g="";
+  for(let r=10;r<=70;r+=6)g+=scCirc(96,4,r+rng()*3,"sc-thin");
+  for(let r=8;r<=40;r+=6)g+=scCirc(-2,80,r+rng()*3,"sc-thin");
+  const pts=[{x:-2,y:78},{x:34,y:74},{x:14,y:62},{x:48,y:54},{x:24,y:42},{x:58,y:34},{x:38,y:24},{x:76,y:18},{x:102,y:10}].map(p=>({x:p.x+rng()*6-3,y:p.y+rng()*4-2}));
+  g+=scRoad(scWayPath(pts),2.2);
+  const hut=pts[5];g+=scRect(hut.x+1.5,hut.y-4.6,3.4,2.8,"sc-block")+scLine(hut.x-2.6,hut.y-2.6,hut.x+2.6,hut.y+2.6,"sc-line")+scText(hut.x+3.2,hut.y-5.6,"BORDER",1.4);
+  const tun=pts[3];g+=scRect(tun.x-5,tun.y-2.6,10,5.2,"sc-inner")+scText(tun.x,tun.y-3.4,"TUNNEL",1.4);
+  g+=scTrees(rng,4,8,22,26,9);
+  const truck={x:(pts[3].x+pts[4].x)/2,y:(pts[3].y+pts[4].y)/2};g+=scTruck(truck.x,truck.y,-30);
+  g+=scCar(pts[7].x,pts[7].y,-20);
+  const sites={road:scClamp(pts[1]),watch:scClamp({x:pts[5].x+16,y:pts[5].y+10}),door:scClamp(hut),inside:scClamp(truck),exit:scClamp(pts[7])};
+  const labels={road:"THE ROAD",watch:"THE RIDGE",door:"THE BARRIER",inside:"THE TRUCK",exit:"THE FAR SIDE"};
+  return {sites,labels,svg:g+scCompass(93,77)+scScale(4,79,"1 km")};
+}
+// A compound: the fence, the sheds, the tanks, the rail spur, the gatehouse, the pylons outside.
+function scCompound(rng,job,co,blackout){
+  let g="";
+  const fx=24,fy=14,fw=62,fh=58;
+  g+=scRect(fx,fy,fw,fh,"sc-fence")+scRect(fx-.8,fy-.8,fw+1.6,fh+1.6,"sc-fence");
+  g+=scTrees(rng,2,74,60,9,7)+scTrees(rng,90,20,9,40,5);
+  // sheds
+  const sheds=[];for(let k=0;k<2;k++){const sw=18+rng()*10,sh=10+rng()*6,sx=fx+4+k*34+rng()*4,sy=fy+4+rng()*4;sheds.push({x:sx,y:sy,w:sw,h:sh});g+=scRect(sx,sy,sw,sh,k?"sc-block":"sc-target")+scHatch(sx,sy,sw,sh,2.2,true);}
+  // tanks
+  const tanks=[];for(let k=0;k<3+Math.floor(rng()*2);k++){const r=3.5+rng()*3,tx=fx+8+k*15+rng()*4,ty=fy+fh-10-rng()*6;tanks.push({x:tx,y:ty,r});g+=scCirc(tx,ty,r,"sc-block")+scCirc(tx,ty,r*.5,"sc-thin")+scCirc(tx,ty,.5,"sc-solid");}
+  tanks.forEach((t,k)=>{const s=sheds[k%2];g+=scPath("M"+f1(t.x)+" "+f1(t.y-t.r)+"V"+f1(s.y+s.h+2)+"H"+f1(s.x+s.w/2)+"V"+f1(s.y+s.h),"sc-thin");});
+  // the chimney, the rail spur, the gatehouse and the road
+  g+=scCirc(sheds[0].x+sheds[0].w+2.6,sheds[0].y+2,1.1,"sc-line")+scCirc(sheds[0].x+sheds[0].w+2.6,sheds[0].y+2,.4,"sc-solid");
+  const ry=fy+fh-3;g+=scLine(fx+fw+14,ry,fx+10,ry,"sc-line");for(let x=fx+10;x<fx+fw+14;x+=2.2)g+=scLine(x,ry-.9,x,ry+.9,"sc-thin");
+  const gy=fy+fh*.55;g+=scRoad("M-2 "+f1(gy)+"H"+f1(fx-1),2.4)+scRect(fx+1,gy-4.2,3.4,2.8,"sc-block")+scLine(fx-.8,gy-2.6,fx-.8,gy+2.6,"sc-road")+scRoad("M"+f1(fx)+" "+f1(gy)+"H"+f1(fx+fw-2),2)+scRoad("M"+f1(fx+fw)+" "+f1(gy)+"H102",2.4);
+  // pylons outside the fence
+  for(let x=6;x<100;x+=22)g+=scPath("M"+f1(x)+" 4l1.6 4h-3.2zM"+f1(x-1.6)+" 6h3.2","sc-line");g+=scLine(2,5.2,100,5.2,"sc-thin");
+  let sub="";if(blackout){for(let r=0;r<3;r++)for(let c=0;c<4;c++)g+=scRect(fx+fw-16+c*3,fy+4+r*3,2.2,2.2,"sc-inner");g+=scRect(fx+fw-17,fy+3,13,10,"sc-thin");sub="SUBSTATION";g+=scText(fx+fw-10.5,fy+15.4,sub,1.3);}
+  g+=scTruck(fx+fw+7,gy,0)+scCar(6,gy,0);
+  const sites={road:{x:8,y:gy},watch:{x:92,y:9},door:{x:fx,y:gy},inside:blackout?{x:fx+fw-10.5,y:fy+8}:{x:sheds[0].x+sheds[0].w/2,y:sheds[0].y+sheds[0].h/2},exit:{x:fx+fw+7,y:gy}};
+  const labels={road:"THE ROAD",watch:"THE PYLON",door:"THE GATE",inside:blackout?"THE SWITCHGEAR":"THE SHED",exit:"THE TRUCK"};
+  return {sites,labels,svg:g+scCompass(93,77)+scScale(4,79,"200 m")};
+}
+// An airfield: the strip, the apron, the hangar, the tower, the fence, the fields around it.
+function scAirfield(rng,job,co){
+  let g="";
+  for(let k=0;k<5;k++){const fx=-6+rng()*100,fy=58+rng()*20,fw=16+rng()*18,fh=8+rng()*10;g+=scRect(fx,fy,fw,fh,"sc-thin")+(rng()<.6?scHatch(fx,fy,fw,fh,1.8,false):"");}
+  const ry=44+rng()*4,rot=rng()*8-4;
+  g+='<g transform="rotate('+f1(rot)+' 50 '+f1(ry)+')">'+scRect(4,ry-4,92,8,"sc-block")+scPath("M10 "+f1(ry)+"H90","sc-dash");
+  for(let x=6;x<12;x+=1.4)g+=scLine(x,ry-3,x,ry+3,"sc-thin");for(let x=88;x<94;x+=1.4)g+=scLine(x,ry-3,x,ry+3,"sc-thin");
+  g+=scText(14,ry+1,"09",2.6)+scText(86,ry+1,"27",2.6)+'</g>';
+  const ax=34+rng()*20;
+  g+=scRect(ax+8,ry-18,8,14.5,"sc-inner")+scRect(ax,ry-30,26,12,"sc-inner")+scRect(ax+2,ry-42,18,11,"sc-target")+scHatch(ax+2,ry-42,18,11,2,true)+scLine(ax+4,ry-31,ax+18,ry-31,"sc-solid");
+  g+=scRect(ax+30,ry-40,3.4,3.4,"sc-block")+scCirc(ax+31.7,ry-38.3,1,"sc-thin");
+  for(let k=0;k<3;k++)g+=scCirc(ax+26+k*2.2,ry-33,.9,"sc-line");
+  g+=scPath("M"+f1(ax+13)+" "+f1(ry-27)+"l.6 2.4 4-.4-3.4 1.6.4 3-1.6-1.4-1.6 1.4.4-3-3.4-1.6 4 .4z","sc-solid");
+  g+=scPath("M84 "+f1(ry-30)+"l0-5 3 1.6z","sc-solid")+scLine(84,ry-30,84,ry-24,"sc-line");
+  g+=scRect(2,2,96,ry+14,"sc-fence")+scRoad("M-2 "+f1(ry-24)+"H"+f1(ax),2.2)+scLine(2,ry-26.5,2,ry-21.5,"sc-road");
+  g+=scCar(8,ry-24,0);
+  const sites={road:{x:9,y:ry-24},watch:{x:92,y:ry+22},door:{x:ax+11,y:ry-30.5},inside:{x:ax+13,y:ry-25},exit:{x:88,y:ry}};
+  const labels={road:"THE ROAD",watch:"THE FENCE",door:"THE HANGAR",inside:"THE APRON",exit:"THE STRIP"};
+  return {sites,labels,svg:g+scCompass(93,77)+scScale(4,79,"200 m")};
+}
+// Which plan a posting gets, from what it is and where.
+function scKind(job,co){
+  const cat=job.cat,tags=job.tags||[],ter=co?co.terrain:[];
+  const water=tags.includes("water"),air=tags.includes("air");
+  if(air||cat==="airlift")return "airfield";
+  if(cat==="deepwater")return "deep";
+  if(water&&["smuggling","interception","escort"].includes(cat))return "port";
+  if(cat==="interception"||cat==="escort")return ter.includes("mountains")?"pass":"route";
+  if(cat==="smuggling")return ter.includes("mountains")?"pass":ter.some(t=>["coast","port","islands","delta"].includes(t))?"port":"route";
+  if(cat==="sabotage"||cat==="labwork")return "compound";
+  if(cat==="blackout")return "blackout";
+  if(cat==="vault"||cat==="ledger"||cat==="undercity")return "bank";
+  if(cat==="highrise")return "tower";
+  if(cat==="extraction")return "flats";
+  if(cat==="negotiation")return "hall";
+  if(cat==="recovery"||cat==="surveillance")return "villa";
+  return "office";
+}
+function scJob(d){
+  const job=d.job,co=COUNTRY_BY_NAME[job.country];
+  const rng=mulberry32(fmHash(String(d.id||job.id)+"|"+job.city+"|"+job.cat));
+  const k=scKind(job,co);
+  let sc;
+  if(k==="airfield")sc=scAirfield(rng,job,co);
+  else if(k==="port"||k==="deep")sc=scPort(rng,job,co,k==="deep");
+  else if(k==="route")sc=scRoute(rng,job,co,false);
+  else if(k==="pass")sc=scPass(rng,job,co);
+  else if(k==="compound"||k==="blackout")sc=scCompound(rng,job,co,k==="blackout");
+  else sc=scCity(rng,job,co,k);
+  sc.kind=k;return sc;
+}
+// A recruitment trip draws the city you flew into: off the plane at the edge of the plan, the city
+// itself, the place you sat down, and the street outside it where the answer was given.
+function scTrip(d){
+  const co=COUNTRY_BY_NAME[d.country];
+  const rng=mulberry32(fmHash("trip|"+d.cid+"|"+d.city+"|"+d.week));
+  const T=scTerrain(rng,co,{});
+  const G=scStreets(rng,{avoid:T.avoid});
+  const t=G.target,R=G.R,MAIN=G.MAIN;
+  const cafe=scRect(t.x+.5,t.y+.5,t.w-1,t.h-1,"sc-target")+scRect(t.x+1.6,t.y+1.6,t.w*.3,t.h*.32,"sc-inner")+scText(t.cx,t.cy+2.2,"CAFÉ",1.5)+scRect(t.cx-1.1,t.y-.2,2.2,.6,"sc-solid");
+  const park=G.cells.filter(c=>c!==t&&c!==G.across).sort((a,b)=>Math.hypot(a.p.x-30,a.p.y-24)-Math.hypot(b.p.x-30,b.p.y-24))[0];
+  let extra="";if(park){extra='<g transform="rotate('+G.rot+' 50 42)">'+scRect(park.x+.7,park.y+.7,park.w-1.4,park.h-1.4,"sc-ground")+scTrees(rng,park.x,park.y,park.w,park.h,6)+'</g>';}
+  const dir=rng()<.5?-1:1;
+  const sites={land:scClamp(R(t.cx-36*dir,MAIN)),city:park?scClamp(R(park.cx,park.cy)):scClamp(R(t.cx-16,MAIN-12)),table:R(t.cx,t.cy+1.2),deal:scClamp(R(t.cx+9*dir,MAIN))};
+  const svg=T.svg+G.svg+'<g transform="rotate('+G.rot+' 50 42)">'+cafe+'</g>'+extra+T.over+scBridge(G,T)+scCompass(93,77)+scScale(4,79,"100 m");
+  return {sites,labels:{},svg,kind:"trip"};
+}
+function fmSceneFor(d){
+  const key=d.cid?("T|"+d.cid+"|"+d.city+"|"+d.week):("J|"+(d.id||(d.job&&d.job.id))+"|"+(d.job?d.job.city:""));
+  if(SC_CACHE[key])return SC_CACHE[key];
+  const sc=d.cid?scTrip(d):scJob(d);
+  sc.x=0;sc.y=0;sc.w=SC_W;sc.h=SC_H;sc.cx=SC_W/2;sc.cy=SC_H/2;
+  SC_CACHE[key]=sc;return sc;
+}
+// The frame is the plan: 100 by 84, with the places where the plan put them.
+function fmFrame(d){return fmSceneFor(d);}
 function fmSitePos(k,F){
+  const s=F.sites&&F.sites[k];
+  if(s)return {x:s.x,y:s.y};
   const u=F.w/100;
   const j={road:[-17,10],watch:[-15,-10],door:[0,-1],inside:[16,-10],exit:[18,10]}[k];
   const t=TRIP_SITE_BY_K[k];
   const off=j||(t?[t.x,t.y]:[0,0]);
   return {x:F.cx+off[0]*u,y:F.cy+off[1]*u};
 }
+const FM_OP_SCALE=0.74;
 function feedMap(d){
   // a job is the crew; a trip is you and whoever you flew out to meet
   const team=d.cid?[S.player,byId(d.cid)].filter(Boolean):(d.teamIds||[]).map(byId).filter(Boolean);
   if(!team.length)return "";
-  const F=fmFrame(d.cid?d.country:d.job.country);
+  const F=fmFrame(d);
   const sites=feedSites(d);
-  const u=F.w/100;
-  const pts=poly=>poly.map(p=>{const q=proj(p[1],p[0]);return q[0].toFixed(1)+","+q[1].toFixed(1);}).join(" ");
-  const land=LAND.map(p=>'<polygon class="fm-land" points="'+pts(p)+'"/>').join("");
-  const water=WATER.map(p=>'<polygon class="fm-water" points="'+pts(p)+'"/>').join("");
-  let grid="";
-  for(let lon=-180;lon<=180;lon+=10){const x=(lon+180)/360*1000;grid+='<line class="fm-grid" x1="'+x+'" y1="0" x2="'+x+'" y2="500"/>';}
-  for(let lat=-80;lat<=80;lat+=10){const y=(90-lat)/180*500;grid+='<line class="fm-grid" x1="0" y1="'+y+'" x2="1000" y2="'+y+'"/>';}
-  const site=k=>{const p=fmSitePos(k,F),S2=feedSiteBy(d,k);
+  const u=1;
+  const city=d.cid?d.city:d.job.city,country=d.cid?d.country:d.job.country,co=COUNTRY_BY_NAME[country];
+  const site=k=>{const p=fmSitePos(k,F),S2=feedSiteBy(d,k),l=(F.labels&&F.labels[k])||S2.l;
     return '<g class="fm-site" data-site="'+k+'" transform="translate('+p.x.toFixed(1)+','+p.y.toFixed(1)+')">'
-      +'<circle r="'+(1.5*u).toFixed(2)+'"/>'
-      +'<text y="'+(-2.6*u).toFixed(2)+'" style="font-size:'+(1.5*u).toFixed(2)+'px">'+esc(S2.l.toUpperCase())+'</text></g>';};
+      +'<circle r="1.5"/><text y="-2.7" style="font-size:2.3px">'+esc(l.toUpperCase())+'</text></g>';};
   const home=fmSitePos(sites[0].k,F);
   const op=(c,i)=>{const o=fmSpot(i,team.length,u);
     const cid="fmc"+String(c.id).replace(/[^A-Za-z0-9]/g,"");
-    return '<g class="fm-op" data-id="'+c.id+'" data-site="'+sites[0].k+'" data-glyph="walk" transform="translate('+(home.x+o.dx).toFixed(1)+','+(home.y+o.dy).toFixed(1)+') scale('+(0.62*u).toFixed(3)+')">'
+    return '<g class="fm-op" data-id="'+c.id+'" data-site="'+sites[0].k+'" data-glyph="walk" transform="translate('+(home.x+o.dx).toFixed(1)+','+(home.y+o.dy).toFixed(1)+') scale('+FM_OP_SCALE+')">'
       +'<clipPath id="'+cid+'"><circle r="4.4"/></clipPath>'
       +'<circle class="fm-op-b" r="4.4"/>'
       // the bust is a 100x120 field; this window is the head, so a disc this small is a face
@@ -3868,12 +4280,9 @@ function feedMap(d){
       +'<g class="fm-op-badge" transform="translate(3.5,3.5) scale(0.42)"><circle class="fm-op-bb" r="5.6"/><g class="fm-op-g">'+FM_GLYPH.walk+'</g></g>'
       +'<text class="fm-op-n" y="8.6">'+esc(fmShort(c))+'</text></g>';};
   return '<div class="feedmap"><div class="fm-clock mono" id="fm-clock">'+esc(d.narrative[0]?d.narrative[0].t:"--:--")+'</div>'
-    +'<div class="fm-where mono">'+esc(d.cid?d.city:d.job.city)+' · '+esc(d.cid?d.country:d.job.country)+'</div>'
-    +'<svg class="fm-svg" viewBox="'+F.x.toFixed(1)+' '+F.y.toFixed(1)+' '+F.w+' '+F.h+'" preserveAspectRatio="xMidYMid slice" aria-label="'+esc((d.cid?d.city:d.job.city)+", "+(d.cid?d.country:d.job.country))+' — where they are">'
-    +'<rect x="'+F.x.toFixed(1)+'" y="'+F.y.toFixed(1)+'" width="'+F.w+'" height="'+F.h+'" fill="var(--card)"/>'
-    +grid+land+water
-    +'<g class="fm-city" transform="translate('+F.cx.toFixed(1)+','+F.cy.toFixed(1)+')">'
-      +'<circle class="fm-city-h" r="'+(9*u).toFixed(2)+'"/><circle class="fm-city-d" r="'+(1*u).toFixed(2)+'"/></g>'
+    +'<div class="fm-where mono">'+flagSvg(co,"fm-flag")+esc(city)+' · '+esc(country)+'</div>'
+    +'<svg class="fm-svg" viewBox="0 0 '+F.w+' '+F.h+'" aria-label="'+esc(city+", "+country)+' — the plan, and where they are">'
+    +'<rect class="sc-ground" x="0" y="0" width="'+F.w+'" height="'+F.h+'"/>'+F.svg
     +'<g class="fm-tether"></g>'
     +sites.map(p=>site(p.k)).join("")
     +'<g class="fm-ops">'+team.map(op).join("")+'</g>'
@@ -3902,7 +4311,7 @@ function fmLayout(root,F,sites){
     const here=[...root.querySelectorAll('.fm-op[data-site="'+p.k+'"]')];
     here.forEach((el,i)=>{const o=fmSpot(i,here.length,u);
       const x=at.x+o.dx, y=at.y+o.dy;
-      el.setAttribute("transform","translate("+x.toFixed(1)+","+y.toFixed(1)+") scale("+(0.62*u).toFixed(3)+")");
+      el.setAttribute("transform","translate("+x.toFixed(1)+","+y.toFixed(1)+") scale("+FM_OP_SCALE+")");
       tether+='<line x1="'+at.x.toFixed(1)+'" y1="'+at.y.toFixed(1)+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'"/>';});
   });
   const t=root.querySelector(".fm-tether");if(t)t.innerHTML=tether;
@@ -3931,7 +4340,7 @@ function feedMapStep(d,line){
   });
   if(line.who==="*")move(ops);
   else if(line.who)move(ops.filter(el=>el.getAttribute("data-id")===String(line.who)));
-  fmLayout(root,fmFrame(d.cid?d.country:d.job.country),feedSites(d));
+  fmLayout(root,fmFrame(d),feedSites(d));
 }
 
 function wentWrong(d){
@@ -4025,7 +4434,7 @@ function modalTrip(T){
   const col=good?"var(--good)":"var(--stamp)";
   const ticker='<div class="ticker" id="ticker">'+T.narrative.slice(0,T.revealed).map(tickLine).join("")+'</div>';
   const co=COUNTRY_BY_NAME[T.country];
-  const h='<div class="modal-h"><div><div class="kicker">'+(co?co.flag+' ':'')+esc(T.city)+', '+esc(T.country)+' · week '+T.week+(live?' · <span class="live">● LIVE</span>':'')+'</div>'
+  const h='<div class="modal-h"><div><div class="kicker">'+(co?flagSvg(co)+' ':'')+esc(T.city)+', '+esc(T.country)+' · week '+T.week+(live?' · <span class="live">● LIVE</span>':'')+'</div>'
     +(live?'<h2 style="font-size:22px;margin-top:4px">Recruiting '+esc(T.name)+'</h2>'
           :'<div class="result-verdict" style="margin-top:6px;color:'+col+'"><span class="verdict-stamp" style="border-color:'+col+'">'+(good?"SIGNED":"NO DEAL")+'</span></div>')
     +'</div>'+(live?'':'<button class="x" data-act="scrim" aria-label="Close">✕</button>')+'</div>';
@@ -4042,7 +4451,7 @@ function modalTrip(T){
         +'<span class="grp mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)">Speed <button class="btn ghost sm" data-act="speed-down" aria-label="Slower" style="padding:2px 8px">−</button><span class="num" style="width:58px;text-align:center">'+SPEEDS[speedIdx()][1]+'</span><button class="btn ghost sm" data-act="speed-up" aria-label="Faster" style="padding:2px 8px">+</button></span>'
         +'<button class="btn ghost sm" data-act="skip-ticker">'+(T.snag&&!T.resolved?"Skip to the meeting →":"Skip to the end →")+'</button></div>';
     }
-    return modalWrap(h+'<div class="modal-b">'+feedMap(T)+ticker+below+'</div>');
+    return modalWrap(h+'<div class="modal-b"><div class="feed-cols"><div class="feed-main">'+ticker+below+'</div><div class="feed-side">'+feedMap(T)+'</div></div></div>',"feed");
   }
   const nums='<div class="num-grid">'
     +'<div class="b"><div class="k">Paid</div><div class="v num">'+money(-(T.paid||0))+'</div></div>'
@@ -4063,7 +4472,7 @@ function modalResult(d){
   const team=d.teamIds.map(byId).filter(Boolean);
   const live=!d.done;
   const ticker='<div class="ticker" id="ticker">'+d.narrative.slice(0,d.revealed).map(tickLine).join("")+'</div>';
-  const h='<div class="modal-h"><div><div class="kicker">'+(d.crew?esc(d.crew)+' · ':'')+esc(d.job.city)+', '+esc(d.job.country)+' · week '+(d.week||S.week-1)+(d.replay?' · recap':'')+(live?' · <span class="live">● LIVE</span>':'')+'</div>'
+  const h='<div class="modal-h"><div><div class="kicker">'+(d.crew?esc(d.crew)+' · ':'')+flagSvg(COUNTRY_BY_NAME[d.job.country])+' '+esc(d.job.city)+', '+esc(d.job.country)+' · week '+(d.week||S.week-1)+(d.replay?' · recap':'')+(live?' · <span class="live">● LIVE</span>':'')+'</div>'
     +(live?'<h2 style="font-size:22px;margin-top:4px">'+esc(d.job.title)+'</h2>'
           :'<div class="result-verdict" style="margin-top:6px;color:'+col+'"><span class="verdict-stamp" style="border-color:'+col+'">'+d.verdictName+'</span></div>')
     +'</div>'+(live?'':'<button class="x" data-act="scrim" aria-label="Close">✕</button>')+'</div>';
@@ -4080,7 +4489,7 @@ function modalResult(d){
         +'<span class="grp mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)">Speed <button class="btn ghost sm" data-act="speed-down" aria-label="Slower" style="padding:2px 8px">−</button><span class="num" style="width:58px;text-align:center">'+SPEEDS[speedIdx()][1]+'</span><button class="btn ghost sm" data-act="speed-up" aria-label="Faster" style="padding:2px 8px">+</button></span>'
         +'<button class="btn ghost sm" data-act="skip-ticker">'+(d.twist&&!d.resolved?"Skip to the decision →":"Skip to the end →")+'</button></div>';
     }
-    return modalWrap(h+'<div class="modal-b">'+feedMap(d)+ticker+below+'</div>');
+    return modalWrap(h+'<div class="modal-b"><div class="feed-cols"><div class="feed-main">'+ticker+below+'</div><div class="feed-side">'+feedMap(d)+'</div></div></div>',"feed");
   }
   const nums='<div class="num-grid">'
     +'<div class="b"><div class="k">Gross</div><div class="v num">'+money(d.take)+'</div></div>'
@@ -4766,7 +5175,7 @@ function screenCreate(){
   if(!draft.face)draft.face=randomFace(freshRng(),draft.gender);
   draft.face=normFace(draft.face,draft.gender);
   const p=draft.profile;
-  const natOpts=COUNTRIES.map(n=>'<option value="'+esc(n.name)+'"'+(draft.nat===n.name?" selected":"")+'>'+n.flag+' '+esc(n.name)+' · P'+n.tier+'</option>').join("");
+  const natOpts=COUNTRIES.map(n=>'<option value="'+esc(n.name)+'"'+(draft.nat===n.name?" selected":"")+'>'+esc(n.name)+' · P'+n.tier+'</option>').join("");
   const techOpts=TECHS_ALL.map(t=>'<option value="'+t.k+'"'+(draft.tech===t.k?" selected":"")+'>'+t.l+'</option>').join("");
   const g=(v,l,act,key)=>'<button class="genbtn'+(draft[key]===v?" on":"")+'" data-act="'+act+'" data-v="'+v+'">'+l+'</button>';
   const fake={attrs:p.attrs,edu:p.edu,jail:p.jail,streets:p.streets,know:p.know,langs:p.langs,limits:p.limits};
@@ -4809,7 +5218,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 49 · 17 September 2026";
+const BUILD="build 50 · 17 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
