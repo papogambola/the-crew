@@ -355,3 +355,14 @@ The text above is kept as written. Decisions that close one of its open details 
   *And the first spread printed twice.* Re-paginating cleared the stack of leaves but not the two on show, so the old pair survived, got filed back in ahead of the new book, and put every page after it off by two — 60 leaves, 62 sheets, and an index that was right about a PDF that was wrong.
 
   **Pagination is a measurement, so it is only true for the faces it measured.** A font that lands after the book has paginated — a slow CDN, a stylesheet injected by a test — changes every line's height and leaves the last block on each page hanging over the edge. The book measures itself again when one arrives, and works from a detached copy of its source so that measuring twice gives the same book as measuring once.
+- **17 September 2026 — Zoom, from the page you are reading.** From the creator: *"Please add a zoom option in the player's handbook so it will zoom in / out from a specific page."*
+
+  `−  100%  +` in the pinned bar, `+` `−` `0` on the keyboard, and ctrl/⌘ with the wheel to zoom at the pointer. 100% is the book fitted to the window and it goes to 300%; past the window size the desk scrolls and you drag the page around under it.
+
+  **It is a scale and nothing else.** The page size is fixed and the book is *drawn* bigger — the pagination is not touched, so page 16 is page 16 at 100% and at 244%, and the index keeps the promise it makes. That is the whole reason zoom could be added at all without undoing the last change: if zooming reflowed the text, every number in the contents would become a different number at every magnification.
+
+  **"From a specific page" is the part that needed deciding.** Zooming on the centre of a two-page spread lands you in the gutter, looking at the inside margins of both pages — the one place with nothing to read. So the book keeps a *focus*: the side you last clicked, or the page an index line or a search hit just landed you on, and zoom centres there. The default is the right-hand page, because that is the one a jump lands on.
+
+  Two things the drive insists on, because both are ways this could quietly go wrong: **a drag is never a page-turn** (panning across a page would otherwise flip it, and you would lose your place every time you moved it), and **a click still turns the page at any zoom** — the reading model does not change just because the book got bigger. A movement threshold of six pixels separates the two, and the click that ends a drag is swallowed.
+
+  The page indicator needed its own ground to stand on. It was white ink on the desk, which works until a zoomed page fills the window and it becomes white ink on white paper — exactly when you most want to know where you are. It sits on a dark pill now, and says *drag to move · 0 to fit* while you are zoomed in.

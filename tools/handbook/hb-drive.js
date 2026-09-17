@@ -112,6 +112,64 @@ const ok=(c,m)=>{if(c){pass++;console.log("  ok   "+m);}else{fail++;console.log(
     "every page is numbered at its foot ("+feet.map(f=>f.pn).join(", ")+")");
   ok(feet.some(f=>f.rh.length>0),"and says which chapter it is in (\""+feet[0].rh+"\")");
 
+  /* -------------------------------- zoom ------------------------------- */
+  console.log("\n— zoom —");
+  await pg.evaluate(()=>window.bookGoPage(16));await settle();
+  ok(await pg.textContent("#zval")==="100%","it sits at 100% — the book fitted to the window");
+  const wide0=Math.round((await (await pg.$(".spread")).boundingBox()).width);
+  const paged0=await pg.evaluate(()=>window.bookPageOf("bigtechs"));
+  for(let i=0;i<4;i++){await pg.click("#zin");await settle(220);}
+  const z=await pg.textContent("#zval");
+  const wide1=Math.round((await (await pg.$(".spread")).boundingBox()).width);
+  ok(parseInt(z,10)>200,"four presses of + take it to "+z);
+  ok(wide1>wide0*1.8,"and the book is drawn that much bigger ("+wide0+"px → "+wide1+"px)");
+  // the whole point: zoom is a scale, not a re-layout. A page that moved would make the index lie.
+  ok(await pg.evaluate(()=>window.bookPages())===pages,"the book is still "+pages+" pages");
+  ok(await pg.evaluate(()=>window.bookPageOf("bigtechs"))===paged0,
+    "and nothing has moved: the specialists are still on page "+paged0);
+  const deskState=await pg.evaluate(()=>{const d=document.querySelector("#desk");
+    return {sw:d.scrollWidth,cw:d.clientWidth,sl:Math.round(d.scrollLeft),st:Math.round(d.scrollTop)};});
+  ok(deskState.sw>deskState.cw,"the desk can be moved around under it ("+deskState.sw+"px of book in a "+deskState.cw+"px window)");
+  ok(deskState.sl>0||deskState.st>0,"and it zoomed in on the page you were reading, not the middle of the book");
+  await pg.screenshot({path:path.join(DIR,"shot-zoom.png")});
+
+  // dragging moves the page; it must not also turn it
+  const spreadBefore=await pg.evaluate(()=>window.bookSpread());
+  const scrollBefore=await pg.evaluate(()=>document.querySelector("#desk").scrollLeft);
+  await pg.mouse.move(700,500);await pg.mouse.down();
+  await pg.mouse.move(900,430,{steps:8});await pg.mouse.up();
+  await settle(600);
+  ok(await pg.evaluate(()=>document.querySelector("#desk").scrollLeft)!==scrollBefore,
+    "dragging moves the page under the window");
+  ok(await pg.evaluate(()=>window.bookSpread())===spreadBefore,"and a drag is never a page-turn");
+  // but a plain click still turns, at any size
+  await pg.mouse.click(1150,500);await settle(1100);
+  ok(await pg.evaluate(()=>window.bookSpread())===spreadBefore+1,"a click still turns the page while zoomed in");
+  ok(await pg.textContent("#zval")===z,"and it stays at "+z+" while you read on");
+
+  await pg.mouse.move(700,500);
+  await pg.keyboard.down("Control");await pg.mouse.wheel(0,-300);await pg.keyboard.up("Control");
+  await settle(400);
+  ok(await pg.textContent("#zval")!==z,"ctrl and the wheel zoom at the pointer ("+z+" → "+(await pg.textContent("#zval"))+")");
+  await pg.keyboard.press("0");await settle(400);
+  ok(await pg.textContent("#zval")==="100%","0 puts it back to the fitted size");
+  await pg.keyboard.press("+");await settle(300);
+  ok(await pg.textContent("#zval")!=="100%","+ zooms in from the keyboard ("+(await pg.textContent("#zval"))+")");
+  await pg.click("#zval");await settle(400);
+  ok(await pg.textContent("#zval")==="100%","and clicking the reading fits it again");
+  // the floor, and that a search term containing + is typing rather than zooming
+  for(let i=0;i<10;i++){
+    if(await pg.evaluate(()=>document.querySelector("#zout").disabled))break;
+    await pg.click("#zout");await settle(140);
+  }
+  const floor=await pg.textContent("#zval");
+  ok(parseInt(floor,10)>=50&&await pg.evaluate(()=>document.querySelector("#zout").disabled),
+    "it stops zooming out at "+floor+", and says so");
+  await pg.keyboard.press("0");await settle(300);
+  await pg.fill("#q","a+b");await settle(400);
+  ok(await pg.textContent("#zval")==="100%","typing a + into the search box types it, and does not zoom");
+  await pg.click("#sclr");await settle(400);
+
   /* ------------------------------- index ------------------------------- */
   console.log("\n— the index —");
   await pg.evaluate(()=>window.bookTurn&&0);
@@ -215,8 +273,10 @@ const ok=(c,m)=>{if(c){pass++;console.log("  ok   "+m);}else{fail++;console.log(
 
   /* ------------------------- back to the front ------------------------- */
   console.log("\n— the cover, and the way out —");
+  await pg.evaluate(()=>window.bookZoom(2));await settle(400);
   await pg.click("#bcover");await settle(500);
   ok(await pg.evaluate(()=>!window.bookOpen()),"the Cover button shuts the book");
+  ok(await pg.textContent("#zval")==="100%","and shutting it puts the zoom back, so the cover is never off the side of the desk");
   ok(await pg.isVisible("#closed"),"and there it is on the desk again");
   await pg.click("#closed");await settle();
   ok(await pg.evaluate(()=>window.bookOpen()),"and it opens again");

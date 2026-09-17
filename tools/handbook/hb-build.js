@@ -95,6 +95,12 @@ a{color:inherit}
   width:24px;height:24px;line-height:1;cursor:pointer;padding:0}
 .sbtn:hover:not(:disabled){background:var(--ink);color:var(--paper)}
 .sbtn:disabled{opacity:.3;cursor:default}
+.zoom{display:flex;align-items:center;gap:4px;border:1.5px solid var(--ink);background:var(--card);
+  height:36px;padding:0 4px;flex:none}
+.zoom .sbtn{width:26px;height:26px;font-size:14px}
+.zval{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;min-width:48px;text-align:center;
+  border:0;background:none;color:var(--ink);cursor:pointer;padding:0 2px}
+.zval:hover{color:var(--stamp)}
 .nav{display:flex;gap:8px;margin-left:auto}
 .nbtn{font-family:var(--f-disp);font-weight:600;font-size:11.5px;letter-spacing:1.3px;text-transform:uppercase;
   border:1.5px solid var(--ink);background:var(--card);color:var(--ink);padding:8px 13px;cursor:pointer;text-decoration:none;white-space:nowrap}
@@ -103,7 +109,13 @@ a{color:inherit}
 .nbtn.solid:hover{background:var(--stamp);border-color:var(--stamp)}
 
 /* ---- the desk the book sits on ---- */
-.desk{position:fixed;inset:56px 0 0;display:flex;align-items:center;justify-content:center;perspective:2800px}
+/* The desk scrolls, so a book zoomed past the window can be moved around under it. margin:auto on
+   the inner box is what centres it — justify-content would centre it too, and then clip the top
+   and left off once it overflows, which is exactly the half you cannot scroll back to. */
+.desk{position:fixed;inset:56px 0 0;display:flex;overflow:auto}
+.deskin{margin:auto;padding:16px;display:flex;align-items:center;justify-content:center;perspective:2800px}
+body.zoomed .spread{cursor:grab}
+body.panning,body.panning .spread{cursor:grabbing}
 
 /* ---- the closed book ---- */
 .closed{position:relative;cursor:pointer;transform-origin:left center;transform-style:preserve-3d;
@@ -156,9 +168,14 @@ body.open .opencue,body.opening .opencue{display:none}
 @keyframes breathe{50%{opacity:.4}}
 
 /* ---- the open book ---- */
-.book{position:relative;display:none;transform-style:preserve-3d;
-  transform:scale(var(--fit,1));transform-origin:center center}
-body.open .book{display:block}
+/* The scale is a transform, which does not change the layout box — so the book sits in a wrapper
+   the size it is actually drawn at, or the desk would never know there was anything to scroll. */
+.bookwrap{position:relative;display:none;
+  width:calc(var(--bw,1120px) * var(--scale,1));
+  height:calc(var(--bh,752px) * var(--scale,1))}
+.book{position:absolute;top:0;left:0;transform-style:preserve-3d;
+  transform:scale(var(--scale,1));transform-origin:top left}
+body.open .bookwrap{display:block}
 body.open .closed{display:none}
 .spread{position:relative;display:flex;transform-style:preserve-3d;
   filter:drop-shadow(0 30px 56px rgba(0,0,0,.6))}
@@ -202,8 +219,12 @@ body.turning .flip{display:block}
 .spread:hover .zone{opacity:.75}
 .zone.off{opacity:0 !important}
 
-.pager{position:fixed;left:0;right:0;bottom:11px;text-align:center;font-family:var(--f-mono);font-size:11px;
-  letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.78);z-index:50;pointer-events:none}
+/* Zoomed in, a page fills the window — so the indicator needs its own ground to stand on, or it
+   is white ink on white paper exactly when it is most wanted. */
+.pager{position:fixed;left:0;right:0;bottom:11px;text-align:center;z-index:50;pointer-events:none}
+.pager span{display:inline-block;background:rgba(17,16,16,.72);color:rgba(255,255,255,.85);
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  padding:5px 12px;border-radius:2px}
 .pager b{font-weight:500;color:#fff}
 body:not(.open) .pager{opacity:0}
 
@@ -306,7 +327,7 @@ body.ready #store{display:none}
 const JS=`
 "use strict";
 var LEAVES=[],PAGE_OF={},SPREAD=0,TURNING=false,GEO={w:0,h:0};
-var HITS=[],HIT=-1;
+var HITS=[],HIT=-1,PANNED=false;
 var $=function(s){return document.querySelector(s);};
 var body=document.body;
 
@@ -316,12 +337,51 @@ var body=document.body;
    something it cannot keep, and the PDF would disagree with what is on screen. So the page is
    fixed and the whole book is scaled to fit, which is what holding a book closer actually is. */
 var PAGE={w:560,h:752};
+var FIT=1,ZOOM=1,FOCUS=1,ZMIN=0.6,ZMAX=3;
 function fit(){
   var vw=window.innerWidth,vh=window.innerHeight;
   var s=Math.min((vw-150)/(PAGE.w*2),(vh-140)/PAGE.h);
-  s=Math.max(0.5,Math.min(s,1.35));
-  document.documentElement.style.setProperty("--fit",s);
+  FIT=Math.max(0.5,Math.min(s,1.35));
+  applyScale();
 }
+/* Zoom is a number over the fitted size: 100% is the book filling the window, and it multiplies
+   the fit rather than replacing it. It is only ever a scale — nothing here repaginates, so the
+   page an index line names is still the page it is on however far in you are. */
+function applyScale(){
+  var r=document.documentElement.style;
+  r.setProperty("--fit",FIT);
+  r.setProperty("--scale",FIT*ZOOM);
+  r.setProperty("--bw",(PAGE.w*2)+"px");
+  r.setProperty("--bh",PAGE.h+"px");
+  var v=$("#zval");if(v)v.textContent=Math.round(ZOOM*100)+"%";
+  pagerText();
+  var zi=$("#zin"),zo=$("#zout");
+  if(zi)zi.disabled=ZOOM>=ZMAX-0.001;
+  if(zo)zo.disabled=ZOOM<=ZMIN+0.001;
+  body.classList.toggle("zoomed",ZOOM>1.001);
+}
+/* Zoom in on the page you are reading, not on the middle of the book. */
+function centreOnFocus(){
+  var desk=$("#desk"),slot=$(FOCUS?"#slotR":"#slotL");
+  if(!desk||!slot||!body.classList.contains("open"))return;
+  var r=slot.getBoundingClientRect(),d=desk.getBoundingClientRect();
+  desk.scrollLeft+=(r.left+r.width/2)-(d.left+d.width/2);
+  desk.scrollTop+=(r.top+r.height/2)-(d.top+d.height/2);
+}
+function setZoom(z,at){
+  z=Math.max(ZMIN,Math.min(ZMAX,z));
+  if(Math.abs(z-ZOOM)<0.0005)return;
+  var desk=$("#desk"),keep=null;
+  if(at&&desk){                       /* zooming at the pointer keeps what is under it still */
+    var d=desk.getBoundingClientRect();
+    keep={x:(desk.scrollLeft+at.x-d.left)/ZOOM,y:(desk.scrollTop+at.y-d.top)/ZOOM,
+          px:at.x-d.left,py:at.y-d.top};
+  }
+  ZOOM=z;applyScale();
+  if(keep&&desk){desk.scrollLeft=keep.x*ZOOM-keep.px;desk.scrollTop=keep.y*ZOOM-keep.py;}
+  else centreOnFocus();
+}
+function zoomFit(){ZOOM=1;applyScale();var d=$("#desk");if(d){d.scrollLeft=0;d.scrollTop=0;}}
 
 /* ------------------------------ pagination ----------------------------- */
 /* Walk the source in order, drop each block on the current leaf, and start a new leaf the moment
@@ -492,6 +552,12 @@ function sizeBook(){
 
 /* ------------------------------- turning ------------------------------- */
 function spreads(){return Math.max(1,Math.ceil(LEAVES.length/2));}
+function pagerText(){
+  var el=$("#pager");if(!el||!LEAVES.length)return;
+  var a=SPREAD*2+1,b=Math.min(SPREAD*2+2,LEAVES.length);
+  el.innerHTML='<span><b>'+a+'–'+b+'</b> of '+LEAVES.length+' &nbsp;·&nbsp; '
+    +(ZOOM>1.001?'drag to move &nbsp;·&nbsp; 0 to fit':'click a page to turn it')+'</span>';
+}
 /* A leaf is always somewhere in the document — in a slot, in the flipper, or back on the stack.
    Emptying a slot with textContent="" detaches whatever was in it, and since only the two leaves
    of the current spread are put back, every turn used to drop a page out of the document. It
@@ -501,9 +567,9 @@ function stack(el){var st=$("#store");while(el&&el.firstChild)st.appendChild(el.
 function put(sel,leaf){var s=$(sel);stack(s);if(leaf)s.appendChild(leaf);}
 function show(i,quiet){
   SPREAD=Math.max(0,Math.min(i,spreads()-1));
+  if(ZOOM>1.001)setTimeout(centreOnFocus,0);
   put("#slotL",LEAVES[SPREAD*2]);put("#slotR",LEAVES[SPREAD*2+1]);
-  var a=SPREAD*2+1,b=Math.min(SPREAD*2+2,LEAVES.length);
-  $("#pager").innerHTML='<b>'+a+'–'+b+'</b> of '+LEAVES.length+' &nbsp;·&nbsp; click a page to turn it';
+  pagerText();
   $("#zprev").classList.toggle("off",SPREAD===0);
   $("#znext").classList.toggle("off",SPREAD>=spreads()-1);
   if(!quiet)try{history.replaceState(null,"","#p"+(SPREAD*2+1));}catch(e){}
@@ -552,6 +618,7 @@ function goPage(n){
 }
 function goId(id){
   if(PAGE_OF[id]==null)return false;
+  FOCUS=(PAGE_OF[id]%2)?1:0;          /* land looking at the page the index named */
   openBook();goPage(PAGE_OF[id]);
   return true;
 }
@@ -602,6 +669,7 @@ function goHit(k){
   HITS.forEach(function(h){h.m.classList.remove("on");});
   HITS[HIT].m.classList.add("on");
   $("#scount").textContent=(HIT+1)+" of "+HITS.length;
+  FOCUS=(HITS[HIT].p%2)?1:0;          /* and at the page the hit is on */
   openBook();show(Math.floor(HITS[HIT].p/2));
   setBtns();
 }
@@ -614,7 +682,7 @@ function openBook(){
   body.classList.add("opening");
   setTimeout(function(){body.classList.add("open");body.classList.remove("opening");},600);
 }
-function closeBook(){body.classList.remove("open","opening");show(0,true);}
+function closeBook(){body.classList.remove("open","opening");zoomFit();show(0,true);}
 
 /* --------------------------------- wire -------------------------------- */
 function wire(){
@@ -623,9 +691,42 @@ function wire(){
     if(e.key==="Enter"||e.key===" "){e.preventDefault();openBook();}});
   var spread=document.querySelector(".spread");
   spread.addEventListener("click",function(e){
+    if(PANNED)return;                  /* a drag across the page is a pan, not a page-turn */
     if(e.target.closest&&e.target.closest("a,button,input,select,textarea"))return;
     var r=spread.getBoundingClientRect();
-    turn(e.clientX<r.left+r.width/2?-1:1);
+    var fwd=e.clientX>=r.left+r.width/2;
+    FOCUS=fwd?1:0;                     /* the side you clicked is the side you are reading */
+    turn(fwd?1:-1);
+  });
+
+  /* ---- zoom ---- */
+  var desk=$("#desk");
+  $("#zin").addEventListener("click",function(){setZoom(ZOOM*1.25);});
+  $("#zout").addEventListener("click",function(){setZoom(ZOOM/1.25);});
+  $("#zval").addEventListener("click",zoomFit);
+  desk.addEventListener("wheel",function(e){
+    if(!(e.ctrlKey||e.metaKey))return;  /* a plain wheel still scrolls the desk */
+    e.preventDefault();
+    setZoom(ZOOM*(e.deltaY<0?1.12:1/1.12),{x:e.clientX,y:e.clientY});
+  },{passive:false});
+
+  /* ---- drag the page around once it is bigger than the window ---- */
+  var down=null;
+  desk.addEventListener("mousedown",function(e){
+    if(ZOOM<=1.001||e.button!==0)return;
+    if(e.target.closest&&e.target.closest("a,button,input,select,textarea"))return;
+    down={x:e.clientX,y:e.clientY,l:desk.scrollLeft,t:desk.scrollTop};PANNED=false;
+  });
+  window.addEventListener("mousemove",function(e){
+    if(!down)return;
+    var dx=e.clientX-down.x,dy=e.clientY-down.y;
+    if(!PANNED&&Math.abs(dx)+Math.abs(dy)<6)return;
+    PANNED=true;body.classList.add("panning");
+    desk.scrollLeft=down.l-dx;desk.scrollTop=down.t-dy;
+  });
+  window.addEventListener("mouseup",function(){
+    down=null;body.classList.remove("panning");
+    if(PANNED)setTimeout(function(){PANNED=false;},0);   /* swallow the click this drag ends with */
   });
   document.addEventListener("click",function(e){
     if(!e.target.closest)return;
@@ -648,6 +749,9 @@ function wire(){
       if(e.key==="Escape"){$("#q").value="";search("");$("#q").blur();}
       return;
     }
+    if(e.key==="+"||e.key==="="){e.preventDefault();setZoom(ZOOM*1.25);return;}
+    if(e.key==="-"||e.key==="_"){e.preventDefault();setZoom(ZOOM/1.25);return;}
+    if(e.key==="0"){e.preventDefault();zoomFit();return;}
     if(e.key==="ArrowRight"||e.key==="PageDown"||e.key===" "){e.preventDefault();openBook();turn(1);}
     else if(e.key==="ArrowLeft"||e.key==="PageUp"){e.preventDefault();turn(-1);}
     else if(e.key==="Home"){e.preventDefault();show(0);}
@@ -702,6 +806,9 @@ window.bookOpen=function(){return document.body.classList.contains("open");};
 window.bookTurn=function(d){turn(d);};
 window.bookRepaginate=function(){paginate();return LEAVES.length;};
 window.bookGoPage=function(n){openBook();goPage(n-1);return SPREAD;};
+window.bookZoom=function(z){if(z!==undefined)setZoom(z);return ZOOM;};
+window.bookZoomFit=function(){zoomFit();return ZOOM;};
+window.bookFocus=function(){return FOCUS;};
 `;
 
 /* --------------------------------- page --------------------------------- */
@@ -724,6 +831,11 @@ const html=`<!doctype html>
     <button class="sbtn" id="snext" title="Next match (Enter)" aria-label="Next match" disabled>›</button>
     <button class="sbtn" id="sclr" title="Clear (Esc)" aria-label="Clear search">✕</button>
   </div>
+  <div class="zoom">
+    <button class="sbtn" id="zout" title="Zoom out (−)" aria-label="Zoom out">−</button>
+    <button class="zval" id="zval" title="Fit the window (0)" aria-label="Fit the window">100%</button>
+    <button class="sbtn" id="zin" title="Zoom in (+)" aria-label="Zoom in">+</button>
+  </div>
   <div class="nav">
     <button class="nbtn" id="bcover">Cover</button>
     <button class="nbtn" id="bcon">Contents</button>
@@ -731,13 +843,13 @@ const html=`<!doctype html>
   </div>
 </div>
 
-<div class="desk">
+<div class="desk" id="desk">
+ <div class="deskin">
   <div class="closed" id="closed" role="button" tabindex="0" aria-label="Open the handbook">
     ${cover}
   </div>
-  <div class="opencue">Click the book to open it</div>
 
-  <div class="book" id="book">
+  <div class="bookwrap" id="bookwrap"><div class="book" id="book">
     <div class="spread">
       <div class="edge l"></div><div class="edge r"></div>
       <div class="slot left" id="slotL"></div>
@@ -747,9 +859,11 @@ const html=`<!doctype html>
       <div class="zone next" id="znext" title="Next page"></div>
       <div class="flip" id="flip"><div class="face front"></div><div class="face back"></div></div>
     </div>
-  </div>
+  </div></div>
+ </div>
 </div>
 
+<div class="opencue">Click the book to open it</div>
 <div class="pager" id="pager"></div>
 <div class="nores"><b>Nothing in the handbook says that.</b><p>Try a shorter word — the search looks at every line, every table row and every glossary entry.</p></div>
 

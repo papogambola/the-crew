@@ -527,6 +527,14 @@ are going to on its back. Arrow keys, PageUp/PageDown, space, Home and End work 
   and turns the book to the one you are on, stepping through with ‹ › or Enter. `/` focuses it,
   Escape clears it. A mark carries no padding, so marking hits cannot reflow a line and move a
   page out from under the number the index just promised.
+- **Zoom, from the page you are reading.** `−  100%  +` in the pinned bar, `+` `−` `0` on the
+  keyboard, and ctrl/⌘ with the wheel to zoom at the pointer. 100% is the book fitted to the
+  window; from there it goes to 300%, and once it is bigger than the window you drag the page
+  around under it. Zooming centres on the page you were reading rather than on the middle of the
+  book — the side you last clicked, or the page an index line or a search hit just landed you on.
+  It is a scale and nothing else: the book does not repaginate, so page 16 is page 16 at any size,
+  which is what lets the index keep its promise. A drag is never a page-turn, and a click still
+  turns the page at any zoom.
 - **Cover, Contents, and back to the game**, in the pinned bar.
 
 Every number in it is read out of the game's own constants at build time — `hb-data.js` generates

@@ -43,6 +43,12 @@ a{color:inherit}
   width:24px;height:24px;line-height:1;cursor:pointer;padding:0}
 .sbtn:hover:not(:disabled){background:var(--ink);color:var(--paper)}
 .sbtn:disabled{opacity:.3;cursor:default}
+.zoom{display:flex;align-items:center;gap:4px;border:1.5px solid var(--ink);background:var(--card);
+  height:36px;padding:0 4px;flex:none}
+.zoom .sbtn{width:26px;height:26px;font-size:14px}
+.zval{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;min-width:48px;text-align:center;
+  border:0;background:none;color:var(--ink);cursor:pointer;padding:0 2px}
+.zval:hover{color:var(--stamp)}
 .nav{display:flex;gap:8px;margin-left:auto}
 .nbtn{font-family:var(--f-disp);font-weight:600;font-size:11.5px;letter-spacing:1.3px;text-transform:uppercase;
   border:1.5px solid var(--ink);background:var(--card);color:var(--ink);padding:8px 13px;cursor:pointer;text-decoration:none;white-space:nowrap}
@@ -51,7 +57,13 @@ a{color:inherit}
 .nbtn.solid:hover{background:var(--stamp);border-color:var(--stamp)}
 
 /* ---- the desk the book sits on ---- */
-.desk{position:fixed;inset:56px 0 0;display:flex;align-items:center;justify-content:center;perspective:2800px}
+/* The desk scrolls, so a book zoomed past the window can be moved around under it. margin:auto on
+   the inner box is what centres it — justify-content would centre it too, and then clip the top
+   and left off once it overflows, which is exactly the half you cannot scroll back to. */
+.desk{position:fixed;inset:56px 0 0;display:flex;overflow:auto}
+.deskin{margin:auto;padding:16px;display:flex;align-items:center;justify-content:center;perspective:2800px}
+body.zoomed .spread{cursor:grab}
+body.panning,body.panning .spread{cursor:grabbing}
 
 /* ---- the closed book ---- */
 .closed{position:relative;cursor:pointer;transform-origin:left center;transform-style:preserve-3d;
@@ -104,9 +116,14 @@ body.open .opencue,body.opening .opencue{display:none}
 @keyframes breathe{50%{opacity:.4}}
 
 /* ---- the open book ---- */
-.book{position:relative;display:none;transform-style:preserve-3d;
-  transform:scale(var(--fit,1));transform-origin:center center}
-body.open .book{display:block}
+/* The scale is a transform, which does not change the layout box — so the book sits in a wrapper
+   the size it is actually drawn at, or the desk would never know there was anything to scroll. */
+.bookwrap{position:relative;display:none;
+  width:calc(var(--bw,1120px) * var(--scale,1));
+  height:calc(var(--bh,752px) * var(--scale,1))}
+.book{position:absolute;top:0;left:0;transform-style:preserve-3d;
+  transform:scale(var(--scale,1));transform-origin:top left}
+body.open .bookwrap{display:block}
 body.open .closed{display:none}
 .spread{position:relative;display:flex;transform-style:preserve-3d;
   filter:drop-shadow(0 30px 56px rgba(0,0,0,.6))}
@@ -150,8 +167,12 @@ body.turning .flip{display:block}
 .spread:hover .zone{opacity:.75}
 .zone.off{opacity:0 !important}
 
-.pager{position:fixed;left:0;right:0;bottom:11px;text-align:center;font-family:var(--f-mono);font-size:11px;
-  letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.78);z-index:50;pointer-events:none}
+/* Zoomed in, a page fills the window — so the indicator needs its own ground to stand on, or it
+   is white ink on white paper exactly when it is most wanted. */
+.pager{position:fixed;left:0;right:0;bottom:11px;text-align:center;z-index:50;pointer-events:none}
+.pager span{display:inline-block;background:rgba(17,16,16,.72);color:rgba(255,255,255,.85);
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  padding:5px 12px;border-radius:2px}
 .pager b{font-weight:500;color:#fff}
 body:not(.open) .pager{opacity:0}
 
@@ -260,6 +281,11 @@ body.ready #store{display:none}
     <button class="sbtn" id="snext" title="Next match (Enter)" aria-label="Next match" disabled>›</button>
     <button class="sbtn" id="sclr" title="Clear (Esc)" aria-label="Clear search">✕</button>
   </div>
+  <div class="zoom">
+    <button class="sbtn" id="zout" title="Zoom out (−)" aria-label="Zoom out">−</button>
+    <button class="zval" id="zval" title="Fit the window (0)" aria-label="Fit the window">100%</button>
+    <button class="sbtn" id="zin" title="Zoom in (+)" aria-label="Zoom in">+</button>
+  </div>
   <div class="nav">
     <button class="nbtn" id="bcover">Cover</button>
     <button class="nbtn" id="bcon">Contents</button>
@@ -267,13 +293,13 @@ body.ready #store{display:none}
   </div>
 </div>
 
-<div class="desk">
+<div class="desk" id="desk">
+ <div class="deskin">
   <div class="closed" id="closed" role="button" tabindex="0" aria-label="Open the handbook">
     <div class="cv-in"><div class="cv-eyebrow">Case file · Classified</div><div class="cv-rule top"></div><div class="cv-title"><span>The</span><span>Crew</span></div><div class="cv-faces"><div class="cv-face"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden="true" style="display:block"><rect x="0" y="0" width="100" height="120" fill="#ffffff"/><path d="M26 40 C26 14 74 14 74 40 L74 70 Q74 78 66 78 L34 78 Q26 78 26 70 Z" fill="#111010" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M43 66 L43 100 L57 100 L57 66 Z" fill="#ffffff" stroke="#111010" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M0 120 L0 104 C12 97 26 93 36 92 Q50 106 64 92 C74 93 88 97 100 104 L100 120 Z" fill="#111010"/><path d="M35 89 Q50 103 65 89" fill="none" stroke="#111010" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M33 45 C25 43 24 60 33 62 Z" fill="#ffffff" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M67 45 C75 43 76 60 67 62 Z" fill="#ffffff" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M50 20 C32.9 20 32 36 32 50 C32 63 42.8 82 50 82 C57.2 82 68 63 68 50 C68 36 67.1 20 50 20 Z" fill="#ffffff" stroke="#111010" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M33.5 42.5 Q41 38.5 48 40.1 L48 42.3 Q41 40.7 33.5 44.7 Z" fill="#111010" stroke="#111010" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M66.5 42.5 Q59 38.5 52 40.1 L52 42.3 Q59 40.7 66.5 44.7 Z" fill="#111010" stroke="#111010" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M35 50 Q41 45.5 47 50 Q41 54.2 35 50 Z" fill="#ffffff" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="41" cy="50.4" r="2.6" fill="#111010"/><path d="M35 49.5 l-2.2 -2.2" fill="none" stroke="#111010" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M53 50 Q59 45.5 65 50 Q59 54.2 53 50 Z" fill="#ffffff" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="59" cy="50.4" r="2.6" fill="#111010"/><path d="M65 49.5 l2.2 -2.2" fill="none" stroke="#111010" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M49 53 L47.6 62 Q50 65.2 53 62" fill="none" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M42 68.8 Q46 65.6 50 68.5 Q54 65.6 58 68.8" fill="none" stroke="#111010" stroke-width="2.9" stroke-linejoin="round" stroke-linecap="round"/><path d="M43.5 73.2 Q50 77.4 56.5 73.2" fill="none" stroke="#111010" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M32 50 C32 36 32.9 20 50 20 C67.1 20 68 36 68 50 L68 44 L66 39 L34 39 L32 44 Z" fill="#111010" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="41" cy="49.5" r="7.4" fill="none" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="59" cy="49.5" r="7.4" fill="none" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M48.4 49.5 L51.6 49.5" fill="none" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M33.6 49 L31 48" fill="none" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M66.4 49 L69 48" fill="none" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="29" cy="61.5" r="1.7" fill="#111010"/><circle cx="71" cy="61.5" r="1.7" fill="#111010"/></svg></div><div class="cv-face"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden="true" style="display:block"><rect x="0" y="0" width="100" height="120" fill="#ffffff"/><path d="M41 66 L41 100 L59 100 L59 66 Z" fill="#ffffff" stroke="#111010" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M0 120 L0 104 C12 97 26 93 36 92 Q50 106 64 92 C74 93 88 97 100 104 L100 120 Z" fill="#111010"/><path d="M35 89 Q50 103 65 89" fill="none" stroke="#111010" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M31 46 C25 44 24 58 31 60 Z" fill="#ffffff" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M69 46 C75 44 76 58 69 60 Z" fill="#ffffff" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M50 20 C31 20 30 36 30 50 C30 63 42 82 50 82 C58 82 70 63 70 50 C70 36 69 20 50 20 Z" fill="#ffffff" stroke="#111010" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M33.5 42.5 Q41 38.5 48 42.2 L48 45.6 Q41 41.9 33.5 45.9 Z" fill="#111010" stroke="#111010" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M66.5 42.5 Q59 38.5 52 42.2 L52 45.6 Q59 41.9 66.5 45.9 Z" fill="#111010" stroke="#111010" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M34 50 Q41 43.8 48 50 Q41 56 34 50 Z" fill="#ffffff" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="41" cy="50.4" r="3.3" fill="#111010"/><path d="M52 50 Q59 43.8 66 50 Q59 56 52 50 Z" fill="#ffffff" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="59" cy="50.4" r="3.3" fill="#111010"/><path d="M49 50 L46 65.5 Q50 68.6 54.5 65.5" fill="none" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M42.5 69.8 Q46.3 67.9 50 69.5 Q53.8 67.9 57.5 69.8" fill="none" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M44 72.4 Q50 77.4 56 72.4" fill="none" stroke="#111010" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M44 74 Q50 84 56 74 Q50 77 44 74 Z" fill="#111010" stroke="#111010" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M30 50 L30 40 L32 30 L36 33 L41 21 L46 29 L50 17 L54 28 L59 20 L62 30 L67 26 L70 40 L70 50 L70 44 C64 34 57 31 50 31 C43 31 36 34 30 44 Z" fill="#111010" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg></div><div class="cv-face"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden="true" style="display:block"><rect x="0" y="0" width="100" height="120" fill="#ffffff"/><path d="M41 66 L41 100 L59 100 L59 66 Z" fill="#ffffff" stroke="#111010" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M0 120 L0 104 C12 97 26 93 36 92 Q50 106 64 92 C74 93 88 97 100 104 L100 120 Z" fill="#111010"/><path d="M35 89 Q50 103 65 89" fill="none" stroke="#111010" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M29 47 C24.5 45 23.5 56 29 58 Z" fill="#ffffff" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M71 47 C75.5 45 76.5 56 71 58 Z" fill="#ffffff" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M50 20 C29.1 20 28 36 28 50 C28 63 32.4 78 50 78 C67.6 78 72 63 72 50 C72 36 70.9 20 50 20 Z" fill="#ffffff" stroke="#111010" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M33.5 42.5 Q41 38.5 48 43.2 L48 45.8 Q41 41.1 33.5 45.1 Z" fill="#111010" stroke="#111010" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M66.5 42.5 Q59 38.5 52 43.2 L52 45.8 Q59 41.1 66.5 45.1 Z" fill="#111010" stroke="#111010" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M34.8 50 Q41 46.9 47.2 50 Q41 54.7 34.8 50 Z" fill="#ffffff" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="41" cy="50.4" r="2.5" fill="#111010"/><path d="M52.8 50 Q59 46.9 65.2 50 Q59 54.7 52.8 50 Z" fill="#ffffff" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="59" cy="50.4" r="2.5" fill="#111010"/><path d="M49 53 L47.6 62 Q50 65.2 53 62" fill="none" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M43 69.5 Q46.5 67.3 50 69.2 Q53.5 67.3 57 69.5" fill="none" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M45 73 Q50 75.6 55 73" fill="none" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M28 50 L28 40 L30 30 L34 33 L41 21 L46 29 L50 17 L54 28 L59 20 L62 30 L69 26 L72 40 L72 50 L72 44 C65.4 34 57.7 31 50 31 C42.3 31 34.6 34 28 44 Z" fill="#111010" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg></div><div class="cv-face"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden="true" style="display:block"><rect x="0" y="0" width="100" height="120" fill="#ffffff"/><path d="M41 66 L41 100 L59 100 L59 66 Z" fill="#ffffff" stroke="#111010" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M0 120 L0 104 C12 97 26 93 36 92 Q50 106 64 92 C74 93 88 97 100 104 L100 120 Z" fill="#111010"/><path d="M35 89 Q50 103 65 89" fill="none" stroke="#111010" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M29 46 C23 44 22 58 29 60 Z" fill="#ffffff" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M71 46 C77 44 78 58 71 60 Z" fill="#ffffff" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M50 20 C29.1 20 28 36 28 50 C28 63 32.4 78 50 78 C67.6 78 72 63 72 50 C72 36 70.9 20 50 20 Z" fill="#ffffff" stroke="#111010" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M33.5 42.5 Q41 38.5 48 43.2 L48 45.8 Q41 41.1 33.5 45.1 Z" fill="#111010" stroke="#111010" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M66.5 42.5 Q59 38.5 52 43.2 L52 45.8 Q59 41.1 66.5 45.1 Z" fill="#111010" stroke="#111010" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M35.4 50 Q41 44.4 46.6 50 Q41 55.4 35.4 50 Z" fill="#ffffff" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="41" cy="50.4" r="3" fill="#111010"/><path d="M53.4 50 Q59 44.4 64.6 50 Q59 55.4 53.4 50 Z" fill="#ffffff" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="59" cy="50.4" r="3" fill="#111010"/><path d="M49 58 L47 63 Q50 65.4 53.4 63" fill="none" stroke="#111010" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M43.5 70.6 Q46.8 69.6 50 70.3 Q53.3 69.6 56.5 70.6" fill="none" stroke="#111010" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M45 72.8 Q50 73.3 55 72.8" fill="none" stroke="#111010" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M29 56 C29 70 32.4 85 50 85 C67.6 85 71 70 71 56 L71 60 C69 73 59 77.5 50 77.5 C41 77.5 31 73 29 60 Z" fill="#111010" stroke="#111010" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M42.5 65.5 Q50 60.5 57.5 65.5 Q50 67.8 42.5 65.5 Z" fill="#111010" stroke="#111010" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="38.7" cy="79.6" r="0.6" fill="#ffffff"/><circle cx="54.3" cy="74.7" r="0.6" fill="#ffffff"/><circle cx="62.7" cy="77" r="0.6" fill="#ffffff"/><circle cx="34.8" cy="76.6" r="0.6" fill="#ffffff"/><circle cx="55.1" cy="77.8" r="0.6" fill="#ffffff"/><circle cx="58.5" cy="79.3" r="0.6" fill="#ffffff"/><circle cx="52" cy="77.3" r="0.6" fill="#ffffff"/><circle cx="55.4" cy="76.3" r="0.6" fill="#ffffff"/><circle cx="58.3" cy="78.7" r="0.6" fill="#ffffff"/><circle cx="36.9" cy="73.2" r="0.6" fill="#ffffff"/><circle cx="41.9" cy="75.7" r="0.6" fill="#ffffff"/><circle cx="50.3" cy="74.8" r="0.6" fill="#ffffff"/><path d="M28 50 L28 40 L30 30 L34 33 L41 21 L46 29 L50 17 L54 28 L59 20 L62 30 L69 26 L72 40 L72 50 L72 44 C65.4 34 57.7 31 50 31 C42.3 31 34.6 34 28 44 Z" fill="#111010" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="41" cy="49.5" r="7.4" fill="none" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="59" cy="49.5" r="7.4" fill="none" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M48.4 49.5 L51.6 49.5" fill="none" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M33.6 49 L27 48" fill="none" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M66.4 49 L73 48" fill="none" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg></div><div class="cv-face"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden="true" style="display:block"><rect x="0" y="0" width="100" height="120" fill="#ffffff"/><path d="M41 66 L41 100 L59 100 L59 66 Z" fill="#ffffff" stroke="#111010" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M0 120 L0 104 C12 97 26 93 36 92 Q50 106 64 92 C74 93 88 97 100 104 L100 120 Z" fill="#111010"/><path d="M35 89 Q50 103 65 89" fill="none" stroke="#111010" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M29 46 C23 44 22 58 29 60 Z" fill="#ffffff" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M71 46 C77 44 78 58 71 60 Z" fill="#ffffff" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M50 20 C29.1 20 28 36 28 50 C28 63 32.4 78 50 78 C67.6 78 72 63 72 50 C72 36 70.9 20 50 20 Z" fill="#ffffff" stroke="#111010" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M33.5 42.5 Q41 38.5 48 43.2 L48 45.8 Q41 41.1 33.5 45.1 Z" fill="#111010" stroke="#111010" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M66.5 42.5 Q59 38.5 52 43.2 L52 45.8 Q59 41.1 66.5 45.1 Z" fill="#111010" stroke="#111010" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M34 50 Q41 43.8 48 50 Q41 56 34 50 Z" fill="#ffffff" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="41" cy="50.4" r="3.3" fill="#111010"/><path d="M52 50 Q59 43.8 66 50 Q59 56 52 50 Z" fill="#ffffff" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="59" cy="50.4" r="3.3" fill="#111010"/><path d="M49 50 L46 65.5 Q50 68.6 54.5 65.5" fill="none" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M43 70.4 Q46.5 68.8 50 70.1 Q53.5 68.8 57 70.4" fill="none" stroke="#111010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M45 74.6 Q50 71.6 55 74.6" fill="none" stroke="#111010" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M42.5 65.5 Q50 60.5 57.5 65.5 Q50 67.8 42.5 65.5 Z" fill="#111010" stroke="#111010" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/></svg></div></div><div class="cv-rule"></div><div class="cv-sub">Player’s<br>Handbook</div><div class="cv-rule"></div><div class="cv-tick"></div><div class="cv-foot">A crew of five<br>Thousands of jobs</div></div>
   </div>
-  <div class="opencue">Click the book to open it</div>
 
-  <div class="book" id="book">
+  <div class="bookwrap" id="bookwrap"><div class="book" id="book">
     <div class="spread">
       <div class="edge l"></div><div class="edge r"></div>
       <div class="slot left" id="slotL"></div>
@@ -283,9 +309,11 @@ body.ready #store{display:none}
       <div class="zone next" id="znext" title="Next page"></div>
       <div class="flip" id="flip"><div class="face front"></div><div class="face back"></div></div>
     </div>
-  </div>
+  </div></div>
+ </div>
 </div>
 
+<div class="opencue">Click the book to open it</div>
 <div class="pager" id="pager"></div>
 <div class="nores"><b>Nothing in the handbook says that.</b><p>Try a shorter word — the search looks at every line, every table row and every glossary entry.</p></div>
 
@@ -311,7 +339,7 @@ body.ready #store{display:none}
 <script>
 "use strict";
 var LEAVES=[],PAGE_OF={},SPREAD=0,TURNING=false,GEO={w:0,h:0};
-var HITS=[],HIT=-1;
+var HITS=[],HIT=-1,PANNED=false;
 var $=function(s){return document.querySelector(s);};
 var body=document.body;
 
@@ -321,12 +349,51 @@ var body=document.body;
    something it cannot keep, and the PDF would disagree with what is on screen. So the page is
    fixed and the whole book is scaled to fit, which is what holding a book closer actually is. */
 var PAGE={w:560,h:752};
+var FIT=1,ZOOM=1,FOCUS=1,ZMIN=0.6,ZMAX=3;
 function fit(){
   var vw=window.innerWidth,vh=window.innerHeight;
   var s=Math.min((vw-150)/(PAGE.w*2),(vh-140)/PAGE.h);
-  s=Math.max(0.5,Math.min(s,1.35));
-  document.documentElement.style.setProperty("--fit",s);
+  FIT=Math.max(0.5,Math.min(s,1.35));
+  applyScale();
 }
+/* Zoom is a number over the fitted size: 100% is the book filling the window, and it multiplies
+   the fit rather than replacing it. It is only ever a scale — nothing here repaginates, so the
+   page an index line names is still the page it is on however far in you are. */
+function applyScale(){
+  var r=document.documentElement.style;
+  r.setProperty("--fit",FIT);
+  r.setProperty("--scale",FIT*ZOOM);
+  r.setProperty("--bw",(PAGE.w*2)+"px");
+  r.setProperty("--bh",PAGE.h+"px");
+  var v=$("#zval");if(v)v.textContent=Math.round(ZOOM*100)+"%";
+  pagerText();
+  var zi=$("#zin"),zo=$("#zout");
+  if(zi)zi.disabled=ZOOM>=ZMAX-0.001;
+  if(zo)zo.disabled=ZOOM<=ZMIN+0.001;
+  body.classList.toggle("zoomed",ZOOM>1.001);
+}
+/* Zoom in on the page you are reading, not on the middle of the book. */
+function centreOnFocus(){
+  var desk=$("#desk"),slot=$(FOCUS?"#slotR":"#slotL");
+  if(!desk||!slot||!body.classList.contains("open"))return;
+  var r=slot.getBoundingClientRect(),d=desk.getBoundingClientRect();
+  desk.scrollLeft+=(r.left+r.width/2)-(d.left+d.width/2);
+  desk.scrollTop+=(r.top+r.height/2)-(d.top+d.height/2);
+}
+function setZoom(z,at){
+  z=Math.max(ZMIN,Math.min(ZMAX,z));
+  if(Math.abs(z-ZOOM)<0.0005)return;
+  var desk=$("#desk"),keep=null;
+  if(at&&desk){                       /* zooming at the pointer keeps what is under it still */
+    var d=desk.getBoundingClientRect();
+    keep={x:(desk.scrollLeft+at.x-d.left)/ZOOM,y:(desk.scrollTop+at.y-d.top)/ZOOM,
+          px:at.x-d.left,py:at.y-d.top};
+  }
+  ZOOM=z;applyScale();
+  if(keep&&desk){desk.scrollLeft=keep.x*ZOOM-keep.px;desk.scrollTop=keep.y*ZOOM-keep.py;}
+  else centreOnFocus();
+}
+function zoomFit(){ZOOM=1;applyScale();var d=$("#desk");if(d){d.scrollLeft=0;d.scrollTop=0;}}
 
 /* ------------------------------ pagination ----------------------------- */
 /* Walk the source in order, drop each block on the current leaf, and start a new leaf the moment
@@ -497,6 +564,12 @@ function sizeBook(){
 
 /* ------------------------------- turning ------------------------------- */
 function spreads(){return Math.max(1,Math.ceil(LEAVES.length/2));}
+function pagerText(){
+  var el=$("#pager");if(!el||!LEAVES.length)return;
+  var a=SPREAD*2+1,b=Math.min(SPREAD*2+2,LEAVES.length);
+  el.innerHTML='<span><b>'+a+'–'+b+'</b> of '+LEAVES.length+' &nbsp;·&nbsp; '
+    +(ZOOM>1.001?'drag to move &nbsp;·&nbsp; 0 to fit':'click a page to turn it')+'</span>';
+}
 /* A leaf is always somewhere in the document — in a slot, in the flipper, or back on the stack.
    Emptying a slot with textContent="" detaches whatever was in it, and since only the two leaves
    of the current spread are put back, every turn used to drop a page out of the document. It
@@ -506,9 +579,9 @@ function stack(el){var st=$("#store");while(el&&el.firstChild)st.appendChild(el.
 function put(sel,leaf){var s=$(sel);stack(s);if(leaf)s.appendChild(leaf);}
 function show(i,quiet){
   SPREAD=Math.max(0,Math.min(i,spreads()-1));
+  if(ZOOM>1.001)setTimeout(centreOnFocus,0);
   put("#slotL",LEAVES[SPREAD*2]);put("#slotR",LEAVES[SPREAD*2+1]);
-  var a=SPREAD*2+1,b=Math.min(SPREAD*2+2,LEAVES.length);
-  $("#pager").innerHTML='<b>'+a+'–'+b+'</b> of '+LEAVES.length+' &nbsp;·&nbsp; click a page to turn it';
+  pagerText();
   $("#zprev").classList.toggle("off",SPREAD===0);
   $("#znext").classList.toggle("off",SPREAD>=spreads()-1);
   if(!quiet)try{history.replaceState(null,"","#p"+(SPREAD*2+1));}catch(e){}
@@ -557,6 +630,7 @@ function goPage(n){
 }
 function goId(id){
   if(PAGE_OF[id]==null)return false;
+  FOCUS=(PAGE_OF[id]%2)?1:0;          /* land looking at the page the index named */
   openBook();goPage(PAGE_OF[id]);
   return true;
 }
@@ -607,6 +681,7 @@ function goHit(k){
   HITS.forEach(function(h){h.m.classList.remove("on");});
   HITS[HIT].m.classList.add("on");
   $("#scount").textContent=(HIT+1)+" of "+HITS.length;
+  FOCUS=(HITS[HIT].p%2)?1:0;          /* and at the page the hit is on */
   openBook();show(Math.floor(HITS[HIT].p/2));
   setBtns();
 }
@@ -619,7 +694,7 @@ function openBook(){
   body.classList.add("opening");
   setTimeout(function(){body.classList.add("open");body.classList.remove("opening");},600);
 }
-function closeBook(){body.classList.remove("open","opening");show(0,true);}
+function closeBook(){body.classList.remove("open","opening");zoomFit();show(0,true);}
 
 /* --------------------------------- wire -------------------------------- */
 function wire(){
@@ -628,9 +703,42 @@ function wire(){
     if(e.key==="Enter"||e.key===" "){e.preventDefault();openBook();}});
   var spread=document.querySelector(".spread");
   spread.addEventListener("click",function(e){
+    if(PANNED)return;                  /* a drag across the page is a pan, not a page-turn */
     if(e.target.closest&&e.target.closest("a,button,input,select,textarea"))return;
     var r=spread.getBoundingClientRect();
-    turn(e.clientX<r.left+r.width/2?-1:1);
+    var fwd=e.clientX>=r.left+r.width/2;
+    FOCUS=fwd?1:0;                     /* the side you clicked is the side you are reading */
+    turn(fwd?1:-1);
+  });
+
+  /* ---- zoom ---- */
+  var desk=$("#desk");
+  $("#zin").addEventListener("click",function(){setZoom(ZOOM*1.25);});
+  $("#zout").addEventListener("click",function(){setZoom(ZOOM/1.25);});
+  $("#zval").addEventListener("click",zoomFit);
+  desk.addEventListener("wheel",function(e){
+    if(!(e.ctrlKey||e.metaKey))return;  /* a plain wheel still scrolls the desk */
+    e.preventDefault();
+    setZoom(ZOOM*(e.deltaY<0?1.12:1/1.12),{x:e.clientX,y:e.clientY});
+  },{passive:false});
+
+  /* ---- drag the page around once it is bigger than the window ---- */
+  var down=null;
+  desk.addEventListener("mousedown",function(e){
+    if(ZOOM<=1.001||e.button!==0)return;
+    if(e.target.closest&&e.target.closest("a,button,input,select,textarea"))return;
+    down={x:e.clientX,y:e.clientY,l:desk.scrollLeft,t:desk.scrollTop};PANNED=false;
+  });
+  window.addEventListener("mousemove",function(e){
+    if(!down)return;
+    var dx=e.clientX-down.x,dy=e.clientY-down.y;
+    if(!PANNED&&Math.abs(dx)+Math.abs(dy)<6)return;
+    PANNED=true;body.classList.add("panning");
+    desk.scrollLeft=down.l-dx;desk.scrollTop=down.t-dy;
+  });
+  window.addEventListener("mouseup",function(){
+    down=null;body.classList.remove("panning");
+    if(PANNED)setTimeout(function(){PANNED=false;},0);   /* swallow the click this drag ends with */
   });
   document.addEventListener("click",function(e){
     if(!e.target.closest)return;
@@ -653,6 +761,9 @@ function wire(){
       if(e.key==="Escape"){$("#q").value="";search("");$("#q").blur();}
       return;
     }
+    if(e.key==="+"||e.key==="="){e.preventDefault();setZoom(ZOOM*1.25);return;}
+    if(e.key==="-"||e.key==="_"){e.preventDefault();setZoom(ZOOM/1.25);return;}
+    if(e.key==="0"){e.preventDefault();zoomFit();return;}
     if(e.key==="ArrowRight"||e.key==="PageDown"||e.key===" "){e.preventDefault();openBook();turn(1);}
     else if(e.key==="ArrowLeft"||e.key==="PageUp"){e.preventDefault();turn(-1);}
     else if(e.key==="Home"){e.preventDefault();show(0);}
@@ -707,5 +818,8 @@ window.bookOpen=function(){return document.body.classList.contains("open");};
 window.bookTurn=function(d){turn(d);};
 window.bookRepaginate=function(){paginate();return LEAVES.length;};
 window.bookGoPage=function(n){openBook();goPage(n-1);return SPREAD;};
+window.bookZoom=function(z){if(z!==undefined)setZoom(z);return ZOOM;};
+window.bookZoomFit=function(){zoomFit();return ZOOM;};
+window.bookFocus=function(){return FOCUS;};
 </script>
 </body></html>
