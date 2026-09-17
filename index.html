@@ -3051,8 +3051,7 @@ function yrs(n){return n===1?"1 yr":n+" yrs";}
 const root=document.getElementById("root");
 let draft=null;
 function render(){
-  musicRoute();
-  if(!S){root.innerHTML=screenTitle()+chrome();bind();fitTitle();return;}
+  if(!S){musicRoute();root.innerHTML=screenTitle()+chrome();bind();fitTitle();return;}
   // a milestone reached is announced first; something that happened between jobs waits for a decision next
   checkMilestones();checkGoals();
   if(!TUT.on){   // nothing pops up under a tutorial; it all waits for the last card
@@ -3061,6 +3060,7 @@ function render(){
     if(S.revenge&&!S.modal&&!S.over){S.modal={type:"revenge"};sfx("bad");}
     if(S.event&&!S.modal&&!S.over)S.modal={type:"event"};
   }
+  musicRoute();   // after the pop-ups are decided, so the week's news is scored as it opens
   if(S.over&&!(S.modal&&(isFeed(S.modal.type)||S.modal.type==="event"))){root.innerHTML=screenOver()+chrome();bind();return;}
   let body="";
   if(S.tab==="crew")body=tabCrew();
@@ -5237,7 +5237,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 54 · 17 September 2026";
+const BUILD="build 55 · 17 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
