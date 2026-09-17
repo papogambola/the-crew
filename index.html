@@ -4642,9 +4642,20 @@ const TRACKS={
   report:["music/report-01.mp3","music/report-02.mp3","music/report-03.mp3","music/report-04.mp3","music/report-05.mp3","music/report-06.mp3","music/report-07.mp3","music/report-08.mp3","music/report-09.mp3","music/report-10.mp3","music/report-11.mp3"],
   result:{good:"music/result-success.mp3",messy:"music/result-messy.mp3",bad:"music/result-disaster.mp3"},
   ambient:"music/ambient.mp3",   // the hour of suspense under everything that is not a job report or a verdict, on a loop
-  trip:"music/tension.mp3",      // the recruitment trip — go and ask — from the flight out to the answer, on a loop
-  news:"music/news.mp3",         // the week's news: the pop-up between jobs, while it is open
+  // Pools: every tune in the pool is drawn at random, a fresh one each time one ends, never the one
+  // just played. A pool of one loops. tools/split_tunes.py cuts a compilation into tunes and
+  // rewrites these two lines.
+  trip:["music/tension.mp3"],      // the recruitment trip — go and ask — from the flight out to the answer
+  news:["music/news.mp3"],         // the week's news: the pop-up between jobs, while it is open
 };
+// A pool of tunes, in a random order that never repeats the last one. A pool of one loops.
+function musicShuffle(pool,label){
+  if(pool.length<2){musicPlay(pool[0],label+", on a loop",true);musicWant.pool=pool;return;}
+  let i=Math.floor(Math.random()*pool.length);
+  if(pool[i]===musicSrc)i=(i+1+Math.floor(Math.random()*(pool.length-1)))%pool.length;
+  musicWant={src:pool[i],label:label+" — tune "+(i+1)+" of "+pool.length,loop:false,pool,base:label};musicSync();
+}
+function musicNext(){if(musicWant&&musicWant.pool&&musicWant.pool.length>1)musicShuffle(musicWant.pool,musicWant.base||musicWant.label);}
 function musicAmbient(){if(musicWant&&musicWant.src===TRACKS.ambient){musicSync();return;}musicPlay(TRACKS.ambient,"Suspense — the hour under the office, on a loop",true);}
 // The report and the verdict bring their own track. A trip runs under the tension track until it is
 // settled, the week's news under its own while the pop-up is up; every other screen runs under the loop.
@@ -4653,10 +4664,10 @@ function musicRoute(){
   if(d){
     if(!d.cid)return;                                   // a job report: its track was chosen when it started, and the verdict picks its own
     if(d.done){musicAmbient();return;}
-    if(!musicWant||musicWant.src!==TRACKS.trip)musicPlay(TRACKS.trip,"the meeting — tension, on a loop",true);
+    if(!musicWant||musicWant.pool!==TRACKS.trip)musicShuffle(TRACKS.trip,"the meeting — tension");
     return;
   }
-  if(S&&S.modal&&S.modal.type==="event"){if(!musicWant||musicWant.src!==TRACKS.news)musicPlay(TRACKS.news,"the week's news, on a loop",true);return;}
+  if(S&&S.modal&&S.modal.type==="event"){if(!musicWant||musicWant.pool!==TRACKS.news)musicShuffle(TRACKS.news,"the week's news");return;}
   musicAmbient();
 }
 const SPEEDS=[[4500,"Slowest"],[3000,"Slow"],[2000,"Normal"],[1300,"Fast"],[800,"Fastest"]];
@@ -4669,7 +4680,7 @@ function musicEl(){
       MUSIC=new Audio();MUSIC.preload="auto";
       MUSIC.addEventListener("playing",()=>{musicState="playing";musicNote="";refreshRadio();});
       MUSIC.addEventListener("pause",()=>{if(musicState==="playing"){musicState="stopped";refreshRadio();}});
-      MUSIC.addEventListener("ended",()=>{if(musicWant&&!musicWant.loop){musicState="stopped";refreshRadio();}});
+      MUSIC.addEventListener("ended",()=>{if(musicWant&&musicWant.pool&&musicWant.pool.length>1){musicNext();return;}if(musicWant&&!musicWant.loop){musicState="stopped";refreshRadio();}});
       MUSIC.addEventListener("error",()=>{musicLoadFallback();});
     }catch(e){MUSIC=null;musicState="blocked";musicNote="this browser has no audio";}
   }
@@ -5237,7 +5248,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 55 · 17 September 2026";
+const BUILD="build 56 · 17 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 

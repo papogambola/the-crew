@@ -101,18 +101,22 @@
    "mean": -9
   }
  },
- "trip": {
-  "name": "tension.mp3",
-  "from": "tension.mp3 (creator, 17 September 2026)",
-  "seconds": 86.36,
-  "bytes": 1618862,
-  "mean": -12.7
- },
- "news": {
-  "name": "news.mp3",
-  "from": "News.mp3 (creator, 17 September 2026)",
-  "seconds": 191.71,
-  "bytes": 3204139,
-  "mean": -11.5
- }
+ "trip": [
+  {
+   "name": "tension.mp3",
+   "from": "tension.mp3 (creator, 17 September 2026)",
+   "seconds": 86.36,
+   "bytes": 1618862,
+   "mean": -12.7
+  }
+ ],
+ "news": [
+  {
+   "name": "news.mp3",
+   "from": "News.mp3 (creator, 17 September 2026)",
+   "seconds": 191.71,
+   "bytes": 3204139,
+   "mean": -11.5
+  }
+ ]
 }
