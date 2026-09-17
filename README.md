@@ -346,9 +346,12 @@ decisions at the end.
   CONTROLS book, the EXIT door, and your hat on the hook (your own file). Settings are kept
   separately from the game and survive a new game.
 - **Music.** The creator's 14-track compilation, split on the silences between tracks and
-  re-encoded to 128 kbps for the web (`music/`). Eleven tracks rotate under the live job
-  report, one per job; three score the verdict — the quietest for a success, a middle one for a
-  messy job, the loudest for a disaster — and loop while the report is open. Under everything
+  re-encoded to 128 kbps for the web (`music/`), plus two more delivered on their own. Eleven
+  tracks rotate under the live job report, one per job; three score the verdict — the quietest
+  for a success, a middle one for a messy job, the loudest for a disaster — and loop while the
+  report is open. A recruitment trip — go and ask — runs under `tension.mp3` from the flight out
+  until the answer, and the week's news pop-up between jobs runs under `news.mp3` while it is
+  up; both on a loop, both handing back to the hour of suspense when they close. Under everything
   else — the title, the office, the crew, the boards, the log — the creator's hour of suspense
   (`music/ambient.mp3`, 62 minutes as delivered) plays on a loop. Browsers only allow audio
   after the first click, so the loop starts on the first click; the radio in the office shows
@@ -557,7 +560,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 53 · 17 September
+The footer of every screen, and the office header, carry a build stamp (`build 54 · 17 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

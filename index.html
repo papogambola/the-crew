@@ -4634,17 +4634,31 @@ function sfx(name){
 }
 
 /* ------------------------------ MUSIC --------------------------------- */
-// Fourteen tracks from the creator's compilation: eleven rotate under the live job report,
-// three score the verdict. Quiet between jobs. Browsers allow audio only after the first
-// click, and the radio in the office reports its state.
+// Sixteen tracks from the creator: eleven rotate under the live job report, three score the
+// verdict, one runs under a recruitment trip and one under the week's news. The hour of
+// suspense loops under everything else. Browsers allow audio only after the first click, and
+// the radio in the office reports its state.
 const TRACKS={
   report:["music/report-01.mp3","music/report-02.mp3","music/report-03.mp3","music/report-04.mp3","music/report-05.mp3","music/report-06.mp3","music/report-07.mp3","music/report-08.mp3","music/report-09.mp3","music/report-10.mp3","music/report-11.mp3"],
   result:{good:"music/result-success.mp3",messy:"music/result-messy.mp3",bad:"music/result-disaster.mp3"},
   ambient:"music/ambient.mp3",   // the hour of suspense under everything that is not a job report or a verdict, on a loop
+  trip:"music/tension.mp3",      // the recruitment trip — go and ask — from the flight out to the answer, on a loop
+  news:"music/news.mp3",         // the week's news: the pop-up between jobs, while it is open
 };
 function musicAmbient(){if(musicWant&&musicWant.src===TRACKS.ambient){musicSync();return;}musicPlay(TRACKS.ambient,"Suspense — the hour under the office, on a loop",true);}
-// The report and the verdict bring their own track; every other screen runs under the loop.
-function musicRoute(){if(!feedData())musicAmbient();}
+// The report and the verdict bring their own track. A trip runs under the tension track until it is
+// settled, the week's news under its own while the pop-up is up; every other screen runs under the loop.
+function musicRoute(){
+  const d=feedData();
+  if(d){
+    if(!d.cid)return;                                   // a job report: its track was chosen when it started, and the verdict picks its own
+    if(d.done){musicAmbient();return;}
+    if(!musicWant||musicWant.src!==TRACKS.trip)musicPlay(TRACKS.trip,"the meeting — tension, on a loop",true);
+    return;
+  }
+  if(S&&S.modal&&S.modal.type==="event"){if(!musicWant||musicWant.src!==TRACKS.news)musicPlay(TRACKS.news,"the week's news, on a loop",true);return;}
+  musicAmbient();
+}
 const SPEEDS=[[4500,"Slowest"],[3000,"Slow"],[2000,"Normal"],[1300,"Fast"],[800,"Fastest"]];
 function speedIdx(){return clamp(Math.round(SET.speed==null?2:SET.speed),0,SPEEDS.length-1);}
 let MUSIC=null,userGestured=false,musicState="idle",musicNote="",musicWant=null,musicSrc=null;
@@ -5223,7 +5237,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 53 · 17 September 2026";
+const BUILD="build 54 · 17 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
