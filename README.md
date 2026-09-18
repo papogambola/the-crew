@@ -127,6 +127,12 @@ decisions at the end.
   feed too, so "Paused" on its door is true. The field
   roster marks who came back: **GONE** in red on anyone who walked with the money, **TAKEN** on
   anyone the police held, **HURT** on the injured.
+- **The police arrive, and the room knows it.** When the feed reaches the line where the police
+  show up — sirens two streets over, a patrol car at the door, the squad that was waiting because
+  somebody talked, the two officers in the hotel lobby on a recruitment trip — the screen darkens,
+  red and blue beams sweep across it and a siren plays for eight seconds (`music/siren.mp3`),
+  with the music ducked under it. Only a line revealed live sets it off; skipping to the end does
+  not.
 - **And the plan, running beside it.** The feed reads down the left of the screen; on the right,
   pinned while the feed scrolls, is a **plan of the place** — not the world, the place: the streets
   and the building with its strongroom on a vault job, the quay, the stacks and the ship alongside
@@ -586,7 +592,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 63 · 18 September
+The footer of every screen, and the office header, carry a build stamp (`build 64 · 18 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

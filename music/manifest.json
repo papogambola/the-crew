@@ -118,5 +118,14 @@
    "bytes": 3204139,
    "mean": -11.5
   }
- ]
+ ],
+ "sfx": {
+  "siren": {
+   "name": "siren.mp3",
+   "from": "Police Siren Sound Effect (creator, 18 September 2026), first 8 s, +12 dB, faded out",
+   "seconds": 8.05,
+   "bytes": 129381,
+   "mean": -16.9
+  }
+ }
 }
