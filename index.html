@@ -42,7 +42,17 @@
   h1,h2,h3{font-family:var(--f-disp);font-weight:600;margin:0;letter-spacing:.02em;text-wrap:balance;line-height:1.05}
   button{font-family:inherit;color:inherit;cursor:pointer}
   a{color:inherit}
-  .jobback{margin:0 0 8px}
+  .jobback{position:sticky;top:calc(var(--topbar-h,56px) + var(--tabs-h,49px));z-index:20;
+    margin:0 0 8px;padding:6px 0 8px;background:var(--paper);border-bottom:1px solid var(--line)}
+  /* Back to the top of a long screen. Fixed at the right, and only once there is something to go
+     back up to — a button that does nothing is worse than no button. */
+  .totop{position:fixed;right:20px;bottom:24px;z-index:70;width:44px;height:44px;
+    border:1.5px solid var(--ink);border-radius:50%;background:var(--paper);color:var(--ink);
+    font-family:var(--f-body);font-size:20px;line-height:1;padding:0 0 3px;cursor:pointer;
+    box-shadow:0 6px 18px -10px rgba(0,0,0,.8);opacity:0;pointer-events:none;transition:opacity .16s}
+  body.scrolled .totop{opacity:1;pointer-events:auto}
+  body.modalup .totop{opacity:0;pointer-events:none}   /* never over a question you have to answer */
+  .totop:hover{background:var(--ink);color:var(--paper)}
   .kicker{font-family:var(--f-mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
 
   .topbar{position:sticky;top:0;z-index:40;background:var(--paper);border-bottom:2px solid var(--ink)}
@@ -3322,6 +3332,7 @@ function render(){
   root.innerHTML=topbar()+'<div class="wrap">'+tabsBar()+body+footNote()+"</div>"+(S.modal?renderModal():"")+chrome();
   bind();
   syncTopbarH();
+  syncScrolled();
   tutMark();
   tickerArm();
   mapArm();
@@ -3355,8 +3366,23 @@ function syncTopbarH(){
     const tb=document.querySelector(".topbar");
     const h=tb?Math.round(tb.getBoundingClientRect().height):0;
     if(h)document.documentElement.style.setProperty("--topbar-h",h+"px");
+    // The tabs are pinned under the top bar, and the job file's way back is pinned under both, so
+    // it has to be told how tall they are rather than guess at a number that a wrapped row breaks.
+    const tabs=document.querySelector(".tabs");
+    const th=tabs?Math.round(tabs.getBoundingClientRect().height):0;
+    if(th)document.documentElement.style.setProperty("--tabs-h",th+"px");
   }catch(e){}
 }
+// Show the way up once there is a way up. Also hides it while a modal is open, because a floating
+// button over a question you have to answer is a button somebody will press by accident.
+function syncScrolled(){
+  try{
+    const y=window.scrollY||document.documentElement.scrollTop||0;
+    document.body.classList.toggle("scrolled",y>260);
+    document.body.classList.toggle("modalup",!!document.querySelector(".scrim"));
+  }catch(e){}
+}
+try{window.addEventListener("scroll",syncScrolled,{passive:true});}catch(e){}
 try{window.addEventListener("resize",syncTopbarH);}catch(e){}
 function topbar(){
   const band=S.heat>80?"red":S.heat>60?"amber":"green";   // green to 60, amber 61 to 80, red above
@@ -6258,6 +6284,7 @@ function infoHTML(){
 const UI={office:false,hold:false,panel:null,confirmNew:false,info:false,found:null,confirmDissolve:null,impInfo:null,impRaw:""};
 function chrome(){
   return '<div id="tipbox" role="tooltip" hidden></div>'
+    +'<button class="totop" data-act="to-top" aria-label="Back to the top" title="Back to the top">↑</button>'
     +'<button class="ibtn" data-act="info" aria-label="What is this screen? (i)" title="What is this screen? (i)">i</button>'
     +'<button class="burger" data-act="office" aria-label="The office — pause and settings (Esc)" title="The office (Esc)"><span></span><span></span><span></span></button>'
     +(UI.office?officeHTML():"")
@@ -6592,7 +6619,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 69 · 18 September 2026";
+const BUILD="build 70 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
@@ -6708,7 +6735,8 @@ document.addEventListener("click",e=>{
     case "bribe": bribe(); break;
     case "rival-buy": rivalPressure(); break;
     case "rival-enforce": rivalEnforce(); break;
-    case "close-job": S.jobOpen=null; render(); break;
+    case "close-job": S.jobOpen=null; render(); window.scrollTo(0,0); syncScrolled(); break;
+    case "to-top": try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){window.scrollTo(0,0);} syncScrolled(); break;
     case "map-country": S.jobOpen=null; S.jobCountry=(S.jobCountry===t.getAttribute("data-cn"))?null:t.getAttribute("data-cn"); render(); break;
     case "map-clear": S.jobOpen=null; S.jobCountry=null; render(); break;
     case "more": S.shown+=30; render(); break;

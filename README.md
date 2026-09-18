@@ -461,6 +461,11 @@ decisions at the end.
   the Log lists the conditions, ticked off as they arrive: **a name at the top of the board**
   (ranking 420), **a career behind you** (55 jobs), **five in the field**, and **a war chest**
   ($5M) — because nobody funds this one but you.
+- **Two ways out of a long screen.** A job file is taller than a laptop window, so the **← Back to
+  job postings** button is pinned under the tabs and stays there however far down the file you are
+  — the way out used to scroll off the top with everything else. And on any screen longer than the
+  window an **↑** appears at the bottom right and takes you back to the top. It is not there until
+  there is something above you, and it gets out of the way the moment a question is put on screen.
 - **Quick Money - High Risk.** A box under the postings for the situation everybody ends up in: you are
   a few thousand short of the person you need. Two or three small pieces a week — a till at
   closing, a car with the engine running, the lead off a church roof — each done this afternoon by
@@ -632,7 +637,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 69 · 18 September
+The footer of every screen, and the office header, carry a build stamp (`build 70 · 18 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

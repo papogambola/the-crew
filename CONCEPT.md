@@ -472,3 +472,12 @@ The text above is kept as written. Decisions that close one of its open details 
   One thing went with it. The empty-board case returned early, before the strip was ever added, so on a week with nothing posted the box disappeared — and a quiet board is the likeliest week of all to want a few hundred this afternoon. It is on both returns now.
 
   The handbook chapter, the "where do I find it" line, the glossary entry and the README all carry the new name: a book that sends a reader to a heading that is not there any more is worse than one that says nothing.
+- **18 September 2026 — Two ways out of a long screen.** From the creator, looking at a job file scrolled down to the reckoning: *"There should be an 'up arrow' button on the right side of the box to go back to the top after scrolling down. Also the back to job listings button should be constant floating and available when scrolling down the job description."*
+
+  Both are the same complaint. A job file is comfortably taller than a laptop window — the split, the casing, the reckoning, who goes and why — and the two ways out of it were both at the very top, which is the part that has scrolled away by the time you want either of them.
+
+  **The way back is pinned under the tabs**, where it already was on arrival, so it does not move at all: the file scrolls under it. It needed the tabs' height to stop against, which is measured rather than hardcoded — the tab row wraps at some widths, and a number would leave a gap or hide the first line of the file.
+
+  **The ↑ is fixed at the bottom right**, in the same ink and the same circle as the *i* button, and it is on every screen rather than only this one: the roster and the case log are long too. Two rules about when it is not there, both of which are about not putting a button where a thumb is already going: it does not appear until there is something above you to go back to, and it disappears entirely while anything is waiting to be answered.
+
+  Closing a file from the pinned button now also puts you at the top of the postings. Without that you were returned to the board at whatever depth the file had been scrolled to, which is a different screen at that scroll position and reads as having been dropped somewhere.

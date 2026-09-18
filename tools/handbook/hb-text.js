@@ -72,7 +72,9 @@ ch("where","Where everything is","The screen, tab by tab",[
     ])),
   S("office","The office",
     p(m("Esc")+", or the "+m("≡")+" button at the top right, on any screen. It pauses the game and opens the desk: sound, music, brightness, the controls book, your own file, the file cabinet, and the door out.")
-    +p("The "+m("i")+" button beside it explains whatever is on screen, and can run the tutorial again — the whole thing, a short reminder, or any single card.")),
+    +p("The "+m("i")+" button beside it explains whatever is on screen, and can run the tutorial again — the whole thing, a short reminder, or any single card.")
+    +p("On a screen longer than the window an "+m("↑")+" appears at the bottom right and takes you back to the top of it. "
+      +"It is not there until there is something above you, and it goes away while anything is waiting to be answered.")),
   S("find","If you are looking for something",
     G.T(["You want","It is here"],[
       ["A crew member's loyalty","<b>Crew</b> → their card. Also on their full file, opened from the card."],
@@ -83,6 +85,7 @@ ch("where","Where everything is","The screen, tab by tab",[
       ["Why a client will not deal with you","<b>Jobs</b> → the notice above the postings. It names the job, the city, the week and the verdict; click it for the whole account. See <a href=\"#grudge\">grudges and revenge</a>."],
       ["How to change somebody's trade","<b>Crew</b> → their card → <b>Teach a trade</b>. See <a href=\"#learn\">a new craft</a>."],
       ["Why two of my crew are arguing","They do the same job. See <a href=\"#clash\">two of the same trade</a>."],
+      ["The way out of a job file","<b>← Back to job postings</b>, pinned under the tabs — it stays there however far down the file you are."],
       ["An old report","<b>Dashboard</b> → <b>Job recaps</b>. Open any one for the whole thing again."],
       ["The detective's file","<b>Dashboard</b> → <b>The competition and the law</b>."],
       ["Retainers, the safe house, buying off a desk","<b>Dashboard</b> → <b>Standing arrangements</b>."],
