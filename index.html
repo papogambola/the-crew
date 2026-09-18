@@ -5861,9 +5861,9 @@ function applyRoll(rng){
   if(!c)return null;
   // what they are asking for. They want it, so it is already under what you would have paid to
   // go and fetch them — before you have said a word.
-  const ask=Math.max(1000,Math.round(c.fee*(0.82+rng()*0.18)/500)*500);
+  const ask=Math.max(1000,Math.round(c.fee*(0.82+rng()*0.18)/1000)*1000);
   S.apply={id:c.id,week:S.week,ask:ask,cut:c.cut,haggles:0,why:pick(rng,APPLY_WHY),outcome:null};
-  logMsg(c.first+" came to you. "+TECH_BY_K[c.tech].l+", "+EXP[(c.exp||1)-1]+", asking "+moneyExact(ask)+".","",true);
+  logMsg(c.first+" came to you. "+TECH_BY_K[c.tech].l+", "+EXP[(c.exp||1)-1]+", asking "+money(ask)+".","",true);
   return S.apply;
 }
 const APPLY_WHY=[
@@ -5895,9 +5895,9 @@ function applyHaggle(){
   a.haggles++;
   if(ri(rng,1,100)<=p){
     const keep=APPLY.cut[0]+rng()*(APPLY.cut[1]-APPLY.cut[0]);
-    a.ask=Math.max(1000,Math.round(a.ask*keep/500)*500);
+    a.ask=Math.max(1000,Math.round(a.ask*keep/1000)*1000);
     a.cut=Math.max(0.01,Math.round((a.cut-APPLY.cutStep)*1000)/1000);
-    a.note=c.first+" takes it, and does not make a thing of it. "+moneyExact(a.ask)+", and "+Math.round(a.cut*100)+"% of each score.";
+    a.note=c.first+" takes it, and does not make a thing of it. "+money(a.ask)+", and "+Math.round(a.cut*100)+"% of each score.";
   }else{
     a.note=c.first+" will not go lower, and says so once. The figure stands.";
     a.firm=true;
@@ -5914,7 +5914,7 @@ function applySign(){
   c.loyalty=clamp(c.loyalty+6,0,100);      // somebody who asked to be here starts a little ahead
   stats().hired++;stats().walkins=(stats().walkins||0)+1;
   a.outcome="signed";
-  logMsg("Signed "+c.n+" — "+TECH_BY_K[c.tech].l+", "+EXP[(c.exp||1)-1]+", "+moneyExact(a.ask)
+  logMsg("Signed "+c.n+" — "+TECH_BY_K[c.tech].l+", "+EXP[(c.exp||1)-1]+", "+money(a.ask)
     +", "+Math.round(c.cut*100)+"% — who came to you. No trip, no week.","good",true);
   checkOver();save();
   return a;
@@ -5937,7 +5937,7 @@ function modalApply(){
     +'<h2 style="font-size:20px;margin-top:4px">'+esc(c.n)+' wants in</h2></div></div>';
   if(a.outcome){
     const done=a.outcome==="signed"
-      ? esc(c.first)+' is on the crew. No trip, no week gone, and '+moneyExact(a.ask)+' for somebody you would have flown out to ask.'
+      ? esc(c.first)+' is on the crew. No trip, no week gone, and '+money(a.ask)+' for somebody you would have flown out to ask.'
       : esc(c.first)+' is told no and leaves. It cost you nothing — which is the whole difference between this and going to somebody.';
     return '<div class="scrim"><div class="modal" role="dialog" aria-modal="true">'+head
       +'<div class="modal-b"><div class="brief" style="border-left-color:'+(a.outcome==="signed"?"var(--good)":"var(--line-2)")+'">'+done+'</div>'
@@ -5949,7 +5949,7 @@ function modalApply(){
   const odds=applyHaggleOdds();
   const rows='<div class="twist-opts one">'
     +'<button class="twist-opt wide" data-act="apply-sign" '+(canPay&&room?"":"disabled")+'>'
-      +'<b>Sign them</b><span class="ob"><span class="mono" style="color:var(--muted)">'+moneyExact(a.ask)+' · '
+      +'<b>Sign them</b><span class="ob"><span class="mono" style="color:var(--muted)">'+money(a.ask)+' · '
       +Math.round(a.cut*100)+'% of each score · '+money(c.upkeep)+' a week · no trip, no week</span><br>'
       +'<span class="why">'+(!room?'Every place is taken.':!canPay?'The float will not carry what they are asking.'
         :'They came to you, so there is nobody to talk round and nothing to fly to.')+'</span></span></button>'
@@ -5968,7 +5968,7 @@ function modalApply(){
     +'<div class="modal-b">'
     +'<p style="margin:0 0 12px;font-size:15px;line-height:1.6">'+esc(c.first)+' '+esc(fill2(a.why,v))
       +'. '+esc(TECH_BY_K[c.tech].l)+', '+esc(EXP[(c.exp||1)-1])+', out of '+esc(c.nat)+' — and is asking for '
-      +'<b>'+moneyExact(a.ask)+'</b> and '+Math.round(a.cut*100)+'% of each score.</p>'
+      +'<b>'+money(a.ask)+'</b> and '+Math.round(a.cut*100)+'% of each score.</p>'
     +(a.note?'<div class="brief">'+esc(a.note)+'</div>':'')
     +rows
     +'<div class="sel-help">You did not go to them and you are not paying for a week on the ground. '
@@ -5977,8 +5977,8 @@ function modalApply(){
     +'<div class="id evwho">'+idCardTop(c)
       +'<div class="attrs">'+attrRow(c)+'</div>'+xpLine(c)+profLine(c)
       +'<div class="evfacts">'
-        +'<span class="k">Asking</span><span class="num">'+moneyExact(a.ask)+' · '+Math.round(a.cut*100)+'% · '+money(c.upkeep)+' a week</span>'
-        +'<span class="k">Going to fetch them</span><span class="num">'+moneyExact(c.fee)+' and a week, and they could say no</span>'
+        +'<span class="k">Asking</span><span class="num">'+money(a.ask)+' · '+Math.round(a.cut*100)+'% · '+money(c.upkeep)+' a week</span>'
+        +'<span class="k">Going to fetch them</span><span class="num">'+money(c.fee)+' and a week, and they could say no</span>'
         +'<span class="k">Vetted</span><span>'+(c.vetted?(c.vetFlag?'<span style="color:var(--stamp)">an informant</span>':'clean'):'not vetted — '+money(VET_COST)+' on the roster, and worth it')+'</span>'
         +'<span class="k">Would know</span><span>'+kn+' of your business if it ended badly</span>'
       +'</div></div>'
@@ -6849,7 +6849,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 72 · 18 September 2026";
+const BUILD="build 73 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
