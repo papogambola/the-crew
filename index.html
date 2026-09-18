@@ -42,6 +42,7 @@
   h1,h2,h3{font-family:var(--f-disp);font-weight:600;margin:0;letter-spacing:.02em;text-wrap:balance;line-height:1.05}
   button{font-family:inherit;color:inherit;cursor:pointer}
   a{color:inherit}
+  .jobback{margin:0 0 8px}
   .kicker{font-family:var(--f-mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
 
   .topbar{position:sticky;top:0;z-index:40;background:var(--paper);border-bottom:2px solid var(--ink)}
@@ -3798,7 +3799,7 @@ function jobPanel(j){
     :'';
   const h='<div class="panel-h" style="align-items:center"><div><div class="kicker">'+esc(co.name)+' · '+cat.l
     +(j.final?' · Final score':j.big?' · Operation '+j.op+' of '+BAL.bigCount:'')+'</div>'
-    +'<h2 style="font-size:20px;margin-top:4px;text-transform:none;letter-spacing:.02em">'+esc(j.title)+'</h2></div><button class="btn ghost sm" data-act="close-job">← All postings</button></div>';
+    +'<h2 style="font-size:20px;margin-top:4px;text-transform:none;letter-spacing:.02em">'+esc(j.title)+'</h2></div></div>';
   // a crew you founded can take it instead of you — its own reckoning, its own report
   const others=crews().map(cr=>{const ac=assessJob(j,crewMembers(cr),cr.leadId||null);const busy=cr.jobWeek===S.week;const lead=crewLeader(cr);
     const fit=ac.canRun?(ac.margin>=10?'<span class="chip c-good">Good fit</span>':ac.margin>=-4?'<span class="chip c-warn">Risky</span>':'<span class="chip c-bad">Long odds</span>'):'<span class="chip c-bad">'+ac.team.length+' of '+j.need+' can go</span>';
@@ -3814,7 +3815,7 @@ function jobPanel(j){
     +'<hr class="rule"><div class="kicker">The reckoning</div>'+factors+'<div style="margin-top:10px">'+odds+'</div>'+othersBlock
     +'<hr class="rule"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" data-act="close-job">Walk away</button>'
     +'<button class="btn stamp" data-act="execute" data-id="'+j.id+'" '+(a.canRun?"":"disabled")+'>'+(a.canRun?"Take the job →":j.news&&j.news.closed?"Shut this week — see the paper":"Needs "+j.need+" in the field")+'</button></div></div>';
-  return '<div class="panel">'+h+b+'</div>';
+  return '<div class="jobback"><button class="btn ghost sm" data-act="close-job">← Back to job postings</button></div><div class="panel">'+h+b+'</div>';
 }
 // Your crew, compact, above the postings — so a job can be judged without leaving the board.
 function crewStrip(){
@@ -5679,7 +5680,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 62 · 18 September 2026";
+const BUILD="build 63 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
