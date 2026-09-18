@@ -10,6 +10,11 @@ doesn't hit one of their limits.
 
 Play it here: **https://papogambola.github.io/the-crew/** — every push to `main` redeploys it.
 
+Or on Windows, as a program: **https://papogambola.github.io/the-crew/desktop/The-Crew-Windows.zip**
+— unzip, keep the two files together, double-click `The Crew.exe`. It is a shell: the window fetches
+the game from the address above, so it plays whatever is on `main` and never needs a new download
+(`desktop/README.md` says how it is built).
+
 The rules, in full: **https://papogambola.github.io/the-crew/handbook.html** — a player's handbook
 of nineteen chapters with a pinned search bar and a clickable index, and the same thing as a
 [PDF](The-Crew-Handbook.pdf). It is reached from inside the game too: the office's bookshelf, the
