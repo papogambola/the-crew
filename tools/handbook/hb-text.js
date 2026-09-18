@@ -211,8 +211,9 @@ ch("people","The people","Everything on a crew member's file",[
 
 /* ---------------- 5 --------------------------------- */
 ch("hiring","Hiring","The roster, the trip, the signature",[
-  S("firstweek","The first week is free",
+  S("firstweek","The first week — the clock stands still",
     p("Going to fetch somebody is a week on the ground — but not in week one. While you are still putting the crew together you can go and ask as many people as the float carries, one after another, and the clock does not move.")
+    +p("Nothing about it is free. Every fee you agree to comes out of the float the moment they say yes, and a float spent in week one is a float you do not have in week four. What week one costs you is money, never time — which is the only sense in which it is cheap.")
     +p("From <b>week two</b> every trip costs its week, whether they sign or not. That is what makes an empty place expensive rather than merely untidy, and it is why somebody turning up on their own is worth something.")),
   S("comeToYou","When they come to you",
     p("From a <b>Known</b> name, people start asking to join instead. The chance is printed on the roster, and it rises with every rung above that — nobody comes to a Nobody.")

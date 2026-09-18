@@ -3946,7 +3946,7 @@ function tabRoster(){
   // whether going to fetch one costs the week, and whether anybody is coming to you yet.
   const p=applyChance();
   const askLine=foundingWeek()
-    ? '<b>The first week is free.</b> Fill the places — going to fetch somebody does not cost a week until week two.'
+    ? '<b>The first week — the clock stands still.</b> Fill the places: you still pay their fee, but going to fetch somebody does not cost a week until week two.'
     : 'Going to fetch somebody is a week on the ground, and they can still say no.';
   const comeLine=p
     ? ' <b>'+Math.round(p*100)+'% a week</b>, somebody asks to join you instead — and when they do, the figure is theirs to open with and yours to argue with.'
@@ -6417,7 +6417,7 @@ const INFO={
     "Everybody who can be hired, in one list. Most of them work the sixteen ordinary trades; the specialists are the minority you go looking for once there are seven places to fill. <b>Search</b> by name, country, language or knowledge. Filter by <b>trade</b>, <b>role</b> and <b>nationality</b>; sort by fee, experience, raw skill or name. Show 30 more at the bottom.",
     "<b>Hover a trade</b> (or MUS, BRN, TCH, CHM, NRV) for a brief: what it is, what it leans on, what it comes with, and which jobs want it. On a phone, tap it.",
     "<b>Temperament.</b> Two files in three carry a trait, and a trait is a fact about working with them, not a number on a bar. <b>Steady</b> never loses faith after a bad night. <b>Hothead</b> is worth +3 and costs +4 heat. <b>Careful</b> takes 4 heat off any job they work. <b>Quick study</b> learns at double speed; a <b>Mentor</b> is +2 and teaches everyone else half again as fast. <b>Mercenary</b> is +2 and takes 3% more. <b>Lucky</b> adds 4 to the night's roll, <b>Jinx</b> takes 3 off it and pulls twists towards the crew. A <b>Ghost</b> is never the one the police get their hands on.",
-    "<b>The first week is free.</b> Going to fetch somebody does not cost a week while you are still putting the crew together — fill the places, as many as the float carries. From week two a trip is a week on the ground, and they can still say no.",
+    "<b>The first week — the clock stands still.</b> What week one costs you is money, never time: every fee you agree to is still paid, but going to fetch somebody does not cost a week while you are still putting the crew together — fill the places, as many as the float carries. From week two a trip is a week on the ground, and they can still say no.",
     "<b>And from a Known name, people start coming to you.</b> Somebody turns up asking to join, more often the further up the ladder you go, and the roster prints the rate. It is the transaction the other way round: no trip, no week, a figure that already sits under what fetching them would have cost — and saying no costs nothing at all.",
     "<b>Fee</b> is paid once, and only if they say yes. <b>Cut</b> is their share of every score. <b>Upkeep</b> is weekly. <b>File</b> opens the whole profile; <b>Go and ask</b> needs an open place, the fee — and a name they will sign with. Rookies, Operators and Professionals sign with anyone; a <b>Veteran</b> wants a Known crew, a <b>Legend</b> a Respected one. A file that won't sign yet says so under the fee.",
     "<b>Nobody joins a crew because a fee was paid.</b> Go and ask and you fly to wherever they live and put it to them in person: a week on the calendar, a live feed like a job, and their answer at the end of it. The trip is where the fee is spent — turn back, or get turned down, and the money stays in your pocket while the week does not.",
@@ -6849,7 +6849,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 73 · 18 September 2026";
+const BUILD="build 74 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 

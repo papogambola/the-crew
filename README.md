@@ -461,10 +461,11 @@ decisions at the end.
   the Log lists the conditions, ticked off as they arrive: **a name at the top of the board**
   (ranking 420), **a career behind you** (55 jobs), **five in the field**, and **a war chest**
   ($5M) — because nobody funds this one but you.
-- **The first week is free.** Going to fetch somebody is a week on the ground — but not in week
-  one. While you are still putting the crew together you can go and ask as many people as the float
-  carries, one after another, and the clock does not move. From week two every trip costs its week,
-  which is what makes an empty place expensive rather than untidy.
+- **The first week — the clock stands still.** Going to fetch somebody is a week on the ground —
+  but not in week one. While you are still putting the crew together you can go and ask as many
+  people as the float carries, one after another, and the clock does not move. Nothing about it is
+  free: every fee is still paid, and week one costs you money rather than time. From week two every
+  trip costs its week, which is what makes an empty place expensive rather than untidy.
 - **And from a Known name, people come to you.** Somebody turns up asking to join, more often the
   further up the ladder you go — the roster prints the rate, and nobody comes to a Nobody. It is the
   transaction the other way round, which is the whole point of it: no trip and no week, because they
