@@ -3676,9 +3676,19 @@ function jobsList(){
   // Fewer postings with no explanation is a bug as far as a player is concerned. Say who.
   const ban=bannedClients();
   const unfinished=grudges().some(g=>g.kind==="blood"&&!g.done);
-  const banLine=ban.length?'<div class="warnbox" style="margin-bottom:10px"><b>'+ban.length+' client'+(ban.length>1?'s':'')+' will not deal with you.</b> '
-    +ban.map(b=>esc(b.c)+' <span class="mono" style="color:var(--muted)">to week '+b.until+'</span>').join(' · ')
-    +(unfinished?'<br><span style="color:var(--stamp)">And one of them is not finished with you.</span>':'')+'</div>':'';
+  // Each one says WHY, on the board, and opens the whole account when clicked. A line that tells
+  // a player the board is smaller and not what they did is the one thing this game does not do.
+  const banRows=ban.map(b=>{
+    const g=grudgeOf(b.c);
+    return '<div style="margin-top:4px"><b>'+esc(b.c)+'</b> — '+grudgeWhy(g)
+      +' <span class="mono" style="color:var(--muted)">· back week '+b.until+'</span>'
+      +(g&&g.kind==="blood"&&!g.done?' <span style="color:var(--stamp)">· not finished with you</span>':'')+'</div>';
+  }).join("");
+  const banLine=ban.length?'<div class="warnbox" style="margin-bottom:10px;cursor:pointer" data-act="grudge-open" role="button" tabindex="0" title="Read the whole account">'
+    +'<b>'+ban.length+' client'+(ban.length>1?'s':'')+' will not deal with you.</b>'
+    +banRows
+    +'<div class="mono" style="margin-top:6px;color:var(--muted);text-decoration:underline">Why, in full →</div>'
+    +'</div>':'';
   const head='<div class="panel-h"><h2>Jobs · Postings</h2><span style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap"><span class="kicker" style="padding-bottom:8px">Week '+S.week+' · postings expire</span>'+sortSel+'<button class="btn ghost sm" data-act="laylow" style="margin-bottom:2px">Lay low a week</button></span></div>';
   const filt=S.jobCountry?'<div style="display:flex;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap"><span class="tag ok">Showing '+esc(S.jobCountry)+'</span><button class="btn ghost sm" data-act="map-clear">All countries</button></div>':'';
   let jobs=S.jobs;
@@ -4053,6 +4063,7 @@ function renderModal(){
   if(m.type==="trip")return modalTrip(m.data);
   if(m.type==="event")return modalEvent();
   if(m.type==="found")return modalFound();
+  if(m.type==="grudge")return modalGrudge();
   if(m.type==="street")return modalStreet();
   if(m.type==="streetdone")return modalStreetDone();
   if(m.type==="notice")return modalNotice();
@@ -5728,7 +5739,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 66 · 18 September 2026";
+const BUILD="build 67 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
@@ -5860,6 +5871,8 @@ document.addEventListener("click",e=>{
     case "crew-recall": crewRecall(id); break;
     case "crew-dissolve": { const cid=+t.getAttribute("data-crew"); if(UI.confirmDissolve===cid)crewDissolve(cid); else {UI.confirmDissolve=cid;render();} break; }
     case "found-open": UI.found={lead:null,ids:[]}; S.modal={type:"found"}; render(); break;
+    case "grudge-open": S.modal={type:"grudge"}; render(); break;
+    case "grudge-close": S.modal=null; render(); break;
     case "street-open": S.modal={type:"street",k:e.target.closest("[data-k]").getAttribute("data-k")}; render(); break;
     case "street-close": S.modal=null; render(); break;
     case "street-send": {
@@ -5906,7 +5919,10 @@ document.addEventListener("keydown",e=>{
   }
   if(e.key==="Enter"||e.key===" "){
     const el=document.activeElement;if(!el||!el.closest)return;
-    const row=el.closest(".jobrow,.streetrow");if(row){e.preventDefault();row.click();}
+    // Anything that says it is a button and is reachable by tab has to answer the keys a button
+    // answers — the board notice is one, and a notice you can only open with a mouse explains
+    // itself to half the people it is for.
+    const row=el.closest('.jobrow,.streetrow,[role="button"][data-act]');if(row){e.preventDefault();row.click();}
   }
 });
 
@@ -5924,6 +5940,85 @@ const GRUDGE={
 };
 function grudges(){return S.grudges||(S.grudges=[]);}
 function clientBanned(name){return grudges().some(g=>g.c===name&&S.week<g.until);}
+/* Why a client will not deal with you.
+
+   The board used to state the fact and nothing else — "2 clients will not deal with you" — which
+   is the one kind of sentence this game is not supposed to print: a verdict with no cause behind
+   it. Everything needed was already on the record when the grudge was made (the job, where it
+   was, what it paid, which week, and now which way it went wrong); it was simply never shown.
+
+   Two depths, because the board is not the place for a paragraph: a line on the board that says
+   enough to know why, and a click that opens the whole account. */
+function grudgeOf(name){
+  // The one that explains it is the one that names a job; a client who was merely told sits behind it.
+  const all=grudges().filter(g=>g.c===name&&S.week<g.until);
+  return all.find(g=>g.job)||all[0]||null;
+}
+// One line, for the board.
+function grudgeWhy(g){
+  if(!g)return "";
+  if(g.via)return "never worked for you — "+esc(g.via)+" had a word";
+  if(!g.job)return "a job of theirs that went wrong";
+  const how=VERDICT_WORD[g.v];
+  return "<i>"+esc(g.job)+"</i>"+(g.city?", "+esc(g.city):"")+", week "+g.since+(how?" — "+how:"");
+}
+// The whole account, for the file.
+function grudgeFull(g){
+  if(!g)return "";
+  const weeks=Math.max(0,g.until-S.week);
+  const left='<span class="mono">'+weeks+' more week'+(weeks===1?'':'s')+'</span>';
+  const bits=[];
+  if(g.via){
+    bits.push('<p>You have never worked for '+esc(g.c)+'. They stopped posting to you because '
+      +'<b>'+esc(g.via)+'</b> had a word with them, which is how it travels: a client who is angry with you '
+      +'takes one or two of the people they drink with.</p>');
+    bits.push('<p>They are not owed anything and cannot be paid off, because nothing happened between you. '
+      +'They come back when it has been long enough — '+left+'.</p>');
+  }else if(!g.job){
+    bits.push('<p>A job of theirs went wrong and they stopped posting to you. '
+      +'The file does not say which one — it was made before this game kept that.</p>'
+      +'<p>They come back on their own, in '+left+'.</p>');
+  }else{
+    const how=VERDICT_WORD[g.v];
+    bits.push('<p>You took <b>'+esc(g.job)+'</b>'+(g.city?' in '+esc(g.city):'')+(g.country&&g.country!==g.city?', '+esc(g.country):'')
+      +', in <span class="mono">week '+g.since+'</span>, and the night was '+(how?'<b>'+how+'</b>':'not what it should have been')+'. '
+      +(g.fee?'The fee was '+money(g.fee)+', and they did not get what they paid for.':'They did not get what they paid for.')+'</p>');
+    bits.push('<p>They are not a rival and they are not the police. They are a customer, and what a customer does '
+      +'is stop calling — and tell the people they drink with. Any postings they already had on the board came down '
+      +'the same week.</p>');
+    bits.push('<p>They start posting to you again in '+left+', at <span class="mono">week '+g.until+'</span>. '
+      +'Nothing you can buy makes that shorter.</p>');
+  }
+  if(g.kind==="blood"&&!g.done){
+    bits.push('<p class="bad"><b>And this one is not finished with you.</b> Somebody is coming — to the door, to the money, '
+      +'or to a detective with your week in their hand. It arrives on its own, and what you are able to do about it '
+      +'depends on who is on the books when it does: an Enforcer, a Fixer, a Cleaner. '
+      +'One of the answers is to pay them back what they lost, in cash, on the spot — expensive, humiliating, '
+      +'and the only thing that ends it early. They take your calls again afterwards.</p>');
+  }
+  return bits.join("");
+}
+function modalGrudge(){
+  const ban=bannedClients();
+  if(!ban.length)return "";
+  const rows=ban.map(b=>{
+    const g=grudgeOf(b.c);
+    return '<div class="jobbrief" style="margin-bottom:12px">'
+      +'<div class="kicker" style="margin-bottom:6px">'+esc(b.c)
+        +' · <span class="mono">closed to you until week '+b.until+'</span>'
+        +(g&&g.kind==="blood"&&!g.done?' · <span style="color:var(--stamp)">not finished with you</span>':'')+'</div>'
+      +grudgeFull(g)+'</div>';
+  }).join("");
+  return '<div class="scrim center"><div class="modal" role="dialog" aria-label="Clients who will not deal with you">'
+    +'<div class="modal-h"><div><h2 style="font-size:17px">Who will not deal with you</h2>'
+      +'<div class="kicker">'+ban.length+' client'+(ban.length>1?'s':'')+' · and why</div></div>'
+      +'<button class="x" data-act="grudge-close" aria-label="Close">✕</button></div>'
+    +'<div class="modal-b">'+rows
+    +'<div class="sel-help">A client is not lost for good. The board is smaller while this lasts, and the way back is '
+      +'to finish the next one clean — a name that goes up is a name the rest of them keep posting to.</div>'
+    +'<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" data-act="grudge-close">Close</button></div>'
+    +'</div></div></div>';
+}
 function bannedClients(){const seen={};grudges().forEach(g=>{if(S.week<g.until)seen[g.c]=Math.max(seen[g.c]||0,g.until);});
   return Object.keys(seen).map(c=>({c,until:seen[c]})).sort((a,b)=>b.until-a.until);}
 function openClients(){const free=CLIENTS.filter(c=>!clientBanned(c));return free.length?free:CLIENTS;}
@@ -5934,6 +6029,7 @@ function grudgeAdd(client,rng,job,verdict){
   const until=S.week+ri(rng,GRUDGE.banWeeks[0],GRUDGE.banWeeks[1]);
   const g={c:client,since:S.week,until,kind:blood?"blood":"word",
     job:job?job.title:"",noun:job?("the "+jobNoun(job)):"",country:job?job.country:"",fee:job?job.payout:0,
+    city:job?job.city:"",v:verdict,tier:job?job.tier:0,
     revengeAt:blood?S.week+ri(rng,GRUDGE.revengeIn[0],GRUDGE.revengeIn[1]):0,done:false};
   grudges().push(g);
   // they take some of the people they drink with

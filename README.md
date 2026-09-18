@@ -243,7 +243,11 @@ decisions at the end.
   are two ways to take it personally, and the first is the common one: **the word goes round.**
   That client stops posting to you for twenty or thirty weeks, has a quiet word with one or two
   of the people they drink with, and the postings they already had come off the board. The Jobs
-  board says who will not deal with you and until when, so a thinner board is never a mystery.
+  board says who will not deal with you **and why**: against each name, the job it was about, the
+  city, the week and which way the night went — or, for a client you have never worked for, which
+  of the others had a word with them. Click the notice and the whole account opens: what they
+  paid, what they lost, how many weeks are left, and whether this is one of the ones that is not
+  finished with you. A thinner board is never a mystery, and neither is what caused it.
 - **The other way is that they come and find you.** A few weeks later, one of four things: three
   cars outside the safe house at four in the morning; the count short because somebody walked
   into the flat in daylight; a detective outside the wrong café two days running; or somebody
@@ -599,7 +603,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 66 · 18 September
+The footer of every screen, and the office header, carry a build stamp (`build 67 · 18 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

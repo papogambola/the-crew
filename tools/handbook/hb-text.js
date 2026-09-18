@@ -80,6 +80,7 @@ ch("where","Where everything is","The screen, tab by tab",[
       ["How many people the job needs","<b>Jobs</b> → open the posting → <b>Crew needed</b>, at the top of the file."],
       ["What you actually keep","<b>Jobs</b> → open the posting → <b>The split</b>. It subtracts the wages as well as the cuts."],
       ["Why a job failed","The report itself → <b>WHAT WENT WRONG</b>, which only appears on a botched or blown night, and says what to do differently."],
+      ["Why a client will not deal with you","<b>Jobs</b> → the notice above the postings. It names the job, the city, the week and the verdict; click it for the whole account. See <a href=\"#grudge\">grudges and revenge</a>."],
       ["An old report","<b>Dashboard</b> → <b>Job recaps</b>. Open any one for the whole thing again."],
       ["The detective's file","<b>Dashboard</b> → <b>The competition and the law</b>."],
       ["Retainers, the safe house, buying off a desk","<b>Dashboard</b> → <b>Standing arrangements</b>."],
@@ -590,7 +591,13 @@ ch("between","Between jobs","The week that passes on its own",[
       "They stop posting to you, for "+m(D.GRUDGE.banWeeks[0]+" to "+D.GRUDGE.banWeeks[1])+" weeks.",
       "They may take one or two of their friends with them — other clients who stop posting too.",
       "And "+m(Math.round(D.GRUDGE.pBlood*100)+"%")+" of the time they do not merely stop. Something arrives, "+m(D.GRUDGE.revengeIn[0]+" to "+D.GRUDGE.revengeIn[1])+" weeks later.",
-    ])),
+    ])
+    +p("<b>The board says who, and why.</b> A notice above the postings names every client who will not deal with you, "
+      +"and against each one: the job it was about, the city, the week, and which way the night went — or, for a client "
+      +"you have never worked for, which of the others had a word with them. Click the notice and the whole account opens: "
+      +"what they paid, what they lost, how many weeks are left, and whether this is one of the ones that is not finished with you.")
+    +note("A ban cannot be bought off. The one exception is a client who comes for you: paying back what they lost, in cash, "
+      +"on the spot, is one of the answers on that screen, and it ends the grudge there and then. Everything else is time.")),
 ]);
 
 /* ---------------- 15 -------------------------------- */
