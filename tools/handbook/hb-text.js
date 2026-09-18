@@ -89,7 +89,7 @@ ch("where","Where everything is","The screen, tab by tab",[
       ["What the crew has done, and the marks left to take","<b>Dashboard</b> → <b>The record</b>."],
       ["The week-by-week log","<b>Dashboard</b> → <b>Case log</b>, filterable by week."],
       ["What the last score is still waiting for","<b>Dashboard</b> → <b>The operation</b>."],
-      ["Small work for one person","<b>Jobs</b> → the <b>Street work</b> strip at the top of the board. See <a href=\"#street\">street work</a>."],
+      ["Small work for one person","<b>Jobs</b> → <b>Quick Money - High Risk</b>, under the postings. See <a href=\"#street\">quick money</a>."],
       ["Your own file","The office → <b>Your file</b>."],
       ["This handbook","The title screen, the office's bookshelf, the controls book, or the footer of any screen."],
       ["A copy of your save you can keep","The office → <b>The file cabinet</b>. Writes the game out as one long code and reads one back in."],
@@ -370,9 +370,9 @@ ch("board","The board","Where the work comes from",[
 ]);
 
 /* ---------------- 8 --------------------------------- */
-ch("street","Street work","One person, no crew, no plan",[
+ch("street","Quick Money - High Risk","One person, no crew, no plan",[
   S("what","What it is",
-    p("A strip at the top of the board, under <b>Street work</b>: two or three small pieces a week, a few hundred to a few thousand dollars each, "
+    p("A box under the postings on the Jobs board, headed <b>Quick Money - High Risk</b>: two or three small pieces a week, a few hundred to a few thousand dollars each, "
       +"done this afternoon by <b>one</b> person off your books. No client, no casing, no crew, no plan, and no week spent.")
     +p("It exists for one situation, and it is a situation everybody ends up in: <b>you are a few thousand short of the person you need.</b> "
       +"The file is there, the price is there, and the float is not. This is how you make up the difference, and it is meant to feel like it.")),
@@ -401,7 +401,7 @@ ch("street","Street work","One person, no crew, no plan",[
   S("offers","What is on offer",
     p("Twelve kinds of work, two or three of them a week, in a different city each time and at a price and a difficulty that are drawn fresh.")
     +G.street()
-    +note("Coming back clean is worth "+m("+6")+" experience. Street work is the cheapest way there is to put a rank on somebody you have just signed — which is its own reason to send the right person rather than the spare one.")),
+    +note("Coming back clean is worth "+m("+6")+" experience. This is the cheapest way there is to put a rank on somebody you have just signed — which is its own reason to send the right person rather than the spare one.")),
   S("limit","Why you cannot live on it",
     p("<b>One piece of street work a week</b>, however big your crew. That is the whole of the brake, and it is deliberate.")
     +p("A perfect year of it — fifty-two weeks, every one of them clean, never once losing anybody — comes to about a fifth of what three tier-3 jobs pay. "
@@ -716,7 +716,7 @@ const KNOWING=[
       "<b>Keep pairs together.</b> A pair gains a point for every job that comes off with both of them on it. A long-running crew is worth real numbers.",
       "<b>Bad blood is the same mechanism in reverse.</b> Hover it and the game tells you which nights caused it.",
       "<b>Your ranking makes the world harder.</b> "+m("+"+D.BAL.repPressure)+" difficulty per 100. A crew that stops improving is sliding.",
-      "<b>Street work is for the gap, not for a living.</b> One a week, a few thousand at most — and send the person the work actually leans on, because a bad fit is not merely likelier to fail, it is likelier to cost you them.",
+      "<b>Quick money is for the gap, not for a living.</b> One a week, a few thousand at most — and send the person the work actually leans on, because a bad fit is not merely likelier to fail, it is likelier to cost you them.",
       "<b>Start building for the last score before it opens.</b> It wants Hacker, Infiltrator, Forger, Safecracker, Demolitions, Overwatch, Smuggler, Wheelman and Cleaner across three operations — and "+money(D.BAL.finalMoney)+" of your own money.",
 ];
 // The title counts the list rather than remembering a number: it said "twenty" with twenty-two
@@ -764,7 +764,7 @@ const GLOSS=[
   ["Roll","The "+m("±"+D.BAL.roll)+" the night adds to the margin."],
   ["Snag","The thing that goes wrong during a recruitment trip."],
   ["Split","Who takes what out of the fee."],
-  ["Street work","A small piece of work for <a href=\"#street\">one person and no crew</a>. One a week, a few thousand at most, and a real chance of losing them."],
+  ["Quick money","The box under the postings, <b>Quick Money - High Risk</b>: <a href=\"#street\">one person and no crew</a>. One a week, a few thousand at most, and a real chance of losing them."],
   ["Standing","Where you stand with somebody: loyalty plus the nights you have been through together. Not the same number as loyalty, and the one that decides whether they take what you ask — see <a href=\"#learn\">a new craft</a>."],
   ["Tier","How big a posting is, 1 to 4 on the open board and 5 for an <a href=\"#ops\">operation</a>. Decides the fee, the weeks, the people needed and how long you may case it."],
   ["Trade","What somebody is — one of sixteen ordinary trades, or one of the fourteen <a href=\"#bigtechs\">specialists</a>. Worth +14 when the client asked for it."],

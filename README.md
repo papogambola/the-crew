@@ -461,7 +461,7 @@ decisions at the end.
   the Log lists the conditions, ticked off as they arrive: **a name at the top of the board**
   (ranking 420), **a career behind you** (55 jobs), **five in the field**, and **a war chest**
   ($5M) — because nobody funds this one but you.
-- **Street work.** A strip at the top of the board for the situation everybody ends up in: you are
+- **Quick Money - High Risk.** A box under the postings for the situation everybody ends up in: you are
   a few thousand short of the person you need. Two or three small pieces a week — a till at
   closing, a car with the engine running, the lead off a church roof — each done this afternoon by
   **one** person off your books, no client, no casing, no crew, no plan and no week spent, for a
@@ -632,7 +632,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 68 · 18 September
+The footer of every screen, and the office header, carry a build stamp (`build 69 · 18 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

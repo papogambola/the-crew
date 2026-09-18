@@ -3713,7 +3713,9 @@ function jobsList(){
   const filt=S.jobCountry?'<div style="display:flex;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap"><span class="tag ok">Showing '+esc(S.jobCountry)+'</span><button class="btn ghost sm" data-act="map-clear">All countries</button></div>':'';
   let jobs=S.jobs;
   if(S.jobCountry)jobs=jobs.filter(j=>j.country===S.jobCountry);
-  if(!jobs.length)return '<div class="panel">'+head+filt+'<div class="empty">'+(S.jobCountry?'No postings in '+esc(S.jobCountry)+' this week.':'The board is quiet. Lay low a week and check again.')+'</div></div>';
+  // The strip goes under the postings on a quiet week as well: a board with nothing on it is the
+  // likeliest week of all to want a few hundred this afternoon, and it used to disappear here.
+  if(!jobs.length)return '<div class="panel">'+head+filt+'<div class="empty">'+(S.jobCountry?'No postings in '+esc(S.jobCountry)+' this week.':'The board is quiet. Lay low a week and check again.')+'</div></div>'+streetStrip();
   const items=jobs.map(j=>({j,a:assessJob(j)}));
   const cmp={
     fit:(x,y)=>(y.j.final?1:0)-(x.j.final?1:0)||(y.a.canRun?1:0)-(x.a.canRun?1:0)||y.a.margin-x.a.margin,
@@ -3738,7 +3740,7 @@ function jobsList(){
         +'<div class="meta"><span class="tag">'+CAT_BY_K[j.cat].l+'</span>'+techs+' '+kn+' '+fit+(j.news?' <span class="chip '+(j.news.closed?"c-bad":"c-warn")+' tip" tabindex="0" data-tip="'+esc(j.news.hits.join("\n"))+'">In the news · '+esc(newsWord(j.news))+'</span>':'')+'</div></div>'
       +'<div class="pay num">'+money(j.payout)+'<div class="loc" style="text-align:right">+'+j.heat+' heat</div></div></div>';
   }).join("");
-  return streetStrip()+'<div class="panel">'+head+banLine+filt+rows+'</div>';
+  return '<div class="panel">'+head+banLine+filt+rows+'</div>'+streetStrip();
 }
 // The job file, in the left column beside the map.
 function jobPanel(j){
@@ -4836,7 +4838,7 @@ function streetStrip(){
         +(best?'<span class="tag ok">best fit '+best.pClean+'%</span>':'<span class="tag no">no soldier can go</span>')+'</div></div>'
       +'<div class="pay num">'+moneyExact(o.pay)+'</div></div>';
   }).join("");
-  return '<div class="panel" style="margin-bottom:14px"><div class="panel-h"><h2>Street work</h2>'
+  return '<div class="panel" style="margin-top:14px"><div class="panel-h"><h2>Quick Money - High Risk</h2>'
     +'<span class="kicker">'+(spent?'done for this week':'one a week · one soldier · no crew')+'</span></div>'
     +'<div class="sel-help" style="padding:10px 14px 0">A few hundred to a few thousand, this afternoon, for whoever you send — and a real chance of losing them for a fortnight or to a cell. No trade counts out here. What counts is the attributes the work leans on, what they will not do, and their nerve for something with nobody behind them.</div>'
     +rows+'</div>';
@@ -6590,7 +6592,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 68 · 18 September 2026";
+const BUILD="build 69 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
