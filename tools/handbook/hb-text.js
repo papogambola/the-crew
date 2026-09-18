@@ -211,6 +211,19 @@ ch("people","The people","Everything on a crew member's file",[
 
 /* ---------------- 5 --------------------------------- */
 ch("hiring","Hiring","The roster, the trip, the signature",[
+  S("firstweek","The first week is free",
+    p("Going to fetch somebody is a week on the ground — but not in week one. While you are still putting the crew together you can go and ask as many people as the float carries, one after another, and the clock does not move.")
+    +p("From <b>week two</b> every trip costs its week, whether they sign or not. That is what makes an empty place expensive rather than merely untidy, and it is why somebody turning up on their own is worth something.")),
+  S("comeToYou","When they come to you",
+    p("From a <b>Known</b> name, people start asking to join instead. The chance is printed on the roster, and it rises with every rung above that — nobody comes to a Nobody.")
+    +p("It is the whole transaction the other way round, and that is the point of it:")
+    +ul([
+      "<b>No trip and no week.</b> They are already here.",
+      "<b>The figure is theirs to open with and yours to argue with.</b> What they ask already sits under what going to fetch them would have cost — both are printed, side by side. <b>Too much</b> costs nothing to say and works most of the time, twice; the third time they are entitled to hold, and do.",
+      "<b>No costs nothing.</b> No week, no money, no place. They go, and will not ask again for a month or two.",
+      "And somebody who asked to be here starts a few points of loyalty ahead of somebody who had to be persuaded.",
+    ])
+    +note("They only turn up when there is a place free. An applicant you cannot sign is a tease, not an event.")),
   S("roster","The roster",
     p("Everybody for hire, filterable by trade, experience, nationality, price and what they will not do. "
       +"They are generated once from the game's seed and they do not change — the person you looked at in week 3 and could not afford is still there in week 40, at the same price, unless somebody else got to them.")),
