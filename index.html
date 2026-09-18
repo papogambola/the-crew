@@ -51,9 +51,14 @@
   .stat .l{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
   .stat .v{font-family:var(--f-mono);font-size:15px;font-weight:500}
   .heatwrap{min-width:132px;flex:1 1 132px;max-width:220px}
-  .heatbar{height:9px;border:1px solid var(--ink);background:repeating-linear-gradient(45deg,var(--paper-2),var(--paper-2) 5px,transparent 5px,transparent 10px);position:relative;overflow:hidden}
-  .heatbar>i{position:absolute;inset:0;width:0;background:var(--ink);transition:width .5s ease}
-  .heatbar.hot>i{background:var(--stamp)}
+  /* three bands on the track — green to 60, amber to 80, red to 100 — and the fill in the colour of the band the heat is in */
+  .heatbar{height:9px;border:1px solid var(--ink);position:relative;overflow:hidden;
+    background:linear-gradient(90deg,color-mix(in srgb,var(--good) 26%,var(--paper-2)) 0 60%,color-mix(in srgb,var(--warn) 30%,var(--paper-2)) 60% 80%,color-mix(in srgb,var(--stamp) 28%,var(--paper-2)) 80% 100%)}
+  .heatbar::before,.heatbar::after{content:"";position:absolute;top:0;bottom:0;width:1px;background:var(--ink);opacity:.55;z-index:1}
+  .heatbar::before{left:60%}.heatbar::after{left:80%}
+  .heatbar>i{position:absolute;inset:0;width:0;background:var(--good);transition:width .5s ease,background-color .5s ease}
+  .heatbar.amber>i{background:var(--warn)}
+  .heatbar.red>i{background:var(--stamp)}
   .spacer{flex:1 1 auto}
 
   /* The tabs pin under the top bar, so Crew/Jobs/Roster/Log are reachable from anywhere down a
@@ -3321,14 +3326,14 @@ function syncTopbarH(){
 }
 try{window.addEventListener("resize",syncTopbarH);}catch(e){}
 function topbar(){
-  const hot=S.heat>=70;
+  const band=S.heat>80?"red":S.heat>60?"amber":"green";   // green to 60, amber 61 to 80, red above
   return '<div class="topbar"><div class="topbar-in">'
     +'<div class="brand">THE CREW</div>'
     +'<div class="stat"><span class="l">Balance</span><span class="v num">'+money(S.money)+'</span></div>'
     +'<div class="stat"><span class="l">Week</span><span class="v num">'+String(S.week).padStart(2,"0")+'</span></div>'
     +'<div class="stat" title="'+esc(rankInfo(S.rep).note)+'"><span class="l">Ranking · '+esc(rankName(S.rep))+'</span><span class="v num">'+S.rep+'</span></div>'
     +'<div class="heatwrap"><div class="stat" style="min-width:0"><span class="l">Heat '+Math.round(S.heat)+(S.heat>=100?" ⚠":"")+'</span>'
-      +'<div class="heatbar'+(hot?" hot":"")+'"><i style="width:'+clamp(S.heat,0,100)+'%"></i></div></div></div>'
+      +'<div class="heatbar '+band+'" title="Green to 60, amber to 80, red above"><i style="width:'+clamp(S.heat,0,100)+'%"></i></div></div></div>'
     +'<div class="spacer"></div>'
     +(S.news?'<button class="btn ghost sm newsbtn" data-act="news-open" title="This week\'s paper">📰 The week'+(S.news.effects.length?' <span class="chip c-bad">'+S.news.effects.length+'</span>':'')+'</button>':'')
     +'</div></div>';
@@ -5674,7 +5679,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 61 · 18 September 2026";
+const BUILD="build 62 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
