@@ -3126,9 +3126,15 @@ function weekTick(rng){
     const rc2=recruits().filter(c=>c.status==="crew");
     if(rc2.length){
       const n=Math.min(rc2.length,ri(rng,1,2));
-      for(let i=0;i<n;i++){const c=rc2[i];c.status="jailed";c.out=S.week+ri(rng,4,7);leaveCrew(c);}
-      logMsg("RAID"+(detective()?" — "+detective().name+" came with a squad":". The heat boiled over")+" — "+n+" of your crew taken.","bad",true);sfx("siren");
+      const taken=[];
+      for(let i=0;i<n;i++){const c=rc2[i];c.status="jailed";c.out=S.week+ri(rng,4,7);leaveCrew(c);taken.push(c.first+" (held until week "+c.out+")");}
+      logMsg("RAID"+(detective()?" — "+detective().name+" came with a squad":". The heat boiled over")+" — "+n+" of your crew taken.","bad",true);
       if(detective())detective().file=Math.max(0,detective().file-25);
+      // announced on the screen with the lights and the siren, ahead of everything else that week
+      S.notices=S.notices||[];
+      S.notices.unshift({k:"Raid · week "+S.week,h:detective()?detective().name+" came with a squad":"The heat boiled over",
+        text:"The door came in at six in the morning. Taken: "+taken.join(", ")+". The float is down by "+(safehouseLevel()>=3?"15%":"30%")+", and the heat with it — for now.",
+        go:"crew",goText:"The crew →",siren:true});
     }
     S.money=Math.round(S.money*(safehouseLevel()>=3?0.85:0.7));
     S.heat=58;
@@ -3286,6 +3292,7 @@ function render(){
   checkMilestones();checkGoals();
   newsSync();
   if(!TUT.on){   // nothing pops up under a tutorial; it all waits for the last card
+    if(S.notices&&S.notices.length&&S.notices[0].siren&&!S.modal&&!S.over){S.modal={type:"notice"};if(!S.notices[0].sirened){S.notices[0].sirened=true;sirenFx();}}
     if(S.news&&S.newsRead!==S.week&&!S.modal&&!S.over){S.modal={type:"news"};sfx("open");}
     if(S.notices&&S.notices.length&&!S.modal&&!S.over){S.modal={type:"notice"};sfx("stamp");}
     if(S.loose&&S.loose.length&&!S.modal&&!S.event&&!S.over){S.modal={type:"loose"};sfx("bad");}
@@ -5720,7 +5727,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 64 · 18 September 2026";
+const BUILD="build 65 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 

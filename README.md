@@ -376,7 +376,9 @@ decisions at the end.
   after the first click, so the loop starts on the first click; the radio in the office shows
   its state and has a **Start the radio** button.
 - **Sound.** A small set of synthesised effects — clicks, the verdict stamp, a coin on a
-  hire, a siren on a raid. No files; the office switch turns it off.
+  hire. No files; the office switch turns it off. A raid is announced on the screen — who was taken
+  and until when, what the float lost — with the same lights and siren as the police arriving in a
+  feed.
 - **Tutorial, and a reminder.** The first time anyone plays, eleven steps walk through every
   screen — the top line, your file, the places and the money rules, other crews, the roster, a
   file, the board, who can go, the reckoning and the twist, the log and what happens between
@@ -592,7 +594,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 64 · 18 September
+The footer of every screen, and the office header, carry a build stamp (`build 65 · 18 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
