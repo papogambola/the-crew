@@ -627,7 +627,12 @@ ch("between","Between jobs","The week that passes on its own",[
     p("Eight kinds, each with several ways out, each with its odds written on it.")
     +G.events()
     +note("When somebody threatens to walk, their whole file opens underneath the question — attributes, trade, experience, loyalty, what they have been through — "
-      +"so the decision is made about a person rather than a name. One of the options is to let them go and settle it in forty-eight hours.")),
+      +"so the decision is made about a person rather than a name. One of the options is to let them go and settle it in forty-eight hours.")
+    +p("<b>An old face is always one of yours, and the screen opens with how they actually left</b> — walked out over the money, asked to be let out, cut loose, "
+      +"gone to another crew, or away with a cut of a score. It is written on their file the week it happens, so a blackmail cannot describe a resignation as a robbery.")
+    +p("<b>Which is how a death can come back.</b> "+m(Math.round(D.FAKED_DEATH*100)+"%")+" of the deaths on that coast were arranged by the person who died, and the week they turn up "
+      +"asking for money is the week you find out — the boat, the storm and the phone that rang out were theirs, and if you paid for the funeral and the family, that money went with them. "
+      +"The other "+m((100-Math.round(D.FAKED_DEATH*100))+"%")+" really did drown. They are off the roster for good, and no blackmail is ever drawn on them.")),
   S("loose","Loose ends",
     p("Anybody who leaves the books alive knows things. The game will not let you ignore it — the question is put to you, once, per person, with the odds.")
     +G.T(["How they left","Chance they talk, before adjustments"],

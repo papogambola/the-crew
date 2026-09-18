@@ -299,8 +299,15 @@ decisions at the end.
   plays under it.
 - **Between jobs.** Every three to seven weeks something happens that is not a job: a death on
   holiday, a member gone without a word, one who wants out, one who has joined another crew
-  and is buying yours drinks (someone may leave every week until it stops), an old face who
-  walked with your money and is talking about the police, a detective asking around the bars.
+  and is buying yours drinks (someone may leave every week until it stops), an old face back to
+  blackmail you, a detective asking around the bars.
+- **An old face is always one of yours, and the screen opens with how they actually left** —
+  walked out over the money, asked to be let out, cut loose, poached, or away with a cut of a
+  score. `looseAdd()` stamps `goneAs` on the file the week it happens and `goneStory()` reads it
+  back, because the blackmail used to open "who walked with your money" about everybody,
+  including people you had buried. A quarter of the deaths on that coast (`FAKED_DEATH`) were
+  arranged by the person who died, and the blackmail is where you find out: they stay on the
+  board as `gone`, the other three quarters get `status:"dead"` and never come back.
   The six types rotate, so each comes round before any repeats; the least loyal member is
   usually the one it happens to. Each asks for a decision with a price and a consequence —
   money, loyalty, a place, heat, sometimes a gamble the text is honest about — and the hard

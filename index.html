@@ -173,9 +173,16 @@
   .diffbar i.h{background:var(--stamp);border-color:var(--stamp)}
 
   .scrim{position:fixed;inset:0;background:rgba(17,16,16,.44);z-index:60;display:flex;align-items:flex-start;justify-content:center;padding:26px 14px;overflow:auto}
-  .modal{background:var(--paper);border:2px solid var(--ink);max-width:680px;width:100%;box-shadow:0 30px 60px -20px rgba(0,0,0,.6)}
-  .modal-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:14px 16px;border-bottom:2px solid var(--ink);background:var(--paper-2)}
-  .modal-b{padding:16px}
+  /* A modal is a sheet of paper on the desk, and it fits the desk. It never grows past the window
+     and makes the page scroll to reach its own buttons: the head and the foot are nailed down and
+     the body between them is what moves. Before this, a long trip report put Continue below the
+     fold, under a Cut loose button — so the click that meant "next" sometimes meant "sack the
+     person you just flew to Sydney to sign". */
+  .modal{background:var(--paper);border:2px solid var(--ink);max-width:680px;width:100%;box-shadow:0 30px 60px -20px rgba(0,0,0,.6);display:flex;flex-direction:column;max-height:calc(100vh - 52px)}
+  .modal-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:14px 16px;border-bottom:2px solid var(--ink);background:var(--paper-2);flex:0 0 auto}
+  .modal-b{padding:16px;flex:1 1 auto;overflow:auto;min-height:0;overscroll-behavior:contain}
+  /* The way out of a modal, always in the same place and always on screen. */
+  .modal-f{flex:0 0 auto;display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;border-top:2px solid var(--ink);background:var(--paper-2)}
   .x{appearance:none;border:1px solid var(--ink);background:var(--paper);width:30px;height:30px;font-size:16px;line-height:1;flex:none}
 
   .check{display:flex;align-items:center;gap:10px;padding:7px 8px;border:1px solid var(--line-2);margin-bottom:6px;background:var(--card)}
@@ -410,7 +417,13 @@
   .feed-side{position:sticky;top:0}
   .feed-side .feedmap{margin-top:0}
   .feed-main .ticker{margin-top:0;max-height:min(66vh,640px)}
-  @media(max-width:920px){.feed-cols{grid-template-columns:1fr}.feed-side{position:static;order:-1}}
+  /* When the trip settles, the sheet keeps the width it had while it was running and the file of
+     whoever signed takes the place the map was in. Stacked under the story it was taller than the
+     window, which is how Continue ended up below the fold with Cut loose sitting over it. */
+  .modal.trip-done .feed-cols{grid-template-columns:minmax(0,1fr) 400px}
+  .modal.trip-done .feed-main .ticker{max-height:min(46vh,420px)}
+  .modal.trip-done .feed-side .id{margin:0}
+  @media(max-width:920px){.feed-cols,.modal.trip-done .feed-cols{grid-template-columns:1fr}.feed-side{position:static;order:-1}}
   .fm-flag{width:16px;height:11px;vertical-align:-1px;margin-right:5px}
   /* the plan: streets, water, the building, in ink */
   .sc-ground{fill:var(--paper-2)}
@@ -1646,7 +1659,10 @@ function checkMilestones(){
   if(crewSeats()>=CREW_MAX_SEATS)push("seats6",{k:"Milestone · "+rankName(S.rep),h:"Two more seats",
     text:"The name is "+rankName(S.rep)+". Places six and seven are open: six soldiers, and you. Fill them from the roster — and from week 104, Feared, with all seven on the crew, you can found a second crew that works without you.",go:"roster",goText:"To the roster →"});
   if(crewSeats()>=CREW_MAX_SEATS)push("bigops",{k:"Milestone · "+rankName(S.rep),h:"Work that needs seven",
-    text:"Seven places is what the ultra-complex operations ask for. "+BAL.bigCount+" of them exist — deep water, air lifts, high rises, tunnels, blackouts, long cons, lab work and whole ledgers — each wanting six or seven in the field, three to five trades and two or three kinds of knowledge. They are not on the ordinary board and no rival can take one; one or two stand on it at a time, by name, and each is spent when it is run. They want people a five-person crew never needed: divers, pilots, skippers, drone specialists, climbers, tunnellers, chemists, medics, electricians, signals, analysts, quartermasters, linguists and handlers. A thousand of those are on the roster.",go:"jobs",goText:"To the board →"});
+    // No stock counts. How many of these exist and how many specialists are on the roster is the
+    // size of a table, not a thing the player does anything with — and a number that large reads
+    // as a boast rather than an opportunity. What is useful is what they want and where to look.
+    text:"Seven places is what the ultra-complex operations ask for — deep water, air lifts, high rises, tunnels, blackouts, long cons, lab work and whole ledgers — each wanting six or seven in the field, three to five trades and two or three kinds of knowledge. They are not on the ordinary board and no rival can take one; one or two stand on it at a time, by name, and each is spent when it is run. They want people a five-person crew never needed: divers, pilots, skippers, drone specialists, climbers, tunnellers, chemists, medics, electricians, signals, analysts, quartermasters, linguists and handlers — and the roster is full of them.",go:"jobs",goText:"To the board →"});
   const fr=foundingRules();
   if(fr.more){
     const n=fr.n+2,ord=["","","second","third","fourth"][n],years=fr.week/52;
@@ -2981,6 +2997,10 @@ function executeJob(job){return startJob(job,{noTwist:true,pool:jobPool(job)});}
 /* --------------------------- BETWEEN JOBS ----------------------------- */
 // Every few weeks something happens to the crew that isn't a job. The types rotate, so each
 // comes round before any repeats. Each one asks for a decision.
+// How often a death on the coast was arranged by the person who died. Kept low on purpose: at one
+// in four it is a thing that happened to somebody once, which is a story. Much higher and no death
+// in the game means anything, because you would be waiting for all of them to come back.
+const FAKED_DEATH=0.25;
 const WEEKLY=[
   {k:"holiday",h:"A death on holiday",text:"{M} went to the coast for three days. A boat, a storm, a phone that rings out. {M} is not coming back.",kill:true,
    opts:[{t:"Pay for the funeral and the family — $8K",money:-8000,loyAll:6,out:"The crew notices who paid. Loyalty rises."},
@@ -3002,7 +3022,15 @@ const WEEKLY=[
          {t:"Send the enforcer to end the conversation",req:"enforcer",roll:[{p:0.7,out:"The drinks stop. So does the other crew's interest.",poach:0},{p:0.3,out:"It gets loud. Heat +10, and {M} keeps talking.",heat:10,poach:2}]},
          {t:"Ignore it — they know who they work for",roll:[{p:0.5,out:"They do. Nobody goes.",poach:0},{p:0.5,out:"{L} goes with {M} on Thursday, and {M} keeps talking.",lose:"lowest",poach:2}]},
          {t:"Let anyone who wants to go, go",out:"{L} goes. The rest stay, and think better of you for it.",lose:"lowest",loyAll:8,poach:0}]},
-  {k:"debt",h:"An old face",text:"{G} — who walked with your money — is back, broke, and talking about the police. $15K buys silence.",needsGone:true,
+  // The opening line comes off the person's own record, because it is about them. Somebody who
+  // staged a drowning does not get the same sentence as somebody who resigned, and the week the
+  // dead walk back in is the week the game says the death was a fake — not before.
+  {k:"debt",h:"An old face - Blackmailing",needsGone:true,
+   text:M=>M&&M.goneAs==="dead"
+     ? (M.funeralPaid
+        ? "{G} is alive. The boat, the storm and the phone that rang out were {G}'s own arrangement, and the money you sent the family went with {G}. Now it is spent, and {G} is broke and talking about the police. $15K buys silence."
+        : "{G} is alive. There was no boat and no storm — {G} let the phone ring out and let you fill the place. Now the money is gone, and {G} is broke and talking about the police. $15K buys silence.")
+     : "{G} — "+goneStory(M)+" — is back, broke, and talking about the police. $15K buys silence.",
    opts:[{t:"Pay — $15K",money:-15000,out:"Silence, for now."},
          {t:"Refuse",roll:[{p:0.5,out:"{G} talks. Heat +18.",heat:18},{p:0.5,out:"{G} was bluffing. Nothing happens, this time."}]},
          {t:"Have the enforcer see {G} to the station",req:"enforcer",out:"{G} leaves town. Heat +4.",heat:4},
@@ -3043,7 +3071,11 @@ function makeEvent(rng){
   const L=rc.filter(c=>!M||c.id!==M.id).sort((a,b)=>a.loyalty-b.loyalty)[0]||null;
   const v={M:M?M.first:"one of the crew",G:M?M.first:"someone",L:L?L.first:"somebody",
     R:rival()?cap(rival().name):"another crew",B:rival()?rival().boss:"their boss",D:detective()?detective().name:"a detective"};
-  return {k,h:fill2(W.h,v),text:fill2(W.text,v),mId:M?M.id:null,lId:L?L.id:null,opts:W.opts.map(o=>({t:fill2(o.t,v),req:o.req||null})),v,outcome:null,week:S.week};
+  // An event's words can depend on who it landed on — a blackmail reads off how that person left.
+  // Resolved here, once, and stored on the event, so the sentence cannot drift between renders or
+  // change under a save.
+  const txt=typeof W.text==="function"?W.text(M,v):W.text;
+  return {k,h:fill2(W.h,v),text:fill2(txt,v),mId:M?M.id:null,lId:L?L.id:null,opts:W.opts.map(o=>({t:fill2(o.t,v),req:o.req||null})),v,outcome:null,week:S.week};
 }
 // Who a choice needs on the crew. "quiet" is either of the two trades that can end something
 // without it becoming a story — an enforcer to do it or a cleaner to make it read as nothing.
@@ -3073,7 +3105,16 @@ function eventApply(ev,i){
   if(M&&eff.cut){M.cut=Math.round((M.cut+eff.cut)*100)/100;}
   if(M&&eff.set==="gone"){M.status="gone";M._touched=true;leaveCrew(M);if(!eff.noLoose)looseAdd(M,"resign");}
   if(M&&eff.set==="jailed"){M.status="jailed";M.out=S.week+(eff.weeks||3);M._touched=true;leaveCrew(M);}
-  if(M&&W.kill){M.status="gone";M._touched=true;leaveCrew(M);}
+  // A death is a death. Most of the time the coast really did take them, and they are dead — off
+  // the roster for good, never an old face in a car park. Now and then the boat and the storm were
+  // the whole point of the trip, and that one stays alive on the board as somebody who is gone,
+  // where the blackmail can find them. Deciding it here, once, is what stops the game telling two
+  // different stories about the same person.
+  if(M&&W.kill){
+    M._touched=true;leaveCrew(M);
+    M.goneAs="dead";M.goneWeek=S.week;M.funeralPaid=!!o.money;
+    M.status=chance(rng,FAKED_DEATH)?"gone":"dead";
+  }
   if(M&&W.gone&&M.status==="crew"){M.status="gone";M._touched=true;leaveCrew(M);looseAdd(M,"resign");}
   if(eff.lose==="lowest"&&L&&L.status==="crew"){L.status="gone";L._touched=true;leaveCrew(L);looseAdd(L,"poach");}
   if(eff.rehire&&M&&recruits().length<crewSeats()){M.status="crew";M.loyalty=30;M._touched=true;S.crewIds.push(M.id);}
@@ -3467,7 +3508,10 @@ function idCardTop(c,extra){
 
 /* ---- CREW ---- */
 // A member's card. cr is the other crew this one sits in, or null for your own.
-function memberCard(c,cr){
+// opts.controls===false prints the file without the row of things you can do to them — for the
+// screens whose job is to tell you who you have, not to ask what you want done about it.
+function memberCard(c,cr,opts){
+  const controls=!opts||opts.controls!==false;
   const paidTip="A bonus buys "+PAID_WEEKS+" weeks paid up: +2 on every reckoning, deaf to other crews' drinks, never the one who skims, and not the one trouble picks on.";
   const moneyTip="Small jobs in a row — a cut under two weeks of this one's upkeep. At three they grumble: −5 loyalty a job and −2 on the reckoning. At five they may walk. A bonus, or a proper score, settles it.";
   const statusChip=(c.status==="injured"?' <span class="chip c-warn">Injured · back wk '+c.out+'</span>':'')
@@ -3476,17 +3520,30 @@ function memberCard(c,cr){
   const low=c.loyalty<35;
   const bonusCost=bonusCostFor(c);
   const seatHome=recruits().length<crewSeats();
-  let btns='<button class="btn ghost sm" data-act="bonus" data-id="'+c.id+'" title="'+esc(paidUp(c)?c.first+" is paid up until week "+c.paidUntil:"+14 loyalty, and "+paidTip)+'" '+(S.money>=bonusCost&&!paidUp(c)?"":"disabled")+'>Bonus '+money(bonusCost)+'</button>';
-  if(cr)btns+='<button class="btn ghost sm" data-act="crew-recall" data-id="'+c.id+'" title="'+(seatHome?"Back to your crew":"No place free in your crew")+'" '+(seatHome?"":"disabled")+'>← Recall</button>';
-  else crews().forEach(x=>{if(x.memberIds.length<EXTRA_CREW_SIZE&&c.status==="crew")btns+='<button class="btn ghost sm" data-act="crew-send" data-id="'+c.id+'" data-crew="'+x.id+'" title="Send to '+esc(x.name)+'">→ '+esc(x.name)+'</button>';});
-  // Teaching somebody a new trade is a conversation, not a purchase, so the button opens one.
-  const why=canLearn(c);
-  const asked=(c.learnAskedUntil||0)>S.week;
-  const learnTip=why?cap(why):(asked?c.first+" was asked recently and said no — try again after week "+c.learnAskedUntil
-    :"Money, weeks out of the field, and two ranks. "+c.first+" can say no.");
-  btns+='<button class="btn ghost sm" data-act="learn" data-id="'+c.id+'" title="'+esc(learnTip)+'" '
-    +(why||asked?"disabled":"")+'>Teach a trade</button>';
-  btns+='<button class="btn ghost sm" data-act="drop" data-id="'+c.id+'">Cut loose</button>';
+  let btns='';
+  if(controls&&UI.confirmDrop===c.id){
+    // Cutting somebody loose puts a person who knows your business on the street, and there is no
+    // undoing it. It gets asked, and the answer that keeps them sits where the hand already is —
+    // in the place the Cut loose button occupied, so a second click by mistake is a second no.
+    btns='<span class="mono" style="font-size:11px;color:var(--stamp);align-self:center">'+esc(c.first)+' walks, and keeps what they know.</span>'
+      +'<button class="btn ghost sm stamp" data-act="drop-yes" data-id="'+c.id+'">Cut loose</button>'
+      +'<button class="btn sm" data-act="drop-no">Keep them</button>';
+  } else if(controls){
+    btns='<button class="btn ghost sm" data-act="bonus" data-id="'+c.id+'" title="'+esc(paidUp(c)?c.first+" is paid up until week "+c.paidUntil:"+14 loyalty, and "+paidTip)+'" '+(S.money>=bonusCost&&!paidUp(c)?"":"disabled")+'>Bonus '+money(bonusCost)+'</button>';
+    if(cr)btns+='<button class="btn ghost sm" data-act="crew-recall" data-id="'+c.id+'" title="'+(seatHome?"Back to your crew":"No place free in your crew")+'" '+(seatHome?"":"disabled")+'>← Recall</button>';
+    else crews().forEach(x=>{if(x.memberIds.length<EXTRA_CREW_SIZE&&c.status==="crew")btns+='<button class="btn ghost sm" data-act="crew-send" data-id="'+c.id+'" data-crew="'+x.id+'" title="Send to '+esc(x.name)+'">→ '+esc(x.name)+'</button>';});
+    // Teaching somebody a new trade is a conversation, not a purchase, so the button opens one.
+    const why=canLearn(c);
+    const asked=(c.learnAskedUntil||0)>S.week;
+    const learnTip=why?cap(why):(asked?c.first+" was asked recently and said no — try again after week "+c.learnAskedUntil
+      :"Money, weeks out of the field, and two ranks. "+c.first+" can say no.");
+    btns+='<button class="btn ghost sm" data-act="learn" data-id="'+c.id+'" title="'+esc(learnTip)+'" '
+      +(why||asked?"disabled":"")+'>Teach a trade</button>';
+    btns+='<button class="btn ghost sm" data-act="drop" data-id="'+c.id+'">Cut loose</button>';
+  } else {
+    // No controls on this card, so the card says where they went rather than leaving a hole.
+    btns='<span class="mono" style="font-size:11px;color:var(--muted)">A bonus, a new trade, cutting loose — all on the Crew tab.</span>';
+  }
   return '<div class="id">'+vetStamp(c)+idCardTop(c,statusChip)
     +'<div style="padding:0 11px 4px"><div class="field" style="gap:2px"><label>Loyalty '+c.loyalty+' · takes '+Math.round(c.cut*100)+'% of each score</label>'
       +'<div class="loy'+(low?" low":"")+'"><i style="width:'+c.loyalty+'%"></i></div></div></div>'
@@ -4139,7 +4196,9 @@ function renderModal(){
 // Both the job report and the recruitment trip play out line by line in the same ticker.
 function isFeed(t){return t==="result"||t==="trip";}
 function feedData(){return S&&S.modal&&isFeed(S.modal.type)?S.modal.data:null;}
-function modalWrap(inner,cls){return '<div class="scrim" data-act="scrim"><div class="modal'+(cls?" "+cls:"")+'" role="dialog" aria-modal="true">'+inner+'</div></div>';}
+// foot, when given, is nailed to the bottom of the sheet: the way on is never something you have
+// to go looking for, and nothing else can drift into the place your hand already knows.
+function modalWrap(inner,cls,foot){return '<div class="scrim" data-act="scrim"><div class="modal'+(cls?" "+cls:"")+'" role="dialog" aria-modal="true">'+inner+(foot?'<div class="modal-f">'+foot+'</div>':'')+'</div></div>';}
 
 function modalRecruit(id){
   const c=byId(id);if(!c)return "";
@@ -4785,12 +4844,22 @@ function modalTrip(T){
     +'<div class="b"><div class="k">On the ground</div><div class="v num" dir="ltr">'+(T.weeks||1)+' week'+((T.weeks||1)>1?'s':'')+'</div></div>'
     +'<div class="b"><div class="k">Heat</div><div class="v num">+'+(T.heatGain||0)+'</div></div>'
     +'<div class="b"><div class="k">How hard it was</div><div class="v num">'+(T.trouble||0)+'%</div></div></div>';
-  const who=c&&good?'<hr class="rule"><div class="kicker">On the books</div>'
-    +'<div class="cards" style="grid-template-columns:1fr">'+memberCard(c,null)+'</div>':'';
-  const why=!good?'<hr class="rule"><div class="mono" style="font-size:12px;color:var(--muted);line-height:1.7">'
-    +esc(T.first)+' stays on the roster and will not take a meeting again until week '+((c&&c.coolUntil)||S.week)+'. A week is a week whether anybody signs at the end of it.</div>':'';
-  const foot='<hr class="rule"><div style="display:flex;justify-content:flex-end"><button class="btn stamp" data-act="scrim">Continue →</button></div>';
-  return modalWrap(h+'<div class="modal-b">'+ticker+nums+who+why+foot+'</div>');
+  // The file of who you just signed, and nothing you can do to them. You agreed terms with this
+  // person ten seconds ago in another country; a Cut loose button here is not a choice the screen
+  // is entitled to offer, and it used to sit one row above Continue.
+  const foot='<button class="btn stamp" data-act="scrim">Continue →</button>';
+  if(c&&good){
+    // Story on the left, the person it produced on the right — the shape the trip already had,
+    // with the file where the map was. Nothing here is below the window.
+    const who='<div class="kicker">On the books</div><div class="cards" style="grid-template-columns:1fr">'
+      +memberCard(c,null,{controls:false})+'</div>';
+    return modalWrap(h+'<div class="modal-b"><div class="feed-cols">'
+      +'<div class="feed-main">'+ticker+nums+'</div><div class="feed-side">'+who+'</div></div></div>',
+      "feed trip-done",foot);
+  }
+  const why='<hr class="rule"><div class="mono" style="font-size:12px;color:var(--muted);line-height:1.7">'
+    +esc(T.first)+' stays on the roster and will not take a meeting again until week '+((c&&c.coolUntil)||S.week)+'. A week is a week whether anybody signs at the end of it.</div>';
+  return modalWrap(h+'<div class="modal-b">'+ticker+nums+why+'</div>',null,foot);
 }
 
 function modalResult(d){
@@ -4851,9 +4920,12 @@ function modalResult(d){
     +team.map(c=>{const mk=d.marks&&d.marks[c.id];
       return '<div class="fld'+(mk?' mk-'+mk:'')+'"><div class="fld-av">'+avatar(c.avseed,c.gender,c.face)+'</div>'+(mk?'<span class="fld-stamp">'+MARK[mk]+'</span>':'')
         +'<div class="fld-n">'+(c.isPlayer?"You":esc(c.first))+'</div>'+(mk==="gone"?'<div class="fld-w">wanted</div>':'')+'</div>';}).join("")+'</div>';
+  // The job report is the longest sheet in the game — the minute-by-minute, the numbers, the
+  // ranking, what everybody learned, the fallout, the field. Its way out is nailed to the bottom
+  // rather than buried at the end of all that.
   return modalWrap(h+'<div class="modal-b"><details open><summary class="kicker" style="cursor:pointer">The job, minute by minute</summary>'+ticker+'</details>'
-    +nums+wrong+tw+rank+growth+ev+roster
-    +'<hr class="rule"><div style="display:flex;justify-content:flex-end"><button class="btn" data-act="scrim">Continue →</button></div></div>');
+    +nums+wrong+tw+rank+growth+ev+roster+'</div>',null,
+    '<button class="btn" data-act="scrim">Continue →</button>');
 }
 // A milestone, announced in the middle of the screen. One at a time; Later keeps the rest waiting.
 /* ---- street work: one soldier, no plan, and the whole game is who you send ---- */
@@ -6491,7 +6563,8 @@ const INFO={
     "<b>Fallout</b>: injuries (out two weeks), arrests (held for weeks, then back on the roster), leaks (an informant talked), and betrayals (someone skimmed the split and vanished).",
     "<b>The twist.</b> On some jobs — one good fit in four, one long shot in twelve — the report stops: something has gone wrong and six options wait for your call. Only one sets the crew free, and it is always the one the crew you brought can actually do: a wheelman can hot-wire the second car, a forger can re-paper the manifest, a hacker can kill the alarm. A call your crew can make but not best costs time and money; a call nobody can make costs blood, a place, and ranking. Walking away is always on the list — it keeps everyone and loses the score. The report then shows what you chose, what would have set you free, and why."]},
   event:{h:"Between jobs",t:[
-    "Every few weeks something happens that is not a job: a death on holiday, a member gone without a word, one who wants out, one who has joined another crew and is buying yours drinks, an old face who walked with your money, a detective asking around. The types rotate, so each comes round before any repeats.",
+    "Every few weeks something happens that is not a job: a death on holiday, a member gone without a word, one who wants out, one who has joined another crew and is buying yours drinks, an old face back to blackmail you, a detective asking around. The types rotate, so each comes round before any repeats.",
+    "<b>An old face is always somebody of yours</b>, and the screen opens with how they left — resigned, cut loose, poached, or off with a cut of a score. One in four deaths on that coast was arranged by the person who died, and that is the week you find out: the boat, the storm and the phone that rang out were theirs, and so was the money you sent the family. The rest of them really did drown, and never come back.",
     "Every option has a price and a consequence — money, loyalty, a place, heat — and some are a gamble the text is honest about. Options that need an <b>Enforcer</b> on the crew are greyed without one. The decision cannot be clicked away; the crew remembers it, and the case log keeps it."]},
   office:{h:"The office",t:[
     "Pause and settings, drawn as the boss's office. The <b>radio</b>: SOUND is the master switch, MUSIC switches the track, VOLUME turns both — click the knob's left to lower, right to raise. An hour of suspense loops under the office and every board; each job report brings its own track, and the verdict another. The <b>monitor</b>: brightness. The <b>paper</b>: language. The <b>book</b>: controls and how the game works. The <b>clipboard</b> on the wall: the tutorial whenever you want it — the whole thing, the short reminder, or any one card. The <b>file cabinet</b>: write the game out as a code you can keep anywhere, or read one back in — a save lives in one browser only, and this is how it leaves. The <b>door</b>: back to the game, or burn the file. Your <b>hat</b>: your own file.",
@@ -6511,7 +6584,7 @@ function infoHTML(){
 
 /* ------------------------------ THE OFFICE ---------------------------- */
 // Pause and settings, drawn as the boss's office. Every object on the desk does something.
-const UI={office:false,hold:false,panel:null,confirmNew:false,info:false,found:null,confirmDissolve:null,impInfo:null,impRaw:""};
+const UI={office:false,hold:false,panel:null,confirmNew:false,info:false,found:null,confirmDissolve:null,confirmDrop:null,impInfo:null,impRaw:""};
 function chrome(){
   return '<div id="tipbox" role="tooltip" hidden></div>'
     +'<button class="totop" data-act="to-top" aria-label="Back to the top" title="Back to the top">↑</button>'
@@ -6671,7 +6744,7 @@ function officePanel(){
       +'<span class="k">Enter / Space</span><span>Open the posting you have selected.</span>'
       +'<span class="k">✓ / ✗</span><span>On a job file: who can go, and why not.</span>'
       +'<span class="k">Saving</span><span>Automatic, in this browser. Settings are kept separately and survive a new game.</span></div>'
-      +'<hr class="rule"><div class="mono" style="font-size:12px;line-height:1.8"><b>How it works.</b> You are the commander. Fill four places from 6,000 files — each has a passport, five attributes, a trade, knowledge, education, time in jail, time on the streets, and things they will not do. '
+      +'<hr class="rule"><div class="mono" style="font-size:12px;line-height:1.8"><b>How it works.</b> You are the commander. Fill the places from the roster — every file has a passport, five attributes, a trade, knowledge, education, time in jail, time on the streets, and things they will not do. '
       +'Clients post jobs online by country; each country has its own categories, language, money, politics and terrain. Everyone on the crew goes on every job, if they can get in and the job doesn\'t hit one of their limits. '
       +'Success pays and builds ranking; failure adds heat and gets people hurt or held. Build the name to the top of the board and the last score — three operations against the Committee — opens up.</div>'
       +'<hr class="rule"><div class="kicker">The player\'s handbook</div>'
@@ -6849,7 +6922,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 74 · 18 September 2026";
+const BUILD="build 75 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
@@ -6948,7 +7021,7 @@ document.addEventListener("click",e=>{
       const player=Object.assign({id:"YOU",isPlayer:true,n:nm,first:nm.split(" ")[0],gender:draft.gender,nat:draft.nat,avseed:draft.avseed,face:normFace(draft.face,draft.gender),status:"crew",cut:0,upkeep:0,loyalty:100,greed:0,mole:false,vetted:true,vetFlag:false,limits:[]},draft.profile);
       newGame(player); draft=null; render(); break;
     }
-    case "tab": S.tab=k; S.modal=null; render(); window.scrollTo(0,0); break;
+    case "tab": S.tab=k; S.modal=null; UI.confirmDrop=null; render(); window.scrollTo(0,0); break;
     case "scrim":
       if(e.target===t||cl.contains("x")||cl.contains("btn")){
         if(feedData()&&feedData().awaiting)break; // the decision cannot be clicked away
@@ -6974,7 +7047,9 @@ document.addEventListener("click",e=>{
     case "hire": hire(id); break;
     case "vet": vet(id); break;
     case "bonus": bonus(id); break;
-    case "drop": drop(id); break;
+    case "drop": UI.confirmDrop=id; render(); break;
+    case "drop-yes": UI.confirmDrop=null; drop(id); break;
+    case "drop-no": UI.confirmDrop=null; render(); break;
     case "case": caseJob(id); break;
     case "execute": doExecute(id); break;
     case "execute-crew": doExecute(id,+t.getAttribute("data-crew")); break;
@@ -7375,9 +7450,26 @@ function looseOptions(c,why){
 // Queue it rather than interrupt — a departure can happen inside a job report or a week tick.
 function looseAdd(c,why){
   if(!c||c.isPlayer)return;
+  // How somebody left is a fact the game has to keep, not something a later screen can guess at.
+  // It is stamped here because nearly every way off this crew already comes through here with its
+  // reason in hand — and the one that doesn't (a death) stamps its own.
+  c.goneAs=why;c.goneWeek=S.week;
   S.loose=S.loose||[];
   if(S.loose.some(l=>l.id===c.id))return;
   S.loose.push({id:c.id,why:why,week:S.week});
+}
+// The clause that says why this person is an old face, in the words the game already uses for it.
+// A blackmail screen that opens "who walked with your money" about somebody you buried is not a
+// twist, it is the game forgetting its own story — which is exactly what it used to do.
+function goneStory(c){
+  if(!c)return "who used to be on this crew";
+  if(c.goneAs==="dead"){
+    return c.funeralPaid
+      ? "whose funeral you paid for, and whose family you paid"
+      : "who drowned off the coast, according to a phone that rang out";
+  }
+  const W=LOOSE_WHY[c.goneAs];
+  return W?"who "+W.l:"who left this crew";
 }
 function looseResolve(i){
   const L=S.loose&&S.loose[0];if(!L)return;
