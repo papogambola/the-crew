@@ -81,6 +81,8 @@ ch("where","Where everything is","The screen, tab by tab",[
       ["What you actually keep","<b>Jobs</b> → open the posting → <b>The split</b>. It subtracts the wages as well as the cuts."],
       ["Why a job failed","The report itself → <b>WHAT WENT WRONG</b>, which only appears on a botched or blown night, and says what to do differently."],
       ["Why a client will not deal with you","<b>Jobs</b> → the notice above the postings. It names the job, the city, the week and the verdict; click it for the whole account. See <a href=\"#grudge\">grudges and revenge</a>."],
+      ["How to change somebody's trade","<b>Crew</b> → their card → <b>Teach a trade</b>. See <a href=\"#learn\">a new craft</a>."],
+      ["Why two of my crew are arguing","They do the same job. See <a href=\"#clash\">two of the same trade</a>."],
       ["An old report","<b>Dashboard</b> → <b>Job recaps</b>. Open any one for the whole thing again."],
       ["The detective's file","<b>Dashboard</b> → <b>The competition and the law</b>."],
       ["Retainers, the safe house, buying off a desk","<b>Dashboard</b> → <b>Standing arrangements</b>."],
@@ -258,11 +260,44 @@ ch("crew","The crew","Places, who goes, and a second crew",[
       "A <b>limit</b> the job hits — the tag is named against them.",
       "A <b>border</b> their passport or their record will not get them through.",
       "They are <b>injured</b>, and the file says which week they are back.",
+      "They are <b>learning a trade</b> — see <a href=\"#learn\">a new craft</a> — and the file says which week the school ends.",
       "They are <b>held</b> by the police.",
       "You <b>benched</b> them.",
     ])
     +p("The job file states, at the top, how many the client needs and how many can actually go. Under the needed number the whole crew is "+m("−22")+" per missing body, which is enormous — "
       +"it is usually the single largest number in the factor list, and it is the reason a job you are short for is not worth running at any fee.")),
+  S("learn","A new craft",
+    p("A trade is what somebody <i>is</i> in this game: the first line of their card, and the thing a client asks for by name. "
+      +"So it can be changed, and changing it is a conversation rather than a purchase — <b>Teach a trade</b> on their card opens it.")
+    +p("Anybody "+m(D.EXP[2])+" or better can be asked. What it costs:")
+    +ul([
+      "<b>Money</b> — from "+money(30000)+", more for a higher rank, and about twice as much for one of the <a href=\"#bigtechs\">specialists</a>.",
+      "<b>Weeks</b> — three to five out of the field, five to seven for a specialist. They cannot go on a job while they are at it.",
+      "<b>Rank</b> — they come back <b>two ranks lower</b>, at the new trade, and are no longer the old one. A Legend Safecracker becomes a Professional Hacker.",
+    ])
+    +p("<b>And they can say no.</b> The screen prints the chance they agree before you ask, and what it is made of: where you stand with them, "
+      +"what they are being asked to give up, whether they are built for the new work, and their temperament. "
+      +"<i>Where you stand</i> is loyalty plus the nights you have actually been through together — it is not the same number as loyalty, and it is the one that decides this.")
+    +note("Ask and be refused and they will not hear it again for a month or two. Rank matters on both sides of it: a Professional gives up less than a Legend does, and answers accordingly.")),
+  S("learnno","And if they say no",
+    p("Four directions, and which of them is worth taking is decided by the same number the refusal was.")
+    +ul([
+      "<b>Leave it.</b> Costs nothing, buys nothing, and they know you asked and listened. Loyalty "+m("+3")+".",
+      "<b>Put money on it.</b> Three offers, each printing the new chance. <b>The money goes whether they take it or not</b> — that is what makes it an offer rather than a purchase. It moves the number at any standing, including for somebody who is halfway out of the door, but it never buys the last stretch.",
+      "<b>Tell them it is not a question.</b> Three ways it can go, all printed: they go and resent it ("+m("−22")+" loyalty, and it costs you with them), they refuse in front of everybody, or they walk out that night. An Enforcer on the books moves the odds towards the first and away from the last.",
+      "<b>Cut them loose.</b> They go, the crew takes it badly in proportion to how much they liked them, and they leave knowing what they know — see <a href=\"#loose\">loose ends</a>.",
+    ])),
+  S("clash","Two of the same trade",
+    p("Put two of the same trade on one crew and the question of who is <i>the</i> "+m("Safecracker")+" is asked the same day, not eventually. "
+      +"It arrives as a scene — ten of them, and which one you get depends on the pair — and you have to answer it before you do anything else.")
+    +p("What it can be about: two plans for the same door; kit bought on the float that the other one says is wrong; one posting that wants the trade "
+      +"and two people who could take it; the newer one being on a bigger percentage; one treating the other as an apprentice; a client who asked for one of them by name; "
+      +"two schools of the same craft; a fourteen-month sentence one of them served for the other one's night; a safe house with one room; and a favour being called in at the table.")
+    +p("Each has five ways out — "+m("50")+" between them — and every one states what it needs, what it costs and the odds it goes your way. "
+      +"They run from picking a side to paying one of them off, putting one on the bench, sending one to the second crew, having a Fixer or an Enforcer settle it, "
+      +"or asking one of them to <a href=\"#learn\">learn a different trade</a>, which is the only answer that removes the reason for the argument.")
+    +note("An answer either settles it or does not, and the screen says which. What is not settled comes back in a few weeks as a different scene between the same two people. "
+      +"Bad blood set here is the game's ordinary bad blood: it costs the crew on the reckoning of every job they are both out on.")),
   S("bench","Benching",
     p("Benching somebody keeps their percentage of the fee. That is all it does.")
     +p("<b>It does not save their wages.</b> The payroll is charged every week for everybody on the books, benched or not, for as many weeks as the job holds the crew. "
@@ -730,6 +765,7 @@ const GLOSS=[
   ["Snag","The thing that goes wrong during a recruitment trip."],
   ["Split","Who takes what out of the fee."],
   ["Street work","A small piece of work for <a href=\"#street\">one person and no crew</a>. One a week, a few thousand at most, and a real chance of losing them."],
+  ["Standing","Where you stand with somebody: loyalty plus the nights you have been through together. Not the same number as loyalty, and the one that decides whether they take what you ask — see <a href=\"#learn\">a new craft</a>."],
   ["Tier","How big a posting is, 1 to 4 on the open board and 5 for an <a href=\"#ops\">operation</a>. Decides the fee, the weeks, the people needed and how long you may case it."],
   ["Trade","What somebody is — one of sixteen ordinary trades, or one of the fourteen <a href=\"#bigtechs\">specialists</a>. Worth +14 when the client asked for it."],
   ["Twist","The thing that goes wrong during a job, and the options it offers."],

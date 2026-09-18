@@ -433,6 +433,9 @@
   .twist h3{font-size:20px;margin:6px 0 4px;text-transform:uppercase;letter-spacing:.05em}
   .twist p{margin:0 0 10px;font-size:14.5px;line-height:1.55}
   .twist-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .twist-opts.one{grid-template-columns:1fr}   /* for answers that are sentences rather than two words */
+  .twist-opt.wide b{width:auto;min-width:104px;max-width:170px;font-size:13.5px;line-height:1.25}
+  .twist-opt .ob{flex:1;min-width:0}          /* the body, so the label cannot be printed over it */
   .twist-opt{text-align:left;font-family:var(--f-mono);font-size:12.5px;line-height:1.45;border:1px solid var(--ink);background:var(--card);color:var(--ink);padding:8px 10px;cursor:pointer;display:flex;gap:8px;align-items:flex-start}
   .twist-opt b{font-family:var(--f-logo);font-size:15px;letter-spacing:.06em;color:var(--stamp);flex:none;width:16px}
   .twist-opt:hover:not(:disabled),.twist-opt:focus-visible{background:var(--ink);color:var(--paper)}
@@ -1422,7 +1425,7 @@ function bondsFor(c){
   });
   return out.sort((a,b)=>Math.abs(b.b)-Math.abs(a.b));
 }
-function bondWord(b){return b>=3?"would go anywhere with":b===2?"works well with":b===1?"gets on with":b===-1?"is cool towards":b===-2?"has bad blood with":"will not be in a room with";}
+function bondWord(b){return b>=3?"would go anywhere with":b===2?"works well with":b===1?"gets on with":b===0?"has no history with":b===-1?"is cool towards":b===-2?"has bad blood with":"will not be in a room with";}
 // Who goes on this job. Everyone eligible goes unless you bench them on the job file:
 // a benched member takes no cut, learns nothing, and cannot be hurt — and the crew that does go is smaller.
 function benchSet(job){return (job&&S.benchJob===job.id&&Array.isArray(S.bench))?S.bench:[];}
@@ -2174,7 +2177,10 @@ function entry(c,job,forgerAboard){
     if(l.country&&l.country(co))return {ok:false,why:l.l};
     if(l.tag&&job.tags.includes(l.tag))return {ok:false,why:l.l+" — job is "+TAG_LABEL[l.tag]};
   }
-  if(c.status!=="crew")return {ok:false,why:c.status==="injured"?"injured, back week "+c.out:"not available"};
+  if(c.status!=="crew")return {ok:false,why:c.status==="injured"?"injured, back week "+c.out
+    :c.status==="learning"?"learning "+(c.learn&&TECH_BY_K[c.learn.to]?TECH_BY_K[c.learn.to].l.toLowerCase():"a trade")+", back week "+c.out
+    :c.status==="benched"?"sitting this out, back week "+c.out
+    :"not available"};
   const local=nat.name===co.name;
   if(!local&&!forgerAboard){
     if(co.gate===2&&nat.tier>1)return {ok:false,why:"strict border, "+TIER_WORD[nat.tier]+" passport — needs a forger aboard"};
@@ -3105,6 +3111,8 @@ function weekTick(rng){
   }
   S.roster.forEach(c=>{
     if(c.status==="injured"&&S.week>=c.out){c.status="crew";logMsg(c.first+" is back on the job.","good");}
+    if(c.status==="learning"&&S.week>=c.out)learnFinish(c);
+    if(c.status==="benched"&&S.week>=c.out){c.status="crew";c._touched=true;logMsg(c.first+" is back in the field.","");}
     if(c.status==="jailed"&&S.week>=c.out){c.status="available";c.jail+=1;logMsg(c.first+" walked. Back on the roster, a year older.","warn");}
   });
   S.heat=clamp(S.heat-heatDrop(),0,120);
@@ -3290,11 +3298,16 @@ function render(){
   if(!S){musicRoute();root.innerHTML=screenTitle()+chrome();bind();fitTitle();return;}
   // a milestone reached is announced first; something that happened between jobs waits for a decision next
   checkMilestones();checkGoals();
+  // Two of a trade on one crew is the consequence of the thing you just did, so it is looked
+  // for wherever somebody joins — hired, recalled, rehired, or loaded out of an old save —
+  // rather than at each of those places separately, where the fifth one would be forgotten.
+  if(S&&!S.clash&&!S.over)clashCheck();
   newsSync();
   if(!TUT.on){   // nothing pops up under a tutorial; it all waits for the last card
     if(S.notices&&S.notices.length&&S.notices[0].siren&&!S.modal&&!S.over){S.modal={type:"notice"};if(!S.notices[0].sirened){S.notices[0].sirened=true;sirenFx();}}
     if(S.news&&S.newsRead!==S.week&&!S.modal&&!S.over){S.modal={type:"news"};sfx("open");}
     if(S.notices&&S.notices.length&&!S.modal&&!S.over){S.modal={type:"notice"};sfx("stamp");}
+    if(S.clash&&!S.modal&&!S.over){S.modal={type:"clash"};sfx("stamp");}
     if(S.loose&&S.loose.length&&!S.modal&&!S.event&&!S.over){S.modal={type:"loose"};sfx("bad");}
     if(S.revenge&&!S.modal&&!S.over){S.modal={type:"revenge"};sfx("bad");}
     if(S.event&&!S.modal&&!S.over)S.modal={type:"event"};
@@ -3437,6 +3450,13 @@ function memberCard(c,cr){
   let btns='<button class="btn ghost sm" data-act="bonus" data-id="'+c.id+'" title="'+esc(paidUp(c)?c.first+" is paid up until week "+c.paidUntil:"+14 loyalty, and "+paidTip)+'" '+(S.money>=bonusCost&&!paidUp(c)?"":"disabled")+'>Bonus '+money(bonusCost)+'</button>';
   if(cr)btns+='<button class="btn ghost sm" data-act="crew-recall" data-id="'+c.id+'" title="'+(seatHome?"Back to your crew":"No place free in your crew")+'" '+(seatHome?"":"disabled")+'>← Recall</button>';
   else crews().forEach(x=>{if(x.memberIds.length<EXTRA_CREW_SIZE&&c.status==="crew")btns+='<button class="btn ghost sm" data-act="crew-send" data-id="'+c.id+'" data-crew="'+x.id+'" title="Send to '+esc(x.name)+'">→ '+esc(x.name)+'</button>';});
+  // Teaching somebody a new trade is a conversation, not a purchase, so the button opens one.
+  const why=canLearn(c);
+  const asked=(c.learnAskedUntil||0)>S.week;
+  const learnTip=why?cap(why):(asked?c.first+" was asked recently and said no — try again after week "+c.learnAskedUntil
+    :"Money, weeks out of the field, and two ranks. "+c.first+" can say no.");
+  btns+='<button class="btn ghost sm" data-act="learn" data-id="'+c.id+'" title="'+esc(learnTip)+'" '
+    +(why||asked?"disabled":"")+'>Teach a trade</button>';
   btns+='<button class="btn ghost sm" data-act="drop" data-id="'+c.id+'">Cut loose</button>';
   return '<div class="id">'+vetStamp(c)+idCardTop(c,statusChip)
     +'<div style="padding:0 11px 4px"><div class="field" style="gap:2px"><label>Loyalty '+c.loyalty+' · takes '+Math.round(c.cut*100)+'% of each score</label>'
@@ -4063,6 +4083,8 @@ function renderModal(){
   if(m.type==="trip")return modalTrip(m.data);
   if(m.type==="event")return modalEvent();
   if(m.type==="found")return modalFound();
+  if(m.type==="clash")return modalClash();
+  if(m.type==="talk")return modalTalk();
   if(m.type==="grudge")return modalGrudge();
   if(m.type==="street")return modalStreet();
   if(m.type==="streetdone")return modalStreetDone();
@@ -4915,6 +4937,835 @@ function eventWho(ev){
     +'</div></div>';
 }
 
+/* ===================== WHERE YOU STAND WITH SOMEBODY ==================== */
+/* Loyalty is what they think of the money. Standing is what they think of YOU, and it is the
+   number both of the conversations below are decided by: whether somebody agrees to start their
+   trade again from the bottom, and whether two of the same trade will take your word for who
+   does what. It is loyalty plus everything you have actually been through together, and it is
+   printed on the screen that uses it, because a refusal nobody can see coming is a dice roll
+   wearing a sentence. */
+function standing(c){
+  if(!c)return 0;
+  let v=c.loyalty||0;
+  v+=Math.min(16,(c.ranWith||0)*2);                       // nights out together
+  if(paidUp(c))v+=8;                                      // and lately, paid
+  const you=S.player&&S.player.id;
+  if(you)v+=4*bondOf(you,c.id);                           // what the two of you have been through
+  if(hasTrait(c,"steady"))v+=4;
+  if(hasTrait(c,"mercenary"))v-=6;                        // nothing personal, and that is the point
+  if(hasTrait(c,"hothead"))v-=4;
+  return clamp(Math.round(v),0,100);
+}
+function standingWord(v){
+  return v>=80?"would follow you anywhere":v>=62?"solid with you":v>=44?"civil":v>=26?"thin":"on the way out";
+}
+
+/* ========================= LEARNING A NEW TRADE ========================= */
+/* A trade is what somebody IS in this game — it is the first thing on their card and the thing a
+   client asks for by name. So changing it is not a purchase, it is a conversation, and the answer
+   is theirs. What it costs is money, weeks off the field, and rank: nobody carries eleven years of
+   being a Safecracker into being a Hacker. A Legend comes back a Professional. That is the whole
+   reason to think about it rather than shop.
+
+   Who can be asked: somebody on the crew who has got somewhere in the trade they have. A Rookie
+   has nothing to unlearn and nothing to be proud of, so there is no conversation to be had. */
+const LEARN={
+  minExp:3,                 // Professional or better — "experienced"
+  base:30000,               // what a school costs before anything else
+  perRank:0.35,             // and more for somebody who has further to fall
+  bigMul:2.2,               // a specialist is taught by fewer people, for more
+  weeks:[3,5], bigWeeks:[5,7],
+  dropRank:2,               // what they come back as, off their old rank
+  payFloor:0.5, payCeil:1.5, // what an extra fee can be, as a share of the school
+};
+function canLearn(c){
+  if(!c||c.isPlayer)return "you are the commander, and nobody is teaching you a trade";
+  if(c.status!=="crew")return c.status==="injured"?"injured, back week "+c.out:"not on the crew";
+  if(c.learn)return "already learning "+TECH_BY_K[c.learn.to].l.toLowerCase();
+  if((c.exp||1)<LEARN.minExp)return "a "+EXP[(c.exp||1)-1]+" has nothing to unlearn yet — "+EXP[LEARN.minExp-1]+" and up";
+  return "";
+}
+// The trades somebody could be taught. The fourteen specialists are taught by people you have no
+// way of reaching until your name opens the seventh place — the same gate the board uses.
+function learnOptions(c){
+  const all=(typeof TECHS_ALL!=="undefined"&&TECHS_ALL)?TECHS_ALL:TECHS;
+  const big=(typeof TECHS_BIG!=="undefined"&&TECHS_BIG)?TECHS_BIG.map(t=>t.k):[];
+  const open=S.rep>=(typeof EXTRA_CREW_REP!=="undefined"?EXTRA_CREW_REP:seatRankAt());
+  return all.filter(t=>t.k!==c.tech&&(open||big.indexOf(t.k)<0));
+}
+function isBigTech(k){
+  const big=(typeof TECHS_BIG!=="undefined"&&TECHS_BIG)?TECHS_BIG.map(t=>t.k):[];
+  return big.indexOf(k)>=0;
+}
+function learnCost(c,k){
+  const big=isBigTech(k);
+  return Math.round(LEARN.base*(1+LEARN.perRank*((c.exp||1)-1))*(big?LEARN.bigMul:1)/1000)*1000;
+}
+function learnWeeks(c,k,rng){
+  const w=isBigTech(k)?LEARN.bigWeeks:LEARN.weeks;
+  return ri(rng||freshRng(),w[0],w[1]);
+}
+function learnNewRank(c){return Math.max(1,(c.exp||1)-LEARN.dropRank);}
+/* Will they do it? Standing first, then three things that are about the trade rather than about
+   you: how far they have to fall, whether the new work is anywhere near what they are built for,
+   and what kind of person they are. Every part of it is printed on the screen that asks. */
+function learnOdds(c,k,extra){
+  const t=TECH_BY_K[k];
+  const why=[];
+  let p=18;
+  const st=standing(c);
+  const stPart=Math.round((st-40)*0.75);
+  p+=stPart; why.push({k:"Where you stand",v:stPart,note:standingWord(st)+" ("+st+")"});
+  // The drop is two ranks for everybody, so on its own it says a Legend and a Professional have
+  // the same thing to lose. They do not: what somebody gives up is the drop AND the standing they
+  // already have in the trade they are. Eleven years of being the best Safecracker anybody knows
+  // is the thing that makes the answer no.
+  const fall=((c.exp||1)-learnNewRank(c));
+  const fallPart=-(8*fall+6*Math.max(0,(c.exp||1)-LEARN.minExp));
+  p+=fallPart; why.push({k:"What they give up",v:fallPart,
+    note:EXP[(c.exp||1)-1]+" again to "+EXP[learnNewRank(c)-1]
+      +((c.exp||1)>LEARN.minExp?", and being the "+TECH_BY_K[c.tech].l.toLowerCase()+" everybody asks for":"")});
+  // a trade leans on one attribute; being built for the new one is most of whether it appeals
+  const fit=(c.attrs&&c.attrs[t.a])||0;
+  const fitPart=Math.round((fit-55)*0.45);
+  p+=fitPart; why.push({k:"Built for it",v:fitPart,note:t.l+" leans on "+ATTR_NAME[t.a].toLowerCase()+", and theirs is "+fit});
+  if(hasTrait(c,"quick")){p+=14;why.push({k:"Quick study",v:14,note:"learns anything, and knows it"});}
+  if(hasTrait(c,"mentor")){p-=8;why.push({k:"Mentor",v:-8,note:"has people who depend on what they already do"});}
+  if(hasTrait(c,"mercenary")){p-=10;why.push({k:"Mercenary",v:-10,note:"will want paying for the years, not the school"});}
+  if(isBigTech(k)){p-=10;why.push({k:"A specialist's trade",v:-10,note:"years, not weeks, and they know it"});}
+  // Everything above is about them. Money is about you, and it is added to the number they
+  // actually arrived at rather than to the arithmetic behind it: somebody who is already on the
+  // way out is at the floor, and a bonus buried under a hundred points of reluctance would make
+  // "pay them for it" a dead option for exactly the player who needs it. So money closes part of
+  // the distance to a ceiling — a great deal of reluctance can be bought, and none of the last
+  // stretch, because nobody is talked into their own life by a cheque.
+  p=clamp(Math.round(p),3,97);
+  if(extra){
+    const share=clamp(extra/Math.max(1,learnCost(c,k)),0,LEARN.payCeil);
+    const reach=hasTrait(c,"mercenary")?0.66:0.5;
+    const bonus=Math.round((88-p)*(share/LEARN.payCeil)*reach);
+    p=clamp(p+bonus,3,97);
+    why.push({k:"The money on top",v:bonus,note:money(extra)+" in their hand, whatever they decide"
+      +(hasTrait(c,"mercenary")?" — and money is what they are here for":"")});
+  }
+  return {p:p,why:why,standing:st};
+}
+/* Sending them. The money goes whatever happens next; the weeks are theirs. */
+function learnStart(c,k,paidExtra){
+  const rng=freshRng();
+  const weeks=learnWeeks(c,k,rng);
+  const cost=learnCost(c,k)+(paidExtra||0);
+  S.money=Math.max(0,S.money-cost);
+  c.learn={to:k,until:S.week+weeks,from:c.tech,fromExp:c.exp||1,paid:cost};
+  c.status="learning";c.out=S.week+weeks;c._touched=true;
+  logMsg(c.first+" is out of the field until week "+c.out+", learning "+TECH_BY_K[k].l.toLowerCase()
+    +" ("+money(cost)+"). Comes back "+EXP[learnNewRank(c)-1]+" at it, and no longer "+TECH_BY_K[c.tech].l.toLowerCase()+".","warn",true);
+  stats().taught=(stats().taught||0)+1;
+  save();
+  return {weeks,cost};
+}
+// The week their school ends. Called from the same tick that brings back the hurt and the held.
+function learnFinish(c){
+  const k=c.learn&&c.learn.to;if(!k)return;
+  const was=TECH_BY_K[c.tech]?TECH_BY_K[c.tech].l:c.tech;
+  c.exp=learnNewRank(c);
+  c.xp=0;
+  c.tech=k;
+  c.know=(c.know||[]).slice();
+  const kn=TECH_BY_K[k].know;
+  if(kn&&c.know.indexOf(kn)<0)c.know.push(kn);      // the trade brings its own domain with it
+  c.learn=null;c.status="crew";c.out=0;c._touched=true;
+  logMsg(c.first+" is back, and is a "+TECH_BY_K[k].l+" now — "+EXP[c.exp-1]
+    +" at it, and no longer a "+was+".","good",true);
+}
+
+/* ------------------------- and if they say no -------------------------- */
+/* Four directions, and which of them is worth taking is decided by the same number the refusal
+   was: somebody who would follow you anywhere can be leaned on and will still be there on Friday.
+   Somebody who is already halfway out of the door will be all the way out by Thursday.
+
+   Every one of them costs something. Leaving it costs the school you were going to buy — nothing,
+   but also nothing gained. Paying costs money whether or not it works, which is the point. */
+const LEARN_NO=[
+  {k:"drop", t:"Leave it. It was a question, not an order.",
+   why:"Costs nothing, buys nothing, and they know you asked and listened."},
+  {k:"pay", t:"Put money on it",
+   why:"The money goes whether they take it or not. That is what makes it an offer."},
+  {k:"force", t:"Tell them it is not a question",
+   why:"What happens next is about where you stand with them, and nothing else."},
+  {k:"fire", t:"Cut them loose",
+   why:"Somebody who will not learn is somebody you are paying to stay the same."},
+];
+// Being leaned on: comply and hate it, refuse in front of everybody, or walk out tonight.
+function forceOdds(c){
+  const st=standing(c);
+  const enf=recruits().some(x=>x.status==="crew"&&x.tech==="enforcer"&&x.id!==c.id);
+  let go=clamp(Math.round(16+st*0.62)+(enf?14:0),5,88);
+  let walk=clamp(Math.round(46-st*0.42)-(enf?10:0),2,70);
+  if(hasTrait(c,"hothead"))walk+=10;
+  if(hasTrait(c,"steady"))walk=Math.max(1,walk-8);
+  walk=clamp(walk,1,100-go);
+  return {go,walk,dig:clamp(100-go-walk,0,95),enf};
+}
+function fireFallout(c){
+  const st=standing(c);
+  // the crew does not mind losing somebody nobody liked; they mind losing one of their own
+  return {crew:-(3+Math.round(st/14)),knows:looseKnows(c)};
+}
+/* The conversation is a small state machine on S.talk, so a reload lands you back in the middle
+   of it rather than losing the answer you were given. */
+function talkOpen(id){
+  const c=byId(id);if(!c)return;
+  if(canLearn(c))return;
+  S.talk={type:"learn",id:id,to:null,stage:"pick",extra:0};
+  S.modal={type:"talk"};
+}
+function talkAsk(){
+  const t=S.talk;if(!t)return;
+  const c=byId(t.id);if(!c||!t.to)return;
+  const rng=freshRng();
+  const o=learnOdds(c,t.to,t.extra||0);
+  const yes=ri(rng,1,100)<=o.p;
+  t.rolled=o.p;
+  if(yes){
+    const r=learnStart(c,t.to,t.extra||0);
+    t.stage="yes";t.weeks=r.weeks;t.cost=r.cost;
+  }else{
+    // the money you put on the table stays on the table
+    if(t.extra){S.money=Math.max(0,S.money-t.extra);
+      logMsg(c.first+" turned the school down and kept the "+money(t.extra)+" that came with the asking.","bad",true);}
+    t.stage="no";t.extra=0;
+    c.learnAskedUntil=S.week+ri(rng,6,12);c._touched=true;   // you cannot ask again on Monday
+  }
+  save();
+}
+function talkForce(){
+  const t=S.talk;if(!t)return;const c=byId(t.id);if(!c)return;
+  const rng=freshRng(),o=forceOdds(c),r=ri(rng,1,100);
+  const lines=[];
+  if(r<=o.go){
+    const cost=learnCost(c,t.to);
+    S.money=Math.max(0,S.money-cost);
+    c.learn={to:t.to,until:S.week+learnWeeks(c,t.to,rng),from:c.tech,fromExp:c.exp||1,paid:cost,forced:true};
+    c.status="learning";c.out=c.learn.until;
+    c.loyalty=clamp(c.loyalty-22,0,100);c._touched=true;
+    const you=S.player&&S.player.id;
+    if(you){S.bonds=S.bonds||{};const bk=bondKey(you,c.id);S.bonds[bk]=clamp((S.bonds[bk]||0)-1,-3,3);}
+    t.stage="forced";
+    lines.push(c.first+" goes, and says nothing on the way out of the room. It is the last thing you will be thanked for.");
+    logMsg(c.first+" was told, not asked — learning "+TECH_BY_K[t.to].l.toLowerCase()+" until week "+c.out+". Loyalty −22.","bad",true);
+  }else if(r<=o.go+o.dig){
+    c.loyalty=clamp(c.loyalty-10,0,100);c._touched=true;
+    recruits().forEach(x=>{if(x.status==="crew"&&x.id!==c.id)x.loyalty=clamp(x.loyalty-4,0,100);});
+    t.stage="dug";
+    lines.push(c.first+" says no again, in front of everybody, and nothing happens to "+c.first+" for it.");
+    logMsg(c.first+" refused in front of the crew. Loyalty −10, and −4 on everyone who watched.","bad",true);
+  }else{
+    c._touched=true;
+    t.stage="walked";
+    lines.push(c.first+" is not at the flat on Tuesday and the phone is dead.");
+    logMsg(c.first+" walked out rather than be told what to be.","bad",true);
+    c.status="gone";leaveCrew(c);looseAdd(c,"resign");
+    recruits().forEach(x=>{if(x.status==="crew")x.loyalty=clamp(x.loyalty-5,0,100);});
+  }
+  t.lines=lines;
+  save();
+}
+function talkFire(){
+  const t=S.talk;if(!t)return;const c=byId(t.id);if(!c)return;
+  const f=fireFallout(c);
+  recruits().forEach(x=>{if(x.status==="crew"&&x.id!==c.id)x.loyalty=clamp(x.loyalty+f.crew,0,100);});
+  c.status="gone";c._touched=true;leaveCrew(c);looseAdd(c,"cut");
+  logMsg(c.first+" was cut loose for saying no. The crew take "+f.crew+" loyalty for it.","bad",true);
+  t.stage="fired";t.crew=f.crew;
+  save();
+}
+function talkDrop(){
+  const t=S.talk;if(!t)return;const c=byId(t.id);if(!c)return;
+  c.loyalty=clamp(c.loyalty+3,0,100);c._touched=true;
+  t.stage="dropped";
+  logMsg("You asked "+c.first+" to learn a trade and let it go when the answer was no. Loyalty +3.","",false);
+  save();
+}
+
+/* ======================= TWO OF THE SAME TRADE ========================= */
+/* Two people who do the same job on a crew of five is not a redundancy, it is a question about
+   who is the {T} — and it is asked the day the second one signs, not eventually. Somebody has to
+   answer it, and the only person who can is you.
+
+   Ten ways it comes up, because "they don't get on" is not a scene, and five answers to each,
+   because a question with one right answer is not a question. Every answer states what it needs,
+   what it costs and the odds it goes your way, like every other option in this game.
+
+   {A} and {B} are the two of them; {A} is the one who was here first. */
+const CLASH=[
+  {k:"plan", h:"Two ways in, and one door",
+   s:"{A} has written the way into the next job. So has {B}. They are not the same way in, and both of them are now explaining to the room why the other one gets people caught.",
+   opts:[
+    {t:"Take {A}'s plan. They were here first.",p:1,
+     why:"Free. Seniority is an answer, and everyone can see it is the answer you gave.",
+     ok:"You take {A}'s plan because {A} was here first, and say so out loud. {B} works the plan and does not pretend to like it.",
+     eff:{loyA:6,loyB:-9,bond:-1}},
+    {t:"Take {B}'s plan. It is the better one.",p:0.62,
+     why:"Free, and it is the right call about two thirds of the time — {B} is newer, not worse.",
+     ok:"You take {B}'s plan, and it is the better plan. {A} says nothing and is right to say nothing.",
+     bad:"You take {B}'s plan on the strength of it being new. It is not better. {A} knew that, and so does everyone else now.",
+     eff:{loyB:8,loyA:-6,bond:-1},badEff:{loyA:-12,loyAll:-4,bond:-1,settled:false}},
+    {t:"Make them write one plan together, and do not take it until they have",p:0.55,req:"none",
+     why:"Free, and it is the only answer that makes them a pair rather than a choice.",
+     ok:"They sit with it for two days and come back with one plan, which is better than either of theirs and which neither of them will admit the other wrote.",
+     bad:"Two days later there are still two plans and now there is a grievance as well.",
+     eff:{bond:2,loyA:3,loyB:3},badEff:{bond:-1,loyA:-3,loyB:-3,settled:false}},
+    {t:"Have your Fixer read both and say which",req:"fixer",p:0.8,
+     why:"Needs a Fixer. Somebody who is not you saying it is worth more than you saying it.",
+     ok:"The Fixer reads both, says which, and gives a reason neither of them can argue with. It is not your ruling, so it is not personal.",
+     bad:"The Fixer picks, and picks the wrong one, and now two people are angry with a third.",
+     eff:{bond:1,loyA:2,loyB:2},badEff:{loyAll:-3,settled:false}},
+    {t:"Run the job with neither plan. Yours.",p:0.42,
+     why:"Free, and it is the commander's privilege. It is also the way to be wrong on your own.",
+     ok:"You write the third plan and it holds. Nobody says well done and everybody works it.",
+     bad:"Your plan is the worst of the three and you find that out in a doorway.",
+     eff:{loyA:-2,loyB:-2,youA:1,youB:1},badEff:{loyAll:-7,heat:6,settled:false}},
+   ]},
+
+  {k:"kit", h:"The tools on the crew's money",
+   s:"{B} has bought kit for the work — good kit, bought with the float. {A} says it is the wrong kit, bought by somebody who read about the job rather than did it, and wants it sent back.",
+   opts:[
+    {t:"Send it back and buy what {A} says",cost:9000,p:1,
+     why:"Costs $9K in restocking and the difference. The oldest hand is usually right about tools.",
+     ok:"The kit goes back. What arrives instead is what {A} said, and it is right, and {B} does not forget being overruled on a receipt.",
+     eff:{loyA:7,loyB:-8,bond:-1}},
+    {t:"Keep it. {B} bought it, {B} carries it.",p:0.66,
+     why:"Free. Two thirds of the time new kit is just new.",
+     ok:"The kit stays and does the job it was bought for. {A} inspects it once and stops mentioning it.",
+     bad:"The kit fails in the middle of a job and everybody remembers who signed for it.",
+     eff:{loyB:7,loyA:-5},badEff:{loyB:-6,loyAll:-4,heat:5,settled:false}},
+    {t:"Buy both sets and let the next job decide",cost:16000,p:1,
+     why:"Costs $16K. Expensive, and it is the only answer where nobody is told they were wrong.",
+     ok:"Both sets go in the van. On the night they use {A}'s, and {B} is the one who says so afterwards.",
+     eff:{bond:1,loyA:3,loyB:3}},
+    {t:"Take the money for it out of {B}'s cut",p:0.5,
+     why:"Free, and it gets the money back. It also tells everyone what happens when you spend without asking.",
+     ok:"{B} pays for it out of the next score, and says it is fair, and it is fair.",
+     bad:"{B} pays for it, calls it a fine, and starts counting everything else you take.",
+     eff:{loyB:-6,loyA:4,youB:-1},badEff:{loyB:-14,loyAll:-3,settled:false}},
+    {t:"Tell them the float is not theirs and say nothing else",p:0.7,
+     why:"Free. A rule stated once is worth more than a ruling.",
+     ok:"Nobody buys anything on the float again without asking, which was the actual problem.",
+     bad:"They hear it as taking {A}'s side by another route.",
+     eff:{loyA:2,loyB:-2,youA:1},badEff:{loyB:-8,bond:-1,settled:false}},
+   ]},
+
+  {k:"seat", h:"One posting, and it wants a {T}",
+   s:"There is a job on the board that asks for a {T} by name, and you have two. {A} has been reading it since Tuesday and has opinions about the building. {B} has not mentioned it once, which is worse. Whoever does not go is a wage for a week of watching somebody else do their work.",
+   opts:[
+    {t:"Send {A}. Send {B} on the next one that wants a {T}.",p:0.72,
+     why:"Free, and it works as long as the next one comes soon enough.",
+     ok:"{A} goes, {B} waits, and the next posting that wants a {T} is on the board inside a fortnight. Both of them remember that you kept your word.",
+     bad:"The next posting that wants a {T} does not come, and {B} has been waiting for it for a month.",
+     eff:{loyA:4,loyB:2,youB:1},badEff:{loyB:-11,settled:false}},
+    {t:"Send both. Two of a trade on one job is not a waste.",p:0.58,
+     why:"Free, and the fee is split more ways. On the night it is either two pairs of hands or two opinions.",
+     ok:"They work either end of it and it comes off cleanly, and something changes between them for having done it together.",
+     bad:"They spend the night proving a point to each other inside somebody else's building.",
+     eff:{bond:2,loyA:4,loyB:4},badEff:{bond:-2,heat:7,loyAll:-3,settled:false}},
+    {t:"Let them decide between themselves and stay out of it",p:0.45,
+     why:"Free. Half the time grown people sort it out; the other half you have told them you will not.",
+     ok:"They sort it out over one evening and tell you which of them is going, and that is the end of it.",
+     bad:"They do not sort it out. They come back to you two days later with the same question and less patience.",
+     eff:{bond:1,loyA:2,loyB:2},badEff:{loyA:-4,loyB:-4,settled:false}},
+    {t:"Pay the one who sits it out a week's wages on top",cost:0,p:1,
+     why:"Costs a week of their upkeep. Money is a poor apology and a very good one.",
+     ok:"The one who sits it out is paid for sitting it out, and stops reading it as being second.",
+     eff:{money:0,loyB:8,payUpkeepB:true}},
+    {t:"Bench {B} and say plainly that {A} is the {T} here",p:1,
+     why:"Free, and it is the clearest thing you can say. It is also the thing that makes somebody start looking.",
+     ok:"You say it once, in front of both of them. {A} is the {T}. {B} hears it exactly as it was meant.",
+     eff:{loyA:9,loyB:-16,bond:-1,benchB:2}},
+   ]},
+
+  {k:"cut", h:"The newer one is on more",
+   s:"{B} signed for a bigger percentage than {A} has ever been on — it is what it took to get {B} to sign. {A} has found out, the way people find these things out, and is standing in the kitchen with the figures.",
+   opts:[
+    {t:"Raise {A} to match",p:1,
+     why:"Costs a share of every score from here on. It is the answer that is actually fair.",
+     ok:"You put {A} on the same percentage and say the reason out loud: same trade, same money, and the longer service is worth the difference in who gets asked first.",
+     eff:{cutA:0.02,loyA:12,bond:1}},
+    {t:"Cut {B} down to {A}'s number",p:0.38,
+     why:"Free, and it is the number {B} did not sign for. Two times in three that is remembered.",
+     ok:"{B} takes the cut without much of an argument, having seen what it looked like from the other side.",
+     bad:"{B} took less to stay and will take the first offer that comes from anywhere else.",
+     eff:{cutB:-0.02,loyA:8,loyB:-8},badEff:{cutB:-0.02,loyB:-20,loyAll:-3,settled:false}},
+    {t:"Pay {A} the difference in cash, for the jobs already done",cost:22000,p:1,
+     why:"Costs $22K now and nothing later. It settles the grievance without moving the split.",
+     ok:"You count it out for the jobs already run. {A} did not want a percentage; {A} wanted it acknowledged.",
+     eff:{loyA:11,youA:1}},
+    {t:"Tell {A} what it cost to get {B}, honestly",p:0.64,
+     why:"Free. The truth is that you paid over the odds because you needed somebody that week.",
+     ok:"{A} listens to the whole of it and says it is a stupid way to run a crew and lets it go. Being told the truth is most of it.",
+     bad:"{A} hears that the way to get paid here is to be new, and files that away.",
+     eff:{loyA:5,youA:1},badEff:{loyA:-9,settled:false}},
+    {t:"Say nothing and hope it passes",p:0.3,
+     why:"Free, and it is the one answer with no version where anybody thinks better of you.",
+     ok:"It passes. People have short memories about money, occasionally.",
+     bad:"It does not pass. It goes round the whole crew, with the figures.",
+     eff:{},badEff:{loyA:-10,loyAll:-6,settled:false}},
+   ]},
+
+  {k:"rank", h:"One of them is treating the other as an apprentice",
+   s:"{A} has started saying \"watch how I do this\" to somebody who has been doing it for eleven years. {B} has stopped answering. The room has noticed and is being very careful about what it says.",
+   opts:[
+    {t:"Tell {A} to stop, in private",p:0.74,
+     why:"Free, and said in private it costs {A} nothing in front of anybody.",
+     ok:"It stops that afternoon. {A} is embarrassed rather than angry, which is the difference private makes.",
+     bad:"{A} hears it as being demoted by somebody who was not in the room, and says so to everyone who will listen.",
+     eff:{loyB:8,loyA:-2,bond:1},badEff:{loyA:-10,loyAll:-3,settled:false}},
+    {t:"Tell {A} to stop, in front of the crew",p:0.5,
+     why:"Free. Everyone hears the rule, and everyone hears somebody being put down.",
+     ok:"The room relaxes about four seconds after you say it. It needed saying where it happened.",
+     bad:"You have made an enemy to solve a manner.",
+     eff:{loyB:11,loyA:-8,loyAll:3},badEff:{loyA:-18,bond:-1,settled:false}},
+    {t:"Put {B} in charge of the next job that wants the trade",p:0.68,
+     why:"Free, and it answers the question with a fact rather than a telling-off.",
+     ok:"{B} runs it, runs it well, and nobody says \"watch how I do this\" in that flat again.",
+     bad:"{B} runs it, and it goes badly enough that {A} has a point now.",
+     eff:{loyB:12,loyA:-4,xpB:20},badEff:{loyB:-8,loyA:4,bond:-2,settled:false}},
+    {t:"Ask {A} to actually teach {B} something, properly",p:0.6,
+     why:"Free, and it turns the worst thing about {A} into the useful version of it.",
+     ok:"Given the job of teaching rather than the habit of it, {A} is good at it, and {B} learns something after eleven years.",
+     bad:"{A} takes it as permission and doubles it.",
+     eff:{bond:2,loyA:5,loyB:4,xpB:15},badEff:{loyB:-12,bond:-1,settled:false}},
+    {t:"Leave it. They are grown adults.",p:0.35,
+     why:"Free. It is true that they are grown adults, and true that this is what you are for.",
+     ok:"It burns itself out in a fortnight, as these things sometimes do.",
+     bad:"It does not burn out, and the next thing is not about the work at all.",
+     eff:{},badEff:{loyB:-12,bond:-2,loyAll:-3,settled:false}},
+   ]},
+
+  {k:"name", h:"The client asked for one of them by name",
+   s:"A client rang and asked for {B} — by name, having heard of {B} from somewhere. {A} took the call, and has been saying the name of the client to nobody in particular ever since.",
+   opts:[
+    {t:"Give the job to {B}. The client asked for {B}.",p:1,
+     why:"Free. The client is the client, and this is the least complicated thing to say.",
+     ok:"{B} takes it. It is not complicated and everybody knows it is not complicated, which does not stop it stinging.",
+     eff:{loyB:7,loyA:-7}},
+    {t:"Put both names on it and let the client sort it out",p:0.55,
+     why:"Free, and it costs a little standing with the client to buy peace at home.",
+     ok:"The client takes both, pays for both, and is faintly baffled. Nobody at your end is baffled at all.",
+     bad:"The client thinks you cannot answer a simple question and posts to somebody else next time.",
+     eff:{bond:1,loyA:4,loyB:2},badEff:{rep:-2,loyAll:-2,settled:false}},
+    {t:"Tell {A} straight that a name is worth money and {A} should go and get one",p:0.62,
+     why:"Free, and it is either the most useful thing anybody has said to {A} or the rudest.",
+     ok:"{A} takes it as work to do rather than an insult, which is what it was.",
+     bad:"{A} takes it as being told they are nobody.",
+     eff:{loyA:4,youA:1},badEff:{loyA:-13,settled:false}},
+    {t:"Have your Face handle the client and keep both names out of it",req:"face",p:0.82,
+     why:"Needs a Face. The client deals with the crew rather than with a person, which is better for you anyway.",
+     ok:"The Face takes it over. The client stops asking for people by name and starts asking for the crew, which is worth more than either of them.",
+     bad:"The client wanted {B} and is annoyed to get a salesman.",
+     eff:{loyA:3,loyB:-2,rep:1},badEff:{rep:-2,settled:false}},
+    {t:"Split the fee between them whoever goes",p:1,
+     why:"Costs {A} nothing and {B} half of something. It buys the argument off rather than answering it.",
+     ok:"They split it. {B} does the work and takes half the money for it, and does not say anything, and remembers.",
+     eff:{loyA:6,loyB:-5,bond:-1}},
+   ]},
+
+  {k:"method", h:"Same trade, two schools",
+   s:"{A} learned the work one way and {B} learned it another, and each of them thinks the other's way is how people end up in a cell. Neither of them is wrong, which is the difficulty.",
+   opts:[
+    {t:"Pick one way and make it the crew's way",p:0.7,
+     why:"Free. A crew with one method is faster than a crew with two, and one of them will hate it.",
+     ok:"You pick, and say it is not about who is right, it is about everybody doing the same thing in the dark. That lands.",
+     bad:"You pick the way that is wrong for the work you actually take.",
+     eff:{loyA:2,loyB:-4,bond:1},badEff:{loyAll:-5,heat:6,settled:false}},
+    {t:"Let each of them work their own way, and carry what it costs",p:1,
+     why:"Free today. From here on the reckoning pays for it on every job they are both out on.",
+     ok:"Neither of them gives way and neither of them has to. They work, they are civil, and there is a cold patch in the middle of the crew that every job goes round.",
+     eff:{loyA:3,loyB:3,bondSet:-3}},
+    {t:"Send them both on a job together and let the night settle it",p:0.5,
+     why:"Free, and it is a coin toss with people inside it.",
+     ok:"They come back arguing about something else entirely, which is how you know it is over.",
+     bad:"The night goes badly and each of them has proof that the other one was the reason.",
+     eff:{bond:3,loyA:5,loyB:5},badEff:{bond:-3,loyA:-8,loyB:-8,heat:8,settled:false}},
+    {t:"Pay for the pair of them to sit with somebody who taught both schools",cost:18000,p:0.78,
+     why:"Costs $18K and a week of their time. The only answer that leaves them better at the job.",
+     ok:"They come back with one method, a shared dislike of the man who taught it, and something like respect.",
+     bad:"They come back with the same two methods and a bill.",
+     eff:{bond:2,loyA:4,loyB:4,xpA:15,xpB:15},badEff:{settled:false}},
+    {t:"Ask {B} to learn a different trade altogether",p:1,learnB:true,
+     why:"Opens the conversation about a new craft, which costs money and weeks and is theirs to refuse.",
+     ok:"You put it to {B} that a crew does not need two of these, and that there is another way to be useful here.",
+     eff:{}},
+   ]},
+
+  {k:"record", h:"One of them did time for the other one's night",
+   s:"They have met before. Years ago, another crew, a job that went wrong: {A} did fourteen months for it and {B} was on a boat by the Thursday. Neither of them mentioned this when they signed.",
+   opts:[
+    {t:"Hear the whole story, from both, with everyone else out of the room",p:0.66,
+     why:"Free, and takes an evening. Half the time it is not what either of them said it was.",
+     ok:"It comes out that the boat was arranged by somebody who is dead now, and that {A} has been angry at the wrong person for four years.",
+     bad:"It is exactly what {A} said it was, and now it has been said out loud in front of you.",
+     eff:{bond:3,loyA:6,loyB:4},badEff:{bond:-2,settled:false}},
+    {t:"Have {B} pay {A} for the fourteen months, out of {B}'s cut",p:0.72,
+     why:"Costs {B} a percentage. Money for time is a real currency in this business.",
+     ok:"{B} pays without being asked twice, which is the part that matters to {A}.",
+     bad:"{B} pays and never forgives being made to.",
+     eff:{cutB:-0.02,cutA:0.02,loyA:10,bond:1},badEff:{cutB:-0.02,cutA:0.02,loyB:-14,settled:false}},
+    {t:"Cut {B} loose. Somebody who runs, runs.",p:1,
+     why:"Free, and it loses you the person and gains you a crew that watched you choose.",
+     ok:"{B} goes, and does not argue, which tells you something. {A} does not say thank you, which tells you more.",
+     eff:{goneB:true,loyA:10,loyAll:3}},
+    {t:"Cut {A} loose. The grudge is the problem, not the history.",p:1,
+     why:"Free, and it is the colder of the two, and the crew will notice which one you kept.",
+     ok:"{A} goes. Nobody says a word about it for a week.",
+     eff:{goneA:true,loyB:6,loyAll:-6}},
+    {t:"Keep both, and live with what is between them",p:0.55,
+     why:"Free, and it is a bomb with the clock left in. Bad blood costs the crew on every job they share.",
+     ok:"It holds. Years pass and nothing happens, and one day they are drinking together — but not this year.",
+     bad:"It does not hold, and what it does instead happens on a job.",
+     eff:{bondSet:-2,loyA:2,loyB:2},badEff:{bondSet:-3,loyA:-6,loyB:-6,heat:10,settled:false}},
+   ]},
+
+  {k:"room", h:"The safe house has one room",
+   s:"{A} and {B} will not be in it together. It has gone from a coldness to a rota nobody agreed, and this week {B} slept in the van in a city where sleeping in a van is how you meet the police.",
+   opts:[
+    {t:"Rent a second flat",cost:14000,p:1,
+     why:"Costs $14K. It buys peace and it buys a second address, which is not nothing.",
+     ok:"Two flats, two sets of keys, and a crew that is not tripping over itself at six in the morning.",
+     eff:{loyA:5,loyB:5,heat:-4}},
+    {t:"Make the rota official and put your name on it",p:0.8,
+     why:"Free. What was a standoff becomes an arrangement, which is most of the sting gone.",
+     ok:"Written down and signed by you, it stops being a fight about who gives way.",
+     bad:"They both read the rota as proof you take the other one's side on the days that matter.",
+     eff:{loyA:2,loyB:2,bond:1},badEff:{loyA:-5,loyB:-5,settled:false}},
+    {t:"Put whoever is not working on the next job up in a hotel",cost:6000,p:1,
+     why:"Costs $6K a time and solves it for exactly as long as you keep paying.",
+     ok:"It works, the way money works, for as long as it is being spent.",
+     eff:{loyA:3,loyB:3,recur:true}},
+    {t:"Tell them both that the van is how people get caught, and leave the rest to them",p:0.58,
+     why:"Free. It is the professional point rather than the personal one, which sometimes works.",
+     ok:"They sort out the sleeping arrangements that night, badly and permanently, and nobody sleeps in a van again.",
+     bad:"Somebody sleeps in the van again on Friday.",
+     eff:{bond:1},badEff:{heat:9,loyAll:-3,settled:false}},
+    {t:"Send {B} to the second crew",req:"crew2",p:1,
+     why:"Needs a second crew of your own. It is the only answer where nobody loses anything.",
+     ok:"{B} goes across, and is somebody else's best {T} by the end of the month, and the two of them get on famously at a distance.",
+     eff:{sendB:true,loyB:4,loyA:6}},
+   ]},
+
+  {k:"favour", h:"A debt being called in, loudly",
+   s:"{A} covered for {B} on a bad night — took a risk, took the blame, said nothing at the time. {A} is saying something now, at the table, in front of everybody, for the third time this week.",
+   opts:[
+    {t:"Settle the debt yourself, in cash, and declare it paid",cost:12000,p:0.86,
+     why:"Costs $12K. A debt somebody else pays off stops being leverage, which is the whole point.",
+     ok:"You pay {A} for the night {A} took, in front of the same people, and say it is closed. It is closed.",
+     bad:"{A} takes the money and keeps the story, which is worth more.",
+     eff:{loyA:8,bond:1,loyB:6},badEff:{loyA:2,loyB:-6,settled:false}},
+    {t:"Tell {A} that a favour said out loud three times is not a favour any more",p:0.64,
+     why:"Free, and it is true, and truth said to somebody who is owed something rarely lands well.",
+     ok:"{A} stops, because it is true and because being told it in the kitchen is better than being told it by {B}.",
+     bad:"{A} hears that covering for somebody here gets you told off for it.",
+     eff:{loyB:7,loyA:-3,bond:1},badEff:{loyA:-14,loyAll:-4,settled:false}},
+    {t:"Have {B} take the next bad job on {A}'s behalf and call it even",p:0.7,
+     why:"Free, and it is the currency they actually deal in.",
+     ok:"{B} takes a job nobody wanted, comes back, and the table is quiet about it in the good way.",
+     bad:"The job goes wrong and now {B} owes {A} twice.",
+     eff:{bond:3,loyA:6,loyB:2,xpB:10},badEff:{bond:-2,loyB:-8,heat:6,settled:false}},
+    {t:"Have your Enforcer suggest the subject is closed",req:"enforcer",p:0.68,
+     why:"Needs an Enforcer. It will be closed. What it costs is what everybody thinks of how it was closed.",
+     ok:"Nobody mentions it again. Nobody mentions much at that table for a few days.",
+     bad:"It closes the subject and opens a worse one: everyone has seen what happens when you have a complaint.",
+     eff:{loyA:-6,loyB:4,loyAll:-3},badEff:{loyAll:-9,loyA:-12,settled:false}},
+    {t:"Put them on the same job and give {A} the dangerous end of it",p:0.52,
+     why:"Free. It answers a debt with a chance to be owed one, which is how these are usually settled.",
+     ok:"{A} takes the bad end, {B} pulls {A} out of it, and the whole thing is over in one night.",
+     bad:"{A} takes the bad end and {B} is not there when it matters. That is the last of it either way.",
+     eff:{bond:3,loyA:7,loyB:5},badEff:{bond:-3,loyA:-15,hurtA:true,settled:false}},
+   ]},
+];
+
+const CLASH_BY_K={};CLASH.forEach(c=>CLASH_BY_K[c.k]=c);
+/* The day a second one of the same trade signs. It is not a weekly event that may or may not
+   come round — it is the consequence of the thing you just did, so it is on the screen before
+   you have put the roster down. */
+function clashCheck(){
+  if(!S||S.clash)return null;
+  const crew=recruits().filter(c=>c.status==="crew"&&!c.isPlayer);
+  for(let i=0;i<crew.length;i++)for(let j=i+1;j<crew.length;j++){
+    const a=crew[i],b=crew[j];
+    if(a.tech!==b.tech)continue;
+    if(clashSettledFor(a.id,b.id))continue;
+    if(clashWaiting(a.id,b.id))continue;
+    return clashStart(a,b);
+  }
+  return null;
+}
+function clashPairKey(a,b){return a<b?a+"|"+b:b+"|"+a;}
+function clashSettledFor(a,b){return !!(S.clashDone&&S.clashDone[clashPairKey(a,b)]);}
+// An argument that was not settled is not raised again on Tuesday. It sits for a few weeks and
+// comes back as a different scene, which is what "it will come back" is supposed to mean.
+function clashWaiting(a,b){return !!(S.clashNext&&S.clashNext[clashPairKey(a,b)]>S.week);}
+function clashStart(a,b){
+  const rng=freshRng();
+  // the one who was here first is {A}: that is what most of these arguments are actually about
+  const first=(S.crewIds.indexOf(a.id)<=S.crewIds.indexOf(b.id))?a:b;
+  const second=first===a?b:a;
+  const sc=pick(rng,CLASH);
+  S.clash={k:sc.k,aId:first.id,bId:second.id,tech:first.tech,week:S.week,round:(S.clashRound||0)+1,outcome:null};
+  logMsg("Two of the same trade on one crew: "+first.first+" and "+second.first+", both "
+    +TECH_BY_K[first.tech].l.toLowerCase()+"s. It did not take a week.","warn",true);
+  return S.clash;
+}
+function clashVars(cl){
+  const a=byId(cl.aId),b=byId(cl.bId);
+  const t=TECH_BY_K[cl.tech];
+  return {A:a?a.first:"one of them",B:b?b.first:"the other",T:t?t.l.toLowerCase():"trade",TT:t?t.l:"Trade",
+          CAT:"", a:a,b:b};
+}
+function clashFill(s,v){return String(s||"").replace(/\{A\}/g,v.A).replace(/\{B\}/g,v.B)
+  .replace(/\{TT\}/g,v.TT).replace(/\{T\}/g,v.T);}
+// What an answer needs before it can be taken, in the words the rest of the game uses.
+function clashCan(o){
+  if(!o)return true;
+  if(o.cost&&S.money<o.cost)return false;
+  if(!o.req||o.req==="none")return true;
+  if(o.req==="crew2")return typeof crews==="function"&&crews().some(x=>x.memberIds.length<EXTRA_CREW_SIZE);
+  return recruits().some(c=>c.status==="crew"&&c.tech===o.req);
+}
+function clashNeed(o){
+  if(!o)return "";
+  if(o.cost&&S.money<o.cost)return "needs "+money(o.cost);
+  if(o.req==="crew2")return "needs a second crew with a place in it";
+  if(o.req&&o.req!=="none")return "needs a"+(/^[aeiou]/i.test(o.req)?"n ":" ")+cap(o.req)+" on the crew";
+  return "";
+}
+/* Answering it. Every effect here is one a player can see on a card afterwards — a percentage,
+   a loyalty, a bond, somebody gone — because an argument that changes nothing you can point at
+   is an argument the game did not really have. */
+function clashApply(i){
+  const cl=S.clash;if(!cl||cl.outcome)return;
+  const sc=CLASH_BY_K[cl.k];if(!sc)return;
+  const o=sc.opts[i];if(!o||!clashCan(o))return;
+  const v=clashVars(cl),a=v.a,b=v.b;
+  const rng=freshRng();
+  const p=o.p==null?1:o.p;
+  const won=rng()<p;
+  const eff=Object.assign({},o.eff||{},won?{}:(o.badEff||{}));
+  const text=clashFill(won?o.ok:(o.bad||o.ok),v);
+  const notes=[];
+  if(o.cost){S.money=Math.max(0,S.money-o.cost);notes.push(money(o.cost)+" paid.");}
+  if(eff.money){S.money=Math.max(0,S.money+eff.money);}
+  if(eff.payUpkeepB&&b){const w=b.upkeep||0;S.money=Math.max(0,S.money-w);notes.push(money(w)+" paid to "+b.first+".");}
+  const loy=(c,n)=>{if(c&&n){c.loyalty=clamp(c.loyalty+n,0,100);c._touched=true;notes.push(c.first+" loyalty "+(n>0?"+":"")+n+".");}};
+  loy(a,eff.loyA);loy(b,eff.loyB);
+  if(eff.loyAll){recruits().forEach(c=>{if(c.status==="crew"&&c.id!==cl.aId&&c.id!==cl.bId)c.loyalty=clamp(c.loyalty+eff.loyAll,0,100);});
+    notes.push("The rest of the crew "+(eff.loyAll>0?"+":"")+eff.loyAll+".");}
+  if(eff.bond&&a&&b){S.bonds=S.bonds||{};const k=bondKey(a.id,b.id);
+    S.bonds[k]=clamp((S.bonds[k]||0)+eff.bond,-3,3);
+    notes.push("Between them: "+bondWord(S.bonds[k])+".");}
+  const you=S.player&&S.player.id;
+  if(you&&eff.youA&&a){S.bonds=S.bonds||{};const k=bondKey(you,a.id);S.bonds[k]=clamp((S.bonds[k]||0)+eff.youA,-3,3);}
+  if(you&&eff.youB&&b){S.bonds=S.bonds||{};const k=bondKey(you,b.id);S.bonds[k]=clamp((S.bonds[k]||0)+eff.youB,-3,3);}
+  if(eff.cutA&&a){a.cut=Math.max(0,Math.round((a.cut+eff.cutA)*1000)/1000);a._touched=true;notes.push(a.first+" now takes "+Math.round(a.cut*100)+"%.");}
+  if(eff.cutB&&b){b.cut=Math.max(0,Math.round((b.cut+eff.cutB)*1000)/1000);b._touched=true;notes.push(b.first+" now takes "+Math.round(b.cut*100)+"%.");}
+  if(eff.xpA&&a){a.xp=(a.xp||0)+eff.xpA;a._touched=true;}
+  if(eff.xpB&&b){b.xp=(b.xp||0)+eff.xpB;b._touched=true;}
+  if(eff.heat){S.heat=clamp(S.heat+eff.heat,0,120);notes.push("Heat "+(eff.heat>0?"+":"")+eff.heat+".");}
+  if(eff.rep){S.rep=Math.max(0,S.rep+eff.rep);notes.push("Ranking "+(eff.rep>0?"+":"")+eff.rep+".");}
+  if(eff.benchB&&b){b.status="benched";b.out=S.week+eff.benchB;b._touched=true;notes.push(b.first+" sits out until week "+b.out+".");}
+  if(eff.hurtA&&a){a.status="injured";a.out=S.week+2;a._touched=true;notes.push(a.first+" is hurt — out until week "+a.out+".");}
+  if(eff.goneA&&a){a.status="gone";a._touched=true;leaveCrew(a);looseAdd(a,"cut");notes.push(a.first+" is off the crew.");}
+  if(eff.goneB&&b){b.status="gone";b._touched=true;leaveCrew(b);looseAdd(b,"cut");notes.push(b.first+" is off the crew.");}
+  if(eff.sendB&&b&&typeof crews==="function"){const x=crews().find(y=>y.memberIds.length<EXTRA_CREW_SIZE);
+    if(x){leaveCrew(b);x.memberIds.push(b.id);b._touched=true;notes.push(b.first+" goes to "+x.name+".");}}
+  if(eff.bondSet!=null&&a&&b){S.bonds=S.bonds||{};const k=bondKey(a.id,b.id);
+    S.bonds[k]=clamp(Math.min(S.bonds[k]==null?0:S.bonds[k],eff.bondSet),-3,3);
+    notes.push("Between them: "+bondWord(S.bonds[k])+" — and the reckoning pays for it on every job they share.");}
+  const settled=eff.settled!==false;
+  S.clashDone=S.clashDone||{};S.clashNext=S.clashNext||{};
+  if(a&&b){
+    if(settled)S.clashDone[clashPairKey(a.id,b.id)]=S.week;
+    else S.clashNext[clashPairKey(a.id,b.id)]=S.week+ri(rng,3,6);
+  }
+  S.clashRound=(S.clashRound||0)+1;
+  if(o.learnB&&b&&!canLearn(b)){cl.thenLearn=b.id;}
+  cl.outcome={text:text,notes:notes,settled:settled,won:won};
+  logMsg("Two "+v.T+"s: "+clashFill(sc.h,v)+" — "+(settled?"settled":"not settled")+". "+text,settled?"":"warn",true);
+  stats().clashes=(stats().clashes||0)+1;
+  save();
+}
+function clashClose(){
+  const cl=S.clash;if(!cl)return;
+  const then=cl.thenLearn;
+  S.clash=null;S.modal=null;
+  if(then){talkOpen(then);}           // "ask {B} to learn a different trade" hands over here
+  save();
+}
+
+/* ---------------------- the two conversations, on screen ---------------- */
+function whyList(rows){
+  return '<div class="factors">'+rows.map(r=>'<span class="k">'+esc(r.k)+'</span><span><span class="'
+    +(r.v>0?"plus":r.v<0?"minus":"")+' num">'+(r.v>0?"+":"")+r.v+'</span> · '+esc(r.note)+'</span>').join("")+'</div>';
+}
+function modalTalk(){
+  const t=S.talk;if(!t)return "";
+  const c=byId(t.id);if(!c)return "";
+  const head=(kick,h)=>'<div class="modal-h"><div><div class="kicker">'+esc(kick)+'</div>'
+    +'<h2 style="font-size:19px;margin-top:3px">'+esc(h)+'</h2></div>'
+    +'<button class="x" data-act="talk-close" aria-label="Close">✕</button></div>';
+  const st=standing(c);
+  const who='<div class="kicker" style="margin-bottom:8px">'+esc(c.first)+' · '+esc(TECH_BY_K[c.tech].l)
+    +' · '+esc(EXP[(c.exp||1)-1])+' · loyalty <span class="num">'+c.loyalty+'</span>'
+    +' · where you stand: <b>'+esc(standingWord(st))+'</b> <span class="num">('+st+')</span></div>';
+
+  /* --- choosing what to teach them --- */
+  if(t.stage==="pick"){
+    const opts=learnOptions(c);
+    const rows=opts.map(o=>{
+      const cost=learnCost(c,o.k),od=learnOdds(c,o.k,0);
+      const sel=t.to===o.k;
+      return '<button class="twist-opt wide'+(sel?" on":"")+'" data-act="talk-pick" data-k="'+o.k+'" '
+        +'style="'+(sel?"border-color:var(--ink);background:var(--paper-2)":"")+'">'
+        +'<b>'+esc(o.l)+'</b><span class="ob"><span class="mono" style="color:var(--muted)">'+money(cost)+' · '
+        +esc(ATTR_ABBR[o.a])+' · '+od.p+'% they agree</span><br>'
+        +'<span class="why">'+esc(o.d)+'</span></span></button>';
+    }).join("");
+    const to=t.to?TECH_BY_K[t.to]:null;
+    const od=to?learnOdds(c,t.to,t.extra||0):null;
+    const weeks=to?(isBigTech(t.to)?LEARN.bigWeeks:LEARN.weeks):null;
+    return '<div class="scrim center"><div class="modal" role="dialog" aria-label="A new trade">'
+      +head("A new trade · week "+S.week,"What else could "+c.first+" be?")
+      +'<div class="modal-b">'+who
+      +'<div class="jobbrief"><p>Anybody can be taught. What it costs is money, the weeks they are not in the field, '
+        +'and rank: nobody carries '+esc(EXP[(c.exp||1)-1].toLowerCase())+' at one trade into another one. '
+        +esc(c.first)+' would come back <b>'+esc(EXP[learnNewRank(c)-1])+'</b> at whatever this is, and would not be '
+        +'a '+esc(TECH_BY_K[c.tech].l)+' any more.</p></div>'
+      +'<div class="kicker">What to teach them</div>'
+      +'<div class="twist-opts one">'+rows+'</div>'
+      +(to?'<hr class="rule"><div class="kicker">'+esc(to.l)+' · '+money(learnCost(c,t.to))
+          +' · '+weeks[0]+' to '+weeks[1]+' weeks out of the field</div>'
+        +'<div class="sel-help">The chance they agree, and everything it is made of. This is put to them once; '
+        +'if the answer is no, you have what to do about it, and they will not hear the question again for a month or two.</div>'
+        +whyList(od.why)
+        +'<div class="result-verdict" style="font-size:26px;margin:8px 0"><span class="verdict-stamp">'+od.p+'% yes</span></div>'
+        +'<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn ghost" data-act="talk-close">Not now</button>'
+        +'<button class="btn" data-act="talk-ask" '+(S.money>=learnCost(c,t.to)?"":"disabled title=\"the float will not carry it\"")+'>Put it to '+esc(c.first)+' →</button></div>'
+        :'<div class="sel-help">Pick a trade to see what it costs and what they would say.</div>')
+      +'</div></div></div>';
+  }
+
+  /* --- they said yes --- */
+  if(t.stage==="yes"){
+    return '<div class="scrim center"><div class="modal" role="dialog" aria-label="A new trade">'
+      +head("A new trade · week "+S.week,c.first+" will do it")
+      +'<div class="modal-b">'+who
+      +'<div class="jobbrief"><p>'+esc(c.first)+' thinks about it for longer than is comfortable and then says yes. '
+        +'The money goes today; '+esc(c.first)+' goes on Monday.</p></div>'
+      +'<div class="factors">'
+        +'<span class="k">Out of the field</span><span>until <span class="num">week '+c.out+'</span> — '+t.weeks+' weeks</span>'
+        +'<span class="k">Paid</span><span><span class="minus num">'+money(t.cost)+'</span></span>'
+        +'<span class="k">Comes back</span><span>'+esc(EXP[learnNewRank(c)-1])+' '+esc(TECH_BY_K[t.to].l)+', and no longer '+esc(TECH_BY_K[c.learn.from].l)+'</span>'
+      +'</div>'
+      +'<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" data-act="talk-close">Close</button></div>'
+      +'</div></div></div>';
+  }
+
+  /* --- they said no, and now it is your move --- */
+  if(t.stage==="no"){
+    const cost=learnCost(c,t.to);
+    const offers=[Math.round(cost*0.5/1000)*1000,cost,Math.round(cost*1.5/1000)*1000];
+    const f=forceOdds(c),fire=fireFallout(c);
+    const pay=offers.map(x=>{
+      const od=learnOdds(c,t.to,x);
+      return '<button class="twist-opt wide" data-act="talk-pay" data-x="'+x+'" '+(S.money>=cost+x?"":"disabled")+'>'
+        +'<b>'+money(x)+' on top</b><span class="ob"><span class="mono" style="color:var(--muted)">→ '+od.p+'% yes</span><br>'
+        +'<span class="why">'+(S.money>=cost+x?'Paid whether they take it or not.':'The float will not carry it.')+'</span></span></button>';
+    }).join("");
+    return '<div class="scrim center"><div class="modal" role="dialog" aria-label="A new trade">'
+      +head("A new trade · week "+S.week,c.first+" says no")
+      +'<div class="modal-b">'+who
+      +'<div class="jobbrief"><p>'+esc(c.first)+' has been a '+esc(TECH_BY_K[c.learn?c.learn.from:c.tech].l)
+        +' for a long time and does not see why that should stop. It was put at '+t.rolled+'% and it came back no.</p></div>'
+      +'<div class="kicker">Which is not the end of it</div>'
+      +'<div class="twist-opts one">'
+        +'<button class="twist-opt wide" data-act="talk-drop"><b>Leave it</b><span class="ob"><span class="why">'
+          +esc(LEARN_NO[0].why)+' Loyalty +3 for asking and listening.</span></span></button>'
+      +'</div>'
+      +'<div class="kicker">Put money on it</div>'
+      +'<div class="sel-help">'+esc(LEARN_NO[1].why)+'</div>'
+      +'<div class="twist-opts one">'+pay+'</div>'
+      +'<div class="kicker">Tell them it is not a question</div>'
+      +'<div class="sel-help">'+esc(LEARN_NO[2].why)+(f.enf?' You have an Enforcer on the books, and everybody knows it.':'')+'</div>'
+      +'<div class="twist-opts one"><button class="twist-opt wide" data-act="talk-force">'
+        +'<b>Tell them</b><span class="ob"><span class="mono" style="color:var(--muted)">'+f.go+'% they go · '+f.dig+'% they refuse in front of everybody · '+f.walk+'% they walk</span><br>'
+        +'<span class="why">If they go, it costs '+money(cost)+' and 22 loyalty, and they will not forget it.</span></span></button></div>'
+      +'<div class="kicker">Or stop paying them</div>'
+      +'<div class="twist-opts one"><button class="twist-opt wide" data-act="talk-fire">'
+        +'<b>Cut '+esc(c.first)+' loose</b><span class="ob"><span class="mono" style="color:var(--muted)">crew loyalty '+fire.crew+'</span><br>'
+        +'<span class="why">They leave knowing '+fire.knows+' of your business, which is its own problem afterwards.</span></span></button></div>'
+      +'</div></div></div>';
+  }
+
+  /* --- how each of those went --- */
+  const ends={
+    forced:["They go, and say nothing",(t.lines||[])[0]||""],
+    dug:["They say no again, out loud",(t.lines||[])[0]||""],
+    walked:["They are gone",(t.lines||[])[0]||""],
+    fired:[c.first+" is off the crew","You stop paying somebody for staying the same. The crew take "+(t.crew||0)+" loyalty for watching it."],
+    dropped:["Left where it was","You asked, and the answer was no, and that was allowed to be the answer. "+c.first+" noticed."],
+  };
+  const e=ends[t.stage];
+  if(!e)return "";
+  return '<div class="scrim center"><div class="modal" role="dialog" aria-label="A new trade">'
+    +head("A new trade · week "+S.week,e[0])
+    +'<div class="modal-b"><div class="jobbrief"><p>'+esc(e[1])+'</p></div>'
+    +'<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" data-act="talk-close">Close</button></div>'
+    +'</div></div></div>';
+}
+
+function modalClash(){
+  const cl=S.clash;if(!cl)return "";
+  const sc=CLASH_BY_K[cl.k];if(!sc)return "";
+  const v=clashVars(cl);
+  const a=v.a,b=v.b;
+  const letters="ABCDEF";
+  const head='<div class="modal-h"><div><div class="kicker" style="color:var(--stamp)">Two '+esc(v.T)+'s · week '+cl.week+'</div>'
+    +'<h2 style="font-size:21px;margin-top:4px">'+esc(clashFill(sc.h,v))+'</h2></div></div>';
+  if(cl.outcome){
+    return '<div class="scrim"><div class="modal" role="dialog" aria-modal="true">'+head
+      +'<div class="modal-b">'
+      +'<div class="brief" style="border-left-color:'+(cl.outcome.settled?"var(--good)":"var(--stamp)")+'">'+esc(cl.outcome.text)+'</div>'
+      +(cl.outcome.notes.length?'<div class="factors">'+cl.outcome.notes.map(n=>'<span class="k">·</span><span>'+esc(n)+'</span>').join("")+'</div>':'')
+      +'<div class="sel-help">'+(cl.outcome.settled
+          ? 'That is settled. Two of a trade is only a problem until somebody decides which of them is the '+esc(v.T)+'.'
+          : 'That is not settled. It will come back, and it will not be the same argument twice.')+'</div>'
+      +'<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" data-act="clash-close">Continue →</button></div>'
+      +'</div></div></div>';
+  }
+  const both='<hr class="rule"><div class="kicker">The two of them</div>'
+    +'<div class="factors">'
+      +'<span class="k">'+esc(v.A)+'</span><span>'+esc(EXP[((a&&a.exp)||1)-1])+' · loyalty <span class="num">'+((a&&a.loyalty)||0)
+        +'</span> · '+((a&&a.ranWith)||0)+' jobs with you · where you stand: '+esc(standingWord(standing(a)))+'</span>'
+      +'<span class="k">'+esc(v.B)+'</span><span>'+esc(EXP[((b&&b.exp)||1)-1])+' · loyalty <span class="num">'+((b&&b.loyalty)||0)
+        +'</span> · '+((b&&b.ranWith)||0)+' jobs with you · where you stand: '+esc(standingWord(standing(b)))+'</span>'
+      +'<span class="k">Between them</span><span>'+esc(v.A)+' '+esc(bondWord(a&&b?bondOf(a.id,b.id):0))+' '+esc(v.B)+'</span>'
+    +'</div>';
+  const opts='<div class="twist-opts one">'+sc.opts.map((o,i)=>{
+    const can=clashCan(o),need=clashNeed(o);
+    const odds=o.p==null||o.p>=1?"certain":Math.round(o.p*100)+"% it goes your way";
+    return '<button class="twist-opt" data-act="clash" data-i="'+i+'" '+(can?"":'disabled')+'>'
+      +'<b>'+letters[i]+'</b><span class="ob">'+esc(clashFill(o.t,v))
+      +' <span class="mono" style="color:var(--muted)">'+esc(odds)+(o.cost?' · '+money(o.cost):'')+'</span><br>'
+      +'<span class="why">'+esc(clashFill(o.why,v))+(can?'':' <b style="width:auto">'+esc(need)+'</b>')+'</span></span></button>';
+  }).join("")+'</div>';
+  return '<div class="scrim"><div class="modal" role="dialog" aria-modal="true">'+head
+    +'<div class="modal-b"><p style="margin:0 0 12px;font-size:15px;line-height:1.6">'+esc(clashFill(sc.s,v))+'</p>'
+    +opts
+    +'<div class="sel-help">Two people cannot both be the '+esc(v.T)+' on a crew of five. Every answer below costs '
+      +'something and the odds are on it; there is no answer that costs nothing, including leaving it alone.</div>'
+    +both+'</div></div></div>';
+}
+
 /* ----------------------------- SETTINGS ------------------------------- */
 // Settings live outside the game save, so they survive a new game.
 const SET_KEY="thecrew_settings_v1";
@@ -5739,7 +6590,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 67 · 18 September 2026";
+const BUILD="build 68 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
@@ -5871,6 +6722,16 @@ document.addEventListener("click",e=>{
     case "crew-recall": crewRecall(id); break;
     case "crew-dissolve": { const cid=+t.getAttribute("data-crew"); if(UI.confirmDissolve===cid)crewDissolve(cid); else {UI.confirmDissolve=cid;render();} break; }
     case "found-open": UI.found={lead:null,ids:[]}; S.modal={type:"found"}; render(); break;
+    case "learn": talkOpen(id); render(); break;
+    case "talk-pick": if(S.talk){S.talk.to=t.getAttribute("data-k");} render(); break;
+    case "talk-ask": talkAsk(); render(); break;
+    case "talk-pay": if(S.talk){S.talk.extra=+t.getAttribute("data-x")||0;S.talk.stage="pick";talkAsk();} render(); break;
+    case "talk-force": talkForce(); render(); break;
+    case "talk-fire": talkFire(); render(); break;
+    case "talk-drop": talkDrop(); render(); break;
+    case "talk-close": S.talk=null; S.modal=null; save(); render(); break;
+    case "clash": clashApply(+t.getAttribute("data-i")); render(); break;
+    case "clash-close": clashClose(); render(); break;
     case "grudge-open": S.modal={type:"grudge"}; render(); break;
     case "grudge-close": S.modal=null; render(); break;
     case "street-open": S.modal={type:"street",k:e.target.closest("[data-k]").getAttribute("data-k")}; render(); break;

@@ -96,6 +96,35 @@ decisions at the end.
   **you keep** — then the **wages** for the weeks the job holds the crew, and **what is left on
   the table**. The shares are fixed; the money they come off is not, so the three figures a clean,
   plain and messy night pay are printed above the split.
+- **A trade can be changed, and it is a conversation.** A trade is what somebody *is* here — the
+  first line of their card and the thing a client asks for by name — so **Teach a trade** on the
+  card opens a conversation rather than a purchase. Anybody Professional or better can be asked.
+  It costs money (from $30K, more for rank, about double for a specialist), three to seven weeks
+  out of the field, and **two ranks**: they come back lower at the new trade and are no longer the
+  old one. The screen prints the chance they agree *before* you ask and what it is made of —
+  **where you stand with them** (loyalty plus the nights you have actually been through together,
+  which is not the same number as loyalty), what they are giving up, whether they are built for
+  the new work, and their temperament. A Legend gives up more than a Professional and answers
+  accordingly.
+- **And they can say no.** Four directions then, each with its own odds on it. **Leave it** — free,
+  loyalty +3 for having asked and listened. **Put money on it** — three offers, each printing the
+  new chance, and *the money goes whether they take it or not*, which is what makes it an offer;
+  it moves the number at any standing but never buys the last stretch. **Tell them it is not a
+  question** — they go and resent it (−22 loyalty), refuse in front of everybody, or walk out that
+  night, all three printed, and an Enforcer on the books shifts which. **Cut them loose** — they
+  go, the crew takes it badly in proportion to how much they liked them, and they leave knowing
+  what they know.
+- **Two of the same trade argue, the same day.** Put two Safecrackers on one crew and the question
+  of who is *the* Safecracker is asked at once, as a scene — **ten** of them: two plans for one
+  door, kit bought on the float, one posting that wants the trade, the newer one on a bigger
+  percentage, one treating the other as an apprentice, a client who asked for one by name, two
+  schools of the same craft, a sentence one served for the other's night, a safe house with one
+  room, a favour called in at the table. **Fifty answers** between them, every one stating what it
+  needs, what it costs and the odds: pick a side, split it, pay one off, bench one, send one to
+  the second crew, put a Fixer or an Enforcer on it, or ask one of them to learn a different trade
+  — the only answer that removes the reason for the argument. An answer either settles it or does
+  not, and the screen says which; what is not settled comes back weeks later as a different scene
+  between the same two people.
 - **Bench somebody and watch it move.** Leave a member behind and their cut comes out of the split
   and stays with you — the row is struck through — and a line appears comparing the two: what you
   keep either way, what it does to the reckoning and to the odds of a clean night, and what you
@@ -603,7 +632,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 67 · 18 September
+The footer of every screen, and the office header, carry a build stamp (`build 68 · 18 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 
