@@ -39,6 +39,7 @@ const out={
   TRIP_SITES:(typeof TRIP_SITES!=="undefined"?TRIP_SITES:null),
   GRUDGE:(typeof GRUDGE!=="undefined"?GRUDGE:null),
   LOOSE_WHY:(typeof LOOSE_WHY!=="undefined"?LOOSE_WHY:null),
+  STREET:(typeof STREET!=="undefined"?STREET:null),
   WEEKLY:(typeof WEEKLY!=="undefined"?WEEKLY.map(w=>({k:w.k,h:w.h,text:w.text,opts:w.opts.map(o=>o.t)})):null),
   SPEEDS:(typeof SPEEDS!=="undefined"?SPEEDS:null),
   VET_COST:(typeof VET_COST!=="undefined"?VET_COST:null),

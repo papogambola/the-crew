@@ -425,17 +425,28 @@ function newLeaf(chap){
    than jumping whole to the next page and leaving a third of this one empty. */
 function splitKids(el,bd,chap){
   var kids=[].slice.call(el.children);
-  if(kids.length<2)return bd;
   if(el.parentNode)el.parentNode.removeChild(el);
+  if(!kids.length){bd.appendChild(el);return bd;}
   var cur=el.cloneNode(false);bd.appendChild(cur);
   for(var i=0;i<kids.length;i++){
     cur.appendChild(kids[i]);
-    if(bd.scrollHeight>bd.clientHeight&&cur.children.length>1){
+    if(bd.scrollHeight<=bd.clientHeight)continue;
+    if(cur.children.length>1){
+      // the ordinary break: end the run here and carry on overleaf
       cur.removeChild(kids[i]);
       bd=newLeaf(chap).querySelector(".leaf-b");
       cur=el.cloneNode(false);bd.appendChild(cur);
       cur.appendChild(kids[i]);
+    }else if(bd.children.length>1){
+      // The run's FIRST item does not fit under what is already on this leaf. Leaving it here is
+      // what hung a list item, or a chapter's block of index lines, off the bottom of the page —
+      // printed nowhere, and a reader cannot notice a line they were never shown. Take it over.
+      bd.removeChild(cur);
+      bd=newLeaf(chap).querySelector(".leaf-b");
+      cur=el.cloneNode(false);bd.appendChild(cur);
+      cur.appendChild(kids[i]);
     }
+    // else: one item, alone on a leaf, taller than a whole page. Nothing can be done with that.
   }
   return bd;
 }
@@ -463,12 +474,24 @@ function splitRows(el,bd,chap){
   var cur=mk();bd.appendChild(cur.t);
   for(var i=0;i<rows.length;i++){
     cur.tb.appendChild(rows[i]);
-    if(bd.scrollHeight>bd.clientHeight&&cur.tb.children.length>1){
+    if(bd.scrollHeight<=bd.clientHeight)continue;
+    if(cur.tb.children.length>1){
+      // the ordinary break: end the table here and carry on overleaf, head repeated
       cur.tb.removeChild(rows[i]);
       bd=newLeaf(chap).querySelector(".leaf-b");
       cur=mk();bd.appendChild(cur.t);
       cur.tb.appendChild(rows[i]);
+    }else if(bd.children.length>1){
+      // The table's FIRST row does not fit under what is already on this leaf. Leaving it here
+      // is what clipped a row in half at the foot of a page: the head printed, the row started,
+      // and its second line was never anywhere. Take the whole table overleaf instead.
+      bd.removeChild(cur.t);
+      bd=newLeaf(chap).querySelector(".leaf-b");
+      cur=mk();bd.appendChild(cur.t);
+      cur.tb.appendChild(rows[i]);
     }
+    // else: one row, alone on a leaf, taller than a whole page. Nothing can be done with that
+    // one but print it, and no table in this book has such a row.
   }
   return bd;
 }
@@ -526,6 +549,11 @@ function paginate(){
   if(LEAVES.length%2)newLeaf(lastChap);
   LEAVES.forEach(function(lf,i){
     lf.setAttribute("data-pg",i+1);
+    // How much of this leaf hangs off the bottom, written down while the leaf is still laid out.
+    // Once the book is ready the store is display:none, and nothing in it can be measured at all —
+    // a check that measures it afterwards is reading zeroes and passing on them.
+    var lb=lf.querySelector(".leaf-b");
+    lf.setAttribute("data-over",String(Math.max(0,lb.scrollHeight-lb.clientHeight)));
     [].forEach.call(lf.querySelectorAll("[id]"),function(e){PAGE_OF[e.id]=i;});
   });
   [].forEach.call(document.querySelectorAll(".ct-p"),function(e){

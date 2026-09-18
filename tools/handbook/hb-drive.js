@@ -184,6 +184,18 @@ const ok=(c,m)=>{if(c){pass++;console.log("  ok   "+m);}else{fail++;console.log(
   const badAnchor=await pg.evaluate(()=>[].slice.call(document.querySelectorAll('.leaf a[href^="#"]'))
     .filter(a=>window.bookPageOf(a.getAttribute("href").slice(1))==null).map(a=>a.getAttribute("href")));
   ok(badAnchor.length===0,"every cross-reference in the prose resolves"+(badAnchor.length?": "+badAnchor:""));
+  // A leaf taller than its page prints whatever hangs over the edge nowhere at all. It happened
+  // to a table row at the foot of a page: the head printed, the row started, and its second line
+  // was lost. Every leaf is measured, because a reader cannot be expected to notice a missing line.
+  // The figure is the paginator's own, taken while the leaf was still laid out. Measuring here
+  // instead reads zeroes: every leaf but the two on show lives in a display:none store.
+  const over=await pg.evaluate(()=>[].slice.call(document.querySelectorAll(".leaf"))
+    .map(l=>({pg:l.getAttribute("data-pg"),over:+(l.getAttribute("data-over")||-1)}))
+    .filter(x=>x.over>1).map(x=>"p"+x.pg+" by "+x.over+"px"));
+  const measured=await pg.evaluate(()=>[].slice.call(document.querySelectorAll(".leaf"))
+    .filter(l=>l.getAttribute("data-over")!=null).length);
+  ok(measured>0&&over.length===0,"nothing hangs off the bottom of any of the "+measured+" pages"
+    +(over.length?": "+over.join(", "):measured?"":" — NOTHING WAS MEASURED"));
   // Four jumps, from four ends of the book. The index runs over several pages, so turn to the
   // page the line is printed on first — then click the line itself, the way a reader would.
   for(const id of ["reckon","loose","gloss","bigtechs"]){
@@ -260,8 +272,25 @@ const ok=(c,m)=>{if(c){pass++;console.log("  ok   "+m);}else{fail++;console.log(
     .filter(r=>r.cells.length===5&&r.cells[0].tagName==="TD"&&!r.cells[4].textContent.trim())
     .map(r=>r.cells[0].textContent.trim()));
   ok(blank.length===0,"every trade has a place on the plan"+(blank.length?", blank: "+blank.join(", "):""));
+  // The book's job is to explain everything in the game, so a piece of work the street can offer
+  // that is nowhere in here is a hole in the book, not a detail. The week's paper has its own
+  // section, written by the session that built it.
+  for(const id of ["street","what","who","odds","risk","offers","limit","paper"])
+    ok(await pg.evaluate(i=>window.bookPageOf(i)!=null,id),"  · #"+id+" is in the book");
+  const missSt=(D.STREET||[]).map(s=>s.l).filter(l=>text.indexOf(l)<0);
+  ok(missSt.length===0,"and all "+(D.STREET||[]).length+" pieces of street work"+(missSt.length?", missing: "+missSt.join(", "):""));
+  ok(/one a week/i.test(text)&&/no crew/i.test(text),
+    "the book says street work is one a week and one person, which is the whole brake on it");
+  // The book prints the game's own sentences, and several of them carry a slot the game fills at
+  // run time ({C} for a country, {F} for a first name). One printed raw reads as a bug in the book.
+  const slots=(text.match(/\{[A-Z]\}/g)||[]);
+  ok(slots.length===0,"nothing printed with its slot still in it"+(slots.length?": "+[...new Set(slots)].join(" "):""));
+  // A figure with a currency sign in front of it is a price, not a head count — street work is
+  // priced in hundreds and thousands, and "$1,000" is not the book telling anybody how many
+  // people exist. Anything else spelling out the size of the roster still fails.
   const heads=[D.ROSTER_SIZE,D.ROSTER_CORE,D.ROSTER_BIG].map(n=>n.toLocaleString("en-US"))
-    .concat(["five thousand","six thousand","thousand files"]).filter(n=>new RegExp(n,"i").test(text));
+    .concat(["five thousand","six thousand","thousand files"])
+    .filter(n=>new RegExp("(?<![$\\d])"+n.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"i").test(text));
   ok(heads.length===0,"no head count of the roster anywhere"+(heads.length?": "+heads.join(", "):""));
   ok(/crew of five/i.test(text)&&/thousands of jobs/i.test(text),
     "it says the shape instead: a crew of five, and thousands of jobs");

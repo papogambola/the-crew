@@ -111,4 +111,14 @@ exports.pay=()=>T(["Tier","Postings called","Typical fee","Weeks on the ground",
     D.BAL.jobWeeks[t]+(D.BAL.jobWeeks[t]===1?' week':' weeks'),
     D.BAL.caseMax[t]]));
 
+// Street work, straight off the game's own list — the pay band, the risk and what it leans on.
+exports.street=()=>T(["The work","Leans on","Difficulty","Pays","If it goes wrong","Heat","Not for"],
+  (D.STREET||[]).map(s=>['<b>'+esc(s.l)+'</b>',
+    Object.keys(s.w).map(a=>'<span class="mono">'+D.ATTR_ABBR[a]+'</span>×'+s.w[a]).join(" "),
+    '<span class="mono">'+s.diff+'</span>',
+    '<span class="mono">$'+s.pay[0].toLocaleString("en-US")+'–$'+s.pay[1].toLocaleString("en-US")+'</span>',
+    'hurt '+Math.round(s.hurt*100)+'% · taken '+Math.round(s.jail*100)+'%',
+    '<span class="mono">+'+s.heat+'</span>',
+    (s.lim||[]).map(k=>esc(((D.LIMITS||[]).find(l=>l.k===k)||{l:k}).l)).join(", ")||'—']));
+
 exports.D=D;exports.money=money;exports.esc=esc;exports.T=T;

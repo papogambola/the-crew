@@ -415,6 +415,19 @@ decisions at the end.
   the Log lists the conditions, ticked off as they arrive: **a name at the top of the board**
   (ranking 420), **a career behind you** (55 jobs), **five in the field**, and **a war chest**
   ($5M) — because nobody funds this one but you.
+- **Street work.** A strip at the top of the board for the situation everybody ends up in: you are
+  a few thousand short of the person you need. Two or three small pieces a week — a till at
+  closing, a car with the engine running, the lead off a church roof — each done this afternoon by
+  **one** person off your books, no client, no casing, no crew, no plan and no week spent, for a
+  few hundred to a few thousand dollars, printed to the dollar because at this size the difference
+  between $1,050 and $1,450 is the point. A trade counts for nothing out here; what counts is the
+  attributes the work actually leans on, weighted, plus experience, temperament and what they will
+  not do, and every name on the list carries its own percentage before you choose. The margin does
+  two things: it sets the chance they come back with the money, and it sets how bad the wrong
+  ending is — a poor choice is not merely likelier to fail, it is likelier to cost you the person,
+  hurt for a fortnight or held for up to five weeks. Heat lands either way, on you and on the
+  country it happened in. **One a week, however big the crew**: a flawless year of it is worth
+  about a fifth of three tier-3 jobs, which is the whole point — it is the gap, not an income.
 - **Standing arrangements.** Money with somewhere to go. Three people on a weekly retainer: a
   **lawyer** (anyone taken is held half as long), a **doctor** (a wound is one week, not two),
   a **fixer** (two more postings a week, and one written for the crew you actually have) — paid
@@ -573,7 +586,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 57 · 17 September
+The footer of every screen, and the office header, carry a build stamp (`build 58 · 18 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

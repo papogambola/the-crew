@@ -86,6 +86,7 @@ ch("where","Where everything is","The screen, tab by tab",[
       ["What the crew has done, and the marks left to take","<b>Dashboard</b> → <b>The record</b>."],
       ["The week-by-week log","<b>Dashboard</b> → <b>Case log</b>, filterable by week."],
       ["What the last score is still waiting for","<b>Dashboard</b> → <b>The operation</b>."],
+      ["Small work for one person","<b>Jobs</b> → the <b>Street work</b> strip at the top of the board. See <a href=\"#street\">street work</a>."],
       ["Your own file","The office → <b>Your file</b>."],
       ["This handbook","The title screen, the office's bookshelf, the controls book, or the footer of any screen."],
       ["A copy of your save you can keep","The office → <b>The file cabinet</b>. Writes the game out as one long code and reads one back in."],
@@ -333,6 +334,46 @@ ch("board","The board","Where the work comes from",[
 ]);
 
 /* ---------------- 8 --------------------------------- */
+ch("street","Street work","One person, no crew, no plan",[
+  S("what","What it is",
+    p("A strip at the top of the board, under <b>Street work</b>: two or three small pieces a week, a few hundred to a few thousand dollars each, "
+      +"done this afternoon by <b>one</b> person off your books. No client, no casing, no crew, no plan, and no week spent.")
+    +p("It exists for one situation, and it is a situation everybody ends up in: <b>you are a few thousand short of the person you need.</b> "
+      +"The file is there, the price is there, and the float is not. This is how you make up the difference, and it is meant to feel like it.")),
+  S("who","The whole game of it is who you send",
+    p("A trade counts for <b>nothing</b> out here. Nobody is paying for a Safecracker on a parked car, and a Legend Forger is worth no more than anybody else on a scaffolding roof.")
+    +p("What counts is:")
+    +ul([
+      "<b>The attributes the work actually leans on</b>, weighted — three parts nerve and one part technique is a different person from three parts muscle.",
+      "<b>Experience</b>, which is worth "+m("+3")+" a rank. Somebody who has done this before does this better.",
+      "<b>Temperament.</b> A Ghost is "+m("+8")+" and a Hothead is "+m("−7")+", because this is work with nobody behind them and no way out that somebody else planned.",
+      "<b>What they will not do.</b> A limit is not a penalty here, it is a wall: somebody afraid of heights is not going up the scaffolding, and the button says so.",
+    ])
+    +note("The commander is "+m("−6")+" and is not on the list at all — you do not go. You are used to having four people behind you, and there is nobody behind you here.")),
+  S("odds","The odds, before you choose",
+    p("Every name on the list carries its own percentage, worked out against this particular piece of work, next to the fit that produced it. "
+      +"That is the same promise the rest of the game makes: the number is on the option before you take it, not after.")
+    +p("Fit against the work's difficulty gives a margin, and the margin gives the chance they come back with the money. The margin does something else as well — "
+      +"<b>the worse the fit, the worse the wrong ending</b>. A bad choice is not merely likelier to fail. It is likelier to cost you the person.")),
+  S("risk","What it costs when it goes wrong",
+    ul([
+      "<b>Hurt</b> — out of the field for two weeks, one with a doctor on retainer.",
+      "<b>Taken</b> — held for two to five weeks, one to three with a lawyer. They come off the crew while they are inside.",
+      "<b>Nothing but the walk home</b> — no money, no damage. The commonest bad ending, and the cheapest.",
+      "Either way: <b>heat</b>, global and local, whether or not it came off. The street does not care how it went. And loyalty "+m("−4")+", because you sent them out alone.",
+    ])),
+  S("offers","What is on offer",
+    p("Twelve kinds of work, two or three of them a week, in a different city each time and at a price and a difficulty that are drawn fresh.")
+    +G.street()
+    +note("Coming back clean is worth "+m("+6")+" experience. Street work is the cheapest way there is to put a rank on somebody you have just signed — which is its own reason to send the right person rather than the spare one.")),
+  S("limit","Why you cannot live on it",
+    p("<b>One piece of street work a week</b>, however big your crew. That is the whole of the brake, and it is deliberate.")
+    +p("A perfect year of it — fifty-two weeks, every one of them clean, never once losing anybody — comes to about a fifth of what three tier-3 jobs pay. "
+      +"It is not an income. It is the difference between a file you cannot afford this week and a file you can, and it is bought with a real chance of losing "
+      +"the most expensive thing you own, which is a person.")),
+]);
+
+/* ------------------------------------------------------ */
 ch("bigops","The operations","The "+D.BAL.bigCount+" that need seven",[
   S("ops","What an operation is",
     p("A <b>Respected</b> name (ranking "+m(RANK("Respected"))+") opens the last two places on your crew. It opens something else at the same time, "
@@ -613,9 +654,7 @@ ch("controls","Controls and the file cabinet","Keys, saving, settings",[
 ]);
 
 /* ---------------- 19 -------------------------------- */
-ch("knowing","Twenty things worth knowing","Everything above, put to use",[
-  S("twenty","",
-    '<ol class="twenty">'+[
+const KNOWING=[
       "<b>Read the category before the fee.</b> The twelve kinds of job lean on different attributes. A crew of muscle is ordinary at anything the client wants talked through.",
       "<b>Being short is worse than being weak.</b> "+m("−22")+" a body dwarfs everything else in the factor list. A job you cannot field is a job to skip, whatever it pays.",
       "<b>Hire a Forger early.</b> Not for the "+m("+14")+" — for the borders. One Forger turns a crew of six passports into a crew that can work anywhere.",
@@ -635,8 +674,18 @@ ch("knowing","Twenty things worth knowing","Everything above, put to use",[
       "<b>Keep pairs together.</b> A pair gains a point for every job that comes off with both of them on it. A long-running crew is worth real numbers.",
       "<b>Bad blood is the same mechanism in reverse.</b> Hover it and the game tells you which nights caused it.",
       "<b>Your ranking makes the world harder.</b> "+m("+"+D.BAL.repPressure)+" difficulty per 100. A crew that stops improving is sliding.",
+      "<b>Street work is for the gap, not for a living.</b> One a week, a few thousand at most — and send the person the work actually leans on, because a bad fit is not merely likelier to fail, it is likelier to cost you them.",
       "<b>Start building for the last score before it opens.</b> It wants Hacker, Infiltrator, Forger, Safecracker, Demolitions, Overwatch, Smuggler, Wheelman and Cleaner across three operations — and "+money(D.BAL.finalMoney)+" of your own money.",
-    ].map(x=>'<li>'+x+'</li>').join("")+'</ol>'),
+];
+// The title counts the list rather than remembering a number: it said "twenty" with twenty-two
+// in it, which is what a hand-kept count beside a list always ends up saying.
+const WORDS=["","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve",
+  "thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty"];
+const spell=n=>n<=20?WORDS[n]:n<30?"twenty-"+WORDS[n-20]:n<40?"thirty-"+WORDS[n-30]:String(n);
+const cap1=x=>x.charAt(0).toUpperCase()+x.slice(1);
+ch("knowing",cap1(spell(KNOWING.length))+" things worth knowing","Everything above, put to use",[
+  S("twenty","",
+    '<ol class="twenty">'+KNOWING.map(x=>'<li>'+x+'</li>').join("")+'</ol>'),
 ]);
 
 /* ---------------- 20 -------------------------------- */
@@ -673,6 +722,7 @@ const GLOSS=[
   ["Roll","The "+m("±"+D.BAL.roll)+" the night adds to the margin."],
   ["Snag","The thing that goes wrong during a recruitment trip."],
   ["Split","Who takes what out of the fee."],
+  ["Street work","A small piece of work for <a href=\"#street\">one person and no crew</a>. One a week, a few thousand at most, and a real chance of losing them."],
   ["Tier","How big a posting is, 1 to 4 on the open board and 5 for an <a href=\"#ops\">operation</a>. Decides the fee, the weeks, the people needed and how long you may case it."],
   ["Trade","What somebody is — one of sixteen ordinary trades, or one of the fourteen <a href=\"#bigtechs\">specialists</a>. Worth +14 when the client asked for it."],
   ["Twist","The thing that goes wrong during a job, and the options it offers."],
