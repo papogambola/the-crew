@@ -157,7 +157,10 @@ decisions at the end.
 - **Who goes.** Every eligible crew member goes by default, and you can **bench** any of them
   on the job file, yourself included. A benched member takes no cut of the score, learns nothing,
   and cannot be hurt, arrested or killed — and the crew that does go is smaller, which the
-  reckoning counts. Bench yourself and a commander-type runs it in your place.
+  reckoning counts. Bench yourself and a commander-type runs it in your place. Every row on that
+  list carries a **File** button — the ones who cannot go included, which is where you most want
+  to read why — opening the whole personnel file over the job. `UI.scrollBack` remembers where you
+  were standing so closing it puts you back on the same row rather than at the top of the page.
 - **The reckoning.** Before you take a job, the file shows who can go and why not (border,
   conviction, a limit the job hits, injury), then every factor with its number: crew size,
   who commands, language, local national, knowledge (double if studied), trades, heat,

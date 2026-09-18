@@ -3972,7 +3972,14 @@ function jobPanel(j){
     return '<div class="check'+(x.ok?"":" out")+(sat?" sat":"")+'"><div class="av">'+avatar(c.avseed,c.gender,c.face)+'</div>'
       +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12.5px">'+(c.isPlayer?"You":esc(c.n))+' '+flagSvg(natOf(c))+' <span class="mono" style="color:var(--muted);font-size:10.5px">'+TECH_BY_K[c.tech].l+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</span></div>'
       +'<div class="why">'+(sat?'sitting this one out'+(c.isPlayer?' — a commander-type runs it':'')+(c.cut?' · keeps '+money(Math.round(j.payout*c.cut))+' in the split':''):esc(x.why))+'</div></div>'
-      +(x.ok?'<button class="btn ghost sm" data-act="bench" data-id="'+c.id+'" title="'+(sat?"Send "+(c.isPlayer?"yourself":c.first)+" on this job":(c.isPlayer?"Stay behind":"Leave "+c.first+" behind")+" — no cut, no experience, and no way to get hurt")+'">'+(sat?"Send":"Bench")+'</button>':'<div class="mark">✗</div>')+'</div>';}).join("");
+      // The whole file, from here. This list is where you decide who goes, and that decision is
+      // made out of what is on their file — the trade, the attributes, what they will not do —
+      // so it is the one screen where having to go somewhere else to read it is most obviously
+      // wrong. It opens over the job, and closing it puts the job back exactly as it was.
+      +'<span style="display:flex;gap:6px;flex:none;align-items:center">'
+      +'<button class="btn ghost sm" data-act="open-recruit" data-id="'+c.id+'" title="'+esc(c.isPlayer?"Your own file":c.first+"'s file — everything the decision is made out of")+'">File</button>'
+      +(x.ok?'<button class="btn ghost sm" data-act="bench" data-id="'+c.id+'" title="'+(sat?"Send "+(c.isPlayer?"yourself":c.first)+" on this job":(c.isPlayer?"Stay behind":"Leave "+c.first+" behind")+" — no cut, no experience, and no way to get hurt")+'">'+(sat?"Send":"Bench")+'</button>':'<div class="mark">✗</div>')
+      +'</span></div>';}).join("");
   const onCrew=crewAll().length, benched=bench.length;
   const barred=Math.max(0,onCrew-benched-a.team.length);
   const enough=a.team.length>=j.need;
@@ -6293,7 +6300,17 @@ function applyRoll(rng){
   if(!c)return null;
   // what they are asking for. They want it, so it is already under what you would have paid to
   // go and fetch them — before you have said a word.
-  const ask=Math.max(1000,Math.round(c.fee*(0.82+rng()*0.18)/1000)*1000);
+  // Always strictly under the fee, because the game says so in three places — "it already sits
+  // under what going to fetch them would have cost", printed beside both figures. The top of the
+  // old range was 1.00 and rounding to the nearest thousand could land it level with the fee, so
+  // now and then the screen made a comparison it had just promised could not happen.
+  // Capped at the largest ROUND THOUSAND strictly under the fee. Both halves of that matter: the
+  // game promises in three places that the ask "already sits under what going to fetch them would
+  // have cost" and the old top of the range was 1.00, so rounding could land it level with the
+  // fee; and the figure has to stay a whole thousand, because what the screen shows is what leaves
+  // the float. A fee of $39,500 capped at fee−1000 gave $38,500, which is neither.
+  const ask=Math.min(Math.max(1000,Math.round(c.fee*(0.82+rng()*0.18)/1000)*1000),
+                     Math.floor((c.fee-1)/1000)*1000);
   S.apply={id:c.id,week:S.week,ask:ask,cut:c.cut,haggles:0,why:pick(rng,APPLY_WHY),outcome:null};
   logMsg(c.first+" came to you. "+TECH_BY_K[c.tech].l+", "+EXP[(c.exp||1)-1]+", asking "+money(ask)+".","",true);
   return S.apply;
@@ -6879,6 +6896,7 @@ const INFO={
     "<b>The brief</b>: who posted it, and the country — language, money, politics, religion, terrain, and the border rule. Chips: the category, trades and knowledge wanted, and tags such as <i>on the water</i> or <i>at night</i> that trip a crew member's limits.",
     "<b>Who goes</b>: every crew member, ✓ or ✗, with the reason — the border against their passport, a conviction at a strict border, a limit the job hits, an injury. A forger on the crew gets weak passports through.",
     "<b>Bench</b> anyone you would rather keep out of it, yourself included. A benched member takes no cut of the score, learns nothing from the job, and cannot be hurt, arrested or killed on it — and the crew that does go is smaller, which the reckoning counts. Bench yourself and a commander-type runs it in your place. <b>Send everyone</b> puts them all back.",
+    "<b>File</b> on any of those rows opens that person's whole file — trade, attributes, knowledge, languages, what they will not do — without leaving the job. It is on every row, including the ones who cannot go, which is where you most want to read why. Closing it puts you back on the same row rather than at the top of the page.",
     "<b>The reckoning</b>: every factor with its number — crew size, who commands, language, a local national, knowledge (double if studied), trades, heat — then the odds. <b>Take the job</b>: the whole eligible crew goes and a week passes. <b>Walk away</b> costs nothing.",
     "A file is longer than the window, so neither way out of it scrolls away: <b>← Back to job postings</b> is pinned under the tabs however far down you are, and an <b>↑</b> at the bottom right takes you back to the top."]},
   apply:{h:"Somebody asks to join",t:[
@@ -6951,7 +6969,7 @@ function infoHTML(){
 
 /* ------------------------------ THE OFFICE ---------------------------- */
 // Pause and settings, drawn as the boss's office. Every object on the desk does something.
-const UI={office:false,hold:false,panel:null,confirmNew:false,info:false,found:null,confirmDissolve:null,confirmDrop:null,impInfo:null,impRaw:""};
+const UI={office:false,hold:false,panel:null,confirmNew:false,info:false,found:null,confirmDissolve:null,confirmDrop:null,scrollBack:null,impInfo:null,impRaw:""};
 function chrome(){
   return '<div id="tipbox" role="tooltip" hidden></div>'
     +'<button class="totop" data-act="to-top" aria-label="Back to the top" title="Back to the top">↑</button>'
@@ -7289,7 +7307,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 77 · 18 September 2026";
+const BUILD="build 78 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
@@ -7388,16 +7406,21 @@ document.addEventListener("click",e=>{
       const player=Object.assign({id:"YOU",isPlayer:true,n:nm,first:nm.split(" ")[0],gender:draft.gender,nat:draft.nat,avseed:draft.avseed,face:normFace(draft.face,draft.gender),status:"crew",cut:0,upkeep:0,loyalty:100,greed:0,mole:false,vetted:true,vetFlag:false,limits:[]},draft.profile);
       newGame(player); draft=null; render(); break;
     }
-    case "tab": S.tab=k; S.modal=null; UI.confirmDrop=null; render(); window.scrollTo(0,0); break;
+    case "tab": S.tab=k; S.modal=null; UI.confirmDrop=null; UI.scrollBack=null; render(); window.scrollTo(0,0); break;
     case "scrim":
       if(e.target===t||cl.contains("x")||cl.contains("btn")){
         if(feedData()&&feedData().awaiting)break; // the decision cannot be clicked away
         if(feedData()&&!feedData().done){tickerFinish();break;}
-        if(S)S.modal=null;UI.panel=null;render();window.scrollTo(0,0);
+        if(S)S.modal=null;UI.panel=null;render();
+        if(UI.scrollBack!=null){const y=UI.scrollBack;UI.scrollBack=null;window.scrollTo(0,y);}
+        else window.scrollTo(0,0);
       }
       break;
-    case "open-recruit": S.modal={type:"recruit",id}; render(); break;
-    case "open-job": S.tab="jobs"; S.jobOpen=id; S.modal=null; if(S.benchJob!==id){S.benchJob=null;S.bench=[];} render(); window.scrollTo(0,0); break;
+    // A file opened from a list is a detour, not a destination: closing it puts you back where you
+    // were standing. Without this, reading the seventh person on a job's "who can go" list threw
+    // the page back to the top, and you had to scroll down to them again to read the eighth.
+    case "open-recruit": UI.scrollBack=window.scrollY||0; S.modal={type:"recruit",id}; render(); break;
+    case "open-job": S.tab="jobs"; S.jobOpen=id; S.modal=null; UI.scrollBack=null; if(S.benchJob!==id){S.benchJob=null;S.bench=[];} render(); window.scrollTo(0,0); break;
     case "bench": { const j=S.jobs.find(x=>x.id===S.jobOpen); if(j)toggleBench(j,id); render(); break; }
     case "bench-clear": { const j=S.jobs.find(x=>x.id===S.jobOpen); if(j)benchClear(j); render(); break; }
     case "retainer": toggleRetainer(k); break;

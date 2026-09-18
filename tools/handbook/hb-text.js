@@ -282,7 +282,9 @@ ch("crew","The crew","Places, who goes, and a second crew",[
       "You <b>benched</b> them.",
     ])
     +p("The job file states, at the top, how many the client needs and how many can actually go. Under the needed number the whole crew is "+m("−22")+" per missing body, which is enormous — "
-      +"it is usually the single largest number in the factor list, and it is the reason a job you are short for is not worth running at any fee.")),
+      +"it is usually the single largest number in the factor list, and it is the reason a job you are short for is not worth running at any fee.")
+    +note("Every row in that list carries a <b>File</b> button, the ones who cannot go included — the whole personnel file, opened over the job and closed back onto the same row. "
+      +"Who goes is decided out of what is on those files, so they are read where the decision is made rather than on another screen.")),
   S("learn","A new craft",
     p("A trade is what somebody <i>is</i> in this game: the first line of their card, and the thing a client asks for by name. "
       +"So it can be changed, and changing it is a conversation rather than a purchase — <b>Teach a trade</b> on their card opens it.")
