@@ -2502,7 +2502,7 @@ function narrate(job,a,tier,rng,x,mode,clock){
       push(s,"bad","exit","*");lines[lines.length-1].siren=true;   // the police are here: the screen says so
     }
     if(x.leaked){push("Someone talked. "+cap(police(co))+" were waiting two streets away.","bad","exit","*");lines[lines.length-1].siren=true;}
-    (x.fallout||[]).forEach(e=>push(e,"bad","exit",null,"down"));
+    (x.fallout||[]).forEach(e=>{push(e,"bad","exit",null,"down");if(/ is arrested /.test(e))lines[lines.length-1].siren=true;});
     if(x.heatGain>0)push(fill2(fresh(MORNING),{P:cap(police(co)),p:police(co),thing:fresh(THINGS),n:x.heatGain}),x.heatGain>=20?"warn":"");
     else if(chance(rng,0.5))push(fresh(QUIET));
     if(x.take>0)push(fill2(fresh(SPLIT),{g:money(x.take),c:money(x.cuts),n:money(x.net)}),"good");
@@ -2804,7 +2804,7 @@ function finishJob(P,choiceIdx,d){
   let pi=0;
   for(let i=0;i<nJail&&pi<hitPool.length;i++,pi++){const c=hitPool[pi];c.status="jailed";
     const held=hasRetainer("lawyer")?Math.max(1,Math.ceil(ri(rng,4,8)/2)):ri(rng,4,8);
-    c.out=S.week+held;leaveCrew(c);fallout.push(c.first+" is taken at the scene. Held until week "+c.out+(hasRetainer("lawyer")?" — the lawyer had it halved.":"."));}
+    c.out=S.week+held;leaveCrew(c);fallout.push(c.first+" is arrested at the scene by "+police(COUNTRY_BY_NAME[job.country])+" and held until week "+c.out+(hasRetainer("lawyer")?" — the lawyer had it halved.":"."));}
   for(let i=0;i<nHurt&&pi<hitPool.length;i++,pi++){const c=hitPool[pi];c.status="injured";
     c.out=S.week+(hasRetainer("doctor")?1:2);
     fallout.push(c.first+" is hurt — out for "+(hasRetainer("doctor")?"a week; the doctor came to the flat.":"two weeks."));}
@@ -2861,7 +2861,7 @@ function finishJob(P,choiceIdx,d){
   if(P.leaked)addR("The job leaked",-3);
   betrayals.forEach(()=>addR("A member walked with the money",-2));
   walkouts.forEach(()=>addR("A member walked out over the money",-1));
-  if(fallout.some(f=>f.indexOf("taken at the scene")>=0))addR("Someone taken by the police",-2);
+  if(fallout.some(f=>f.indexOf("is arrested")>=0))addR("Someone taken by the police",-2);
   const repBefore=S.rep,rankBefore=rankName(S.rep);
   const repDelta=rk.reduce((s,r)=>s+r.v,0);
   S.rep=clamp(S.rep+repDelta,0,999);
@@ -5131,11 +5131,12 @@ function sirenFx(){
   try{
     let el=document.getElementById("sirenfx");
     if(!el){el=document.createElement("div");el.id="sirenfx";el.setAttribute("aria-hidden","true");el.innerHTML='<i class="s-red"></i><i class="s-blue"></i>';document.body.appendChild(el);}
+    const already=SIREN.on;
     el.classList.add("on");
     SIREN.on=true;SIREN.el=el;
     if(SIREN.timer)clearTimeout(SIREN.timer);
     SIREN.timer=setTimeout(sirenEnd,8000);
-    if(SET.sound&&SET.volume>0){
+    if(!already&&SET.sound&&SET.volume>0){
       if(!SIREN.audio){SIREN.audio=new Audio("music/siren.mp3");SIREN.audio.preload="auto";}
       SIREN.audio.volume=clamp(SET.volume*0.9,0,1);SIREN.audio.currentTime=0;
       const p=SIREN.audio.play();if(p&&p.catch)p.catch(()=>{});
@@ -5727,7 +5728,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 65 · 18 September 2026";
+const BUILD="build 66 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
@@ -6183,7 +6184,7 @@ function looseResolve(i){
       if(o.risker&&chance(rng,0.4)){
         const e=byId(o.risker);
         if(e&&e.status==="crew"){e.status="jailed";e.out=S.week+ri(rng,5,10);leaveCrew(e);e._touched=true;
-          lines.push(e.first+" is taken for it. Held until week "+e.out+".");}
+          lines.push(e.first+" is arrested for it. Held until week "+e.out+".");}
       }
       S.rep=Math.max(0,S.rep-3);
       lines.push("Ranking −3. A mess is not the same as a reputation.");
