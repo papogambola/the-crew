@@ -114,6 +114,17 @@ decisions at the end.
   night, all three printed, and an Enforcer on the books shifts which. **Cut them loose** — they
   go, the crew takes it badly in proportion to how much they liked them, and they leave knowing
   what they know.
+- **A language is the other school, and nobody refuses it.** A posting in a country nobody on the
+  crew speaks is **−8** on the night and **−14** if the job is all talk; one of your people
+  speaking it is **+6** instead, so **Teach a language** opens with the languages a posting wants
+  *this week* that nobody can speak. Nothing is given up, so there is nothing to argue about — it
+  is a price list, and the price is weeks. $3K a week, **3 weeks** for a language out of a family
+  they are already inside and **6** for one out of a family they are not, less a week each for
+  Brains 70+, Quick study, and being a Linguist, floor of 2. They cannot go on a job while they
+  are at it, and they come back with the language for good and +4 loyalty. `LANG_FAMILY` holds the
+  nine families — Romance, Germanic, Slavic, Indo-Aryan, Sino-Tibetan, Turkic, Austronesian,
+  Semitic (Arabic/Hebrew) and Bantu (Swahili/Zulu); Greek, Finnish, Japanese, Korean, Thai and
+  Vietnamese stand alone in this game and are always the long way round.
 - **Two of the same trade argue, the same day.** Put two Safecrackers on one crew and the question
   of who is *the* Safecracker is asked at once, as a scene — **ten** of them: two plans for one
   door, kit bought on the float, one posting that wants the trade, the newer one on a bigger

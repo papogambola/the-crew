@@ -277,7 +277,7 @@ ch("crew","The crew","Places, who goes, and a second crew",[
       "A <b>limit</b> the job hits — the tag is named against them.",
       "A <b>border</b> their passport or their record will not get them through.",
       "They are <b>injured</b>, and the file says which week they are back.",
-      "They are <b>learning a trade</b> — see <a href=\"#learn\">a new craft</a> — and the file says which week the school ends.",
+      "They are at a school — <a href=\"#learn\">a new craft</a> or <a href=\"#lang\">a new language</a> — and the file says which week it ends, and which one they are at.",
       "They are <b>held</b> by the police.",
       "You <b>benched</b> them.",
     ])
@@ -304,6 +304,34 @@ ch("crew","The crew","Places, who goes, and a second crew",[
       "<b>Tell them it is not a question.</b> Three ways it can go, all printed: they go and resent it ("+m("−22")+" loyalty, and it costs you with them), they refuse in front of everybody, or they walk out that night. An Enforcer on the books moves the odds towards the first and away from the last.",
       "<b>Cut them loose.</b> They go, the crew takes it badly in proportion to how much they liked them, and they leave knowing what they know — see <a href=\"#loose\">loose ends</a>.",
     ])),
+  S("lang","A new language",
+    p("The other school, and the cheap one. <b>Teach a language</b> on their card opens it. It exists because of one line on every job file: "
+      +"a posting in a country nobody on the crew speaks is "+m("−8")+" on the night, and "+m("−14")+" if the job is all talk. One of your people speaking it is "+m("+6")+" instead. "
+      +"So the screen opens with the languages a posting wants <i>this week</i> that nobody on this crew can speak.")
+    +p("<b>Nobody refuses this one.</b> A trade is what somebody is, so swapping it costs rank and has to be argued for. A language is added to what they already have "
+      +"and takes nothing away — so there is nothing to argue about. It is a price list, and the price is weeks.")
+    +G.T(["What it costs",""],[
+      ["<b>Money</b>",money(D.TUTOR.rate)+" a week of tutoring — a fraction of a trade"],
+      ["<b>Weeks, near</b>",m(D.TUTOR.near+" weeks")+" for a language out of a family they are already inside"],
+      ["<b>Weeks, far</b>",m(D.TUTOR.far+" weeks")+" for one out of a family they are not"],
+      ["<b>The field</b>","they cannot go on a job while they are at it — the crew is one short"],
+      ["<b>Coming back</b>","the language, for good, and "+m("+"+D.TUTOR.loyalty)+" loyalty for the money you spent on them"],
+    ])
+    +p("<b>The families.</b> A French speaker reaches Spanish, Italian, Portuguese, Romanian and Catalan across a family they are already in, and Japanese across nothing at all:")
+    +ul([
+      "<b>Romance</b> — French, Spanish, Portuguese, Italian, Romanian, Catalan.",
+      "<b>Germanic</b> — English, German, Dutch, Swedish, Danish, Norwegian, Icelandic, Afrikaans.",
+      "<b>Slavic</b> — Russian, Ukrainian, Polish, Czech, Slovak, Bulgarian, Serbian, Croatian, Slovenian.",
+      "<b>Indo-Aryan</b> — Hindi, Urdu, Bengali, Punjabi, Gujarati, Marathi, Nepali, Sinhala.",
+      "<b>Sino-Tibetan</b> — Mandarin, Cantonese, Burmese, Tibetan.",
+      "<b>Turkic</b> — Turkish, Azerbaijani, Uzbek, Kazakh, Turkmen, Kyrgyz.",
+      "<b>Austronesian</b> — Indonesian, Malay, Tagalog, Filipino, Javanese, Malagasy, Maori, Hawaiian.",
+      "<b>Semitic</b> — Arabic, Hebrew. <b>Bantu</b> — Swahili, Zulu.",
+      "<b>On their own</b> — Greek, Finnish, Japanese, Korean, Thai, Vietnamese. Nothing in this game is near them, so they are always the long way round.",
+    ])
+    +p("A week comes off for <b>Brains "+m(D.TUTOR.brainsAt)+"</b> or better, a week for <b>Quick study</b>, and a week for a <b>Linguist</b>, who does this for a living. "
+      +"Nothing is learned in under "+m(D.TUTOR.floor+" weeks")+" however sharp they are.")
+    +note("Every reason for the length is printed on the screen beside the number, including which language of theirs the new one is reached through.")),
   S("clash","Two of the same trade",
     p("Put two of the same trade on one crew and the question of who is <i>the</i> "+m("Safecracker")+" is asked the same day, not eventually. "
       +"It arrives as a scene — ten of them, and which one you get depends on the pair — and you have to answer it before you do anything else.")

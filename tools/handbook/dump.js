@@ -46,6 +46,8 @@ const out={
   WEEKLY:(typeof WEEKLY!=="undefined"?WEEKLY.map(w=>({k:w.k,h:w.h,
     text:typeof w.text==="function"?w.text(null,{}):w.text,opts:w.opts.map(o=>o.t)})):null),
   FAKED_DEATH:(typeof FAKED_DEATH!=="undefined"?FAKED_DEATH:null),
+  TUTOR:(typeof TUTOR!=="undefined"?TUTOR:null),
+  LANG_FAMILY:(typeof LANG_FAMILY!=="undefined"?LANG_FAMILY:null),
   SPEEDS:(typeof SPEEDS!=="undefined"?SPEEDS:null),
   VET_COST:(typeof VET_COST!=="undefined"?VET_COST:null),
   PAID_WEEKS:(typeof PAID_WEEKS!=="undefined"?PAID_WEEKS:null),

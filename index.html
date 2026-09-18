@@ -470,7 +470,12 @@
   .modal-b .twist-opts:has(.twist-opt.kill){grid-template-columns:1fr}
   .twist-opt:disabled{color:var(--muted);border-color:var(--line-2);cursor:not-allowed;background:var(--paper-2)}
   .twist-opt.on{background:var(--ink);color:var(--paper)}
-  .twist-opt.on b{color:var(--paper)}
+  /* A chosen row is black paper with white ink, and EVERYTHING on it has to turn over with it —
+     these rows carry inline greys for the small print, and an inline colour beats a class, so the
+     line under the one you just picked went grey-on-black and the row you had chosen was the one
+     you could least read. This is what !important is actually for: a state that owns the row. */
+  .twist-opt.on b,.twist-opt.on .ob,.twist-opt.on .why,.twist-opt.on .mono,
+  .twist-opt.on .num,.twist-opt.on span{color:var(--paper)!important}
   /* ---- the police arrive: darkness, and two beams sweeping the room ---- */
   #sirenfx{position:fixed;inset:0;z-index:95;pointer-events:none;background:rgba(6,4,4,.58);opacity:0;visibility:hidden;transition:opacity .35s ease,visibility 0s linear .35s;overflow:hidden;mix-blend-mode:normal}
   #sirenfx.on{opacity:1;visibility:visible;transition:opacity .12s ease}
@@ -2204,7 +2209,7 @@ function entry(c,job,forgerAboard){
     if(l.tag&&job.tags.includes(l.tag))return {ok:false,why:l.l+" — job is "+TAG_LABEL[l.tag]};
   }
   if(c.status!=="crew")return {ok:false,why:c.status==="injured"?"injured, back week "+c.out
-    :c.status==="learning"?"learning "+(c.learn&&TECH_BY_K[c.learn.to]?TECH_BY_K[c.learn.to].l.toLowerCase():"a trade")+", back week "+c.out
+    :c.status==="learning"?"learning "+(c.tutor?c.tutor.to:(c.learn&&TECH_BY_K[c.learn.to]?TECH_BY_K[c.learn.to].l.toLowerCase():"a trade"))+", back week "+c.out
     :c.status==="benched"?"sitting this out, back week "+c.out
     :"not available"};
   const local=nat.name===co.name;
@@ -3164,7 +3169,8 @@ function weekTick(rng){
   }
   S.roster.forEach(c=>{
     if(c.status==="injured"&&S.week>=c.out){c.status="crew";logMsg(c.first+" is back on the job.","good");}
-    if(c.status==="learning"&&S.week>=c.out)learnFinish(c);
+    // One school ends on the same tick as the other; which one it was is on the file.
+    if(c.status==="learning"&&S.week>=c.out){if(c.tutor)tutorFinish(c);else learnFinish(c);}
     if(c.status==="benched"&&S.week>=c.out){c.status="crew";c._touched=true;logMsg(c.first+" is back in the field.","");}
     if(c.status==="jailed"&&S.week>=c.out){c.status="available";c.jail+=1;logMsg(c.first+" walked. Back on the roster, a year older.","warn");}
   });
@@ -3225,7 +3231,15 @@ function logMsg(t,tone,big){S.log.unshift({t,tone:tone||"",big:!!big,wk:S.week})
 // The roster is rebuilt from the seed; only changed members are stored.
 function packState(){
   const ov={};
-  S.roster.forEach(c=>{if(c.status!=="available"||c.vetted||c._touched){ov[c.id]={status:c.status,out:c.out,loyalty:c.loyalty,vetted:c.vetted,vetFlag:c.vetFlag,jail:c.jail,exp:c.exp,xp:c.xp||0,attrs:c.attrs,cut:c.cut,paidUntil:c.paidUntil==null?null:c.paidUntil,lowRun:c.lowRun||0,traits:c.traits,coolUntil:c.coolUntil||0,ranWith:c.ranWith||0,talks:c.talks||0};}});
+  // Everything about a person that the game can CHANGE has to be in here. load() rebuilds the
+  // roster from the seed and lays these over the top, so a field left out is a field that quietly
+  // reverts on the next reload — which is how the trade school came to take two ranks off somebody
+  // and hand back nothing: exp was saved and tech was not, so a Hacker opened as a Safecracker
+  // again, two ranks down. Anything written to a roster member anywhere belongs on this line.
+  S.roster.forEach(c=>{if(c.status!=="available"||c.vetted||c._touched){ov[c.id]={status:c.status,out:c.out,loyalty:c.loyalty,vetted:c.vetted,vetFlag:c.vetFlag,jail:c.jail,exp:c.exp,xp:c.xp||0,attrs:c.attrs,cut:c.cut,paidUntil:c.paidUntil==null?null:c.paidUntil,lowRun:c.lowRun||0,traits:c.traits,coolUntil:c.coolUntil||0,ranWith:c.ranWith||0,talks:c.talks||0,
+    tech:c.tech,know:c.know,langs:c.langs,
+    learn:c.learn||null,tutor:c.tutor||null,learnAskedUntil:c.learnAskedUntil||0,
+    goneAs:c.goneAs||null,goneWeek:c.goneWeek||0,funeralPaid:!!c.funeralPaid};}});
   const d=Object.assign({},S);delete d.roster;delete d.modal;d.ov=ov;
   return d;
 }
@@ -3539,6 +3553,14 @@ function memberCard(c,cr,opts){
       :"Money, weeks out of the field, and two ranks. "+c.first+" can say no.");
     btns+='<button class="btn ghost sm" data-act="learn" data-id="'+c.id+'" title="'+esc(learnTip)+'" '
       +(why||asked?"disabled":"")+'>Teach a trade</button>';
+    // A language is the other school, and the cheap one: nothing is given up, so nobody refuses.
+    const lwhy=canTutor(c);
+    const wanted=lwhy?null:tutorOptions(c).filter(o=>o.wanted);
+    btns+='<button class="btn ghost sm" data-act="tutor" data-id="'+c.id+'" title="'
+      +esc(lwhy?cap(lwhy):(wanted&&wanted.length
+        ? wanted.length+" language"+(wanted.length>1?"s":"")+" on the board right now that nobody can speak — "+wanted[0].l+" from "+money(wanted[0].cost)+" and "+wanted[0].weeks+" weeks"
+        : "A few weeks and a few thousand, and "+c.first+" can work a country nobody could talk their way through"))+'" '
+      +(lwhy?"disabled":"")+'>Teach a language</button>';
     btns+='<button class="btn ghost sm" data-act="drop" data-id="'+c.id+'">Cut loose</button>';
   } else {
     // No controls on this card, so the card says where they went rather than leaving a hole.
@@ -4184,6 +4206,7 @@ function renderModal(){
   if(m.type==="apply")return modalApply();
   if(m.type==="clash")return modalClash();
   if(m.type==="talk")return modalTalk();
+  if(m.type==="tutor")return modalTutor();
   if(m.type==="grudge")return modalGrudge();
   if(m.type==="street")return modalStreet();
   if(m.type==="streetdone")return modalStreetDone();
@@ -5193,6 +5216,149 @@ function learnFinish(c){
     +" at it, and no longer a "+was+".","good",true);
 }
 
+/* ========================= LEARNING A LANGUAGE ========================= */
+/* A language is not a trade, and the difference decides the whole shape of this.
+   A trade is what somebody IS: swapping it costs them rank and the thing everybody asks for them
+   by name, so it is a conversation and they can refuse it. A language is ADDED to what they
+   already have and takes nothing away — so there is nothing to refuse, and this is a purchase
+   rather than a negotiation. What you are buying is weeks: the money is small, and the price that
+   actually hurts is that the crew is one short while they are at it.
+
+   Why anybody would: a job in a country nobody speaks is −8 on the night, and −14 if the job is
+   all talk. One of your people speaking it is +6 instead. That gap is the whole feature. */
+
+// The families, as Paz gave them, extended to cover the nine languages in the game that were not
+// on that list. Arabic and Hebrew are a pair worth having (Arabic alone opens six countries), and
+// so are Swahili and Zulu. The rest are on their own, which is not a gap — it is the answer: there
+// is nothing in this game close to Japanese, so Japanese is always the long way round.
+const LANG_FAMILY={
+  French:"romance",Spanish:"romance",Portuguese:"romance",Italian:"romance",Romanian:"romance",Catalan:"romance",
+  English:"germanic",German:"germanic",Dutch:"germanic",Swedish:"germanic",Danish:"germanic",
+  Norwegian:"germanic",Icelandic:"germanic",Afrikaans:"germanic",
+  Russian:"slavic",Ukrainian:"slavic",Polish:"slavic",Czech:"slavic",Slovak:"slavic",
+  Bulgarian:"slavic",Serbian:"slavic",Croatian:"slavic",Slovenian:"slavic",
+  Hindi:"aryan",Urdu:"aryan",Bengali:"aryan",Punjabi:"aryan",Gujarati:"aryan",Marathi:"aryan",
+  Nepali:"aryan",Sinhala:"aryan",
+  Mandarin:"sino",Cantonese:"sino",Burmese:"sino",Tibetan:"sino",
+  Turkish:"turkic",Azerbaijani:"turkic",Uzbek:"turkic",Kazakh:"turkic",Turkmen:"turkic",Kyrgyz:"turkic",
+  Indonesian:"austronesian",Malay:"austronesian",Tagalog:"austronesian",Filipino:"austronesian",
+  Javanese:"austronesian",Malagasy:"austronesian",Maori:"austronesian",Hawaiian:"austronesian",
+  Arabic:"semitic",Hebrew:"semitic",
+  Swahili:"bantu",Zulu:"bantu",
+  Greek:"hellenic",Finnish:"uralic",Japanese:"japonic",Korean:"koreanic",Thai:"kradai",Vietnamese:"vietic",
+};
+const LANG_FAMILY_NAME={romance:"Romance",germanic:"Germanic",slavic:"Slavic",aryan:"Indo-Aryan",
+  sino:"Sino-Tibetan",turkic:"Turkic",austronesian:"Austronesian",semitic:"Semitic",bantu:"Bantu",
+  hellenic:"Hellenic",uralic:"Uralic",japonic:"Japonic",koreanic:"Koreanic",kradai:"Kra-Dai",vietic:"Austroasiatic"};
+const TUTOR={
+  rate:3000,            // a week with a tutor — small, on purpose; the weeks are the real price
+  near:3, far:6,        // out of a family they already have, or out of one they do not
+  brainsAt:70,          // sharp enough to take a week off it
+  floor:2,              // and nothing is learned in less than a fortnight
+  loyalty:4,            // somebody you spent money making better is somebody you spent money on
+};
+function langFamily(l){return LANG_FAMILY[l]||null;}
+// Every language in the game, drawn off the countries rather than written down twice. Cached in a
+// module variable and not on S, because it is the same list in every save and does not belong in
+// one — packState copies whatever is on S, and a derived list would ride along in every write.
+let LANGS_ALL=null;
+function allLangs(){
+  if(LANGS_ALL)return LANGS_ALL;
+  const set={};
+  COUNTRIES.forEach(co=>(co.langs||[]).forEach(l=>{set[l]=1;}));
+  (typeof EXTRA_LANGS!=="undefined"?EXTRA_LANGS:[]).forEach(l=>{set[l]=1;});
+  LANGS_ALL=Object.keys(set).sort();
+  return LANGS_ALL;
+}
+function langCountries(l){return COUNTRIES.filter(co=>(co.langs||[]).indexOf(l)>=0).map(co=>co.name);}
+// Is this one out of a family they already have? That is the whole of "difficulty" here: a French
+// speaker reaches Spanish across a family they are already inside, and Japanese across nothing.
+function langNear(c,l){
+  const f=langFamily(l);if(!f)return null;
+  const via=(c.langs||[]).find(x=>x!==l&&langFamily(x)===f);
+  return via||null;
+}
+/* How long, and why — the reasons come back with the number so the screen can print them rather
+   than assert a figure nobody can argue with. */
+function tutorWeeks(c,l){
+  const why=[];
+  const via=langNear(c,l);
+  const fam=langFamily(l);
+  let w=via?TUTOR.near:TUTOR.far;
+  why.push({k:via?"Already inside it":"A family of its own",v:w,
+    note:via?via+" is "+LANG_FAMILY_NAME[fam]+" too, and so is this"
+      :(fam?LANG_FAMILY_NAME[fam]+", which is not a family "+c.first+" is already in"
+           :"nothing "+c.first+" speaks is anywhere near it")});
+  const br=(c.attrs&&c.attrs.brains)||0;
+  if(br>=TUTOR.brainsAt){w-=1;why.push({k:"Brains "+br,v:-1,note:"picks it up faster than most"});}
+  if(hasTrait(c,"quick")){w-=1;why.push({k:"Quick study",v:-1,note:"learns anything, and knows it"});}
+  if(c.tech==="linguist"){w-=1;why.push({k:"Linguist",v:-1,note:"does this for a living"});}
+  const out=Math.max(TUTOR.floor,w);
+  if(out!==w)why.push({k:"The floor",v:0,note:"nothing is learned in under "+TUTOR.floor+" weeks, however sharp"});
+  return {weeks:out,why:why,via:via,family:fam};
+}
+function tutorCost(c,l){return Math.round(tutorWeeks(c,l).weeks*TUTOR.rate/1000)*1000;}
+function canTutor(c){
+  if(!c||c.isPlayer)return "you are the commander, and nobody is teaching you anything";
+  if(c.status!=="crew")return c.status==="injured"?"injured, back week "+c.out
+    :c.status==="learning"?"already out of the field until week "+c.out:"not on the crew";
+  if(c.learn||c.tutor)return "already at a school";
+  if(tutorOptions(c).length===0)return c.first+" already speaks everything this board is in";
+  return "";
+}
+// The languages of countries with a posting up right now that nobody on the crew can speak. This
+// is the only reason to open this screen, so it is what the screen opens with.
+function tutorWanted(){
+  if(!S||!S.jobs)return {};
+  const crew=recruits().filter(x=>x.status==="crew").concat([S.player]).filter(Boolean);
+  const out={};
+  S.jobs.forEach(j=>{
+    const co=COUNTRY_BY_NAME[j.country];if(!co||!co.langs||!co.langs.length)return;
+    if(crew.some(x=>(x.langs||[]).some(l=>co.langs.indexOf(l)>=0)))return;
+    co.langs.forEach(l=>{(out[l]=out[l]||[]).push(j.city);});
+  });
+  return out;
+}
+/* What they could be taught, in the order somebody would actually want it: what a posting on the
+   board needs today, then how much of the world it opens, then the short ones. */
+function tutorOptions(c){
+  if(!c)return [];
+  const want=tutorWanted();
+  const crew=recruits().filter(x=>x.status==="crew"&&x.id!==c.id).concat([S.player]).filter(Boolean);
+  return allLangs().filter(l=>(c.langs||[]).indexOf(l)<0).map(l=>{
+    const t=tutorWeeks(c,l);
+    return {l:l,weeks:t.weeks,cost:tutorCost(c,l),via:t.via,family:t.family,why:t.why,
+      countries:langCountries(l),
+      wanted:want[l]||null,
+      onCrew:crew.some(x=>(x.langs||[]).indexOf(l)>=0)};
+  }).sort((a,b)=>
+    (b.wanted?b.wanted.length:0)-(a.wanted?a.wanted.length:0)
+    ||b.countries.length-a.countries.length
+    ||a.weeks-b.weeks
+    ||a.l.localeCompare(b.l));
+}
+function tutorStart(c,l){
+  const t=tutorWeeks(c,l),cost=tutorCost(c,l);
+  S.money=Math.max(0,S.money-cost);
+  c.tutor={to:l,until:S.week+t.weeks,paid:cost,weeks:t.weeks};
+  c.status="learning";c.out=c.tutor.until;c._touched=true;
+  logMsg(c.first+" is out of the field until week "+c.out+", learning "+l+" ("+money(cost)+").","warn",true);
+  stats().tutored=(stats().tutored||0)+1;
+  save();
+  return {weeks:t.weeks,cost:cost};
+}
+function tutorFinish(c){
+  const l=c.tutor&&c.tutor.to;if(!l)return;
+  c.langs=(c.langs||[]).slice();
+  if(c.langs.indexOf(l)<0)c.langs.push(l);
+  c.loyalty=clamp((c.loyalty||0)+TUTOR.loyalty,0,100);
+  c.tutor=null;c.status="crew";c.out=0;c._touched=true;
+  const opens=langCountries(l);
+  logMsg(c.first+" is back, and speaks "+l+" now — "+(opens.length
+    ? opens.length+" countr"+(opens.length>1?"ies":"y")+" that used to be a job nobody could talk their way through"
+    : "one more room to be in")+". Loyalty +"+TUTOR.loyalty+".","good",true);
+}
+
 /* ------------------------- and if they say no -------------------------- */
 /* Four directions, and which of them is worth taking is decided by the same number the refusal
    was: somebody who would follow you anywhere can be leaned on and will still be there on Friday.
@@ -5717,6 +5883,15 @@ function clashClose(){
 }
 
 /* ---------------------- the two conversations, on screen ---------------- */
+/* The same list, but the numbers are weeks rather than points — so they are printed with their
+   unit, and the colours run the other way. Six weeks is not a bonus; a week off one is. Reusing
+   whyList here printed "+6" in the green the game uses for a score going your way. */
+function tutorWhyList(rows){
+  return '<div class="factors">'+rows.map(r=>'<span class="k">'+esc(r.k)+'</span><span>'
+    +(r.v?'<span class="'+(r.v>0?"minus":"plus")+' num" dir="ltr">'+(r.v>0?"":"−")+Math.abs(r.v)
+      +' week'+(Math.abs(r.v)>1?'s':'')+'</span> · ':'')
+    +esc(r.note)+'</span>').join("")+'</div>';
+}
 function whyList(rows){
   return '<div class="factors">'+rows.map(r=>'<span class="k">'+esc(r.k)+'</span><span><span class="'
     +(r.v>0?"plus":r.v<0?"minus":"")+' num">'+(r.v>0?"+":"")+r.v+'</span> · '+esc(r.note)+'</span>').join("")+'</div>';
@@ -5738,8 +5913,10 @@ function modalTalk(){
     const rows=opts.map(o=>{
       const cost=learnCost(c,o.k),od=learnOdds(c,o.k,0);
       const sel=t.to===o.k;
-      return '<button class="twist-opt wide'+(sel?" on":"")+'" data-act="talk-pick" data-k="'+o.k+'" '
-        +'style="'+(sel?"border-color:var(--ink);background:var(--paper-2)":"")+'">'
+      // No inline background here. ".twist-opt.on" is black paper with white ink, and an inline
+      // light background left the white ink on it — the row you had just chosen was the one you
+      // could not read.
+      return '<button class="twist-opt wide'+(sel?" on":"")+'" data-act="talk-pick" data-k="'+o.k+'">'
         +'<b>'+esc(o.l)+'</b><span class="ob"><span class="mono" style="color:var(--muted)">'+money(cost)+' · '
         +esc(ATTR_ABBR[o.a])+' · '+od.p+'% they agree</span><br>'
         +'<span class="why">'+esc(o.d)+'</span></span></button>';
@@ -5835,6 +6012,58 @@ function modalTalk(){
     +'<div class="modal-b"><div class="jobbrief"><p>'+esc(e[1])+'</p></div>'
     +'<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" data-act="talk-close">Close</button></div>'
     +'</div></div></div>';
+}
+
+/* The other school, on screen. No odds and no refusal — it is a price list, and the only thing
+   worth deciding is which language, so the screen is built to answer that: what the board wants
+   this week first, then how much of the world each one opens. */
+function modalTutor(){
+  const t=S.tutor;if(!t)return "";
+  const c=byId(t.id);if(!c)return "";
+  const opts=tutorOptions(c);
+  const sel=t.to?opts.find(o=>o.l===t.to):null;
+  const head='<div class="modal-h"><div><div class="kicker">A language · week '+S.week+'</div>'
+    +'<h2 style="font-size:19px;margin-top:3px">What else could '+esc(c.first)+' speak?</h2></div>'
+    +'<button class="x" data-act="tutor-close" aria-label="Close">✕</button></div>';
+  const who='<div class="kicker" style="margin-bottom:8px">'+esc(c.first)+' · '+esc(TECH_BY_K[c.tech].l)
+    +' · speaks <b>'+esc((c.langs||[]).join(", "))+'</b></div>';
+  const row=o=>{
+    const on=t.to===o.l;
+    const where=o.countries.length
+      ? o.countries.slice(0,4).join(", ")+(o.countries.length>4?" and "+(o.countries.length-4)+" more":"")
+      : "nowhere on this board";
+    return '<button class="twist-opt wide'+(on?" on":"")+'" data-act="tutor-pick" data-k="'+esc(o.l)+'">'
+      +'<b>'+esc(o.l)+'</b><span class="ob"><span class="mono" style="color:var(--muted)">'
+      +money(o.cost)+' · <span dir="ltr">'+o.weeks+' weeks</span> · '+(o.via?"near "+esc(o.via):"from nothing")
+      +(o.onCrew?' · <span style="color:var(--muted)">somebody else already speaks it</span>':'')+'</span><br>'
+      +'<span class="why">'+esc(where)+(o.wanted?' — <b>a posting in '+esc(o.wanted[0])+' this week nobody can talk through</b>':'')+'</span></span></button>';
+  };
+  const want=opts.filter(o=>o.wanted),rest=opts.filter(o=>!o.wanted);
+  const body=(want.length
+      ? '<div class="kicker">Wanted on the board this week</div>'
+        +'<div class="sel-help">A posting is up in a country nobody on this crew can speak. That is <b>−8</b> on the night, and <b>−14</b> if the job is all talk.</div>'
+        +'<div class="twist-opts one">'+want.map(row).join("")+'</div><hr class="rule">'
+      :'')
+    +'<div class="kicker">'+(want.length?"Everything else":"Every language on this board")+'</div>'
+    +'<div class="twist-opts one">'+rest.map(row).join("")+'</div>';
+  // What you have chosen goes ABOVE the list, not under thirty rows of it. Clicking a row rebuilds
+  // the sheet and puts the scroll back at the top, so a detail printed at the bottom is a detail
+  // the player is carried away from at the moment they ask for it.
+  const chosen=sel?'<div class="kicker">'+esc(sel.l)+' · '+money(sel.cost)
+      +' · <span dir="ltr">'+sel.weeks+' weeks</span> out of the field</div>'
+    +'<div class="sel-help">Nothing is given up and nobody says no — a language is added to what '
+      +esc(c.first)+' already has. What it costs you is the money and a crew one short until week '+(S.week+sel.weeks)+'.</div>'
+    +tutorWhyList(sel.why)
+    +'<div class="sel-help">Afterwards: <b>'+esc(sel.countries.join(", ")||"nowhere on this board")+'</b>'
+      +(sel.countries.length?' stop being jobs nobody can talk their way through — <b>+6</b> instead of −8.':'.')
+      +' And '+esc(c.first)+' comes back <b>+'+TUTOR.loyalty+' loyalty</b>, because you spent money making them better at this.</div>'
+      +'<hr class="rule">'
+    :'<div class="sel-help">Pick one to see what it costs, how long it takes, and why that long.</div><hr class="rule">';
+  const foot='<button class="btn ghost" data-act="tutor-close">Not now</button>'
+    +(sel?'<button class="btn" data-act="tutor-go" '+(S.money>=sel.cost?"":'disabled title="the float will not carry it"')
+      +'>Send '+esc(c.first)+' →</button>':'');
+  return '<div class="scrim center"><div class="modal" role="dialog" aria-label="A language">'
+    +head+'<div class="modal-b">'+who+chosen+body+'</div><div class="modal-f">'+foot+'</div></div></div>';
 }
 
 function modalClash(){
@@ -6536,6 +6765,12 @@ const INFO={
     "A trade is what somebody <i>is</i> here — the first line of their card and the thing a client asks for by name — so changing it is a conversation and the answer is theirs.",
     "It costs money, three to seven weeks out of the field, and <b>two ranks</b>: they come back lower at the new trade and are no longer the old one. The chance they agree is printed before you ask, with everything it is made of — where you stand with them, what they are giving up, whether they are built for the new work.",
     "If they say no: leave it, put money on it (spent whether they take it or not), tell them it is not a question, or cut them loose. Each states its own odds and what it costs you with them and with everybody watching."]},
+  tutor:{h:"A language",t:[
+    "The other school, and the cheap one. A job in a country nobody on the crew speaks is <b>−8</b> on the night, and <b>−14</b> if the job is all talk; one of your people speaking it is <b>+6</b> instead. That gap is the whole reason this screen exists, so it opens with the languages a posting wants <i>this week</i> that nobody can speak.",
+    "<b>Nobody refuses.</b> A trade is what somebody is, so swapping it costs them rank and is a conversation. A language is added to what they already have and takes nothing away — so there is nothing to argue about. It is a price list.",
+    "<b>What it costs is weeks, not money.</b> "+money(TUTOR.rate)+" a week, and the crew is one short until they are back — you cannot send them on a job while they are at it. How long depends on how far the language is from the ones they already speak: <b>"+TUTOR.near+" weeks</b> out of a family they are already inside (a French speaker reaching Spanish), <b>"+TUTOR.far+"</b> out of one they are not (that same speaker reaching Japanese).",
+    "<b>The families</b> are Romance, Germanic, Slavic, Indo-Aryan, Sino-Tibetan, Turkic, Austronesian, Semitic (Arabic and Hebrew) and Bantu (Swahili and Zulu). Greek, Finnish, Japanese, Korean, Thai and Vietnamese stand alone in this game — nothing is ever near them, so they are always the long way round.",
+    "A week comes off for <b>Brains "+TUTOR.brainsAt+"</b> or better, a week for <b>Quick study</b>, and a week for a <b>Linguist</b>, who does this for a living. Nothing is learned in under "+TUTOR.floor+" weeks however sharp they are. They come back with <b>+"+TUTOR.loyalty+" loyalty</b>: you spent money making them better at this, and they noticed."]},
   street:{h:"Quick money · who goes",t:[
     "One soldier, no crew, no casing, no week spent, and a few hundred to a few thousand dollars at the end of it.",
     "<b>A trade counts for nothing out here.</b> What counts is the attributes the work leans on, weighted, plus experience, temperament, and what they will not do — which is a wall rather than a penalty. Every name carries its own percentage, worked out against this particular piece of work.",
@@ -6922,7 +7157,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 75 · 18 September 2026";
+const BUILD="build 76 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
@@ -7058,6 +7293,17 @@ document.addEventListener("click",e=>{
     case "crew-dissolve": { const cid=+t.getAttribute("data-crew"); if(UI.confirmDissolve===cid)crewDissolve(cid); else {UI.confirmDissolve=cid;render();} break; }
     case "found-open": UI.found={lead:null,ids:[]}; S.modal={type:"found"}; render(); break;
     case "learn": talkOpen(id); render(); break;
+    // The language school. No ask, no roll, no refusal — pick one and send them.
+    case "tutor": { const c=byId(id); if(c&&!canTutor(c)){S.tutor={id:id,to:null};S.modal={type:"tutor"};} render(); break; }
+    case "tutor-pick": if(S.tutor){S.tutor.to=t.getAttribute("data-k");} render(); break;
+    case "tutor-go": {
+      const T=S.tutor; if(!T||!T.to)break;
+      const c=byId(T.id); if(!c||canTutor(c))break;
+      if(!tutorOptions(c).some(o=>o.l===T.to))break;
+      if(S.money<tutorCost(c,T.to))break;
+      tutorStart(c,T.to);
+      S.tutor=null;S.modal=null;sfx("stamp");render();break; }
+    case "tutor-close": S.tutor=null; S.modal=null; save(); render(); break;
     case "talk-pick": if(S.talk){S.talk.to=t.getAttribute("data-k");} render(); break;
     case "talk-ask": talkAsk(); render(); break;
     case "talk-pay": if(S.talk){S.talk.extra=+t.getAttribute("data-x")||0;S.talk.stage="pick";talkAsk();} render(); break;
