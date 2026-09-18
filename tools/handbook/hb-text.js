@@ -564,6 +564,19 @@ ch("night","The night itself","The live report",[
     +p("The options are gated on what you brought: a trade, an attribute above a threshold, the language, or a long enough record. "
       +"Choosing the option that fits your crew is worth a great deal; choosing the impressive one you cannot back up is how a good job becomes a blown one.")
     +note("A twist you walk away from mid-decision is not lost. Close the game in the middle of it and it resumes exactly there — the report so far, then the options.")),
+  S("twicewrong","Two of them, on a big night",
+    p("<b>A job paying over "+money(D.BIG_MONEY)+" does not go wrong once.</b> Two things go, sometimes three, and they are never the same thing twice. "
+      +"The screen counts them from the first — "+m("1 of 3")+" — so the number is known before you spend anybody on the first one.")
+    +p("That count is the decision. <b>They will not want the same person twice</b>: the wheelman who hot-wires the second car is no use when the manifest is wrong an hour later, "
+      +"and the forger who re-papers it cannot drive. So a big payday is the job that asks whether the crew is <i>broad</i> rather than whether it is good — "
+      +"which is the reason the money is there.")
+    +ul([
+      "<b>Every call counts.</b> What each one does to the night adds up, and each appears on the ranking by name — "+m("Twist 1")+", "+m("Twist 2")+".",
+      "<b>What they cost of the take compounds</b> rather than adding: two calls that each lose half of it leave a quarter, not nothing.",
+      "<b>The job file says so before you take it</b>, and says why it matters for who you bring.",
+      "<b>Between them the night carries on</b> — what your call turned out to be, a beat, and then the next thing. Close the game between two of them and it comes back at the one it stopped at, with the first already answered and on the page.",
+    ])
+    +note("Under "+money(D.BIG_MONEY)+" nothing has changed: most jobs go wrong once or not at all.")),
   S("wrong","WHAT WENT WRONG",
     p("When a job ends botched or blown, the report adds a section that reads back the actual reckoning and says, in order of how much it cost, what beat you — "
       +"and for each of those, what would have fixed it. Not advice in general: the trade that was wanted and missing, the language nobody spoke, the domain nobody knew, "

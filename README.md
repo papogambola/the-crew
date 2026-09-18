@@ -278,6 +278,15 @@ decisions at the end.
   options are shuffled every time. The decision cannot be clicked away, survives a reload, and
   the verdict screen — and the recap on file — shows what you chose, what would have set you
   free, and why.
+- **A job paying over $150K goes wrong at least twice.** `BIG_MONEY` — two of them, sometimes
+  three (`BIG_THIRD`), never the same one twice, and the screen counts them (*1 of 3*) from the
+  first so the number is known before you spend anybody. That count is the decision: they will
+  not want the same person twice, so a big payday asks whether the crew is *broad* rather than
+  whether it is good. Every call counts towards the verdict and each is on the ranking by name;
+  what each costs of the take compounds rather than adding, so two calls that each lose half of
+  it leave a quarter. Between them the night carries on — the outcome of your call, a beat, then
+  the next thing — and a game closed between two of them comes back at the one it stopped at.
+  The job file carries the warning before you take it. Under the line nothing changed.
 - **Clients remember a job that went wrong.** Botch one badly enough and the client may take it
   personally — about a third of botched jobs and two in three disasters, more on a big fee. There
   are two ways to take it personally, and the first is the common one: **the word goes round.**

@@ -2554,6 +2554,21 @@ function narrate(job,a,tier,rng,x,mode,clock){
 // brought can actually do. Wrong calls cost time, money, blood or a place.
 // The line that stops the feed before a twist. One of these, chosen with the twist.
 const TWIST_CUE=["Then it goes wrong.","And then it doesn't go to plan.","Then, the thing nobody drew.","Then the night turns.","And then a problem.","Then something the file didn't have.","Then it stops being simple.","Then the part nobody rehearsed."];
+// And the line for a second or third one on the same night, which is a different sentence: the
+// crew has already had one of these and is still standing in the same room.
+const TWIST_AGAIN=["Then it goes wrong again.","And it is not finished with you.","Then the night finds something else.","And then the second one.","Then the other shoe.","And the room has one more in it.","Then it goes wrong in a new direction.","And there is more of it."];
+// The beat between two of them. Without it the second question arrives on the heels of the first
+// answer and the whole thing reads as one screen asked twice.
+const TWIST_BETWEEN=["That holds. For about four minutes.","The crew move again. Nobody says anything.","It settles. The clock does not.",
+  "Everyone breathes out. Too early.","That is dealt with, and the night carries on.","Back to it, one problem lighter.",
+  "The plan, what is left of it, resumes.","It works. The room is still the room."];
+/* Money changes what a night is. Under this, a job is one room and at most one thing that goes
+   wrong in it. Over it, there is enough moving — more people, more doors, more of somebody else's
+   money — that two things go, and sometimes three. Which is the point of it rather than a tax: two
+   twists cannot both be answered by one specialist, so a big payday is the thing that asks whether
+   the crew is broad or merely good. */
+const BIG_MONEY=150000;
+const BIG_THIRD=0.3;            // and how often a big one produces a third
 // s is the setup: one string, or several to choose from, because the same twist read the same
 // way every time it came round, and it comes round often.
 const TWISTS=[
@@ -2725,15 +2740,49 @@ function reqMet(req,team){
   return false;
 }
 function reqWho(req,team){return team.find(c=>(req.tech&&req.tech.includes(c.tech))||(req.know&&req.know.some(k=>c.know.includes(k))))||null;}
-function makeTwist(job,team,rng){
-  const pool=TWISTS.filter(t=>t.cats.includes(job.cat));
-  const T=pick(rng,pool.length?pool:TWISTS);
+function makeTwist(job,team,rng,used){
+  used=used||{};
+  // Never the same thing twice on one night — "the engine won't turn" happening again an hour
+  // later is not a second twist, it is the first one with the serial numbers filed off.
+  let pool=TWISTS.filter(t=>t.cats.includes(job.cat)&&!used[t.k]);
+  if(!pool.length)pool=TWISTS.filter(t=>!used[t.k]);
+  if(!pool.length)return null;
+  const T=pick(rng,pool);
   const others=team.filter(c=>!c.isPlayer);
   const M=others.length?pick(rng,others):null;
   const sub={M:M?M.first:"one of the crew"};
   const opts=T.opts.map(o=>Object.assign({},o,{t:fill2(o.t,sub)}));
   for(let i=opts.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));const tmp=opts[i];opts[i]=opts[j];opts[j]=tmp;}
-  return {k:T.k,h:fill2(T.h,sub),s:fill2(pick(rng,[].concat(T.s)),sub),cue:pick(rng,TWIST_CUE),opts,mId:M?M.id:null};
+  const nth=Object.keys(used).length;
+  return {k:T.k,h:fill2(T.h,sub),s:fill2(pick(rng,[].concat(T.s)),sub),
+    cue:pick(rng,nth?TWIST_AGAIN:TWIST_CUE),opts,mId:M?M.id:null};
+}
+/* How many things go wrong on this night, and which. Over BIG_MONEY it is two, sometimes three,
+   always — that is what the money is for. Under it, the old odds: usually none, more often on a job
+   the crew is comfortably over, and more often again with a Jinx in the field. */
+function twistCount(job,a,team,rng){
+  if(job.payout>BIG_MONEY)return chance(rng,BIG_THIRD)?3:2;
+  const p=(a.margin>=10?0.25:0.08)+(team.some(c=>hasTrait(c,"jinx"))?0.12:0);
+  return chance(rng,p)?1:0;
+}
+function makeTwists(job,team,rng,n){
+  const out=[],used={};
+  for(let i=0;i<n;i++){
+    const tw=makeTwist(job,team,rng,used);
+    if(!tw)break;
+    used[tw.k]=1;out.push(tw);
+  }
+  return out;
+}
+// A job saved mid-decision under an older build has one twist on P.twist and no P.twists. One
+// reader, so every caller sees a list whichever shape the save is in.
+// An empty list is not "no list": a job that carries twists:[] and an older build's single
+// P.twist has to read as that one twist, and `P.twists||...` never reaches the fallback because
+// [] is truthy. Prefer a list with something in it, then the old single, then nothing.
+function pendingTwists(P){
+  if(P&&P.twists&&P.twists.length)return P.twists;
+  if(P&&P.twist)return [P.twist];
+  return [];
 }
 function twistCorrect(tw,team){
   let best=null;
@@ -2778,13 +2827,13 @@ function startJob(job,opts){
   let leaked=false;
   if(hasMole&&chance(rng,0.55)){roll-=16;leaked=true;}
   const pre=narrate(job,a,0,rng,{},"pre",null);
-  let twist=null;
-  const pTw=(a.margin>=10?0.25:0.08)+(team.some(c=>hasTrait(c,"jinx"))?0.12:0);
-  if(!opts.noTwist&&!cr&&!job.final&&team.length>=2&&chance(rng,pTw))twist=makeTwist(job,team,rng);
-  const P={jobId:job.id,job:Object.assign({},job),roll,leaked,teamIds:team.map(c=>c.id),pre:pre.lines,clock:pre.clock,stood:pre.stood,prep:casedWeeks(job),postSeed:ri(rng,1,2000000000),twist,week:S.week,
+  const canTwist=!opts.noTwist&&!cr&&!job.final&&team.length>=2;
+  const twists=canTwist?makeTwists(job,team,rng,twistCount(job,a,team,rng)):[];
+  const twist=twists[0]||null;
+  const P={jobId:job.id,job:Object.assign({},job),roll,leaked,teamIds:team.map(c=>c.id),pre:pre.lines,clock:pre.clock,stood:pre.stood,prep:casedWeeks(job),postSeed:ri(rng,1,2000000000),twists,answers:[],bridges:[],week:S.week,
     crewId:cr?cr.id:null,crewName:cr?cr.name:null,leadId:cr?cr.leadId||null:null,memberIds:members?members.map(c=>c.id):null};
   S.pendingJob=P;
-  const d={id:job.id+"-w"+S.week+(cr?"-c"+cr.id:""),week:S.week,job:P.job,crew:P.crewName,narrative:pre.lines.slice(),revealed:0,done:false,twist:twist?{h:twist.h,s:twist.s,opts:twist.opts.map(o=>o.t)}:null,awaiting:false,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}};
+  const d={id:job.id+"-w"+S.week+(cr?"-c"+cr.id:""),week:S.week,job:P.job,crew:P.crewName,narrative:pre.lines.slice(),revealed:0,done:false,twist:twist?{h:twist.h,s:twist.s,opts:twist.opts.map(o=>o.t)}:null,twistNo:twists.length?1:0,twistOf:twists.length,awaiting:false,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}};
   if(twist)d.narrative.push({t:"— —",x:twist.cue||"Then it goes wrong.",tone:"bad",twist:true});
   else finishJob(P,null,d);
   save();
@@ -2796,13 +2845,24 @@ function finishJob(P,choiceIdx,d){
   const a=assessJob(job,P.memberIds?P.memberIds.map(byId).filter(Boolean):null,P.leadId||null);
   const team=a.team;
   const heatIn=S.heat;   // what they carried in, before this job adds its own
-  let dm=0,twHurt=0,twJail=0,twHeat=0,twLose=0,twLine=null,twRank=null,twRec=null;
-  if(P.twist&&choiceIdx!=null){
-    const r=twistResolve(P.twist,choiceIdx,team);
-    dm=r.dm;twHurt=r.hurt;twJail=r.jail;twHeat=r.heat;twLose=r.lose;twRank=r.rank;
-    twLine={t:"— —",x:r.text,tone:r.free?"good":"bad"};
-    twRec={h:P.twist.h,s:P.twist.s,chosen:P.twist.opts[choiceIdx].t,correct:P.twist.opts[r.correct].t,free:r.free,why:twistWhy(P.twist,team)};
-  }
+  // Every one of them is answered and every answer counts. The score deltas and the blood add up;
+  // what each one costs of the take compounds rather than adding, because two calls that each lose
+  // half of it leave a quarter, not nothing.
+  const tws=pendingTwists(P);
+  const answers=Array.isArray(choiceIdx)?choiceIdx:(choiceIdx!=null?[choiceIdx]:[]);
+  let dm=0,twHurt=0,twJail=0,twHeat=0,twKeep=1,twLine=null;
+  const twRanks=[],twRecs=[],twLines=[];
+  tws.forEach((tw,i)=>{
+    if(answers[i]==null)return;
+    const r=twistResolve(tw,answers[i],team);
+    dm+=r.dm;twHurt+=r.hurt;twJail+=r.jail;twHeat+=r.heat;twKeep*=(1-(r.lose||0));
+    if(r.rank)twRanks.push(r.rank);
+    twLines[i]={t:"— —",x:r.text,tone:r.free?"good":"bad"};
+    twRecs.push({h:tw.h,s:tw.s,chosen:tw.opts[answers[i]].t,correct:tw.opts[r.correct].t,free:r.free,why:twistWhy(tw,team)});
+  });
+  const twLose=Math.round((1-twKeep)*1000)/1000;
+  const twRec=twRecs[0]||null;
+  twLine=twLines[0]||null;
   // the casing is already in a.margin as a factor of its own — counting P.prep here too would
   // pay for those weeks twice
   const m=a.margin+P.roll+dm;
@@ -2894,7 +2954,9 @@ function finishJob(P,choiceIdx,d){
   else if(tier===2)addR(twLose>=1?"Walked away — no score":"Messy work",pen(-job.tier*2));
   else if(tier===1)addR("Botched job",pen(-job.tier*4));
   else addR("Disaster",pen(-job.tier*6));
-  if(twRank)addR("Twist: "+twRank[0],twRank[1]);
+  // One line per thing that went wrong, numbered when there was more than one — a night with two
+  // right calls in it should read as two right calls, not as a single unexplained number.
+  twRanks.forEach((r,i)=>addR("Twist"+(twRanks.length>1?" "+(i+1):"")+": "+r[0],r[1]));
   if(P.leaked)addR("The job leaked",-3);
   betrayals.forEach(()=>addR("A member walked with the money",-2));
   walkouts.forEach(()=>addR("A member walked out over the money",-1));
@@ -2937,7 +2999,14 @@ function finishJob(P,choiceIdx,d){
   bondUpdate(team,tier,job);
   const post=narrate(job,a,tier,rng,{leaked:P.leaked,fallout,betrayals,heatGain,take,cuts,net},"post",P.clock);
   const narrative=P.pre.slice();
-  if(P.twist){narrative.push({t:"— —",x:P.twist.cue||"Then it goes wrong.",tone:"bad",twist:true});if(twLine)narrative.push(twLine);}
+  // Rebuilt in the order it was played: each cue, what that call turned out to be, and the beat
+  // that carried the crew to the next one — the same bridging lines the feed showed live, kept on
+  // P so the finished report is the night the player watched and not a tidier version of it.
+  tws.forEach((tw,i)=>{
+    narrative.push({t:"— —",x:tw.cue||"Then it goes wrong.",tone:"bad",twist:true});
+    if(twLines[i])narrative.push(twLines[i]);
+    if(i<tws.length-1&&(P.bridges||[])[i])narrative.push((P.bridges||[])[i]);
+  });
   post.lines.forEach(l=>narrative.push(l));
   S.jobs=S.jobs.filter(j=>j.id!==job.id);
   if(job.big){bigDone()[job.id]=S.week;stats().big=(stats().big||0)+1;}
@@ -2970,7 +3039,7 @@ function finishJob(P,choiceIdx,d){
   else{for(let i=0;i<onGround&&!S.over;i++)weekTick(rng);S.idle=0;}
   countryHeatAdd(job.country,Math.round(BAL.countryHeatPerJob*(tier>=3?1:1.5)));
   refreshJobs(false);
-  const res={id:job.id+"-w"+wk+(P.crewId?"-c"+P.crewId:""),week:wk,crew:P.crewName,tier,verdictName,take,cuts,net,heatGain,repDelta,repBefore,repAfter:S.rep,rankBefore,rankAfter,rk,growth,marks,events:fallout.concat(betrayals),leaked:P.leaked,job:P.job,teamIds:team.map(t=>t.id),narrative,twist:twRec,revealed:0,done:false,
+  const res={id:job.id+"-w"+wk+(P.crewId?"-c"+P.crewId:""),week:wk,crew:P.crewName,tier,verdictName,take,cuts,net,heatGain,repDelta,repBefore,repAfter:S.rep,rankBefore,rankAfter,rk,growth,marks,events:fallout.concat(betrayals),leaked:P.leaked,job:P.job,teamIds:team.map(t=>t.id),narrative,twist:twRec,twists:twRecs,revealed:0,done:false,
     // the reckoning as it stood when they went in — what a post-mortem has to be written from
     why:{factors:a.factors.slice(),eff:a.eff,diff:job.diff,margin:a.margin,roll:P.roll,dm,twLose,leaked:!!P.leaked,
       need:job.need,went:team.length,techs:job.techs.slice(),know:job.know.slice(),lang:((COUNTRY_BY_NAME[job.country]||{}).langs||[])[0]||"",heat:heatIn}};
@@ -2981,7 +3050,7 @@ function finishJob(P,choiceIdx,d){
   st.countries[job.country]=(st.countries[job.country]||0)+1;
   if(job.tier>=3)st["tier"+Math.min(4,job.tier)]=(st["tier"+Math.min(4,job.tier)]||0)+1;
   if(P.crewId)st.crewJobs++;
-  if(twRec)twRec.free?st.twistRight++:st.twistWrong++;
+  twRecs.forEach(t=>{t.free?st.twistRight++:st.twistWrong++;});
   const scratched=Object.keys(marks).length>0;
   st.hurt+=Object.keys(marks).filter(k=>marks[k]==="hurt").length;
   st.taken+=Object.keys(marks).filter(k=>marks[k]==="taken").length;
@@ -2989,7 +3058,7 @@ function finishJob(P,choiceIdx,d){
   if(scratched)st.streak=0;else{st.streak++;if(st.streak>st.bestStreak)st.bestStreak=st.streak;}
   S.reports=S.reports||[];S.reports.push(Object.assign({},res));if(S.reports.length>80)S.reports.shift();
   S.pendingJob=null;
-  if(d)Object.assign(d,res,{narrative,revealed:d.revealed,done:false,awaiting:false,resolved:true,twist:twRec});
+  if(d)Object.assign(d,res,{narrative,revealed:d.revealed,done:false,awaiting:false,resolved:true,twist:twRec,twists:twRecs});
   save();
   return res;
 }
@@ -3272,10 +3341,26 @@ function load(){
     if(S.finalDone)S.finalStage=FINAL_STAGES.length;
     // a job left mid-decision picks up exactly there: the report so far, then the six options
     const P=S.pendingJob;
-    if(P&&P.twist&&Array.isArray(P.pre)){
-      const narrative=P.pre.slice();narrative.push({t:"— —",x:P.twist.cue||"Then it goes wrong.",tone:"bad",twist:true});
+    // A job stopped at a decision picks up at the one it stopped at — which on a big night may be
+    // the second or the third, with the earlier ones already answered and on the page.
+    const Ptw=pendingTwists(P);
+    if(P&&Ptw.length&&Array.isArray(P.pre)){
+      P.answers=P.answers||[];P.bridges=P.bridges||[];
+      const at=Math.min(P.answers.length,Ptw.length-1);
+      const team=(P.teamIds||[]).map(byId).filter(Boolean);
+      const narrative=P.pre.slice();
+      for(let i=0;i<=at;i++){
+        narrative.push({t:"— —",x:Ptw[i].cue||"Then it goes wrong.",tone:"bad",twist:true});
+        if(P.answers[i]!=null){
+          const r=twistResolve(Ptw[i],P.answers[i],team);
+          narrative.push({t:"— —",x:r.text,tone:r.free?"good":"bad"});
+          if(P.bridges[i])narrative.push(P.bridges[i]);
+        }
+      }
+      const tw=Ptw[at];
       S.modal={type:"result",data:{id:P.jobId+"-w"+P.week,week:P.week,job:P.job,narrative,revealed:narrative.length,done:false,
-        twist:{h:P.twist.h,s:P.twist.s,opts:P.twist.opts.map(o=>o.t)},awaiting:true,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}}};
+        twist:{h:tw.h,s:tw.s,opts:tw.opts.map(o=>o.t)},twistNo:at+1,twistOf:Ptw.length,
+        awaiting:true,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}}};
     } else if(P){S.pendingJob=null;}
     // a recruitment trip stopped at the meeting picks up exactly there, the same way
     const R=S.pendingTrip;
@@ -3876,6 +3961,7 @@ function jobPanel(j){
     +j.know.map(k=>chip(knows(k),'knows '+k,knowBrief(k)+"\n"+(knows(k)?'Someone going knows it.':'Nobody going knows it.'))).join("")
     +chip(speaks,'speaks '+co.langs[0],speaks?'someone going speaks it':'nobody going speaks it'+(cat.lang?' — and this job is all talk':''))
     +j.tags.map(t=>{const b=blockedBy(t);return chip(!b.length,TAG_LABEL[t],b.length?b.join(", ")+' won\'t — sits this one out':'nobody on the crew minds');}).join("")
+    +(j.payout>BIG_MONEY&&!j.final?chip(false,'two things go wrong','A job paying over '+money(BIG_MONEY)+' is not one room and one problem. At least two things go wrong on the night, sometimes three, and each is its own decision with its own right answer. They will not want the same person twice — this is the job that asks whether your crew is broad, not whether it is good.'):'')
     +(function(){const small=a.team.filter(c=>smallMoney(c,j));return chip(!small.length,'the money',small.length?small.map(c=>c.first+" ("+money(Math.round(j.payout*c.cut))+")").join(", ")+" call this small money — a cut under two weeks of their own upkeep. Three in a row and they grumble; five and they may walk.":"every cut on this one is worth the trip");})()+'</div>';
   // who can go — and, for those who can, whether you send them
   const benchCuts=bench.map(byId).filter(Boolean).reduce((s,c)=>s+Math.round(j.payout*c.cut),0);
@@ -4775,8 +4861,13 @@ function wentWrong(d){
   // and the two that are not on the reckoning at all
   if(W.leaked)out.push({k:"Somebody talked",v:null,note:"the police were waiting",
     fix:"A mole was on the job. Vetting reads a file against your crew's instincts before you sign them — a sharper crew catches more."});
-  if(W.twLose>0&&d.twist)out.push({k:"The wrong call",v:null,note:"when it went wrong you chose "+d.twist.chosen,
-    fix:"What would have set you free: "+d.twist.correct+(d.twist.why?" — because "+d.twist.why+".":".")});
+  // Every call that was not the free one, not merely the first — a night with three decisions in it
+  // and two of them wrong used to print one line and leave the other unexplained.
+  const recs=d.twists||(d.twist?[d.twist]:[]);
+  recs.forEach((t,i)=>{if(t.free)return;
+    out.push({k:"The wrong call"+(recs.length>1?" · "+(i+1)+" of "+recs.length:""),v:null,
+      note:t.h+" — you chose "+t.chosen,
+      fix:"What would have set you free: "+t.correct+(t.why?" — because "+t.why+".":".")});});
   return {gap:W.eff-W.diff,eff:W.eff,diff:W.diff,roll:W.roll,items:out};
 }
 function tickLine(l){return '<div class="tk '+(l.tone||"")+(l.twist?" tk-twist":"")+'"><span class="tk-t">'+esc(l.t)+'</span><span class="tk-x">'+esc(l.x)+'</span></div>';}
@@ -4817,7 +4908,9 @@ function tickerFinish(){
   // Checking only d.twist let Skip jump a recruitment trip straight past its meeting, which
   // left the trip unresolved and the week unspent.
   if((d.twist||d.snag)&&!d.resolved){
-    const i=d.narrative.findIndex(l=>l.twist);
+    // The NEXT one waiting, not the first one on the page — a second twist sits after lines that
+    // are already read, and skipping to the first cue would rewind the feed instead of advancing it.
+    const i=d.narrative.findIndex((l,ix)=>l.twist&&ix>=d.revealed);
     d.revealed=i>=0?i+1:d.narrative.length;d.awaiting=true;render();return;
   }
   if(S.modal.type==="trip"&&!d.resolved&&S.pendingTrip)finishTrip(S.pendingTrip,null,d);
@@ -4827,12 +4920,42 @@ function tickerFinish(){
   const vt=verdictTrack(d.tier);musicPlay(vt[0],vt[1],true);
   render();
 }
+/* Answering one of them. If there is another still to come, the feed carries on rather than the
+   job settling: what that call turned out to be, a beat, and then the next thing. The job is only
+   over when the last of them has been answered. */
 function twistChoose(i){
   const d=S&&S.modal&&S.modal.type==="result"?S.modal.data:null;
   if(!d||!S.pendingJob||d.resolved)return;
-  finishJob(S.pendingJob,i,d);
+  const P=S.pendingJob;
+  const tws=pendingTwists(P);
+  P.answers=P.answers||[];
+  if(!tws.length||P.answers.length>=tws.length)return;
+  const tw=tws[P.answers.length];
+  if(i==null||i<0||i>=tw.opts.length)return;
+  P.answers.push(i);
+  if(P.answers.length<tws.length){advanceTwist(P,d);sfx("click");render();return;}
+  finishJob(P,P.answers,d);
   sfx("click");
   render();
+}
+// The night carries on to the next one. The bridging line is kept on P so the finished report can
+// be rebuilt as the thing that was actually watched.
+function advanceTwist(P,d){
+  const tws=pendingTwists(P);
+  const k=P.answers.length;                       // how many have been answered
+  const prev=tws[k-1],next=tws[k];
+  const rng=freshRng();
+  const team=(P.teamIds||[]).map(byId).filter(Boolean);
+  const r=twistResolve(prev,P.answers[k-1],team);
+  const bridge={t:"— —",x:pick(rng,TWIST_BETWEEN),tone:""};
+  P.bridges=P.bridges||[];P.bridges[k-1]=bridge;
+  d.narrative.push({t:"— —",x:r.text,tone:r.free?"good":"bad"});
+  d.narrative.push(bridge);
+  d.narrative.push({t:"— —",x:next.cue||"Then it goes wrong again.",tone:"bad",twist:true});
+  d.twist={h:next.h,s:next.s,opts:next.opts.map(o=>o.t)};
+  d.twistNo=k+1;d.twistOf=tws.length;
+  d.awaiting=false;                                // and the ticker picks it up from where it stopped
+  save();
 }
 // The trip, on screen: the same live ticker as a job, a meeting that can stop it, and a stamp.
 function modalTrip(T){
@@ -4899,10 +5022,18 @@ function modalResult(d){
     let below;
     if(d.awaiting&&d.twist&&!d.resolved){
       const letters="ABCDEF";
-      below='<div class="twist"><div class="kicker" style="color:var(--stamp)">Something goes wrong · your call</div>'
+      // On a big night there is more than one of these, and the player is told so at the first —
+      // "one of three" is a different decision from "the one thing that went wrong", because it
+      // says the specialist you are about to spend may be wanted again before the night is out.
+      const of=d.twistOf||1,no=d.twistNo||1;
+      below='<div class="twist"><div class="kicker" style="color:var(--stamp)">'
+        +(of>1?'Something goes wrong · <span class="num" dir="ltr">'+no+' of '+of+'</span> · your call'
+              :'Something goes wrong · your call')+'</div>'
         +'<h3>'+esc(d.twist.h)+'</h3><p>'+esc(d.twist.s)+'</p>'
         +'<div class="twist-opts">'+d.twist.opts.map((t,i)=>'<button class="twist-opt" data-act="twist" data-i="'+i+'"><b>'+letters[i]+'</b> '+esc(t)+'</button>').join("")+'</div>'
-        +'<div class="sel-help">One of these sets the crew free. Think about who is on the job and what each of them can do.</div></div>';
+        +'<div class="sel-help">One of these sets the crew free. Think about who is on the job and what each of them can do.'
+        +(of>1?' <b>This job has '+(of===2?'two':'three')+'</b>, and they will not want the same person twice — spend the room you have, and keep something for what is still coming.':'')
+        +'</div></div>';
     } else {
       below='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">'
         +'<span class="grp mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)">Speed <button class="btn ghost sm" data-act="speed-down" aria-label="Slower" style="padding:2px 8px">−</button><span class="num" style="width:58px;text-align:center">'+SPEEDS[speedIdx()][1]+'</span><button class="btn ghost sm" data-act="speed-up" aria-label="Faster" style="padding:2px 8px">+</button></span>'
@@ -6796,7 +6927,8 @@ const INFO={
     "Then the verdict: <b>Clean</b>, <b>Success</b>, <b>Messy</b>, <b>Botched</b> or <b>Disaster</b> — crew power against difficulty, plus the roll. Gross is the fee earned, cuts go to the crew, the net is yours.",
     "<b>Ranking — why</b> lists every reason the crew's ranking moved: up for a clean or successful job (more for a bigger job, a little more if nobody was hurt), down for messy, botched or disastrous work, a leak, an arrest, or a member walking with the money. <b>What they learned</b>: everyone who went gains experience; ranks are earned at 40, 110, 220 and 400 xp, and good work adds a point to the attributes the job leaned on. If the job wanted a trade nobody on the crew has, somebody spends the week before learning enough of it to stand in — and if the job comes off, that week is worth a point of brains, marked <i>stood in as</i>. A job that doesn't come off teaches them nothing.",
     "<b>Fallout</b>: injuries (out two weeks), arrests (held for weeks, then back on the roster), leaks (an informant talked), and betrayals (someone skimmed the split and vanished).",
-    "<b>The twist.</b> On some jobs — one good fit in four, one long shot in twelve — the report stops: something has gone wrong and six options wait for your call. Only one sets the crew free, and it is always the one the crew you brought can actually do: a wheelman can hot-wire the second car, a forger can re-paper the manifest, a hacker can kill the alarm. A call your crew can make but not best costs time and money; a call nobody can make costs blood, a place, and ranking. Walking away is always on the list — it keeps everyone and loses the score. The report then shows what you chose, what would have set you free, and why."]},
+    "<b>The twist.</b> On some jobs — one good fit in four, one long shot in twelve — the report stops: something has gone wrong and six options wait for your call. Only one sets the crew free, and it is always the one the crew you brought can actually do: a wheelman can hot-wire the second car, a forger can re-paper the manifest, a hacker can kill the alarm. A call your crew can make but not best costs time and money; a call nobody can make costs blood, a place, and ranking. Walking away is always on the list — it keeps everyone and loses the score. The report then shows what you chose, what would have set you free, and why.",
+    "<b>And a job paying over "+money(BIG_MONEY)+" goes wrong at least twice.</b> Two of them, sometimes three, each its own thing and never the same thing twice — the screen counts them (<i>1 of 3</i>) from the first, so you know before you spend anybody that the room has to last the night. They will not want the same person twice, which is the whole of it: a big payday asks whether the crew is <i>broad</i>, not whether it is good. Every call counts towards the verdict and every one is on the ranking by name; what each costs of the take compounds rather than adding, so two calls that each lose half of it leave a quarter. The job file says so before you take it."]},
   event:{h:"Between jobs",t:[
     "Every few weeks something happens that is not a job: a death on holiday, a member gone without a word, one who wants out, one who has joined another crew and is buying yours drinks, an old face back to blackmail you, a detective asking around. The types rotate, so each comes round before any repeats.",
     "<b>An old face is always somebody of yours</b>, and the screen opens with how they left — resigned, cut loose, poached, or off with a cut of a score. One in four deaths on that coast was arranged by the person who died, and that is the week you find out: the boat, the storm and the phone that rang out were theirs, and so was the money you sent the family. The rest of them really did drown, and never come back.",
@@ -7157,7 +7289,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 76 · 18 September 2026";
+const BUILD="build 77 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 

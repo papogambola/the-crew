@@ -47,6 +47,8 @@ const out={
     text:typeof w.text==="function"?w.text(null,{}):w.text,opts:w.opts.map(o=>o.t)})):null),
   FAKED_DEATH:(typeof FAKED_DEATH!=="undefined"?FAKED_DEATH:null),
   TUTOR:(typeof TUTOR!=="undefined"?TUTOR:null),
+  BIG_MONEY:(typeof BIG_MONEY!=="undefined"?BIG_MONEY:null),
+  BIG_THIRD:(typeof BIG_THIRD!=="undefined"?BIG_THIRD:null),
   LANG_FAMILY:(typeof LANG_FAMILY!=="undefined"?LANG_FAMILY:null),
   SPEEDS:(typeof SPEEDS!=="undefined"?SPEEDS:null),
   VET_COST:(typeof VET_COST!=="undefined"?VET_COST:null),
