@@ -122,7 +122,7 @@ decisions at the end.
 - **The live report.** Take the job and it plays out minute by minute, manager-game style:
   the crew arriving, who got in and who didn't, who does the talking, what each trade
   buys, what goes right and wrong for that kind of job, the exit, the police by morning, the
-  split — then the verdict stamp. You are "you" throughout, never named in the third person. Skip to the end if you'd rather, hold it where it is with **Pause**, or set the pace: five
+  split — then the verdict stamp. You are "you" throughout, never named in the third person. Skip to the end if you'd rather, hold it where it is with **Pause** (the music holds with it, and picks up where it stopped), or set the pace: five
   speeds, Slowest to Fastest, on the report itself and in the office. Opening the office holds the
   feed too, so "Paused" on its door is true. The field
   roster marks who came back: **GONE** in red on anyone who walked with the money, **TAKEN** on
@@ -586,7 +586,7 @@ and the rest — so the handbook cannot describe a game that no longer exists.
 
 ## Which build am I on?
 
-The footer of every screen, and the office header, carry a build stamp (`build 60 · 18 September
+The footer of every screen, and the office header, carry a build stamp (`build 61 · 18 September
 2026`). If the stamp is older than the latest commit here, the browser is showing a cached copy —
 hard-reload (Ctrl+Shift+R), or close the tab and reopen the link.
 

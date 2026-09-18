@@ -5128,7 +5128,9 @@ function musicSync(){
   const m=musicEl();if(!m)return;
   try{
     m.volume=clamp(SET.volume*0.5,0,1);
-    const allowed=SET.sound&&SET.music&&SET.volume>0&&userGestured&&!document.hidden;
+    // Pause on the feed holds the music with it; Resume picks the track up where it stopped
+    const held=!!(UI.hold&&feedData()&&!feedData().done);
+    const allowed=SET.sound&&SET.music&&SET.volume>0&&userGestured&&!document.hidden&&!held;
     if(musicWant&&allowed){
       if(musicSrc!==musicWant.src){musicSrc=musicWant.src;m.src=musicWant.src;musicState="idle";}
       m.loop=musicWant.loop;
@@ -5150,6 +5152,7 @@ function musicStatusText(){
   if(!SET.music)return "Radio off";
   if(SET.volume<=0)return "Radio on, volume at zero";
   if(!musicWant)return "Radio quiet — the loop plays under the office and the boards, a track under each job report, another under the verdict";
+  if(UI.hold&&feedData()&&!feedData().done)return "♪ Held with the feed — "+musicWant.label;
   if(musicState==="playing")return "♪ Now playing — "+musicWant.label;
   if(musicState==="blocked")return "Radio silent: "+musicNote;
   return "Radio ready — "+musicWant.label+" · press Start the radio, or click anywhere";
@@ -5671,7 +5674,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 60 · 18 September 2026";
+const BUILD="build 61 · 18 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
@@ -5718,7 +5721,7 @@ document.addEventListener("click",e=>{
     case "off-music": SET.music=!SET.music; saveSettings(); musicSync(); render(); break;
     case "off-radio-start": SET.sound=true; SET.music=true; if(SET.volume<=0)SET.volume=0.6; saveSettings(); userGestured=true; musicState="idle"; musicSync(); render(); break;
     case "skip-ticker": UI.hold=false; tickerFinish(); break;
-    case "tick-hold": UI.hold=!UI.hold; render(); break;
+    case "tick-hold": UI.hold=!UI.hold; render(); musicSync(); break;   // the report keeps its own track, so the hold tells the music itself
     case "twist": twistChoose(+t.getAttribute("data-i")); break;
     case "trip-opt": tripChoose(+t.getAttribute("data-i")); break;
     case "loose": looseResolve(+t.getAttribute("data-i")); break;
