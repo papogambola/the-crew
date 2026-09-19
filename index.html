@@ -2556,7 +2556,11 @@ function narrate(job,a,tier,rng,x,mode,clock){
 const TWIST_CUE=["Then it goes wrong.","And then it doesn't go to plan.","Then, the thing nobody drew.","Then the night turns.","And then a problem.","Then something the file didn't have.","Then it stops being simple.","Then the part nobody rehearsed."];
 // And the line for a second or third one on the same night, which is a different sentence: the
 // crew has already had one of these and is still standing in the same room.
-const TWIST_AGAIN=["Then it goes wrong again.","And it is not finished with you.","Then the night finds something else.","And then the second one.","Then the other shoe.","And the room has one more in it.","Then it goes wrong in a new direction.","And there is more of it."];
+// None of these may say WHICH one it is or how many are left. "And then the second one" numbers
+// it; "the room has one more in it" and "the other shoe" both promise exactly one more and no
+// further. The screen stopped counting, so the prose cannot count either — and not knowing
+// whether this is the last of it is the point.
+const TWIST_AGAIN=["Then it goes wrong again.","And it is not finished with you.","Then the night finds something else.","And then another.","Then the next thing.","And the room is not done with you.","Then it goes wrong in a new direction.","And there is more of it."];
 // The beat between two of them. Without it the second question arrives on the heels of the first
 // answer and the whole thing reads as one screen asked twice.
 const TWIST_BETWEEN=["That holds. For about four minutes.","The crew move again. Nobody says anything.","It settles. The clock does not.",
@@ -3961,7 +3965,10 @@ function jobPanel(j){
     +j.know.map(k=>chip(knows(k),'knows '+k,knowBrief(k)+"\n"+(knows(k)?'Someone going knows it.':'Nobody going knows it.'))).join("")
     +chip(speaks,'speaks '+co.langs[0],speaks?'someone going speaks it':'nobody going speaks it'+(cat.lang?' — and this job is all talk':''))
     +j.tags.map(t=>{const b=blockedBy(t);return chip(!b.length,TAG_LABEL[t],b.length?b.join(", ")+' won\'t — sits this one out':'nobody on the crew minds');}).join("")
-    +(j.payout>BIG_MONEY&&!j.final?chip(false,'two things go wrong','A job paying over '+money(BIG_MONEY)+' is not one room and one problem. At least two things go wrong on the night, sometimes three, and each is its own decision with its own right answer. They will not want the same person twice — this is the job that asks whether your crew is broad, not whether it is good.'):'')
+    // The warning, without the number. That this kind of job keeps going wrong is worth knowing
+    // before you commit to it — it decides who you bring. How many times is not: that is the part
+    // nobody in the room could know, and printing it turned the night into a list with a length.
+    +(j.payout>BIG_MONEY&&!j.final?chip(false,'a long night','A job paying over '+money(BIG_MONEY)+' is not one room and one problem. It keeps going wrong, and each time is its own decision with its own right answer. They will not want the same person twice — this is the job that asks whether your crew is broad, not whether it is good.'):'')
     +(function(){const small=a.team.filter(c=>smallMoney(c,j));return chip(!small.length,'the money',small.length?small.map(c=>c.first+" ("+money(Math.round(j.payout*c.cut))+")").join(", ")+" call this small money — a cut under two weeks of their own upkeep. Three in a row and they grumble; five and they may walk.":"every cut on this one is worth the trip");})()+'</div>';
   // who can go — and, for those who can, whether you send them
   const benchCuts=bench.map(byId).filter(Boolean).reduce((s,c)=>s+Math.round(j.payout*c.cut),0);
@@ -4872,7 +4879,9 @@ function wentWrong(d){
   // and two of them wrong used to print one line and leave the other unexplained.
   const recs=d.twists||(d.twist?[d.twist]:[]);
   recs.forEach((t,i)=>{if(t.free)return;
-    out.push({k:"The wrong call"+(recs.length>1?" · "+(i+1)+" of "+recs.length:""),v:null,
+    // No "1 of 2" here either. The note already names which thing this was, so the tally added
+    // nothing except a count of a night the player has just lived through decision by decision.
+    out.push({k:"The wrong call",v:null,
       note:t.h+" — you chose "+t.chosen,
       fix:"What would have set you free: "+t.correct+(t.why?" — because "+t.why+".":".")});});
   return {gap:W.eff-W.diff,eff:W.eff,diff:W.diff,roll:W.roll,items:out};
@@ -5029,18 +5038,15 @@ function modalResult(d){
     let below;
     if(d.awaiting&&d.twist&&!d.resolved){
       const letters="ABCDEF";
-      // On a big night there is more than one of these, and the player is told so at the first —
-      // "one of three" is a different decision from "the one thing that went wrong", because it
-      // says the specialist you are about to spend may be wanted again before the night is out.
-      const of=d.twistOf||1,no=d.twistNo||1;
-      below='<div class="twist"><div class="kicker" style="color:var(--stamp)">'
-        +(of>1?'Something goes wrong · <span class="num" dir="ltr">'+no+' of '+of+'</span> · your call'
-              :'Something goes wrong · your call')+'</div>'
+      /* No count on this screen, and no "this job has two". How many things are going to go wrong
+         tonight is not something anybody in that room knows, and printing it turned the night into
+         a list with a length — you could see the end of it from the first question, and a second
+         one arriving was an item ticked rather than a thing happening. The game still knows;
+         d.twistNo and d.twistOf carry the bookkeeping, and neither is shown. */
+      below='<div class="twist"><div class="kicker" style="color:var(--stamp)">Something goes wrong · your call</div>'
         +'<h3>'+esc(d.twist.h)+'</h3><p>'+esc(d.twist.s)+'</p>'
         +'<div class="twist-opts">'+d.twist.opts.map((t,i)=>'<button class="twist-opt" data-act="twist" data-i="'+i+'"><b>'+letters[i]+'</b> '+esc(t)+'</button>').join("")+'</div>'
-        +'<div class="sel-help">One of these sets the crew free. Think about who is on the job and what each of them can do.'
-        +(of>1?' <b>This job has '+(of===2?'two':'three')+'</b>, and they will not want the same person twice — spend the room you have, and keep something for what is still coming.':'')
-        +'</div></div>';
+        +'<div class="sel-help">One of these sets the crew free. Think about who is on the job and what each of them can do.</div></div>';
     } else {
       below='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">'
         +'<span class="grp mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)">Speed <button class="btn ghost sm" data-act="speed-down" aria-label="Slower" style="padding:2px 8px">−</button><span class="num" style="width:58px;text-align:center">'+SPEEDS[speedIdx()][1]+'</span><button class="btn ghost sm" data-act="speed-up" aria-label="Faster" style="padding:2px 8px">+</button></span>'
@@ -6946,7 +6952,7 @@ const INFO={
     "<b>Ranking — why</b> lists every reason the crew's ranking moved: up for a clean or successful job (more for a bigger job, a little more if nobody was hurt), down for messy, botched or disastrous work, a leak, an arrest, or a member walking with the money. <b>What they learned</b>: everyone who went gains experience; ranks are earned at 40, 110, 220 and 400 xp, and good work adds a point to the attributes the job leaned on. If the job wanted a trade nobody on the crew has, somebody spends the week before learning enough of it to stand in — and if the job comes off, that week is worth a point of brains, marked <i>stood in as</i>. A job that doesn't come off teaches them nothing.",
     "<b>Fallout</b>: injuries (out two weeks), arrests (held for weeks, then back on the roster), leaks (an informant talked), and betrayals (someone skimmed the split and vanished).",
     "<b>The twist.</b> On some jobs — one good fit in four, one long shot in twelve — the report stops: something has gone wrong and six options wait for your call. Only one sets the crew free, and it is always the one the crew you brought can actually do: a wheelman can hot-wire the second car, a forger can re-paper the manifest, a hacker can kill the alarm. A call your crew can make but not best costs time and money; a call nobody can make costs blood, a place, and ranking. Walking away is always on the list — it keeps everyone and loses the score. The report then shows what you chose, what would have set you free, and why.",
-    "<b>And a job paying over "+money(BIG_MONEY)+" goes wrong at least twice.</b> Two of them, sometimes three, each its own thing and never the same thing twice — the screen counts them (<i>1 of 3</i>) from the first, so you know before you spend anybody that the room has to last the night. They will not want the same person twice, which is the whole of it: a big payday asks whether the crew is <i>broad</i>, not whether it is good. Every call counts towards the verdict and every one is on the ranking by name; what each costs of the take compounds rather than adding, so two calls that each lose half of it leave a quarter. The job file says so before you take it."]},
+    "<b>And a job paying over "+money(BIG_MONEY)+" keeps going wrong.</b> Not once — again, and each time a different thing, never the same one twice. <b>You are not told how many are coming</b>, because nobody in that room would know; answer the one in front of you and find out whether the night is finished with you. They will not want the same person twice, which is the whole of it: a big payday asks whether the crew is <i>broad</i>, not whether it is good, and the room has to last. Every call counts towards the verdict and every one is on the ranking; what each costs of the take compounds rather than adding, so two calls that each lose half of it leave a quarter. The job file warns you before you take it."]},
   event:{h:"Between jobs",t:[
     "Every few weeks something happens that is not a job: a death on holiday, a member gone without a word, one who wants out, one who has joined another crew and is buying yours drinks, an old face back to blackmail you, a detective asking around. The types rotate, so each comes round before any repeats.",
     "<b>An old face is always somebody of yours</b>, and the screen opens with how they left — resigned, cut loose, poached, or off with a cut of a score. One in four deaths on that coast was arranged by the person who died, and that is the week you find out: the boat, the storm and the phone that rang out were theirs, and so was the money you sent the family. The rest of them really did drown, and never come back.",
@@ -7307,7 +7313,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 78 · 18 September 2026";
+const BUILD="build 79 · 19 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 

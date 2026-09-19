@@ -282,14 +282,17 @@ decisions at the end.
   the verdict screen — and the recap on file — shows what you chose, what would have set you
   free, and why.
 - **A job paying over $150K goes wrong at least twice.** `BIG_MONEY` — two of them, sometimes
-  three (`BIG_THIRD`), never the same one twice, and the screen counts them (*1 of 3*) from the
-  first so the number is known before you spend anybody. That count is the decision: they will
-  not want the same person twice, so a big payday asks whether the crew is *broad* rather than
-  whether it is good. Every call counts towards the verdict and each is on the ranking by name;
-  what each costs of the take compounds rather than adding, so two calls that each lose half of
-  it leave a quarter. Between them the night carries on — the outcome of your call, a beat, then
-  the next thing — and a game closed between two of them comes back at the one it stopped at.
-  The job file carries the warning before you take it. Under the line nothing changed.
+  three (`BIG_THIRD`), never the same one twice. **The player is never told how many**: no count
+  on the twist screen, none on the job file, none in the handbook. Nobody in that room would know,
+  and a number turns the night into a list you can see the end of — a second twist arriving should
+  be a thing happening, not an item ticked. `d.twistNo`/`d.twistOf` still carry the bookkeeping
+  and neither is rendered. What the job file does say, before you commit, is *a long night*:
+  they will not want the same person twice, so a big payday asks whether the crew is *broad*
+  rather than whether it is good, and the room has to last. Every call counts towards the verdict
+  and each is on the ranking; what each costs of the take compounds rather than adding, so two
+  calls that each lose half of it leave a quarter. Between them the night carries on — the outcome
+  of your call, a beat, then the next thing — and a game closed in the middle of one comes back
+  exactly there. Under the line nothing changed.
 - **Clients remember a job that went wrong.** Botch one badly enough and the client may take it
   personally — about a third of botched jobs and two in three disasters, more on a big fee. There
   are two ways to take it personally, and the first is the common one: **the word goes round.**
