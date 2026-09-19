@@ -122,6 +122,11 @@
   .field{display:flex;flex-direction:column;gap:3px}
   .field label{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
   input[type=text],select{font-family:var(--f-mono);font-size:13px;padding:7px 9px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);max-width:100%}
+  /* A group's heading is a heading — same mono, same small caps as every other label on the page,
+     rather than the browser's bold italic. The options under it stay the game's own ink. */
+  optgroup{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);font-style:normal;font-weight:400;background:var(--paper)}
+  optgroup option{font-size:13px;letter-spacing:0;text-transform:none;color:var(--ink)}
   input[type=text]:focus,select:focus,.tab:focus-visible,.btn:focus-visible,button:focus-visible,.jobrow:focus-visible,.streetrow:focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
   .count{font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-left:auto;padding-bottom:8px}
 
@@ -864,6 +869,21 @@ const TECHS_BIG=[
 ];
 const TECHS_ALL=TECHS.concat(TECHS_BIG);
 const TECH_BY_K={};TECHS_ALL.forEach(t=>TECH_BY_K[t.k]=t);
+/* The trades in a dropdown, and the only place that decides how they are listed. Thirty job
+   titles in the order they happen to be declared is a list you have to read all of before you
+   know it does not have what you want — so they come in their two kinds, Trade and Specialist,
+   and A to Z inside each, which is how you look for a word you already have in mind.
+
+   The arrays themselves are left alone. TECHS order means something elsewhere (it is the order a
+   file's trade is drawn from, among other things), so the sort happens on a copy, here, for the
+   screen. */
+function techOptions(cur){
+  const g=(label,list)=>'<optgroup label="'+label+'">'
+    +list.slice().sort((a,b)=>a.l.localeCompare(b.l))
+      .map(t=>'<option value="'+esc(t.k)+'"'+(cur===t.k?" selected":"")+'>'+esc(t.l)+'</option>').join("")
+    +'</optgroup>';
+  return g("Trade",TECHS)+g("Specialist",TECHS_BIG);
+}
 function isBigTech(k){const t=TECH_BY_K[k];return !!(t&&t.big);}
 const SITES=[
   {k:"road",  l:"The street", x:14, y:50, ly:-10.5},
@@ -4110,9 +4130,11 @@ function tabRoster(){
   const opt=(v,l,cur)=>'<option value="'+esc(v)+'"'+(cur===v?" selected":"")+'>'+l+'</option>';
   const bar='<div class="rosterbar">'
     +'<div class="field"><label for="q">Search</label><input type="text" id="q" value="'+esc(f.q)+'" placeholder="name, country, language, knowledge" autocomplete="off" style="min-width:220px"></div>'
-    +'<div class="field"><label for="ftech">Trade</label><select id="ftech">'+opt("","All",f.tech)+TECHS_ALL.map(t=>opt(t.k,t.l,f.tech)).join("")+'</select></div>'
+    +'<div class="field"><label for="ftech">Trade</label><select id="ftech">'+opt("","All",f.tech)+techOptions(f.tech)+'</select></div>'
     +'<div class="field"><label for="frole">Role</label><select id="frole">'+opt("","Any",f.role)+opt("commander","Commander",f.role)+opt("soldier","Soldier",f.role)+'</select></div>'
-    +'<div class="field"><label for="fnat">Nationality</label><select id="fnat">'+opt("","All",f.nat)+COUNTRIES.map(c=>opt(c.name,c.name,f.nat)).join("")+'</select></div>'
+    // A to Z here too, for the same reason. On a copy — COUNTRIES' own order is the world's, and
+    // things that are not this dropdown are drawn from it.
+    +'<div class="field"><label for="fnat">Nationality</label><select id="fnat">'+opt("","All",f.nat)+COUNTRIES.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c=>opt(c.name,c.name,f.nat)).join("")+'</select></div>'
     +'<div class="field"><label for="fsort">Sort</label><select id="fsort">'+opt("fee","Fee, low first",f.sort)+opt("feeD","Fee, high first",f.sort)+opt("exp","Experience",f.sort)+opt("power","Raw skill",f.sort)+opt("name","Name",f.sort)+'</select></div>'
     +'<span class="count num">'+total.toLocaleString()+' match · showing '+shown.length+'</span></div>';
   const cards=shown.map(c=>'<div class="id">'+vetStamp(c)+idCardTop(c)
@@ -6870,6 +6892,7 @@ const INFO={
     "It works. A body does not talk, and the board notices what happens to people who leave your crew — <b>ranking +2</b> when it is clean. It also costs: <b>heat</b>, the detective's file, and <b>loyalty across everybody still with you</b>, because they can all count. Nobody is safe working for somebody who does that, and they know it."]},
   roster:{h:"The Roster",t:[
     "Everybody who can be hired, in one list. Most of them work the sixteen ordinary trades; the specialists are the minority you go looking for once there are seven places to fill. <b>Search</b> by name, country, language or knowledge. Filter by <b>trade</b>, <b>role</b> and <b>nationality</b>; sort by fee, experience, raw skill or name. Show 30 more at the bottom.",
+    "<b>The trade list comes in its two kinds</b> — <i>Trade</i> for the sixteen, <i>Specialist</i> for the fourteen — and A to Z inside each, as the nationalities are. Thirty job titles in no particular order is a list you have to read all of before you know it does not have what you want.",
     "<b>Hover a trade</b> (or MUS, BRN, TCH, CHM, NRV) for a brief: what it is, what it leans on, what it comes with, and which jobs want it. On a phone, tap it.",
     "<b>Temperament.</b> Two files in three carry a trait, and a trait is a fact about working with them, not a number on a bar. <b>Steady</b> never loses faith after a bad night. <b>Hothead</b> is worth +3 and costs +4 heat. <b>Careful</b> takes 4 heat off any job they work. <b>Quick study</b> learns at double speed; a <b>Mentor</b> is +2 and teaches everyone else half again as fast. <b>Mercenary</b> is +2 and takes 3% more. <b>Lucky</b> adds 4 to the night's roll, <b>Jinx</b> takes 3 off it and pulls twists towards the crew. A <b>Ghost</b> is never the one the police get their hands on.",
     "<b>The first week — the clock stands still.</b> What week one costs you is money, never time: every fee you agree to is still paid, but going to fetch somebody does not cost a week while you are still putting the crew together — fill the places, as many as the float carries. From week two a trip is a week on the ground, and they can still say no.",
@@ -7270,8 +7293,12 @@ function screenCreate(){
   if(!draft.face)draft.face=randomFace(freshRng(),draft.gender);
   draft.face=normFace(draft.face,draft.gender);
   const p=draft.profile;
-  const natOpts=COUNTRIES.map(n=>'<option value="'+esc(n.name)+'"'+(draft.nat===n.name?" selected":"")+'>'+esc(n.name)+' · P'+n.tier+'</option>').join("");
-  const techOpts=TECHS_ALL.map(t=>'<option value="'+t.k+'"'+(draft.tech===t.k?" selected":"")+'>'+t.l+'</option>').join("");
+  // The same two lists the roster filters by, listed the same way: A to Z, and the trades in
+  // their two kinds. This is the first screen anybody sees, so it is the worst one to make
+  // somebody read thirty job titles in an order only the source file knows.
+  const natOpts=COUNTRIES.slice().sort((a,b)=>a.name.localeCompare(b.name))
+    .map(n=>'<option value="'+esc(n.name)+'"'+(draft.nat===n.name?" selected":"")+'>'+esc(n.name)+' · P'+n.tier+'</option>').join("");
+  const techOpts=techOptions(draft.tech);
   const g=(v,l,act,key)=>'<button class="genbtn'+(draft[key]===v?" on":"")+'" data-act="'+act+'" data-v="'+v+'">'+l+'</button>';
   const fake={attrs:p.attrs,edu:p.edu,jail:p.jail,streets:p.streets,know:p.know,langs:p.langs,limits:p.limits};
   return '<div class="wrap"><div class="hero" style="padding:34px 0 22px"><div class="eyebrow">New dossier</div><h1 style="font-size:clamp(38px,10vw,74px)">Who are you?</h1></div>'
@@ -7313,7 +7340,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 79 · 19 September 2026";
+const BUILD="build 80 · 19 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 

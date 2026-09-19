@@ -227,7 +227,9 @@ ch("hiring","Hiring","The roster, the trip, the signature",[
     +note("They only turn up when there is a place free. An applicant you cannot sign is a tease, not an event.")),
   S("roster","The roster",
     p("Everybody for hire, filterable by trade, experience, nationality, price and what they will not do. "
-      +"They are generated once from the game's seed and they do not change — the person you looked at in week 3 and could not afford is still there in week 40, at the same price, unless somebody else got to them.")),
+      +"They are generated once from the game's seed and they do not change — the person you looked at in week 3 and could not afford is still there in week 40, at the same price, unless somebody else got to them.")
+    +note("The trade filter comes in its two kinds — <b>Trade</b> for the sixteen, <b>Specialist</b> for the fourteen — and A to Z inside each, as the nationalities are. "
+      +"Thirty job titles in no particular order is a list you have to read all of before you know it does not have what you want.")),
   S("sign","Who will sign",
     p("Your ranking decides the ceiling. A Nobody cannot get a Legend to sit down with them at any price.")
     +ul([

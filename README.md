@@ -407,8 +407,11 @@ decisions at the end.
   week one and there is no reason to be: nothing on the open board asks for their trade, so they
   are worth their attributes and nothing more, and cost $9K over the odds. Once the seventh place
   opens they are most of what an operation asks for by name. The roster's trade filter lists all
-  thirty. A save made before they existed is unaffected — the roster is rebuilt from its seed, and
-  the first 5,000 files come out exactly as they did.
+  thirty, in two `<optgroup>`s — **Trade** and **Specialist** — A to Z inside each, as the
+  nationality list is; `techOptions()` is the one place that decides it, and it sorts a copy,
+  because `TECHS` and `COUNTRIES` order means other things. A save made before they existed is
+  unaffected — the roster is rebuilt from its seed, and the first 5,000 files come out exactly as
+  they did.
 - **Milestones, announced.** A box in the middle of the screen, once each: the two places a
   Respected name opens; the operations those places open; each year mark (weeks 104, 156, 208) when another crew is within reach,
   with what is still missing; and the moment a second, third or fourth crew can actually be
