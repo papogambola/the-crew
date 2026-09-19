@@ -57,6 +57,7 @@ const out={
   EXTRA_CREW_SIZE:(typeof EXTRA_CREW_SIZE!=="undefined"?EXTRA_CREW_SIZE:null),
   EXTRA_CREW_REP:(typeof EXTRA_CREW_REP!=="undefined"?EXTRA_CREW_REP:null),
   EXTRA_CREW_WEEKS:(typeof EXTRA_CREW_WEEKS!=="undefined"?EXTRA_CREW_WEEKS:null),
+  JOKER:(typeof JOKER!=="undefined"?JOKER:null),
   FM_TECH_GLYPH:(typeof FM_TECH_GLYPH!=="undefined"?FM_TECH_GLYPH:null),
   BUILD:(typeof BUILD!=="undefined"?BUILD:null),
   // The five on the cover. A printed book has the same faces every time, so they are drawn once

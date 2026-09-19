@@ -141,6 +141,36 @@
   .qrh-p b{color:var(--ink)}
   .qrh-list{font-family:var(--f-mono);font-size:1em;line-height:1.42;color:var(--ink-2)}
 
+  /* ---- the joker: one card, top right of the crew screen ---- */
+  /* The heading takes the line and the card takes the corner, so the grid below starts under both
+     rather than under a card floating over it. */
+  .crewtop{display:flex;gap:16px;align-items:flex-start;justify-content:space-between}
+  .crewtop-l{flex:1;min-width:0}
+  .joker{flex:none;width:108px;height:152px;position:relative;border:1.5px solid var(--ink);border-radius:7px;
+    background:var(--card);box-shadow:var(--shadow);cursor:pointer;overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    padding:14px 6px 12px;transition:transform .12s,box-shadow .12s}
+  /* Unplayable it is still a card you hold — present, legible, plainly not ready. */
+  .joker{opacity:.5;filter:grayscale(1)}
+  .joker.live{opacity:1;filter:none;border-color:var(--stamp);box-shadow:0 2px 0 rgba(154,43,30,.25),var(--shadow)}
+  .joker.live:hover,.joker.live:focus-visible{transform:translateY(-3px) rotate(-1.5deg);box-shadow:0 10px 22px -12px rgba(0,0,0,.7)}
+  .joker.spent{opacity:.32}
+  .jk-i{position:absolute;font-family:var(--f-logo);font-size:15px;line-height:1;color:var(--ink)}
+  .joker.live .jk-i{color:var(--stamp)}
+  .jk-tl{top:5px;left:7px}
+  .jk-br{bottom:5px;right:7px;transform:rotate(180deg)}
+  .jk-face{width:58px;height:70px;border:1px solid var(--ink);background:#fff;flex:none}
+  .jk-w{font-family:var(--f-disp);font-weight:600;text-transform:uppercase;letter-spacing:.11em;
+    font-size:9.5px;text-align:center;line-height:1.2;color:var(--ink)}
+  .joker.live .jk-w{color:var(--stamp)}
+  .jk-x{position:absolute;top:50%;left:-10px;right:-10px;transform:translateY(-50%) rotate(-12deg);
+    font-family:var(--f-logo);font-size:17px;letter-spacing:.14em;text-align:center;color:var(--stamp);
+    border-top:2px solid var(--stamp);border-bottom:2px solid var(--stamp);background:rgba(251,250,246,.86)}
+  .modal.joker-m{max-width:min(1180px,calc(100vw - 24px))}
+  .modal.joker-m .cards{grid-template-columns:repeat(auto-fit,minmax(216px,1fr))}
+  .modal.joker-m .joker{cursor:default}
+  .modal.joker-m .joker:hover{transform:none}
+
   /* ---- the crew's files, opened over a decision ---- */
   .cfiles .modal{max-width:calc(100vw - 24px);max-height:calc(100vh - 24px)}
   .cfiles .cards{grid-template-columns:repeat(auto-fill,minmax(248px,1fr))}
@@ -1429,6 +1459,64 @@ function yearsIn(week){
 }
 const EXTRA_CREW_REP=80;                // Feared
 function crewSeats(){return rankInfo(S.rep).seats;}
+
+/* --------------------------- THE JOKER: REASSEMBLE --------------------------- */
+/* One card, once a game, for the one state this game can otherwise leave you in with nothing to
+   do. Your name is worth nothing, so nobody will sign with you. Your crew is gone, so you cannot
+   work. And you cannot rebuild a name without working. That is not a defeat — the game never says
+   you have lost — it is a dead end, which is worse, because a dead end has no screen and no
+   sentence, it is just a board you cannot take anything from. The money in the float is the proof
+   that it is a dead end rather than a poor position: you can afford a crew and still not get one.
+
+   So: the one call you get to make. It costs the money, it fills the places, and it ignores the
+   rank gate that is the whole of the problem — these people are not coming for your name, they are
+   coming because you asked.
+
+   Three things it deliberately does not do. It does not touch your ranking: the card buys you
+   people, and the name is still yours to rebuild. It does not cost a week: a call is a call. And
+   it does not let you choose who comes — that is what makes it a joker and not a shopping trip.
+   You are shown exactly who, and you may decline and keep the card, but the same names come back
+   every time you look, because they are drawn from a seed written down the first time you asked.
+   Closing the screen and opening it again is not a re-roll. */
+const JOKER={rep:5,crew:1,cost:150000};
+// The face on the card. Fixed rather than rolled, because it is the same man every game — drawn by
+// the game's own face builder out of the parts that make him, not a picture pasted on top.
+const JOKER_FACE={hair:2,shape:3,brow:3,eye:2,nose:0,mouth:0,ear:1,glasses:2,fh:2,earring:0,scar:0};
+// Why the card cannot be played, in the words for it, or "" when it can.
+function jokerWhy(){
+  if(!S||S.over)return "the game is over";
+  if(S.jokerUsed)return "played in week "+S.jokerUsed+". There was only the one.";
+  if(S.rep>=JOKER.rep)return "your name is still worth something — ranking "+S.rep+", and this is for a name under "+JOKER.rep+".";
+  if(recruits().length>JOKER.crew)return "you still have a crew — "+recruits().length+" of them. This is for "+JOKER.crew+" or none.";
+  if(S.money<=JOKER.cost)return "it costs "+money(JOKER.cost)+", and the float is "+money(S.money)+".";
+  return "";
+}
+// Who comes. The ones who have run with you and are back on the roster first — they are coming
+// because they know you — and then whoever else the money finds. Drawn from a seed kept on the
+// save, so the answer to "who would come?" is the same answer every time it is asked.
+function jokerCrew(){
+  if(!S.jokerSeed){S.jokerSeed=ri(freshRng(),1,2000000000);save();}
+  const rng=mulberry32(S.jokerSeed>>>0);
+  const need=Math.max(0,crewSeats()-recruits().length);
+  const free=S.roster.filter(c=>c.status==="available"&&!c.isPlayer);
+  const out=[],take=(pool,n)=>{const p=pool.slice();
+    for(let i=0;i<n&&p.length;i++)out.push(p.splice(Math.floor(rng()*p.length),1)[0]);};
+  take(free.filter(c=>(c.ranWith||0)>0),need);
+  if(out.length<need)take(free.filter(c=>!(c.ranWith||0)&&out.indexOf(c)<0),need-out.length);
+  return out;
+}
+function jokerPlay(){
+  if(jokerWhy())return;
+  const crew=jokerCrew();
+  if(!crew.length)return;
+  S.money-=JOKER.cost;
+  crew.forEach(c=>{c.status="crew";c._touched=true;c.coolUntil=0;S.crewIds.push(c.id);stats().hired++;});
+  S.jokerUsed=S.week;
+  S.modal=null;
+  logMsg("Reassembled — "+money(JOKER.cost)+" and one telephone call. "
+    +crew.map(c=>c.first+" ("+TECH_BY_K[c.tech].l+")").join(", ")+" came back.","good",true);
+  sfx("stamp");save();render();
+}
 // Which name opens the last two places, read off the ladder rather than written into the copy —
 // the card said "ranking 60" for a while after the ladder moved it to 65.
 function seatRank(){return RANKS.slice().reverse().find(r=>r[2].seats>=CREW_MAX_SEATS)||RANKS[0];}
@@ -3897,6 +3985,58 @@ function playerCard(){
   return '<div class="id you">'+idCardTop(you)+'<div class="attrs">'+attrRow(you)+'</div>'+xpLine(you)+profLine(you)
     +'<div class="foot"><span class="mono" style="font-size:11px;color:var(--muted)">the name on the file</span></div></div>';
 }
+/* A playing card, drawn as one: the index in two corners, the face in the middle, and the word
+   across it. It is on the screen from the first week, spent or unspendable or ready — a card you
+   are not told you hold is a card that cannot change a decision, and the decision it is for is
+   whether to keep going. */
+function jokerCard(){
+  if(!S||S.over)return "";
+  const why=jokerWhy(),live=!why,spent=!!S.jokerUsed;
+  const tip=spent?"Played in week "+S.jokerUsed:live?"Ready — the one call you get to make":cap(why);
+  return '<div class="joker'+(live?" live":"")+(spent?" spent":"")+'" data-act="joker" role="button" tabindex="0"'
+    +' title="'+esc("Reassemble — "+tip)+'" aria-label="'+esc("The Reassemble card. "+tip)+'">'
+    +'<span class="jk-i jk-tl">J</span><span class="jk-i jk-br">J</span>'
+    +'<div class="jk-face">'+avatar(0x0BADCAFE,"M",JOKER_FACE)+'</div>'
+    +'<div class="jk-w">Reassemble</div>'
+    +(spent?'<div class="jk-x">Played</div>':'')+'</div>';
+}
+function modalJoker(){
+  const why=jokerWhy(),live=!why;
+  const crew=live?jokerCrew():[];
+  const known=crew.filter(c=>(c.ranWith||0)>0);
+  const ok=(b,t)=>'<span class="tag '+(b?"ok":"no")+'">'+(b?"✓ ":"✗ ")+t+'</span>';
+  const head='<div class="modal-h"><div><div class="kicker">One card · once a game</div>'
+    +'<h2 style="font-size:22px;margin-top:4px">Reassemble</h2></div>'
+    +'<button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
+  let body='<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">'
+    +'<div style="flex:none">'+jokerCard()+'</div>'
+    +'<div style="flex:1;min-width:260px">'
+    +'<p style="margin:0 0 10px;font-size:14.5px;line-height:1.6">Nobody signs with a name worth nothing, and a name is only worth what the last job was worth. '
+    +'With no crew there is no job, and with no job there is no name — which is not losing, it is just having nothing left to press. '
+    +'This is the one call you get to make. They are not coming for your name. They are coming because you asked.</p>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'
+      +ok(S.rep<JOKER.rep,"a name under "+JOKER.rep+" — yours is "+S.rep)
+      +ok(recruits().length<=JOKER.crew,JOKER.crew+" on the crew or none — you have "+recruits().length)
+      +ok(S.money>JOKER.cost,"more than "+money(JOKER.cost)+" — you have "+money(S.money))
+      +ok(!S.jokerUsed,S.jokerUsed?"already played, week "+S.jokerUsed:"not yet played")
+    +'</div>'
+    +'<div class="sel-help" style="margin:0">It costs '+money(JOKER.cost)+' and no weeks, and it pays no ranking: the card buys people, not a name. '
+    +'If having a crew again finishes a goal you were already owed, that goal pays out the way it always would. '
+    +'You do not pick them, and looking again will not change them.</div></div></div>';
+  if(live&&crew.length){
+    body+='<hr class="rule"><div class="kicker">Who comes'+(known.length?' — '+known.length+' of them have run with you before':'')+'</div>'
+      +'<div class="cards" style="margin-top:8px">'+crew.map(c=>memberCard(c,null,{controls:false})).join("")+'</div>';
+  } else if(live){
+    body+='<hr class="rule"><div class="warnbox">There is nobody on the roster to call. The card stays in your hand.</div>';
+  }
+  const foot=live&&crew.length
+    ?'<span class="qrh-p" style="margin:0;flex:1;min-width:180px">Decline and the card is still yours.</span>'
+      +'<button class="btn ghost" data-act="scrim">Not yet</button>'
+      +'<button class="btn stamp" data-act="joker-play">Make the call — '+money(JOKER.cost)+'</button>'
+    :'<span class="qrh-p" style="margin:0;flex:1;min-width:180px">'+esc(cap(why||"Nobody to call."))+'</span>'
+      +'<button class="btn" data-act="scrim">Close</button>';
+  return modalWrap(head+'<div class="modal-b">'+body+'</div>',"joker-m",foot);
+}
 function tabCrew(){
   const cards=[];
   const you=S.player;
@@ -3909,7 +4049,9 @@ function tabCrew(){
   if(seats<CREW_MAX_SEATS)cards.push('<div class="id slot locked"><div>Places '+(seats+2)+'–'+(CREW_MAX_SEATS+1)+' — locked</div><div class="mono" style="font-size:11px;line-height:1.6">A '+esc(seatRankName())+' name (ranking '+seatRankAt()+') runs six soldiers. You are '+esc(rankName(S.rep))+', at '+S.rep+'.</div></div>');
   const ct=recruits().filter(c=>c.role==="commander");
   const note=ct.length?'<div class="warnbox" style="color:var(--ink-2);border-color:var(--line-2)">'+ct.map(c=>c.first).join(", ")+(ct.length>1?" are commanders":" is a commander")+' by nature — takes your orders badly (−3 each on a job you lead), but can run the crew on a job you can\'t get into, or lead a crew of their own.</div>':'';
-  let out=note+'<div class="panel-h" style="border:0;padding:0 0 6px"><h2>The Crew</h2><span class="kicker">'+(seats+1)+' places · everyone goes on every job</span></div>'
+  let out=note+'<div class="crewtop">'
+    +'<div class="crewtop-l"><div class="panel-h" style="border:0;padding:0 0 6px"><h2>The Crew</h2><span class="kicker">'+(seats+1)+' places · everyone goes on every job</span></div></div>'
+    +jokerCard()+'</div>'
     +'<div class="cards">'+cards.join("")+'</div>';
   // other crews: a commander and four soldiers each, working without you
   crews().forEach(cr=>{
@@ -4543,6 +4685,7 @@ function renderModal(){
   if(m.type==="trip")return modalTrip(m.data);
   if(m.type==="event")return modalEvent();
   if(m.type==="found")return modalFound();
+  if(m.type==="joker")return modalJoker();
   if(m.type==="apply")return modalApply();
   if(m.type==="clash")return modalClash();
   if(m.type==="talk")return modalTalk();
@@ -7116,6 +7259,11 @@ const INFO={
   notice:{h:"A milestone",t:[
     "Announced once, in the middle of the screen, when the game reaches it: the two places a Respected name opens; each year mark (weeks "+EXTRA_CREW_WEEKS.join(", ")+") when another crew is within reach, with what is still missing; and the moment a second, third or fourth crew can actually be founded, with a button straight into founding it.",
     "<b>Later</b> closes it; nothing is lost — the Crew tab keeps the places and the founding panel, and the case log keeps the record."]},
+  joker:{h:"Reassemble",t:[
+    "<b>One card, once a game.</b> It is on the Crew screen from the first week, and it can only be played out of the one position this game can otherwise leave you in with nothing to press: a name under "+JOKER.rep+", "+JOKER.crew+" on the crew or none, and more than "+money(JOKER.cost)+" in the float. The money is the point — it says you can afford a crew and still cannot get one, because nobody signs with a name worth nothing.",
+    "It costs "+money(JOKER.cost)+" and no weeks, fills every empty place, and ignores who would normally sign with you. The ones who have run with you before come first; the rest are whoever the money finds.",
+    "<b>It pays no ranking.</b> The card buys people, not a name, and earning the name back is the whole of what you do with them. If filling the crew finishes a goal you were already owed — <i>A crew of five</i> is the obvious one — that goal pays what it has always paid. The card itself gives you nothing but the people.",
+    "You do not choose who comes, and looking again does not change them: they are drawn once, from a seed kept with the save. You can decline and keep the card."]},
   found:{h:"Founding a crew",t:[
     "Pick the commander — a commander by nature, whose own command score runs the job — and four soldiers from your ready crew. They leave your places; fill them again from the roster.",
     "The new crew is named after its commander, takes one job a week from the same board, and never faces a twist: you are not there to decide, so its report runs straight through."]},
@@ -7727,7 +7875,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 85 · 19 September 2026";
+const BUILD="build 86 · 19 September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
@@ -7935,6 +8083,8 @@ document.addEventListener("click",e=>{
     case "notice-go": noticeDone(); if(k==="found"){UI.found={lead:null,ids:[]};S.modal={type:"found"};} else if(k){S.tab=k;S.jobOpen=null;} render(); window.scrollTo(0,0); break;
     case "found-lead": if(UI.found){UI.found.lead=UI.found.lead===id?null:id;UI.found.ids=UI.found.ids.filter(x=>x!==id);} render(); break;
     case "found-pick": if(UI.found){const f=UI.found;if(f.ids.includes(id))f.ids=f.ids.filter(x=>x!==id);else if(f.ids.length<4)f.ids.push(id);} render(); break;
+    case "joker": if(S&&!S.over){S.modal={type:"joker"};sfx("open");render();} break;
+    case "joker-play": jokerPlay(); break;
     case "found-go": if(UI.found)foundCrew(UI.found.lead,UI.found.ids); render(); break;
     case "laylow": layLow(); break;
     case "newgame": wipe(); S=null; draft=null; rollTitleFaces(); render(); window.scrollTo(0,0); break;

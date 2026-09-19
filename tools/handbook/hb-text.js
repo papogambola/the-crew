@@ -366,6 +366,22 @@ ch("crew","The crew","Places, who goes, and a second crew",[
     ])
     +p("A crew is a commander and four soldiers, named after its commander. It takes a posting of its own each week from the same board. "
       +"Its take is yours, its ranking is yours, its heat is yours — and so is its payroll.")),
+  S("joker","Reassemble — the one card",
+    p("There is a position this game can leave you in with nothing to press. Nobody signs with a name worth nothing; "
+      +"a name is only worth what the last job was worth; with no crew there is no job. That is not losing — the game never says you have lost — "
+      +"it is a board you cannot take anything from. <b>Reassemble</b> is the one call you get to make, and you get it once.")
+    +G.T(["Needed","Value"],[
+      ["Ranking","under "+m(D.JOKER.rep)+" — a name worth nothing"],
+      ["Your crew",m(D.JOKER.crew)+" soldier or none"],
+      ["The float","more than "+money(D.JOKER.cost)+" — proof you can afford a crew and still cannot get one"],
+      ["Times","once a game"],
+    ])
+    +p("It costs "+money(D.JOKER.cost)+" and no weeks, fills every empty place, and ignores who would normally sign with you — "
+      +"these people are not coming for your name, they are coming because you asked. The ones who have run with you before come first; "
+      +"the rest are whoever the money finds.")
+    +p("It pays no ranking. The card buys people, not a name. You do not choose who comes and looking again does not change them — "
+      +"they are drawn once and kept with the save — but you may decline, and then the card is still yours. "
+      +"It sits in the top right of the Crew screen from the first week, so you always know you are holding it.")),
 ]);
 
 /* ---------------- 7 --------------------------------- */
