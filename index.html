@@ -1676,6 +1676,11 @@ function detFile(){return S.det?Math.round(S.det.file):0;}
 // A thick file brings the raid forward.
 function raidAt(){const f=detFile();return 100-(f>=50?10:0)-(f>=75?10:0);}
 function rivalAhead(){return !!(rival()&&rival().standing>S.rep);}
+/* How many more weeks a posting stands, counting this one. It survives while expires >= the week,
+   so the week it expires in is still a week you can take it in — the subtraction alone is one
+   short, and being one short here is the difference between "go and fetch a Forger" and watching
+   the job go off the board with the Forger still on a plane. */
+function jobLeft(j){return j.final?99:Math.max(0,j.expires-S.week+1);}
 // The rival takes a posting off the board — the best one still there.
 function rivalWorks(rng){
   const rv=rival();if(!rv)return;
@@ -1683,9 +1688,20 @@ function rivalWorks(rng){
   if(open.length<5)return;
   if(!chance(rng,rivalAhead()?0.5:0.38))return;
   const j=open.slice().sort((a,b)=>b.tier-a.tier||b.payout-a.payout)[0];
+  const a=assessJob(j),cased=casedWeeks(j);          // read it while the posting is still there
   S.jobs=S.jobs.filter(x=>x.id!==j.id);
   rv.standing=clamp(rv.standing+j.tier,0,999);rv.took++;
+  const sting=cased
+    ? "You had "+cased+" week"+(cased>1?"s":"")+" of watching it, and "+money(cased*caseCost(j))+" spent on the watching."
+    : a.canRun
+      ? "Your crew could have run it."
+      : "You could not have fielded it anyway — "+a.team.length+" of the "+j.need+" it wanted.";
   logMsg(cap(rv.name)+" took the "+j.city+" job off the board — "+j.title.toLowerCase()+". Their standing "+rv.standing+".","warn");
+  S.notices=S.notices||[];
+  S.notices.push({k:"The board · week "+S.week,h:cap(rv.name)+" got there first",
+    text:'"'+j.title+'" in '+j.city+", "+j.country+" — "+money(j.payout)+", off the board before you moved. "
+      +sting+" Their standing is "+rv.standing+(rivalAhead()?", which is ahead of yours.":"."),
+    go:"jobs",goText:"What is left →"});
 }
 function detWatch(rng){
   const d=detective();if(!d)return;
@@ -4419,8 +4435,22 @@ function jobPanel(j){
       +'<div class="sub num" style="color:'+(a.team.length>=j.need?"var(--good)":"var(--stamp)")+'">'
       +(a.team.length>=j.need?a.team.length+" can go":"only "+a.team.length+" can go")+'</div></div>'
     +'<div class="b"><div class="k">On the ground</div><div class="v num" dir="ltr">'+wks+' week'+(wks>1?'s':'')+'</div></div>'
+    +(j.final?'':'<div class="b"><div class="k">Expires</div><div class="v num" dir="ltr">wk '+j.expires+'</div>'
+      +'<div class="sub num" style="color:'+(jobLeft(j)<=1?"var(--stamp)":"var(--ink-2)")+'">'
+      +(jobLeft(j)<=1?"this week only":jobLeft(j)+" weeks left")+'</div></div>')
     +'<div class="b"><div class="k">Difficulty</div><div class="v">'+diffbar(j.diff,j.heat>22)+'</div></div>'
     +'<div class="b"><div class="k">Heat</div><div class="v num">+'+j.heat+'</div></div></div>';
+  // The whole use of a date on a posting is the sum you do with it. A recruiting trip is a week,
+  // so a gap in the crew and weeks still on the board is a move you can make — and one week left
+  // is the same gap with the move gone. Said only when there is a gap to say it about.
+  const missing=j.techs.filter(t=>!a.team.some(c=>c.tech===t));
+  const gap=missing.length||a.team.length<j.need;
+  const timeNote=(!j.final&&gap)?'<div class="sel-help" style="margin:6px 0 0">'
+    +(jobLeft(j)<=1
+      ? 'This is the last week for it. A trip to fetch somebody is a week, so whoever is missing stays missing — this one runs with the crew you have, or it does not run.'
+      : 'A trip to fetch somebody is a week, and this posting stands for <b>'+jobLeft(j)+'</b> more. '
+        +(missing.length?'Nobody on the crew is '+missing.map(t=>TECH_BY_K[t].l).join(' or ')+'.':'You are '+(j.need-a.team.length)+' short of the crew it wants.'))
+    +'</div>':'';
   // Weeks spent watching a room before you walk into it. The board does not wait while you do.
   const cw=casedWeeks(j),cmax=caseMax(j);
   const localHeat=countryHeat(j.country);
@@ -4445,7 +4475,7 @@ function jobPanel(j){
   const bigNote=j.big?'<div class="warnbox" style="color:var(--ink-2);border-color:var(--ink)"><b>An ultra-complex operation — '+j.need+' in the field, '+j.techs.length+' trades wanted, '+j.know.length+' kinds of knowledge.</b> '
     +'These are not on the ordinary board and nobody else can take one: they arrive by name because you have seven places. '
     +bigRun()+' of '+BAL.bigCount+' run so far. Each one is spent when it is finished, whichever way it finishes.</div>':'';
-  const b='<div class="panel-b">'+bigNote+theJob+brief+'<div class="mono" style="font-size:12px;color:var(--muted)">The plan leans on '+wtxt+'.</div>'+chips+reqs
+  const b='<div class="panel-b">'+bigNote+theJob+brief+'<div class="mono" style="font-size:12px;color:var(--muted)">The plan leans on '+wtxt+'.</div>'+chips+reqs+timeNote
     +'<hr class="rule"><div class="kicker">Who goes</div>'+benchBar+checks+splitBlock+caseBlock
     +'<hr class="rule"><div class="kicker">The reckoning</div>'+factors+'<div style="margin-top:10px">'+odds+'</div>'+othersBlock
     +'<hr class="rule"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" data-act="close-job">Walk away</button>'
@@ -7296,6 +7326,8 @@ const INFO={
     "About one file in fourteen is a <b>police informant</b>: they leak jobs and leak heat. <b>Vet</b> a file for $6K — a dull crew misses one in three, so a clean stamp is a guess with money behind it."]},
   jobs:{h:"Jobs",t:[
     "Postings from clients, by country. Each row: category, the trades and knowledge it wants — <b>green</b> if someone on your crew has it, <b>red</b> if nobody does — city, country and language, crew needed, fee, heat, when it expires, and a chip: <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go.",
+    "<b>The board does not wait.</b> Every posting carries the week it expires, on the row and again on its own screen with the weeks left counted off. It matters because a trip to fetch somebody is a week: a posting wanting a trade nobody has, with three weeks on it, is a job you can still go and fit. With one week on it, it is a job you run with the crew you have or not at all — and the screen says which of the two you are looking at.",
+    "<b>You are not the only crew reading it.</b> A rival takes the best posting still standing, some weeks, and you are told which one, what it paid, and whether you could have run it — or, worse, how many weeks you had already spent watching it.",
     "<b>Clients remember.</b> Botch a job badly enough and the client may stop posting to you for twenty or thirty weeks, take one or two other clients with them, and pull the postings they already had. The board says who will not deal with you and until when — and whether one of them is not finished with you.",
     "<b>Sort</b> the board by best fit, crew needed, trade wanted, fee, heat, difficulty, country or expiry. <b>Your crew</b> sits above the board — passport, trade, attributes, languages, knowledge, limits — so a posting can be judged without leaving; hide it if you know them by heart. Keys <b>1–4</b> jump between the tabs.",
     "The bars are difficulty; red means high heat. Open a posting to see the reckoning before you commit.",
@@ -7875,7 +7907,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 86 · 19 September 2026";
+const BUILD="build 87 · 19 September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
