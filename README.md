@@ -11,9 +11,10 @@ doesn't hit one of their limits.
 Play it here: **https://papogambola.github.io/the-crew/** — every push to `main` redeploys it.
 
 Or on Windows, as a program: **https://papogambola.github.io/the-crew/desktop/The-Crew-Windows.zip**
-— unzip, keep the two files together, double-click `The Crew.exe`. It is a shell: the window fetches
-the game from the address above, so it plays whatever is on `main` and never needs a new download
-(`desktop/README.md` says how it is built).
+— unzip, keep the two files together, double-click `The Crew.exe`. The game is inside it and runs
+with no internet at all; the music is streamed from the address above, and a line in the footer
+says when a newer build is out. It was a shell that fetched the game until build 85, which meant it
+went dark whenever the address did (`desktop/README.md` says what changed and how it is built).
 
 The rules, in full: **https://papogambola.github.io/the-crew/handbook.html** — a player's handbook
 of nineteen chapters with a pinned search bar and a clickable index, and the same thing as a

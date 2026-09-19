@@ -2,3 +2,7 @@ bin/
 dist/
 .tmp/
 resources/js/
+# Assembled by tools/build.py from the game in the repository root. Generated, not authored —
+# committing an 800KB copy of index.html here would double the repository's weight per release.
+resources/index.html
+resources/handbook.html
