@@ -171,7 +171,9 @@ decisions at the end.
 - **The live report.** Take the job and it plays out minute by minute, manager-game style:
   the crew arriving, who got in and who didn't, who does the talking, what each trade
   buys, what goes right and wrong for that kind of job, the exit, the police by morning, the
-  split — then the verdict stamp. You are "you" throughout, never named in the third person. Skip to the end if you'd rather, hold it where it is with **Pause** (the music holds with it, and picks up where it stopped), or set the pace: five
+  split — then the verdict stamp. You are "you" throughout, never named in the third person. **Skip** runs the rest at once — as far as the end, or as far as the next thing that wants an
+answer, and the button does not say which in advance, because a button that named its destination
+told you whether the night had anything in it before you had read a line of it. Hold it where it is with **Pause** (the music holds with it, and picks up where it stopped), or set the pace: five
   speeds, Slowest to Fastest, on the report itself and in the office. Opening the office holds the
   feed too, so "Paused" on its door is true. The field
   roster marks who came back: **GONE** in red on anyone who walked with the money, **TAKEN** on

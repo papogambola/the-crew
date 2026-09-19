@@ -146,25 +146,25 @@
      rather than under a card floating over it. */
   .crewtop{display:flex;gap:16px;align-items:flex-start;justify-content:space-between}
   .crewtop-l{flex:1;min-width:0}
-  .joker{flex:none;width:108px;height:152px;position:relative;border:1.5px solid var(--ink);border-radius:7px;
+  .joker{flex:none;width:76px;height:107px;position:relative;border:1.25px solid var(--ink);border-radius:5px;
     background:var(--card);box-shadow:var(--shadow);cursor:pointer;overflow:hidden;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-    padding:14px 6px 12px;transition:transform .12s,box-shadow .12s}
+    padding:11px 4px 9px;transition:transform .12s,box-shadow .12s}
   /* Unplayable it is still a card you hold — present, legible, plainly not ready. */
   .joker{opacity:.5;filter:grayscale(1)}
   .joker.live{opacity:1;filter:none;border-color:var(--stamp);box-shadow:0 2px 0 rgba(154,43,30,.25),var(--shadow)}
   .joker.live:hover,.joker.live:focus-visible{transform:translateY(-3px) rotate(-1.5deg);box-shadow:0 10px 22px -12px rgba(0,0,0,.7)}
   .joker.spent{opacity:.32}
-  .jk-i{position:absolute;font-family:var(--f-logo);font-size:15px;line-height:1;color:var(--ink)}
+  .jk-i{position:absolute;font-family:var(--f-logo);font-size:11px;line-height:1;color:var(--ink)}
   .joker.live .jk-i{color:var(--stamp)}
-  .jk-tl{top:5px;left:7px}
-  .jk-br{bottom:5px;right:7px;transform:rotate(180deg)}
-  .jk-face{width:58px;height:70px;border:1px solid var(--ink);background:#fff;flex:none}
-  .jk-w{font-family:var(--f-disp);font-weight:600;text-transform:uppercase;letter-spacing:.11em;
-    font-size:9.5px;text-align:center;line-height:1.2;color:var(--ink)}
+  .jk-tl{top:3px;left:5px}
+  .jk-br{bottom:3px;right:5px;transform:rotate(180deg)}
+  .jk-face{width:42px;height:51px;border:1px solid var(--ink);background:#fff;flex:none}
+  .jk-w{font-family:var(--f-disp);font-weight:600;text-transform:uppercase;letter-spacing:.06em;
+    font-size:7px;text-align:center;line-height:1.15;color:var(--ink)}
   .joker.live .jk-w{color:var(--stamp)}
-  .jk-x{position:absolute;top:50%;left:-10px;right:-10px;transform:translateY(-50%) rotate(-12deg);
-    font-family:var(--f-logo);font-size:17px;letter-spacing:.14em;text-align:center;color:var(--stamp);
+  .jk-x{position:absolute;top:50%;left:-8px;right:-8px;transform:translateY(-50%) rotate(-12deg);
+    font-family:var(--f-logo);font-size:12px;letter-spacing:.1em;text-align:center;color:var(--stamp);
     border-top:2px solid var(--stamp);border-bottom:2px solid var(--stamp);background:rgba(251,250,246,.86)}
   .modal.joker-m{max-width:min(1180px,calc(100vw - 24px))}
   .modal.joker-m .cards{grid-template-columns:repeat(auto-fit,minmax(216px,1fr))}
@@ -5362,9 +5362,15 @@ function tickerArm(){
 function tickerFinish(){
   if(TICK){clearInterval(TICK);TICK=null;}
   const d=feedData();if(!d)return;
-  // Skip stops at whatever is waiting for a decision — a job's twist or a trip's meeting.
-  // Checking only d.twist let Skip jump a recruitment trip straight past its meeting, which
-  // left the trip unresolved and the week unspent.
+  /* Skip stops at whatever is waiting for a decision — a job's twist or a trip's meeting.
+     Checking only d.twist let Skip jump a recruitment trip straight past its meeting, which
+     left the trip unresolved and the week unspent.
+
+     The button that calls this says "Skip" and nothing else, always. It used to name where it was
+     going — "Skip to the decision" when a twist was coming, "Skip to the end" when none was — and
+     so a player who had read no further than the first line already knew whether this night had
+     anything in it. That is the same fault as printing "twist 1 of 2": the screen telling you the
+     shape of the story before the story. Where Skip lands is the answer, not the label. */
   if((d.twist||d.snag)&&!d.resolved){
     // The NEXT one waiting, not the first one on the page — a second twist sits after lines that
     // are already read, and skipping to the first cue would rewind the feed instead of advancing it.
@@ -5450,7 +5456,7 @@ function modalTrip(T){
       below='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">'
         +'<span class="grp mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)">Speed <button class="btn ghost sm" data-act="speed-down" aria-label="Slower" style="padding:2px 8px">−</button><span class="num" style="width:58px;text-align:center">'+SPEEDS[speedIdx()][1]+'</span><button class="btn ghost sm" data-act="speed-up" aria-label="Faster" style="padding:2px 8px">+</button></span>'
         +'<button class="btn ghost sm" data-act="tick-hold" aria-pressed="'+(UI.hold?"true":"false")+'" title="Hold the feed where it is">'+(UI.hold?"▶ Resume":"❚❚ Pause")+'</button>'
-        +'<button class="btn ghost sm" data-act="skip-ticker">'+(T.snag&&!T.resolved?"Skip to the meeting →":"Skip to the end →")+'</button></div>';
+        +'<button class="btn ghost sm" data-act="skip-ticker" title="Run the rest of it at once">Skip →</button></div>';
     }
     return modalWrap(h+'<div class="modal-b"><div class="feed-cols"><div class="feed-main">'+ticker+below+'</div><div class="feed-side">'+feedMap(T)+'</div></div></div>',"feed");
   }
@@ -5507,7 +5513,7 @@ function modalResult(d){
       below='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">'
         +'<span class="grp mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)">Speed <button class="btn ghost sm" data-act="speed-down" aria-label="Slower" style="padding:2px 8px">−</button><span class="num" style="width:58px;text-align:center">'+SPEEDS[speedIdx()][1]+'</span><button class="btn ghost sm" data-act="speed-up" aria-label="Faster" style="padding:2px 8px">+</button></span>'
         +'<button class="btn ghost sm" data-act="tick-hold" aria-pressed="'+(UI.hold?"true":"false")+'" title="Hold the feed where it is">'+(UI.hold?"▶ Resume":"❚❚ Pause")+'</button>'
-        +'<button class="btn ghost sm" data-act="skip-ticker">'+(d.twist&&!d.resolved?"Skip to the decision →":"Skip to the end →")+'</button></div>';
+        +'<button class="btn ghost sm" data-act="skip-ticker" title="Run the rest of it at once">Skip →</button></div>';
     }
     return modalWrap(h+'<div class="modal-b"><div class="feed-cols"><div class="feed-main">'+ticker+below+'</div><div class="feed-side">'+feedMap(d)+'</div></div></div>',"feed");
   }
@@ -7423,7 +7429,7 @@ const INFO={
     "Everything on record: role, trade, experience, education, knowledge, languages, time in jail, time on the streets, passport, sex, what they will not do, and the price — fee once, a cut of each score, upkeep weekly.",
     "<b>Vet</b> reads the file for informant ties against your crew's instincts. <b>Hire</b> needs an open place and the fee."]},
   result:{h:"The job report",t:[
-    "First the job as it happened, minute by minute — who got in and who didn't, who did the talking, what each trade bought, what went right and what went wrong, the exit, the split. Skip to the end if you'd rather.",
+    "First the job as it happened, minute by minute — who got in and who didn't, who did the talking, what each trade bought, what went right and what went wrong, the exit, the split. <b>Skip</b> runs the rest of it at once — as far as the end, or as far as the next thing that wants an answer from you, and it does not say in advance which.",
     "Then the verdict: <b>Clean</b>, <b>Success</b>, <b>Messy</b>, <b>Botched</b> or <b>Disaster</b> — crew power against difficulty, plus the roll. Gross is the fee earned, cuts go to the crew, the net is yours.",
     "<b>Ranking — why</b> lists every reason the crew's ranking moved: up for a clean or successful job (more for a bigger job, a little more if nobody was hurt), down for messy, botched or disastrous work, a leak, an arrest, or a member walking with the money. <b>What they learned</b>: everyone who went gains experience; ranks are earned at "+XP_STEPS.slice(1,-1).join(", ")+" and "+XP_STEPS[XP_STEPS.length-1]+" xp, and good work adds a point to the attributes the job leaned on. If the job wanted a trade nobody on the crew has, somebody spends the week before learning enough of it to stand in — and if the job comes off, that week is worth a point of brains, marked <i>stood in as</i>. A job that doesn't come off teaches them nothing.",
     "<b>Fallout</b>: injuries (out two weeks), arrests (held for weeks, then back on the roster), leaks (an informant talked), and betrayals (someone skimmed the split and vanished).",
@@ -7936,7 +7942,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 88 · 19 September 2026";
+const BUILD="build 89 · 19 September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
