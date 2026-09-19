@@ -747,7 +747,33 @@ function ri(rng,a,b){return Math.floor(rng()*(b-a+1))+a;}
 function pick(rng,arr){return arr[Math.floor(rng()*arr.length)];}
 function chance(rng,p){return rng()<p;}
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-function freshRng(){return mulberry32((Date.now()^Math.floor(Math.random()*1e9))>>>0);}
+/* The game's own stream of chance, and the reason the whole game is a function of its seed.
+   
+   Every job outcome, twist, trip, weekly event and street run used to draw from a rolling of the
+   clock — Date.now() ^ Math.random() — a fresh unseeded stream each time. The world was already
+   reproducible without it: the roster is rebuilt from S.seed, the board is dealt from S.seed and
+   the week. Only what HAPPENED was not, and that is the half a server would have to check. It
+   could re-deal your board and rebuild your roster and still have no way of knowing whether your
+   fifty million was earned, because nothing about the night that earned it could be run again.
+
+   So the draws are numbered. Each one takes the next number and derives its stream from that and
+   the seed, and the number is saved with the game — which makes the whole of it a function of
+   (seed, the order of your decisions). Run the same decisions from the same seed and the same
+   nights happen. That is what makes a score checkable rather than merely claimed, and it is the
+   floor under every online thing that comes after.
+
+   Before there is a game — the faces on the title screen, a dossier being rolled, a face being
+   re-rolled on the create screen — there is nothing to be deterministic about, and a reroll button
+   that gave back the same face twice would be a broken button. Those keep the clock.
+
+   Math.imul because the multiply is a 32-bit mix and a counter big enough to matter would lose
+   its low bits to a float otherwise. */
+const RNG_MIX=2654435761;
+function freshRng(){
+  if(!S||!S.seed)return mulberry32((Date.now()^Math.floor(Math.random()*1e9))>>>0);
+  S.rngN=(S.rngN||0)+1;
+  return mulberry32((S.seed^Math.imul(S.rngN,RNG_MIX))>>>0);
+}
 
 /* ----------------------------- NAMES ---------------------------------- */
 const NAMES={
@@ -1429,6 +1455,9 @@ function newGame(player){
   const seed=(Date.now()^Math.floor(Math.random()*1e9))>>>0;
   S={
     v:2,seed,player,roster:buildRoster(seed),
+    // How many draws this game has made. With the seed it is the whole of its luck, which is why
+    // it is saved with everything else rather than kept in a variable that dies with the tab.
+    rngN:0,
     crewIds:[],money:BAL.startMoney,heat:0,week:1,rep:0,jobSeq:0,
     tab:"crew",modal:null,filter:{q:"",tech:"",role:"",nat:"",sort:"fee"},shown:30,
     jobs:[],log:[],finalDone:false,over:null,seenFinal:false,
@@ -7907,7 +7936,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 87 · 19 September 2026";
+const BUILD="build 88 · 19 September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
