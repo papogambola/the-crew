@@ -141,6 +141,18 @@
   .qrh-p b{color:var(--ink)}
   .qrh-list{font-family:var(--f-mono);font-size:1em;line-height:1.42;color:var(--ink-2)}
 
+  /* ---- the crew's files, opened over a decision ---- */
+  .cfiles .modal{max-width:calc(100vw - 24px);max-height:calc(100vh - 24px)}
+  .cfiles .cards{grid-template-columns:repeat(auto-fill,minmax(248px,1fr))}
+  /* the ones who did not go are still worth reading — they are why you cannot answer with a
+     Forger — but they are not the people in that room, and the card says so without hiding them */
+  .cfiles .away{opacity:.62}
+  .cf-h{font-family:var(--f-disp);text-transform:uppercase;letter-spacing:.1em;font-size:12.5px;
+    color:var(--muted);margin:16px 0 9px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+  .cf-h:first-child{margin-top:0}
+  /* a key cap printed after the words on a button rather than before them */
+  .btn .kcap{margin:0 0 0 7px;border-color:currentColor;color:inherit;background:transparent}
+
   .panel{background:var(--card);border:1px solid var(--line-2);box-shadow:var(--shadow)}
   .panel-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
   .panel-h h2{font-size:16px;letter-spacing:.08em;text-transform:uppercase}
@@ -3875,12 +3887,21 @@ function memberCard(c,cr,opts){
     +'<div class="foot"><span class="mono" style="font-size:11px;color:var(--muted)">upkeep '+money(c.upkeep)+'/wk</span>'
       +'<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">'+btns+'</span></div></div>';
 }
+/* Your own file, which is not the same card as anybody else's: no vetting stamp, because you do
+   not vet yourself; no loyalty bar, because you cannot walk out on yourself; and no buttons,
+   because there is nothing to do to yourself. It lives here rather than inline on the Crew tab so
+   that the files sheet prints the same card — the first version of that sheet reused the ordinary
+   member card and stamped the commander VETTED, across their own name. */
+function playerCard(){
+  const you=S.player;
+  return '<div class="id you">'+idCardTop(you)+'<div class="attrs">'+attrRow(you)+'</div>'+xpLine(you)+profLine(you)
+    +'<div class="foot"><span class="mono" style="font-size:11px;color:var(--muted)">the name on the file</span></div></div>';
+}
 function tabCrew(){
   const cards=[];
   const you=S.player;
   const seats=crewSeats();
-  cards.push('<div class="id you">'+idCardTop(you)+'<div class="attrs">'+attrRow(you)+'</div>'+xpLine(you)+profLine(you)
-    +'<div class="foot"><span class="mono" style="font-size:11px;color:var(--muted)">the name on the file</span></div></div>');
+  cards.push(playerCard());
   recruits().forEach(c=>cards.push(memberCard(c,null)));
   for(let i=recruits().length;i<seats;i++){
     cards.push('<div class="id slot"><div>Place '+(i+2)+' of '+(seats+1)+' — empty</div><button class="btn sm" data-act="tab" data-k="roster">Open the roster</button></div>');
@@ -5219,7 +5240,10 @@ function modalTrip(T){
       below='<div class="twist"><div class="kicker" style="color:var(--stamp)">The meeting · your call</div>'
         +'<h3>'+esc(T.snag.h)+'</h3><p>'+esc(T.snag.s)+'</p>'
         +'<div class="twist-opts">'+T.snag.opts.map((t,i)=>'<button class="twist-opt" data-act="trip-opt" data-i="'+i+'"><b>'+letters[i]+'</b> '+esc(t)+'</button>').join("")+'</div>'
-        +'<div class="sel-help">What you brought decides this, not what you can pay. Who is on the crew, what you speak, what the name is worth, and what you are like in a room.</div></div>';
+        +'<div class="sel-help" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">'
+          +'<span style="flex:1;min-width:230px">What you brought decides this, not what you can pay. Who is on the crew, what you speak, what the name is worth, and what you are like in a room.</span>'
+          +'<button class="btn ghost sm" data-act="crew-files" title="Your crew\'s files, without leaving the meeting">Your crew<span class="kcap">C</span></button>'
+        +'</div></div>';
     } else {
       below='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">'
         +'<span class="grp mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)">Speed <button class="btn ghost sm" data-act="speed-down" aria-label="Slower" style="padding:2px 8px">−</button><span class="num" style="width:58px;text-align:center">'+SPEEDS[speedIdx()][1]+'</span><button class="btn ghost sm" data-act="speed-up" aria-label="Faster" style="padding:2px 8px">+</button></span>'
@@ -5273,7 +5297,10 @@ function modalResult(d){
       below='<div class="twist"><div class="kicker" style="color:var(--stamp)">Something goes wrong · your call</div>'
         +'<h3>'+esc(d.twist.h)+'</h3><p>'+esc(d.twist.s)+'</p>'
         +'<div class="twist-opts">'+d.twist.opts.map((t,i)=>'<button class="twist-opt" data-act="twist" data-i="'+i+'"><b>'+letters[i]+'</b> '+esc(t)+'</button>').join("")+'</div>'
-        +'<div class="sel-help">One of these sets the crew free. Think about who is on the job and what each of them can do.</div></div>';
+        +'<div class="sel-help" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">'
+          +'<span style="flex:1;min-width:230px">One of these sets the crew free. Think about who is on the job and what each of them can do.</span>'
+          +'<button class="btn ghost sm" data-act="crew-files" title="The files of everyone on this job, without leaving the decision">Their files<span class="kcap">C</span></button>'
+        +'</div></div>';
     } else {
       below='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">'
         +'<span class="grp mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)">Speed <button class="btn ghost sm" data-act="speed-down" aria-label="Slower" style="padding:2px 8px">−</button><span class="num" style="width:58px;text-align:center">'+SPEEDS[speedIdx()][1]+'</span><button class="btn ghost sm" data-act="speed-up" aria-label="Faster" style="padding:2px 8px">+</button></span>'
@@ -7288,6 +7315,52 @@ function qrhHTML(){
     +attrs+techs+bigs+ranks+know+edu+traits+lims+pass+langs+cost+loy
     +'</div></div><div class="modal-f">'+foot+'</div></div></div></div>';
 }
+/* ---------------------- THE CREW'S FILES, OVER A DECISION --------------------- */
+/* A twist asks which of your people can do a thing. The answer is on their files — and their
+   files were two screens away, behind a modal that will not let you leave until you have
+   answered. So the files come to the decision instead: the same cards as the Crew tab, read-only,
+   over whatever is on the screen, exactly the way the quick reference does.
+
+   Who is actually in that room is the first thing it says. A job takes some of the crew and
+   leaves the rest at home, and an answer that turns on a Forger is the wrong answer when the
+   Forger is in another country — so the ones on the job come first under their own heading, and
+   the ones who stayed come after, faded, under a heading that says why they are faded. They are
+   not hidden: knowing that the Forger exists and is not here is the whole of why the answer is no.
+
+   It reads S.pendingJob rather than a copy, so it is the crew as it stands at that moment —
+   hurt, paid up, grumbling, taught a new trade last week — and not a snapshot taken when the
+   job began. */
+function crewFilesHTML(){
+  const P=S&&S.pendingJob;
+  const ids=P&&P.teamIds&&P.teamIds.length?P.teamIds:null;
+  const team=ids?ids.map(byId).filter(Boolean):[];
+  const rest=crewAll().filter(c=>!ids||ids.indexOf(c.id)<0);
+  const card=c=>c.isPlayer?playerCard():memberCard(c,null,{controls:false});
+  const sec=(label,list,cls)=>list.length
+    ?'<div class="cf-h">'+label+'</div><div class="cards'+(cls?" "+cls:"")+'">'+list.map(card).join("")+'</div>':"";
+  let body,h2;
+  if(team.length){
+    const j=P.job;
+    h2="Who is standing in that room";
+    body='<div class="sel-help" style="margin:0 0 12px"><b>'+esc(j.title)+'</b> — '+esc(j.city)+', '+esc(j.country)+'. '
+        +team.length+' went'+(rest.length?'; '+rest.length+' stayed at home, and cannot be part of any answer'
+                                         :' — the whole crew, so every answer is on the table')+'.</div>'
+      +sec("On the job",team,"")
+      +sec("At home this week",rest,"away");
+  } else {
+    h2="Who you have, and what they can do";
+    body='<div class="cards">'+crewAll().map(card).join("")+'</div>';
+  }
+  const head='<div class="modal-h"><div><div class="qrh-h"><span class="logo">THE CREW</span>'
+    +'<span class="kicker">The files · press <b>C</b> anywhere, or <b>1</b> over a decision</span></div>'
+    +'<h2 style="font-size:20px;margin-top:6px">'+h2+'</h2></div>'
+    +'<button class="x" data-act="crew-files-close" aria-label="Close">✕</button></div>';
+  const foot='<span class="qrh-p" style="margin:0;flex:1;min-width:200px">The same files as the Crew tab. Reading them changes nothing and costs nothing.</span>'
+    +'<button class="btn" data-act="crew-files-close">Close</button>';
+  return '<div class="above cfiles"><div class="scrim" data-act="crew-files-close">'
+    +'<div class="modal" role="dialog" aria-modal="true" aria-label="Your crew\'s files">'
+    +head+'<div class="modal-b">'+body+'</div><div class="modal-f">'+foot+'</div></div></div></div>';
+}
 // The two things the card needs that the game says in prose elsewhere: the name of a ranking at a
 // given number, and who each experience rank will sign with.
 function rankNameAt(n){const r=RANKS.find(x=>n>=x[0]);return r?r[1]:RANKS[RANKS.length-1][1];}
@@ -7298,7 +7371,7 @@ function repSignWord(exp){
 
 /* ------------------------------ THE OFFICE ---------------------------- */
 // Pause and settings, drawn as the boss's office. Every object on the desk does something.
-const UI={office:false,hold:false,panel:null,confirmNew:false,info:false,qrh:false,found:null,confirmDissolve:null,confirmDrop:null,scrollBack:null,impInfo:null,impRaw:""};
+const UI={office:false,hold:false,panel:null,confirmNew:false,info:false,qrh:false,crew:false,found:null,confirmDissolve:null,confirmDrop:null,scrollBack:null,impInfo:null,impRaw:""};
 function chrome(){
   return '<div id="tipbox" role="tooltip" hidden></div>'
     +'<button class="totop" data-act="to-top" aria-label="Back to the top" title="Back to the top">↑</button>'
@@ -7307,6 +7380,7 @@ function chrome(){
     +(UI.office?officeHTML():"")
     +(UI.info?infoHTML():"")
     +(UI.qrh?qrhHTML():"")
+    +(UI.crew&&S?crewFilesHTML():"")
     +(TUT.on&&S&&!S.over?tutHTML():"");
 }
 /* The handbook is a separate page: every rule, number and screen in the game, with a search bar and
@@ -7641,7 +7715,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 83 · 19 September 2026";
+const BUILD="build 84 · 19 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
@@ -7675,8 +7749,10 @@ document.addEventListener("click",e=>{
   const cl=t.classList;
   if(cl.contains("btn")||cl.contains("tab")||cl.contains("jobrow")||cl.contains("genbtn")||cl.contains("burger"))sfx("click");
   switch(act){
-    case "info": UI.info=!UI.info; render(); break;
-    case "qrh": UI.qrh=!UI.qrh; UI.info=false; render(); break;
+    case "info": UI.info=!UI.info; UI.qrh=false; UI.crew=false; render(); break;
+    case "qrh": UI.qrh=!UI.qrh; UI.info=false; UI.crew=false; render(); break;
+    case "crew-files": UI.crew=!UI.crew; UI.info=false; UI.qrh=false; render(); break;
+    case "crew-files-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){UI.crew=false;render();} break;
     case "qrh-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){UI.qrh=false;render();} break;
     case "info-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){UI.info=false;render();} break;
     case "tut-start": UI.info=false; UI.office=false; UI.panel=null; tutStart("full"); break;
@@ -7684,7 +7760,7 @@ document.addEventListener("click",e=>{
     case "tut-next": if(TUT.step>=tutSteps().length-1)tutEnd(); else tutGo(TUT.step+1); break;
     case "tut-back": tutGo(TUT.step-1); break;
     case "tut-skip": tutEnd(); break;
-    case "office": UI.office=!UI.office; UI.panel=null; UI.info=false; UI.qrh=false; render(); break;
+    case "office": UI.office=!UI.office; UI.panel=null; UI.info=false; UI.qrh=false; UI.crew=false; render(); break;
     case "off-close": UI.office=false; UI.panel=null; render(); break;
     case "off-sound": SET.sound=!SET.sound; saveSettings(); if(SET.sound)sfx("open"); musicSync(); render(); break;
     case "off-music": SET.music=!SET.music; saveSettings(); musicSync(); render(); break;
@@ -7834,14 +7910,22 @@ document.addEventListener("keydown",e=>{
   userGestured=true;musicSync();
   const tag=e.target&&e.target.tagName;
   const typing=tag==="INPUT"||tag==="SELECT"||tag==="TEXTAREA";
-  if(!typing&&(e.key==="i"||e.key==="I")&&!e.ctrlKey&&!e.metaKey&&!e.altKey){UI.info=!UI.info;UI.qrh=false;render();return;}
+  if(!typing&&(e.key==="i"||e.key==="I")&&!e.ctrlKey&&!e.metaKey&&!e.altKey){UI.info=!UI.info;UI.qrh=false;UI.crew=false;render();return;}
   // The quick reference opens over anything — including a twist waiting for an answer, which is
   // the moment it is most wanted. Q from anywhere; 5 is the same key as the tab it sits on, and
   // is not gated the way the other four are, because it is not a tab.
-  if(!typing&&(e.key==="q"||e.key==="Q"||e.key==="5")&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&S&&!S.over){UI.qrh=!UI.qrh;UI.info=false;render();return;}
-  if(!typing&&!UI.office&&!UI.info&&!UI.qrh&&S&&!S.over&&!S.modal&&"1234".includes(e.key)&&e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){S.tab=["crew","jobs","roster","log"][+e.key-1];render();window.scrollTo(0,0);return;}
+  if(!typing&&(e.key==="q"||e.key==="Q"||e.key==="5")&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&S&&!S.over){UI.qrh=!UI.qrh;UI.info=false;UI.crew=false;render();return;}
+  /* C is the crew, from anywhere — including a twist waiting for an answer, which is the moment
+     the files are actually wanted. And 1 means the crew too: with nothing over the screen that is
+     the Crew tab, and over a decision the tab cannot be reached, so it is the same files in the
+     only form a decision leaves room for. One meaning, two shapes, rather than a key that does
+     nothing in the half of the game where you need it most. */
+  if(!typing&&(e.key==="c"||e.key==="C")&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&S&&!S.over){UI.crew=!UI.crew;UI.info=false;UI.qrh=false;render();return;}
+  if(!typing&&e.key==="1"&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&S&&!S.over&&S.modal){UI.crew=!UI.crew;UI.info=false;UI.qrh=false;render();return;}
+  if(!typing&&!UI.office&&!UI.info&&!UI.qrh&&!UI.crew&&S&&!S.over&&!S.modal&&"1234".includes(e.key)&&e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){S.tab=["crew","jobs","roster","log"][+e.key-1];render();window.scrollTo(0,0);return;}
   if(e.key==="Escape"){
     if(UI.qrh){UI.qrh=false;render();}
+    else if(UI.crew){UI.crew=false;render();}
     else if(UI.info){UI.info=false;render();}
     else if(TUT.on){tutEnd();}
     else if(UI.panel){UI.panel=null;render();}
