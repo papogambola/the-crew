@@ -99,26 +99,47 @@
   .tab.qrh.on{color:var(--ink);border-color:var(--stamp)}
 
   /* ---- the quick reference: the part of the handbook you need mid-decision ---- */
-  .qrh .modal{max-width:1120px}
+  /* You read this one in the middle of a decision, which is the whole point of it, so it cannot be
+     a thing you scroll: all twelve sections are on the screen at once. How much screen there is is
+     the player's business and not knowable from here, so the card takes the window, fills it with
+     as many columns as fit, and then fitQRH() sizes the type down until the last section is above
+     the fold. One knob does that — --qs — which is why everything below is measured in em and not
+     in pixels. Same argument as fitTitle() and syncTopbarH(): read the number, don't assume it. */
+  /* Every margin here is spent on type: the whole card is one screen's worth of height, so a
+     tenth of an em of padding on a row is a tenth of an em off the size of every word on it,
+     ninety-five rows over. Measured rather than chosen — packing it this tight is worth about
+     17% on the type, which is the difference between eight and a half and seven. */
+  .qrh .modal{max-width:calc(100vw - 24px);height:calc(100vh - 24px)}
+  .qrh .modal-h{padding:6px 12px}
+  .qrh .modal-f{padding:6px 12px}
   .qrh-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
   .qrh-h .logo{font-family:var(--f-logo);font-size:19px;letter-spacing:.14em;line-height:1}
-  .qrh-b{columns:2;column-gap:20px}
-  @media(max-width:900px){.qrh-b{columns:1}}
+  .qrh .modal-b{padding:8px 11px}
+  .qrh-b{columns:230px;column-gap:.9em;font-family:var(--f-mono);font-size:calc(11.5px * var(--qs,1))}
+  /* A section stays in one column. Letting them run over a break packs about 7% more type in —
+     it was tried, measured and thrown away, because the half that lands in the next column
+     arrives with no heading over it: a reader glancing at that column gets fourteen trades with
+     nothing saying they are the specialists. On a card whose whole job is being glanced at, a
+     ragged foot on a column is the cheaper fault. */
   .qrh-s{break-inside:avoid;page-break-inside:avoid;border:1px solid var(--line-2);background:var(--card);
-    padding:9px 11px 10px;margin:0 0 12px}
-  .qrh-s h3{font-family:var(--f-disp);text-transform:uppercase;letter-spacing:.1em;font-size:12.5px;
-    margin:0 0 7px;display:flex;align-items:baseline;gap:7px}
-  .qrh-s h3 .qrh-n{font-family:var(--f-mono);font-size:10px;color:var(--stamp);letter-spacing:.06em;flex:none}
-  .qrh-r{display:grid;grid-template-columns:minmax(74px,auto) 1fr;gap:4px 9px;
-    font-family:var(--f-mono);font-size:11.5px;line-height:1.45;padding:2px 0;border-top:1px solid var(--line)}
+    padding:.55em .75em .62em;margin:0 0 .7em}
+  .qrh-s h3{font-family:var(--f-disp);text-transform:uppercase;letter-spacing:.1em;font-size:1.09em;
+    line-height:1.1;margin:0 0 .45em;display:flex;align-items:baseline;gap:.61em}
+  .qrh-s h3 .qrh-n{font-family:var(--f-mono);font-size:.8em;color:var(--stamp);letter-spacing:.06em;flex:none}
+  /* The label column is left to find its own width. Capping it was tried and measured: it squeezes
+     the text beside it into more lines than the cap saves, and comes out 4% smaller. */
+  .qrh-r{display:grid;grid-template-columns:minmax(6.4em,auto) 1fr;gap:.22em .7em;
+    font-family:var(--f-mono);font-size:1em;line-height:1.34;padding:.1em 0;border-top:1px solid var(--line)}
   .qrh-r:first-of-type{border-top:0}
   .qrh-r .qa{font-weight:700;color:var(--ink)}
   .qrh-r .qb{color:var(--ink-2)}
   .qrh-r .qb b{color:var(--ink)}
+  /* the plain 11.5px is for the one of these that lives in the footer, outside the scaled body */
   .qrh-p{font-family:var(--f-mono);font-size:11.5px;line-height:1.5;color:var(--ink-2);margin:0 0 6px}
+  .qrh-b .qrh-p{font-size:1em;line-height:1.38;margin:0 0 .4em}
   .qrh-p:last-child{margin-bottom:0}
   .qrh-p b{color:var(--ink)}
-  .qrh-list{font-family:var(--f-mono);font-size:11.5px;line-height:1.55;color:var(--ink-2)}
+  .qrh-list{font-family:var(--f-mono);font-size:1em;line-height:1.42;color:var(--ink-2)}
 
   .panel{background:var(--card);border:1px solid var(--line-2);box-shadow:var(--shadow)}
   .panel-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
@@ -3611,7 +3632,7 @@ function yrs(n){return n===1?"1 yr":n+" yrs";}
 const root=document.getElementById("root");
 let draft=null;
 function render(){
-  if(!S){musicRoute();root.innerHTML=screenTitle()+chrome();bind();fitTitle();return;}
+  if(!S){musicRoute();root.innerHTML=screenTitle()+chrome();bind();fitTitle();fitQRH();return;}
   // a milestone reached is announced first; something that happened between jobs waits for a decision next
   checkMilestones();checkGoals();
   // Two of a trade on one crew is the consequence of the thing you just did, so it is looked
@@ -3630,7 +3651,7 @@ function render(){
     if(S.event&&!S.modal&&!S.over)S.modal={type:"event"};
   }
   musicRoute();   // after the pop-ups are decided, so the week's news is scored as it opens
-  if(S.over&&!(S.modal&&(isFeed(S.modal.type)||S.modal.type==="event"))){root.innerHTML=screenOver()+chrome();bind();return;}
+  if(S.over&&!(S.modal&&(isFeed(S.modal.type)||S.modal.type==="event"))){root.innerHTML=screenOver()+chrome();bind();fitQRH();return;}
   let body="";
   if(S.tab==="crew")body=tabCrew();
   else if(S.tab==="jobs")body=tabJobs();
@@ -3639,6 +3660,7 @@ function render(){
   root.innerHTML=topbar()+'<div class="wrap">'+tabsBar()+body+footNote()+"</div>"+(S.modal?renderModal():"")+chrome();
   bind();
   syncTopbarH();
+  fitQRH();          // after bind, because it measures what is on the screen
   syncScrolled();
   tutMark();
   tickerArm();
@@ -3680,6 +3702,27 @@ function syncTopbarH(){
     if(th)document.documentElement.style.setProperty("--tabs-h",th+"px");
   }catch(e){}
 }
+/* The quick reference is read mid-decision, so scrolling it is scrolling away the half of it you
+   were comparing against. It has to fit the window — and the window is whoever's window it is, so
+   the size is measured rather than chosen: try it full size, and if that overflows, halve the
+   difference until the largest type that still fits is found. Eight steps settle it to within a
+   third of a percent of the true answer, which is well under a pixel of type.
+
+   The floor is a floor and not a target. Below it the mono stops being readable, and a card you
+   cannot read but do not have to scroll is a worse card — so under it the scroller is still there,
+   doing what it did before. */
+function fitQRH(){
+  try{
+    const b=document.querySelector(".qrh .modal-b");if(!b)return;
+    const set=v=>b.style.setProperty("--qs",String(v));
+    const fits=()=>b.scrollHeight<=b.clientHeight+1;
+    set(1);if(fits())return;
+    let lo=0.62,hi=1;
+    for(let i=0;i<8;i++){const mid=(lo+hi)/2;set(mid);if(fits())lo=mid;else hi=mid;}
+    set(lo);
+  }catch(e){}
+}
+try{window.addEventListener("resize",fitQRH);}catch(e){}
 // Show the way up once there is a way up. Also hides it while a modal is open, because a floating
 // button over a question you have to answer is a button somebody will press by accident.
 function syncScrolled(){
@@ -7598,7 +7641,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 82 · 19 September 2026";
+const BUILD="build 83 · 19 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
