@@ -430,6 +430,19 @@ decisions at the end.
 - **Continue.** The game saves itself after every move, in the browser you play in. The title
   screen offers the saved crew first — name, week, ranking, money — and warns if the browser
   is refusing to keep saves (a private window, or site data blocked).
+- **The keys are printed on the tabs.** `1 Crew · 2 Jobs · 3 Roster · 4 Dashboard`, each wearing
+  its number as a drawn key cap (`.kcap` — thicker bottom edge, the way a key catches the light).
+  They have worked since the game was written and nothing said so, which is the same as not having
+  them.
+- **`5 QRH` — the Quick Reference Handbook.** A fifth thing on the bar that is not a tab: it opens
+  chapter 4 of the handbook — everything a crew member's file is made of — on one two-column card.
+  `Q` from anywhere, `5` from the bar, Esc to close. It is `UI.qrh`, not game state, so it draws
+  **over whatever is on screen including a twist waiting for an answer** — which is the moment it
+  is for — and closing gives the screen back untouched. `qrhHTML()` reads every figure off the
+  game's own constants (`TECHS`, `TRAITS`, `LIMITS`, `XP_STEPS`, `TUTOR`, `VET_COST`,
+  `PAID_WEEKS`…) rather than restating them: a quick reference typed by hand is wrong within a few
+  builds, and wrong at speed is worse than absent. browser56 checks the card against the code, not
+  against itself.
 - **The office.** Esc, or the three-line button top right, opens the boss's office — the
   pause and settings screen, drawn as line art you can click. The radio's SOUND switch, MUSIC
   switch and VOLUME knob, the DISPLAY monitor's brightness slider, the LANGUAGE paper, the

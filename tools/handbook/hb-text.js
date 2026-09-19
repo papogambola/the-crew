@@ -749,10 +749,19 @@ ch("controls","Controls and the file cabinet","Keys, saving, settings",[
     G.T(["Key","What it does"],[
       [m("Esc"),"The office — pause and settings. Also closes whatever is open."],
       [m("≡")+" top right","The same."],
-      [m("1")+" "+m("2")+" "+m("3")+" "+m("4"),"Crew, Jobs, Roster, Dashboard."],
+      [m("1")+" "+m("2")+" "+m("3")+" "+m("4"),"Crew, Jobs, Roster, Dashboard. Each tab wears its key, so none of this has to be found out."],
+      [m("5")+" or "+m("Q"),"The <a href=\"#qrh\">Quick Reference Handbook</a> — this chapter on one card."],
       [m("Enter")+" / "+m("Space"),"Open the posting you have selected."],
       [m("i"),"Explain whatever is on screen, and run the tutorial again."],
     ])),
+  S("qrh","The Quick Reference Handbook",
+    p("<b>QRH</b> on the tab bar, or "+m("5")+", or "+m("Q")+" from anywhere. It puts <a href=\"#people\">chapter 4</a> — everything a crew member's file is made of — on a single card: "
+      +"the five attributes, the sixteen trades and the fourteen specialists with what each leans on, experience and who will sign, knowledge, schooling, "
+      +"temperament, limits, passports, languages, what people cost, and loyalty.")
+    +p("<b>It opens over whatever you are looking at</b>, a twist waiting for an answer included — which is the moment it is for, because that is when you need to know "
+      +"which of your people can actually do the thing in front of you. Closing it gives the screen back untouched.")
+    +note("Every figure on it is read off the game's own constants rather than written out a second time. A quick reference typed by hand is wrong within a few builds, "
+      +"and wrong at speed is worse than absent.")),
   S("save","Saving",
     p("Automatic, in this browser, after everything. Settings are kept separately and survive a new game.")
     +p("A game lives in one browser only. Clear its data, play on another machine, or lose the laptop, and the crew goes with it. "
