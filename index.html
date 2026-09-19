@@ -144,7 +144,7 @@
   /* ---- the joker: one card, top right of the crew screen ---- */
   /* The heading takes the line and the card takes the corner, so the grid below starts under both
      rather than under a card floating over it. */
-  .crewtop{display:flex;gap:16px;align-items:flex-start;justify-content:space-between}
+  .crewtop{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;margin-bottom:32px}
   .crewtop-l{flex:1;min-width:0}
   .joker{flex:none;width:76px;height:107px;position:relative;border:1.25px solid var(--ink);border-radius:5px;
     background:var(--card);box-shadow:var(--shadow);cursor:pointer;overflow:hidden;
@@ -7944,7 +7944,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 90 · 19 September 2026";
+const BUILD="build 91 · 19 September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
