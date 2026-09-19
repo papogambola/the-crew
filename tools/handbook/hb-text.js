@@ -357,9 +357,9 @@ ch("crew","The crew","Places, who goes, and a second crew",[
     p("A bad night puts people in hospital or in a cell. A doctor on retainer halves the weeks of an injury; a lawyer on retainer halves the weeks of a sentence. "
       +"Somebody who comes out of a cell is back on the roster rather than on your crew, a year older, with that year on their record — and a record is what borders read.")),
   S("second","A second crew",
-    p("From two years in, with a big enough name and a full crew, you can found a second crew that works without you.")
+    p("From a year in, with a big enough name and a full crew, you can found a second crew that works without you.")
     +G.T(["Needed","Value"],[
-      ["Week","104 for the second, 156 for the third, 208 for the fourth — and no more"],
+      ["Week",D.EXTRA_CREW_WEEKS[0]+" for the second, "+D.EXTRA_CREW_WEEKS[1]+" for the third, "+D.EXTRA_CREW_WEEKS[2]+" for the fourth — and no more"],
       ["Ranking","at least "+m(D.EXTRA_CREW_REP)],
       ["Your crew","full — all "+m(D.CREW_MAX_SEATS)+" soldiers plus you"],
       ["Among them","a commander type, and "+m(D.EXTRA_CREW_SIZE)+" ready to go"],

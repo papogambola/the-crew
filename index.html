@@ -567,7 +567,9 @@
   .strip{border:1px solid var(--line-2);background:var(--card);margin-bottom:14px;box-shadow:var(--shadow)}
   .strip-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
   .strip-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;padding:10px 12px}
-  .smc{display:flex;gap:8px;align-items:flex-start;padding:6px;border:1px solid var(--line);background:var(--paper)}
+  .smc{display:flex;gap:8px;align-items:flex-start;padding:6px;border:1px solid var(--line);background:var(--paper);
+    text-align:left;font:inherit;color:inherit;cursor:pointer}
+  .smc:hover,.smc:focus-visible{border-color:var(--ink);background:var(--card)}
   .smc.out{opacity:.55}
   .sm-av{width:34px;height:41px;flex:none;border:1px solid var(--ink);background:#fff}
   .sm-b{min-width:0;flex:1;font-family:var(--f-mono);font-size:10.5px;line-height:1.45;color:var(--ink-2)}
@@ -1381,7 +1383,17 @@ function field(){return crewAll().filter(c=>c.status==="crew");}
 // Places on your crew come with the name; other crews come with the years.
 const CREW_MAX_SEATS=6;                 // six soldiers, plus you
 const EXTRA_CREW_SIZE=5;                // a commander and four soldiers
-const EXTRA_CREW_WEEKS=[104,156,208];   // two, three and four years in — and no more
+/* When each further crew becomes possible: a year in for the second, then year three and year
+   four — and no more. One list, and every screen that says it out loud reads it from here rather
+   than printing the number again, because it has been written out by hand in six places before
+   now and those copies are what go stale. */
+const EXTRA_CREW_WEEKS=[52,156,208];
+// "a year in" / "two years in" — a week count said the way somebody would say it, so a threshold
+// of 52 does not come out as "1 years in".
+function yearsIn(week){
+  const y=Math.round(week/52);
+  return y===1?"a year":(["","one","two","three","four","five","six"][y]||y)+" years";
+}
 const EXTRA_CREW_REP=80;                // Feared
 function crewSeats(){return rankInfo(S.rep).seats;}
 // Which name opens the last two places, read off the ladder rather than written into the copy —
@@ -1713,7 +1725,7 @@ function checkMilestones(){
   const M=S.milestones;
   const push=(k,n)=>{if(M[k])return;M[k]=true;S.notices.push(n);logMsg(n.h+" — "+n.text,"good",true);};
   if(crewSeats()>=CREW_MAX_SEATS)push("seats6",{k:"Milestone · "+rankName(S.rep),h:"Two more seats",
-    text:"The name is "+rankName(S.rep)+". Places six and seven are open: six soldiers, and you. Fill them from the roster — and from week 104, Feared, with all seven on the crew, you can found a second crew that works without you.",go:"roster",goText:"To the roster →"});
+    text:"The name is "+rankName(S.rep)+". Places six and seven are open: six soldiers, and you. Fill them from the roster — and from week "+EXTRA_CREW_WEEKS[0]+", Feared, with all seven on the crew, you can found a second crew that works without you.",go:"roster",goText:"To the roster →"});
   if(crewSeats()>=CREW_MAX_SEATS)push("bigops",{k:"Milestone · "+rankName(S.rep),h:"Work that needs seven",
     // No stock counts. How many of these exist and how many specialists are on the roster is the
     // size of a table, not a thing the player does anything with — and a number that large reads
@@ -1721,18 +1733,18 @@ function checkMilestones(){
     text:"Seven places is what the ultra-complex operations ask for — deep water, air lifts, high rises, tunnels, blackouts, long cons, lab work and whole ledgers — each wanting six or seven in the field, three to five trades and two or three kinds of knowledge. They are not on the ordinary board and no rival can take one; one or two stand on it at a time, by name, and each is spent when it is run. They want people a five-person crew never needed: divers, pilots, skippers, drone specialists, climbers, tunnellers, chemists, medics, electricians, signals, analysts, quartermasters, linguists and handlers — and the roster is full of them.",go:"jobs",goText:"To the board →"});
   const fr=foundingRules();
   if(fr.more){
-    const n=fr.n+2,ord=["","","second","third","fourth"][n],years=fr.week/52;
+    const n=fr.n+2,ord=["","","second","third","fourth"][n],years=yearsIn(fr.week);
     if(canFound()){
       M["year"+n]=true;
       push("found"+n,{k:"Milestone · week "+S.week+" · "+rankName(S.rep),h:"A "+ord+" crew",
-        text:years+" years in, "+rankName(S.rep)+", seven on the crew. You can found a "+ord+" crew: a commander-type and four soldiers out of your seven, named after its commander, taking a job of its own each week without you. Its take, its heat and its ranking are yours — and so is its payroll.",go:"found",goText:"Found a crew →"});
+        text:cap(years)+" in, "+rankName(S.rep)+", seven on the crew. You can found a "+ord+" crew: a commander-type and four soldiers out of your seven, named after its commander, taking a job of its own each week without you. Its take, its heat and its ranking are yours — and so is its payroll.",go:"found",goText:"Found a crew →"});
     } else if(fr.weekOk){
       const need=[];
       if(!fr.repOk)need.push("a Feared name (ranking "+fr.rep+", now "+S.rep+")");
       if(!fr.full)need.push("seven on your crew (now "+(1+recruits().length)+")");
       if(!fr.cmdr)need.push("a commander-type among them");
       if(!fr.ready)need.push("five ready to go");
-      push("year"+n,{k:"Milestone · week "+fr.week,h:years+" years in",
+      push("year"+n,{k:"Milestone · week "+fr.week,h:cap(years)+" in",
         text:"A "+ord+" crew is within reach: a commander and four soldiers out of your seven, working without you, from the same board. Still needed: "+need.join("; ")+". The Crew tab keeps the list.",go:"crew",goText:"To the crew →"});
     }
   }
@@ -2522,6 +2534,28 @@ function fill2(s,v){return String(s).replace(/\{(\w+)\}/g,(_,k)=>v[k]!==undefine
 // A draw that remembers: the last sixty lines drawn anywhere stay out of the pool, so a line read
 // on this trip is not read on the next. The report does the same inside narrate().
 function freshPick(rng,pool){S.recent=S.recent||[];const key=p=>typeof p==="string"?p:p[0];let cand=pool.filter(p=>!S.recent.includes(key(p)));if(!cand.length)cand=pool;const pk=pick(rng,cand);S.recent.push(key(pk));if(S.recent.length>60)S.recent.shift();return pk;}
+/* A line that plants a flag in the day — "over breakfast", "tonight", "the night shift" — has to
+   agree with the clock printed beside it. There are thirty pools with lines like that in them, so
+   rather than split every one of them by hand the way the twist pools are split, one filter sits
+   at the single place every line is drawn. It reads the sentence, not a tag, because a tag on a
+   thousand strings is a thousand chances to forget one.
+
+   It only ever removes candidates. If it empties a pool the pool is used whole, because a line
+   repeated is a smaller fault than a gap in the report — and the same reason the bands are drawn
+   a little inside the edges: the clock is a few minutes further on by the time the line is
+   stamped, and 17:50 is not worth arguing about. */
+const SAYS_NIGHT=/\btonight\b|\bmidnight\b|\bdusk\b|\bnightfall\b|\ball[- ]night\b|\bat night\b|\bthe night\b(?! before)|\bnight (?:shift|porter|manager|watchman|bus|ferry|market|train)\b|\b(?:one|two|three|four) in the morning\b/i;
+const SAYS_DAY=/\bbreakfast\b|\blunch(?:time)?\b(?!-)|\bnoon\b|\bmidday\b|\bafternoon\b|\bdaylight\b|\bday shift\b|\bdaytime\b/i;
+// One definition of night in the whole game, and one of day. They are not each other's negation:
+// half past five in the evening is neither "tonight" nor "over breakfast", and a line that names
+// either is simply not offered then.
+function isNight(h){return h>=18||h<6;}         // when "tonight" is true
+function isDay(h){return h>=6&&h<17;}           // when "over breakfast" is true
+function fitsHour(s,h){
+  if(SAYS_NIGHT.test(s))return isNight(h);
+  if(SAYS_DAY.test(s))return isDay(h);
+  return true;                                  // says nothing about the hour, so any hour will do
+}
 // The report in two halves: "pre" is the arrival and the plan, "post" is the work and what it cost.
 // A twist can sit between them. The clock carries over.
 function narrate(job,a,tier,rng,x,mode,clock){
@@ -2531,13 +2565,23 @@ function narrate(job,a,tier,rng,x,mode,clock){
   let h=clock?clock.h:(job.tags.includes("night")?ri(rng,20,23):ri(rng,7,15)),m=clock?clock.m:ri(rng,0,59);
   const lines=[];
   const stood=[];                                 // {id,k}: who learned a trade the crew hasn't got
+  /* The feed's clock. Everything printed against it has to be true at that hour, which is the
+     whole of why the aftermath rolls the day over: "By morning the police have a description"
+     stamped 17:00 the same evening is the report contradicting itself in two adjacent columns. */
+  let over=false;                                  // past midnight, into the morning after
   const push=(t,tone,at,who,act)=>{m+=ri(rng,4,26);if(m>=60){m-=60;h=(h+1)%24;}
-    const L={t:String(h).padStart(2,"0")+":"+String(m).padStart(2,"0"),x:t,tone:tone||""};
+    const L={t:(over?"NEXT ":"")+String(h).padStart(2,"0")+":"+String(m).padStart(2,"0"),x:t,tone:tone||""};
     if(at)L.at=at;if(who)L.who=who;if(act)L.act=act;
     lines.push(L);};
   S.recent=S.recent||[];
   const key=p=>typeof p==="string"?p:p[0];
-  const fresh=pool=>{let cand=pool.filter(p=>!S.recent.includes(key(p)));if(!cand.length)cand=pool;const pk=pick(rng,cand);S.recent.push(key(pk));if(S.recent.length>60)S.recent.shift();return pk;};
+  const both=p=>typeof p==="string"?p:p.join(" ");   // a pair says the same thing twice; test both
+  // Two filters, in order of how much they matter: a line that contradicts the clock is wrong, a
+  // line read last week is only stale. Either may be given up if it leaves nothing to say.
+  const fresh=pool=>{
+    let cand=pool.filter(p=>fitsHour(both(p),h));if(!cand.length)cand=pool;
+    const unread=cand.filter(p=>!S.recent.includes(key(p)));if(unread.length)cand=unread;
+    const pk=pick(rng,cand);S.recent.push(key(pk));if(S.recent.length>60)S.recent.shift();return pk;};
   const pair=(p,c)=>typeof p==="string"?p:(c&&c.isPlayer?p[1]:p[0]);
   const nm=c=>c.isPlayer?"You":c.first;
   const say=(pool,c,vars,tone,at,act)=>push(fill2(pair(fresh(pool),c),Object.assign({X:c?nm(c):"",P:cap(police(co))},vars||{})),tone,at||(c?techSite(c.tech):null),c?c.id:null,act);
@@ -2591,6 +2635,9 @@ function narrate(job,a,tier,rng,x,mode,clock){
     }
     if(x.leaked){push("Someone talked. "+cap(police(co))+" were waiting two streets away.","bad","exit","*");lines[lines.length-1].siren=true;}
     (x.fallout||[]).forEach(e=>{push(e,"bad","exit",null,"down");if(/ is arrested /.test(e))lines[lines.length-1].siren=true;});
+    // From here it is the morning after: what the police have, what the papers say, what the
+    // client pays. These lines have always talked about morning; now the clock agrees with them.
+    over=true;h=ri(rng,5,9);m=ri(rng,0,45);
     if(x.heatGain>0)push(fill2(fresh(MORNING),{P:cap(police(co)),p:police(co),thing:fresh(THINGS),n:x.heatGain}),x.heatGain>=20?"warn":"");
     else if(chance(rng,0.5))push(fresh(QUIET));
     if(x.take>0)push(fill2(fresh(SPLIT),{g:money(x.take),c:money(x.cuts),n:money(x.net)}),"good");
@@ -2604,19 +2651,42 @@ function narrate(job,a,tier,rng,x,mode,clock){
 // Mid-job: the report stops, six options, one sets the crew free — the one the crew you
 // brought can actually do. Wrong calls cost time, money, blood or a place.
 // The line that stops the feed before a twist. One of these, chosen with the twist.
-const TWIST_CUE=["Then it goes wrong.","And then it doesn't go to plan.","Then, the thing nobody drew.","Then the night turns.","And then a problem.","Then something the file didn't have.","Then it stops being simple.","Then the part nobody rehearsed."];
+/* A job can run at eleven in the morning. Half these lines used to call it "the night" anyway,
+   and the feed printed them against a clock reading 14:56 — the words and the time in adjacent
+   columns, disagreeing. The filter in narrate() would drop the night ones at eleven, but dropping
+   is only half of it: the dark is worth saying something about, so these are kept apart and added
+   to the pool when isNight() says they are true. */
+const TWIST_CUE=["Then it goes wrong.","And then it doesn't go to plan.","Then, the thing nobody drew.","And then a problem.","Then something the file didn't have.","Then it stops being simple.","Then the part nobody rehearsed.","Then the hour turns."];
+const TWIST_CUE_NIGHT=["Then the night turns.","Then the dark stops helping."];
 // And the line for a second or third one on the same night, which is a different sentence: the
 // crew has already had one of these and is still standing in the same room.
 // None of these may say WHICH one it is or how many are left. "And then the second one" numbers
 // it; "the room has one more in it" and "the other shoe" both promise exactly one more and no
 // further. The screen stopped counting, so the prose cannot count either — and not knowing
 // whether this is the last of it is the point.
-const TWIST_AGAIN=["Then it goes wrong again.","And it is not finished with you.","Then the night finds something else.","And then another.","Then the next thing.","And the room is not done with you.","Then it goes wrong in a new direction.","And there is more of it."];
+const TWIST_AGAIN=["Then it goes wrong again.","And it is not finished with you.","And then another.","Then the next thing.","And the room is not done with you.","Then it goes wrong in a new direction.","And there is more of it.","And the hour is not done either."];
+const TWIST_AGAIN_NIGHT=["Then the night finds something else.","And the night is not finished with you."];
 // The beat between two of them. Without it the second question arrives on the heels of the first
 // answer and the whole thing reads as one screen asked twice.
 const TWIST_BETWEEN=["That holds. For about four minutes.","The crew move again. Nobody says anything.","It settles. The clock does not.",
-  "Everyone breathes out. Too early.","That is dealt with, and the night carries on.","Back to it, one problem lighter.",
+  "Everyone breathes out. Too early.","That is dealt with, and the job carries on.","Back to it, one problem lighter.",
   "The plan, what is left of it, resumes.","It works. The room is still the room."];
+const TWIST_BETWEEN_NIGHT=["That is dealt with, and the night carries on.","The night gives you four minutes. It is not generous."];
+// One place decides which pool a line comes out of, and the hour decides the pool.
+function twistLines(pool,h){
+  const night={TWIST_CUE:TWIST_CUE_NIGHT,TWIST_AGAIN:TWIST_AGAIN_NIGHT,TWIST_BETWEEN:TWIST_BETWEEN_NIGHT};
+  const base={TWIST_CUE:TWIST_CUE,TWIST_AGAIN:TWIST_AGAIN,TWIST_BETWEEN:TWIST_BETWEEN}[pool];
+  return isNight(h)?base.concat(night[pool]):base;
+}
+// The feed's clock, advanced one line's worth. The twist block runs on the same clock as the
+// story around it — it used to have no time at all, so the night stopped for it and started again
+// twenty minutes later with no account of where the time went.
+function stepClock(clock,rng){
+  if(!clock)return "— —";
+  clock.m+=ri(rng,4,26);
+  if(clock.m>=60){clock.m-=60;clock.h=(clock.h+1)%24;}
+  return String(clock.h).padStart(2,"0")+":"+String(clock.m).padStart(2,"0");
+}
 /* Money changes what a night is. Under this, a job is one room and at most one thing that goes
    wrong in it. Over it, there is enough moving — more people, more doors, more of somebody else's
    money — that two things go, and sometimes three. Which is the point of it rather than a tax: two
@@ -2652,7 +2722,7 @@ const TWISTS=[
    opts:[
     {t:"Go down through the ceiling",req:{tech:["demolitions"]},pri:1,ok:"{X} measures twice and the ceiling opens like a door. Clear.",slow:"{X} makes a hole. It takes longer than a door would have.",bad:"Nobody knows how. You make noise and a hole in the wrong place.",wrong:{dm:-18,hurt:1,heat:10}},
     {t:"Pull the new plan from the manager's terminal",req:{tech:["hacker"]},pri:2,ok:"{X} has this year's plan in four minutes. Clear.",slow:"{X} finds the plan. Eleven minutes of the clock gone.",bad:"Nobody can get into the terminal. You guess.",wrong:{dm:-16,hurt:1,heat:8}},
-    {t:"Walk into the manager's office and ask",req:{tech:["face","grifter","infiltrator"]},pri:3,ok:"{X} asks a night manager for directions and gets them, with a coffee. Clear.",slow:"{X} gets directions, and a manager who remembers a face.",bad:"Nobody on the crew can bluff a manager. Security is called.",wrong:{dm:-22,jail:1,heat:12}},
+    {t:"Walk into the manager's office and ask",req:{tech:["face","grifter","infiltrator"]},pri:3,ok:"{X} asks the duty manager for directions and gets them, with a coffee. Clear.",slow:"{X} gets directions, and a manager who remembers a face.",bad:"Nobody on the crew can bluff a manager. Security is called.",wrong:{dm:-22,jail:1,heat:12}},
     {t:"Try every door on the floor",req:{tech:["safecracker"]},pri:4,ok:"{X} opens six doors in eleven minutes; the seventh is the one. Clear.",slow:"{X} opens doors until the right one. The clock nearly runs out.",bad:"Six locked doors and nobody who can open them.",wrong:{dm:-18,heat:8}},
     {t:"Split up and search",pri:9,bad:"Four people on four floors. One of them meets a guard.",wrong:{dm:-26,jail:1,heat:12}},
     {t:"Abort — out the way you came",pri:5,fallback:true,lose:1,bad:"You leave by the way you came, past a ceiling somebody could have opened. Empty-handed, and seen on the stairs.",ok:"You leave with nothing and with everyone."},
@@ -2760,7 +2830,7 @@ const TWISTS=[
   {k:"boat",cats:["smuggling","extraction","recovery","escort"],h:"The boat isn't there",
    s:["The quay is empty. The boat that was to be here at two is not here at two, or at half past.","The mooring is bare rope and a gull. No boat, no message, and a tide that will not wait.","There is a boat at the quay. It is the wrong boat, and its crew is asleep and not yours."],
    opts:[
-    {t:"The skipper finds another way off the water",req:{tech:["skipper","diver"]},pri:1,ok:"{X} knows a fisherman two coves along who owes something. You are at sea by three. Clear.",slow:"{X} finds a boat. It is slower and smaller, and it is nearly dawn when it leaves.",bad:"Nobody knows the coast. You stand on a quay waiting for a boat that has been sold.",wrong:{dm:-22,jail:1,heat:12}},
+    {t:"The skipper finds another way off the water",req:{tech:["skipper","diver"]},pri:1,ok:"{X} knows a fisherman two coves along who owes something. You are at sea by three. Clear.",slow:"{X} finds a boat. It is slower and smaller, and it is hours late when it leaves.",bad:"Nobody knows the coast. You stand on a quay waiting for a boat that has been sold.",wrong:{dm:-22,jail:1,heat:12}},
     {t:"The smuggler's man with a truck",req:{tech:["smuggler","fixer"]},pri:2,ok:"{X} makes a call. A truck comes instead of a boat; the border it crosses is a different one. Clear.",slow:"{X} finds a truck. It is a long drive and a nervous driver.",bad:"Nobody has a man with a truck. You are on foot on a coast road at three in the morning.",wrong:{dm:-20,jail:1,heat:12}},
     {t:"The pilot's strip up the coast",req:{tech:["pilot"]},pri:3,ok:"{X} has a strip forty minutes north and a plane that will start. Clear.",slow:"{X} gets you airborne. Late, and low on fuel.",bad:"Nobody flies. The sea stays the only way out, and there is no boat on it.",wrong:{dm:-20,jail:1,heat:10}},
     {t:"Wait on the quay",pri:9,bad:"The boat doesn't come. A patrol launch does.",wrong:{dm:-28,jail:1,heat:16}},
@@ -2795,8 +2865,9 @@ function reqMet(req,team){
   return false;
 }
 function reqWho(req,team){return team.find(c=>(req.tech&&req.tech.includes(c.tech))||(req.know&&req.know.some(k=>c.know.includes(k))))||null;}
-function makeTwist(job,team,rng,used){
+function makeTwist(job,team,rng,used,hour){
   used=used||{};
+  if(hour==null)hour=job.tags&&job.tags.includes("night")?21:12;
   // Never the same thing twice on one night — "the engine won't turn" happening again an hour
   // later is not a second twist, it is the first one with the serial numbers filed off.
   let pool=TWISTS.filter(t=>t.cats.includes(job.cat)&&!used[t.k]);
@@ -2810,7 +2881,7 @@ function makeTwist(job,team,rng,used){
   for(let i=opts.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));const tmp=opts[i];opts[i]=opts[j];opts[j]=tmp;}
   const nth=Object.keys(used).length;
   return {k:T.k,h:fill2(T.h,sub),s:fill2(pick(rng,[].concat(T.s)),sub),
-    cue:pick(rng,nth?TWIST_AGAIN:TWIST_CUE),opts,mId:M?M.id:null};
+    cue:pick(rng,twistLines(nth?"TWIST_AGAIN":"TWIST_CUE",hour)),opts,mId:M?M.id:null};
 }
 /* How many things go wrong on this night, and which. Over BIG_MONEY it is two, sometimes three,
    always — that is what the money is for. Under it, the old odds: usually none, more often on a job
@@ -2820,10 +2891,10 @@ function twistCount(job,a,team,rng){
   const p=(a.margin>=10?0.25:0.08)+(team.some(c=>hasTrait(c,"jinx"))?0.12:0);
   return chance(rng,p)?1:0;
 }
-function makeTwists(job,team,rng,n){
+function makeTwists(job,team,rng,n,hour){
   const out=[],used={};
   for(let i=0;i<n;i++){
-    const tw=makeTwist(job,team,rng,used);
+    const tw=makeTwist(job,team,rng,used,hour);
     if(!tw)break;
     used[tw.k]=1;out.push(tw);
   }
@@ -2860,10 +2931,14 @@ function twistResolve(tw,idx,team){
   const w=o.req?reqWho(o.req,team):null;
   const M=tw.mId?byId(tw.mId):null;
   const v={X:w?(w.isPlayer?"You":w.first):"Someone",M:M?M.first:"one of the crew"};
-  if(idx===correct)return {free:true,correct,dm:0,hurt:0,jail:0,heat:0,lose:o.fallback?(o.lose||0):0,text:fill2(o.ok,v),rank:o.fallback?["Walked away in one piece",1]:["Cool under pressure",3]};
-  if(o.req&&reqMet(o.req,team))return {free:false,correct,dm:-8,hurt:0,jail:0,heat:6,lose:o.lose||0,text:fill2(o.slow||o.ok,v),rank:["The slow call",-2]};
+  // These answers are written about somebody by name. When that somebody is you, the subject
+  // becomes "You" and the verb has to come with it — otherwise the report says "You is the
+  // contractor from the lift company".
+  const line=t=>youGrammar(fill2(t,v));
+  if(idx===correct)return {free:true,correct,dm:0,hurt:0,jail:0,heat:0,lose:o.fallback?(o.lose||0):0,text:line(o.ok),rank:o.fallback?["Walked away in one piece",1]:["Cool under pressure",3]};
+  if(o.req&&reqMet(o.req,team))return {free:false,correct,dm:-8,hurt:0,jail:0,heat:6,lose:o.lose||0,text:line(o.slow||o.ok),rank:["The slow call",-2]};
   const wr=o.wrong||{dm:-16,hurt:1,heat:8};
-  return {free:false,correct,dm:wr.dm,hurt:wr.hurt||0,jail:wr.jail||0,heat:wr.heat||0,lose:wr.lose||0,text:fill2(o.bad||"It goes wrong.",v),rank:["The wrong call",-4]};
+  return {free:false,correct,dm:wr.dm,hurt:wr.hurt||0,jail:wr.jail||0,heat:wr.heat||0,lose:wr.lose||0,text:line(o.bad||"It goes wrong."),rank:["The wrong call",-4]};
 }
 
 /* ------------------------------ THE JOB ------------------------------- */
@@ -2883,13 +2958,17 @@ function startJob(job,opts){
   if(hasMole&&chance(rng,0.55)){roll-=16;leaked=true;}
   const pre=narrate(job,a,0,rng,{},"pre",null);
   const canTwist=!opts.noTwist&&!cr&&!job.final&&team.length>=2;
-  const twists=canTwist?makeTwists(job,team,rng,twistCount(job,a,team,rng)):[];
+  const twists=canTwist?makeTwists(job,team,rng,twistCount(job,a,team,rng),pre.clock.h):[];
   const twist=twists[0]||null;
   const P={jobId:job.id,job:Object.assign({},job),roll,leaked,teamIds:team.map(c=>c.id),pre:pre.lines,clock:pre.clock,stood:pre.stood,prep:casedWeeks(job),postSeed:ri(rng,1,2000000000),twists,answers:[],bridges:[],week:S.week,
     crewId:cr?cr.id:null,crewName:cr?cr.name:null,leadId:cr?cr.leadId||null:null,memberIds:members?members.map(c=>c.id):null};
   S.pendingJob=P;
   const d={id:job.id+"-w"+S.week+(cr?"-c"+cr.id:""),week:S.week,job:P.job,crew:P.crewName,narrative:pre.lines.slice(),revealed:0,done:false,twist:twist?{h:twist.h,s:twist.s,opts:twist.opts.map(o=>o.t)}:null,twistNo:twists.length?1:0,twistOf:twists.length,awaiting:false,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}};
-  if(twist)d.narrative.push({t:"— —",x:twist.cue||"Then it goes wrong.",tone:"bad",twist:true});
+  // The twist block runs on the same clock as the story around it, and the times are recorded on
+  // P as they are made, because finishJob rebuilds this narrative later and it has to come out as
+  // the night the player actually watched rather than a fresh roll of the dice.
+  if(twist){P.twistAt=[{cue:stepClock(P.clock,rng)}];
+    d.narrative.push({t:P.twistAt[0].cue,x:twist.cue||"Then it goes wrong.",tone:"bad",twist:true});}
   else finishJob(P,null,d);
   save();
   return d;
@@ -2912,7 +2991,11 @@ function finishJob(P,choiceIdx,d){
     const r=twistResolve(tw,answers[i],team);
     dm+=r.dm;twHurt+=r.hurt;twJail+=r.jail;twHeat+=r.heat;twKeep*=(1-(r.lose||0));
     if(r.rank)twRanks.push(r.rank);
-    twLines[i]={t:"— —",x:r.text,tone:r.free?"good":"bad"};
+    // The last one's outcome is only known here, so it is stamped here — on the same clock, so
+    // the post-report that follows carries on from after it rather than from before the twist.
+    P.twistAt=P.twistAt||[];P.twistAt[i]=P.twistAt[i]||{};
+    if(!P.twistAt[i].out)P.twistAt[i].out=stepClock(P.clock,rng);
+    twLines[i]={t:P.twistAt[i].out,x:r.text,tone:r.free?"good":"bad"};
     twRecs.push({h:tw.h,s:tw.s,chosen:tw.opts[answers[i]].t,correct:tw.opts[r.correct].t,free:r.free,why:twistWhy(tw,team)});
   });
   const twLose=Math.round((1-twKeep)*1000)/1000;
@@ -3058,7 +3141,7 @@ function finishJob(P,choiceIdx,d){
   // that carried the crew to the next one — the same bridging lines the feed showed live, kept on
   // P so the finished report is the night the player watched and not a tidier version of it.
   tws.forEach((tw,i)=>{
-    narrative.push({t:"— —",x:tw.cue||"Then it goes wrong.",tone:"bad",twist:true});
+    narrative.push({t:((P.twistAt||[])[i]||{}).cue||"— —",x:tw.cue||"Then it goes wrong.",tone:"bad",twist:true});
     if(twLines[i])narrative.push(twLines[i]);
     if(i<tws.length-1&&(P.bridges||[])[i])narrative.push((P.bridges||[])[i]);
   });
@@ -3404,11 +3487,14 @@ function load(){
       const at=Math.min(P.answers.length,Ptw.length-1);
       const team=(P.teamIds||[]).map(byId).filter(Boolean);
       const narrative=P.pre.slice();
+      // The times were written down when these lines were first shown, so a job picked up after a
+      // reload reads with the same clock on it and not a row of dashes where the night was.
+      const at_=P.twistAt||[];
       for(let i=0;i<=at;i++){
-        narrative.push({t:"— —",x:Ptw[i].cue||"Then it goes wrong.",tone:"bad",twist:true});
+        narrative.push({t:(at_[i]||{}).cue||"— —",x:Ptw[i].cue||"Then it goes wrong.",tone:"bad",twist:true});
         if(P.answers[i]!=null){
           const r=twistResolve(Ptw[i],P.answers[i],team);
-          narrative.push({t:"— —",x:r.text,tone:r.free?"good":"bad"});
+          narrative.push({t:(at_[i]||{}).out||"— —",x:r.text,tone:r.free?"good":"bad"});
           if(P.bridges[i])narrative.push(P.bridges[i]);
         }
       }
@@ -3421,7 +3507,8 @@ function load(){
     const R=S.pendingTrip;
     if(R&&R.snag&&Array.isArray(R.pre)){
       const cc=byId(R.cid);
-      const narrative=R.pre.slice();narrative.push({t:"— —",x:R.snag.h+".",tone:"bad",twist:true});
+      // the hour the trouble arrived was written down when it arrived, so this is the same week
+      const narrative=R.pre.slice();narrative.push({t:R.snagAt||"— —",x:R.snag.h+".",tone:"bad",twist:true});
       S.modal={type:"trip",data:{cid:R.cid,name:cc?cc.n:"",first:cc?cc.first:"",city:R.city,country:R.country,week:R.week,fee:R.fee,
         narrative,revealed:narrative.length,done:false,awaiting:true,resolved:false,snag:R.snag,trouble:R.trouble,outcome:null}};
     } else if(R){S.pendingTrip=null;}
@@ -3430,10 +3517,32 @@ function load(){
 }
 // Recaps written before the report spoke to the player as "you" still name the player.
 // Turn those lines to second person, verbs included, so old files read like new ones.
+/* "You is the contractor from the lift company." A twist's answers are written about a person by
+   name — "{X} is", "{X} walks" — and when the person who solves it is you, {X} becomes "You" and
+   the verb is left in the third person. The narrative never had this problem because its lines
+   come in pairs, one written each way; the twists are single strings, so the verb is conjugated
+   here instead. Same table the old-save conversion below uses, which is the same job. */
+const YOU_VERB={does:"do",knows:"know",has:"have",is:"are",owns:"own",walks:"walk",papers:"paper",makes:"make",buys:"buy",measures:"measure",lifts:"lift",counts:"count",finds:"find",brings:"bring",points:"point",improvises:"improvise",stays:"stay",talks:"talk",takes:"take",gets:"get",goes:"go",says:"say",puts:"put",runs:"run",drives:"drive",opens:"open",closes:"close",throws:"throw",pays:"pay",reads:"read",writes:"write",cuts:"cut",kills:"kill",calls:"call",waits:"wait",leaves:"leave",holds:"hold",carries:"carry",tries:"try",does_:"do"};
+function youVerb(v){
+  if(YOU_VERB[v])return YOU_VERB[v];
+  if(v.endsWith("ies"))return v.slice(0,-3)+"y";
+  // Only a real sibilant cluster takes "es": passes→pass, fixes→fix, watches→watch, washes→wash.
+  // A single s before it belongs to the stem — loses→lose, uses→use — and stripping "es" there
+  // gave "You los it in three turns and a car park."
+  if(/(?:ss|x|z|ch|sh)es$/.test(v))return v.slice(0,-2);
+  return v.endsWith("s")?v.slice(0,-1):v;
+}
+// Only at the head of a sentence, where the subject is: "You is" is a subject and a verb, and a
+// "You" further in ("annoyed at You", "asks You") is an object and must be left alone.
+function youGrammar(s){
+  return String(s)
+    .replace(/(^|[.!?] |[.!?]["’] )You (\w+)/g,(m,p,v)=>p+"You "+youVerb(v))
+    .replace(/(^|[.!?] )You['’]s /g,"$1Your ");
+}
 function migrateReports(d){
   const first=d.player&&d.player.first;if(!first||!d.reports||!d.reports.length)return;
   const V={does:"do",knows:"know",has:"have",is:"are",owns:"own",walks:"walk",papers:"paper",makes:"make",buys:"buy",measures:"measure",lifts:"lift",counts:"count",finds:"find",brings:"bring",points:"point",improvises:"improvise",stays:"stay",crosses:"cross",reads:"read",gets:"get",orders:"order",handles:"handle",learns:"learn",plays:"play",sleeps:"sleep",keeps:"keep",argues:"argue",wins:"win",listens:"listen",times:"time",ages:"age",needs:"need",stands:"stand",tests:"test",wants:"want",bumps:"bump",sits:"sit",spots:"spot",turns:"turn",books:"book",talks:"talk",takes:"take",runs:"run",watches:"watch",goes:"go"};
-  const sp=v=>V[v]||(v.endsWith("ies")?v.slice(0,-3)+"y":(/(?:[sxz]|[sc]h)es$/.test(v)?v.slice(0,-2):v.endsWith("s")?v.slice(0,-1):v));
+  const sp=v=>V[v]||youVerb(v);   // the same conjugator the twists use — it had this bug too
   const q=first.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
   const rePoss=new RegExp("(^|\\. )"+q+"['’]s ","g");
   const reOut=new RegExp("(^|\\. )"+q+" doesn['’]t come","g");
@@ -3756,8 +3865,8 @@ function tabCrew(){
     // seventh places do — a panel full of red crosses with no lock on it reads like a bug.
     const lk=canFound();
     out+='<div class="panel'+(lk?'':' locked')+'" style="margin-top:20px"><div class="panel-h"><h2>'+(fr.n?"Another crew":"A second crew")+(lk?'':' — locked')+'</h2><span class="kicker">crew '+(fr.n+2)+' of 4 at most</span></div><div class="panel-b">'
-      +'<p class="mono" style="font-size:12.5px;line-height:1.65;margin:0 0 10px">A crew of your own people — a commander and four soldiers out of your seven — that takes a job of its own each week, anywhere, without you. Its take, its heat and its ranking are yours. So is its payroll. Two years in, a second; three, a third; four, a fourth; no more.</p>'
-      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+ok(fr.weekOk,'week '+fr.week+' ('+(fr.week/52)+' years) — now week '+S.week)+ok(fr.repOk,'Feared (ranking '+fr.rep+') — now '+S.rep)+ok(fr.full,'seven on your crew — now '+(1+recruits().length))+ok(fr.cmdr,'a commander-type among them')+ok(fr.ready,'five ready to go')+'</div>'
+      +'<p class="mono" style="font-size:12.5px;line-height:1.65;margin:0 0 10px">A crew of your own people — a commander and four soldiers out of your seven — that takes a job of its own each week, anywhere, without you. Its take, its heat and its ranking are yours. So is its payroll. '+cap(yearsIn(EXTRA_CREW_WEEKS[0]))+' in, a second; then '+EXTRA_CREW_WEEKS.slice(1).map(w=>yearsIn(w)).join('; then ')+' — four crews, and no more.</p>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+ok(fr.weekOk,'week '+fr.week+' ('+yearsIn(fr.week)+') — now week '+S.week)+ok(fr.repOk,'Feared (ranking '+fr.rep+') — now '+S.rep)+ok(fr.full,'seven on your crew — now '+(1+recruits().length))+ok(fr.cmdr,'a commander-type among them')+ok(fr.ready,'five ready to go')+'</div>'
       +'<button class="btn" data-act="found-open" '+(canFound()?"":"disabled")+'>Found a crew →</button></div></div>';
   } else out+='<div class="mono" style="font-size:11.5px;color:var(--muted);margin-top:16px">Four crews. No more.</div>';
   return out;
@@ -4145,7 +4254,11 @@ function crewStrip(){
   if(hidden)return '<div class="strip">'+head+'</div>';
   const cards=crewAll().map(c=>{
     const nat=natOf(c);
-    return '<div class="smc'+(c.status!=="crew"?" out":"")+'"><div class="sm-av">'+avatar(c.avseed,c.gender,c.face)+'</div><div class="sm-b">'
+    // The strip is here so a posting can be judged without leaving the board, and judging one is
+    // reading files. The whole card opens the file — there is nothing else to press on it, so a
+    // button would only make the card smaller.
+    return '<div class="smc'+(c.status!=="crew"?" out":"")+'" data-act="open-recruit" data-id="'+c.id+'" role="button" tabindex="0" '
+      +'title="'+esc(c.isPlayer?"Your file":c.first+"'s file")+'"><div class="sm-av">'+avatar(c.avseed,c.gender,c.face)+'</div><div class="sm-b">'
       +'<div class="sm-n">'+esc(c.first)+(c.isPlayer?' <span class="chip c-bad">you</span> ':', ')+'<span class="nm-tr">'+techTip(c.tech)+'</span>'+(c.status==="injured"?' <span class="chip c-warn">hurt</span>':'')+'</div>'
       +'<div class="sm-l">'+flagSvg(nat)+' P'+nat.tier+' · '+EXP[c.exp-1]+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</div>'
       +'<div class="sm-a num">'+ATTRS.map(a=>ATTR_ABBR[a]+' '+c.attrs[a]).join(' · ')+'</div>'
@@ -5026,11 +5139,19 @@ function advanceTwist(P,d){
   const rng=freshRng();
   const team=(P.teamIds||[]).map(byId).filter(Boolean);
   const r=twistResolve(prev,P.answers[k-1],team);
-  const bridge={t:"— —",x:pick(rng,TWIST_BETWEEN),tone:""};
+  // Three lines, three times, all on the job's own clock and all written down: what that call
+  // turned out to be, the beat, and the next thing. The beat is drawn from the pool the hour
+  // allows, so a job running at two in the afternoon is not told that the night carries on.
+  P.twistAt=P.twistAt||[{}];
+  P.twistAt[k-1]=P.twistAt[k-1]||{};
+  P.twistAt[k-1].out=stepClock(P.clock,rng);
+  const bridge={t:stepClock(P.clock,rng),x:pick(rng,twistLines("TWIST_BETWEEN",P.clock?P.clock.h:12)),tone:""};
+  P.twistAt[k-1].bridge=bridge.t;
   P.bridges=P.bridges||[];P.bridges[k-1]=bridge;
-  d.narrative.push({t:"— —",x:r.text,tone:r.free?"good":"bad"});
+  P.twistAt[k]={cue:stepClock(P.clock,rng)};
+  d.narrative.push({t:P.twistAt[k-1].out,x:r.text,tone:r.free?"good":"bad"});
   d.narrative.push(bridge);
-  d.narrative.push({t:"— —",x:next.cue||"Then it goes wrong again.",tone:"bad",twist:true});
+  d.narrative.push({t:P.twistAt[k].cue,x:next.cue||"Then it goes wrong again.",tone:"bad",twist:true});
   d.twist={h:next.h,s:next.s,opts:next.opts.map(o=>o.t)};
   d.twistNo=k+1;d.twistOf=tws.length;
   d.awaiting=false;                                // and the ticker picks it up from where it stopped
@@ -6827,7 +6948,7 @@ const TUT_STEPS=[
   {tab:"crew",sel:".topbar",h:"The top line",t:"Balance is your money — hires, upkeep, bonuses and vetting come out of it. Week counts time: every job or lay-low is a week. Ranking is your name — eight of them, Nobody up to The Crew — and the name decides what clients post, what they pay, who will sign with you, how many places you have, whether your crew stays, and how hard every room you are given is defended. The last score is three operations and it asks for a great deal more than a number. Heat is how hard the police are looking: every job adds some, and at 100 there is a raid."},
   {tab:"crew",sel:".id.you",h:"This is you",t:"The commander. Your file goes on every job: five attributes, a trade, education, time in jail and on the streets, knowledge, languages, and anything you won't do. If a border keeps you out, the crew goes without you — a commander-type recruit runs it, well or badly."},
   {tab:"crew",sel:".id.slot",h:"The empty places",t:"Fill them from the Roster. Everyone you hire goes on every job, takes a cut of every score, and costs upkeep each week. Four places to start; a Respected name opens two more. Every member has a price: a cut under two weeks of their own upkeep is small money — three small jobs in a row and they grumble, five and they may walk. A bonus settles it and keeps them sharp for three weeks."},
-  {tab:"crew",sel:"[data-act=found-open]",h:"Other crews, later",t:"Two years in, Feared, with seven on your crew, you can found a second crew out of your own people — a commander and four soldiers, named after its commander — that takes a job of its own each week without you. A third at three years, a fourth at four, no more. The game announces each milestone in a box when you reach it."},
+  {tab:"crew",sel:"[data-act=found-open]",h:"Other crews, later",t:cap(yearsIn(EXTRA_CREW_WEEKS[0]))+" in, Feared, with seven on your crew, you can found a second crew out of your own people — a commander and four soldiers, named after its commander — that takes a job of its own each week without you. A third at three years, a fourth at four, no more. The game announces each milestone in a box when you reach it."},
   {tab:"roster",sel:".rosterbar",h:"Everybody for hire",t:"Search by name, country, language or knowledge. Filter by trade, role and nationality. Sort by fee, experience or raw skill."},
   {tab:"roster",sel:".cards .id",h:"A file",t:"Flag and passport tier (P1 strong, P4 weak), trade and rank, the five attributes, then education, jail, streets, knowledge, languages — and in red, what this one will not do. Hover the trade, or MUS, BRN, TCH, CHM, NRV, for a brief. File opens the whole thing and lets you vet for informants. Hire pays the fee — if the file will sign with a crew of your name: Veterans want a Known crew, Legends a Respected one."},
   {tab:"jobs",sel:".jobrow",h:"Jobs",t:"Clients post jobs by country; the map beside them lights every country with a posting. Each row: category, the trades and knowledge it wants — green if your crew has it, red if not — city, crew needed, fee, heat, when it expires, and a chip saying how your crew fits. Open one."},
@@ -6909,9 +7030,9 @@ const INFO={
     "<b>Two of the same trade</b> on one crew start arguing the day the second one signs, and it has to be answered before anything else. Ten ways it comes up and five answers to each, every one stating what it needs, what it costs and the odds. One of them is to have one of the two learn something else, which is the only answer that removes the reason for it.",
     "<b>Bonus</b> (three weeks' upkeep, $4K at least) buys +14 loyalty and three weeks <b>paid up</b>: +2 on every reckoning that member goes on, deaf to another crew's drinks, never the one who skims the split, and not the one trouble picks on. One at a time; the card says until when. It also settles any grumbling about small jobs.",
     "<b>Small money.</b> Every member has a price: a cut under two weeks of their own upkeep is a job done for you, not for them. The job file says who calls a posting small money before you take it. Three small jobs in a row and they <b>grumble</b> (−5 loyalty a job, −2 on the reckoning, a chip on the card); five, and they may walk out at the split — back on the roster, wanting more. A proper score, or a bonus, resets the count.",
-    "<b>Places.</b> Four to start. A <b>Respected</b> name opens places six and seven. <b>Other crews.</b> From week 104 (two years), Feared, with seven on your crew, you can found a second crew — a commander-type and four soldiers out of your seven, named after its commander — that takes a job of its own each week without you, from the same board, with its own reckoning and report; its take, heat and ranking are yours, and so is its payroll. A third crew at three years, a fourth at four, no more. Send and recall people between crews from their cards; dissolve a crew and its people come back as far as your places allow."]},
+    "<b>Places.</b> Four to start. A <b>Respected</b> name opens places six and seven. <b>Other crews.</b> From week "+EXTRA_CREW_WEEKS[0]+" ("+yearsIn(EXTRA_CREW_WEEKS[0])+"), Feared, with seven on your crew, you can found a second crew — a commander-type and four soldiers out of your seven, named after its commander — that takes a job of its own each week without you, from the same board, with its own reckoning and report; its take, heat and ranking are yours, and so is its payroll. A third crew at three years, a fourth at four, no more. Send and recall people between crews from their cards; dissolve a crew and its people come back as far as your places allow."]},
   notice:{h:"A milestone",t:[
-    "Announced once, in the middle of the screen, when the game reaches it: the two places a Respected name opens; each year mark (weeks 104, 156, 208) when another crew is within reach, with what is still missing; and the moment a second, third or fourth crew can actually be founded, with a button straight into founding it.",
+    "Announced once, in the middle of the screen, when the game reaches it: the two places a Respected name opens; each year mark (weeks "+EXTRA_CREW_WEEKS.join(", ")+") when another crew is within reach, with what is still missing; and the moment a second, third or fourth crew can actually be founded, with a button straight into founding it.",
     "<b>Later</b> closes it; nothing is lost — the Crew tab keeps the places and the founding panel, and the case log keeps the record."]},
   found:{h:"Founding a crew",t:[
     "Pick the commander — a commander by nature, whose own command score runs the job — and four soldiers from your ready crew. They leave your places; fill them again from the roster.",
@@ -7477,7 +7598,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 81 · 19 September 2026";
+const BUILD="build 82 · 19 September 2026";
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div>';}
 
@@ -8422,31 +8543,48 @@ function tripCan(o,c,kit){
   if(o.req.jobs&&kit.jobs<o.req.jobs)return false;
   return true;
 }
+/* A recruiting trip is a week, not a night, so its clock counts days as well as hours — and it is
+   the same argument as the job report's: the meeting, the trouble and the handshake all used to be
+   stamped "— —", which left no way to tell an hour's wait in a bar from three days of one. The
+   times are recorded on the trip as they are made, because a trip picked up after a reload has to
+   read as the week the player watched. */
+const TRIP_DAYS=["MON","TUE","WED","THU","FRI","SAT","SUN"];
+function stepTrip(P,rng){
+  if(!P)return "— —";
+  P.mm+=ri(rng,20,180);while(P.mm>=60){P.mm-=60;P.hh++;}while(P.hh>=24){P.hh-=24;P.day++;}
+  return TRIP_DAYS[P.day%7]+" "+String(P.hh).padStart(2,"0")+":"+String(P.mm).padStart(2,"0");
+}
 function startTrip(c){
   const rng=freshRng();
   const kit=tripKit(c);
   const co=kit.co;
   const city=co&&co.cities?pick(rng,co.cities):c.nat;
   const v={F:c.first,city,country:c.nat,L:kit.lang,G:kit.face?kit.face.first:"",X:"",n:kit.jobs};
-  let day=0;const DAYS=["MON","TUE","WED","THU","FRI","SAT","SUN"];
+  let day=0;
   let hh=ri(rng,8,19),mm=ri(rng,0,59);
   const lines=[];
+  // The line is chosen after the clock has moved, not before, so a pool filtered by the hour is
+  // filtered by the hour actually printed beside it. This clock jumps up to three hours at a step
+  // — "a dawn flight, {city} by lunch" chosen at four in the afternoon lands at seven in the
+  // evening — which is more slack than the bands in fitsHour() allow for. Hence the thunk.
   const push=(t,tone,at,who,act)=>{mm+=ri(rng,20,180);while(mm>=60){mm-=60;hh++;}while(hh>=24){hh-=24;day++;}
-    const L={t:DAYS[day%7]+" "+String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0"),x:fill2(t,v),tone:tone||""};
+    const L={t:TRIP_DAYS[day%7]+" "+String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0"),
+      x:fill2(typeof t==="function"?t():t,v),tone:tone||""};
     if(at)L.at=at;if(who)L.who=who;if(act)L.act=act;
     lines.push(L);};
+  const drawn=pool=>()=>freshPick(rng,pool,hh);
   v.cur=co?co.cur:"cash";
   // you land, you walk the city for a day, then you sit down with them
-  push(freshPick(rng,TRIP_OUT),"","land","*");
+  push(drawn(TRIP_OUT),"","land","*");
   const pl=tripPlaceLine(co,rng);if(pl)push(pl,"","city");
-  push(freshPick(rng,TRIP_LOOK),"","city","YOU");
-  push(freshPick(rng,TRIP_READ),"","table","*");
-  if(kit.speaks)push(freshPick(rng,TRIP_TALK.lang),"","table","YOU","talk");
-  if(kit.face&&chance(rng,0.7))push(freshPick(rng,TRIP_TALK.face),"","table","YOU","phone");
-  else if(kit.charm>=62)push(freshPick(rng,TRIP_TALK.charm),"","table","YOU","talk");
-  if(S.rep>=RANKS.find(r=>r[1]==="Known")[0])push(freshPick(rng,TRIP_TALK.rep),"","table","YOU","talk");
-  else if(chance(rng,0.6))push(freshPick(rng,TRIP_TALK.nobody),"warn","table",c.id,"watch");
-  if(kit.jobs>=6&&chance(rng,0.5))push(freshPick(rng,TRIP_TALK.record),"","table",c.id,"paper");
+  push(drawn(TRIP_LOOK),"","city","YOU");
+  push(drawn(TRIP_READ),"","table","*");
+  if(kit.speaks)push(drawn(TRIP_TALK.lang),"","table","YOU","talk");
+  if(kit.face&&chance(rng,0.7))push(drawn(TRIP_TALK.face),"","table","YOU","phone");
+  else if(kit.charm>=62)push(drawn(TRIP_TALK.charm),"","table","YOU","talk");
+  if(S.rep>=RANKS.find(r=>r[1]==="Known")[0])push(drawn(TRIP_TALK.rep),"","table","YOU","talk");
+  else if(chance(rng,0.6))push(drawn(TRIP_TALK.nobody),"warn","table",c.id,"watch");
+  if(kit.jobs>=6&&chance(rng,0.5))push(drawn(TRIP_TALK.record),"","table",c.id,"paper");
   const trouble=tripTrouble(c);
   const snag=chance(rng,trouble)?tripSnagFor(c,rng):null;
   const P={cid:c.id,fee:c.fee,city,country:c.nat,pre:lines,day,hh,mm,week:S.week,
@@ -8456,7 +8594,8 @@ function startTrip(c){
   const T={cid:c.id,name:c.n,first:c.first,city,country:c.nat,week:S.week,fee:c.fee,
     narrative:lines.slice(),revealed:0,done:false,awaiting:false,resolved:false,
     snag:P.snag,trouble:P.trouble,outcome:null,lines:[]};
-  if(snag)T.narrative.push({t:"— —",x:fill2(snag.h,v)+".",tone:"bad",twist:true,at:"table",who:"*",act:"down",siren:snag.k==="police"});
+  if(snag){P.snagAt=stepTrip(P,rng);
+    T.narrative.push({t:P.snagAt,x:fill2(snag.h,v)+".",tone:"bad",twist:true,at:"table",who:"*",act:"down",siren:snag.k==="police"});}
   save();
   return T;
 }
@@ -8479,7 +8618,7 @@ function finishTrip(P,choiceIdx,T){
       const helper=o.req&&o.req.tech?(o.req.tech==="face"?kit.face:o.req.tech==="enforcer"?kit.enforcer:o.req.tech==="fixer"?kit.fixer:kit.forger):null;
       v.X=helper?helper.first:"nobody";
       if(can){
-        out.push({t:"— —",x:fill2(o.ok,v),tone:o.sign?"good":"warn"});
+        out.push({t:stepTrip(P,rng),x:fill2(o.ok,v),tone:o.sign?"good":"warn"});
         sign=!!o.sign;
         const e=o.eff||{};
         if(e.money)extra-=e.money;                       // e.money is a negative delta on your float
@@ -8492,11 +8631,11 @@ function finishTrip(P,choiceIdx,T){
         if(e.cut)cutAdd+=e.cut;
         if(e.hurtYou)hurtYou=true;
         if(e.attrHit){ATTRS.forEach(a=>{c.attrs[a]=clamp(c.attrs[a]-ri(rng,2,7),8,98);});c._touched=true;
-          out.push({t:"— —",x:"The file was generous. Whatever "+c.first+" was eight years ago, this is what is left of it.",tone:"warn"});}
+          out.push({t:stepTrip(P,rng),x:"The file was generous. Whatever "+c.first+" was eight years ago, this is what is left of it.",tone:"warn"});}
       } else {
         // the option needed something you did not bring
         sign=false;
-        out.push({t:"— —",x:fill2(WHY_NOT[o.req&&o.req.tech?"tech":o.req&&o.req.attr?"attr":o.req&&o.req.lang?"lang":"jobs"],
+        out.push({t:stepTrip(P,rng),x:fill2(WHY_NOT[o.req&&o.req.tech?"tech":o.req&&o.req.attr?"attr":o.req&&o.req.lang?"lang":"jobs"],
           Object.assign({},v,{T:o.req&&o.req.tech?TECH_BY_K[o.req.tech].l:"",A:o.req&&o.req.attr?o.req.attr:""})),tone:"bad"});
         heat+=4;
       }
@@ -8506,30 +8645,30 @@ function finishTrip(P,choiceIdx,T){
   let spend=Math.max(0,Math.round((sign?fee:0)+extra+(lostFee?c.fee:0)));
   if(sign&&S.money<spend){
     sign=false;spend=Math.max(0,Math.round(extra+(lostFee?c.fee:0)));
-    out.push({t:"— —",x:"And then the money is not there. You sit in a bar in "+P.city+" explaining to "+c.first+" that the float will not carry it, which is a conversation neither of you will mention again.",tone:"bad"});
+    out.push({t:stepTrip(P,rng),x:"And then the money is not there. You sit in a bar in "+P.city+" explaining to "+c.first+" that the float will not carry it, which is a conversation neither of you will mention again.",tone:"bad"});
   }
   if(recruits().length>=crewSeats()&&sign){
     sign=false;spend=Math.max(0,Math.round(extra+(lostFee?c.fee:0)));
-    out.push({t:"— —",x:"There is no place free on the crew any more. You flew out for somebody you cannot put anywhere.",tone:"bad"});
+    out.push({t:stepTrip(P,rng),x:"There is no place free on the crew any more. You flew out for somebody you cannot put anywhere.",tone:"bad"});
   }
   S.money=Math.max(0,S.money-spend);
   if(heat)S.heat=clamp(S.heat+heat,0,120);
   if(det&&detective())detective().file=clamp(detective().file+det,0,100);
   countryHeatAdd(P.country,heat?6:2);
-  if(hurtYou)out.push({t:"— —",x:"You are home with eleven stitches and a story you will not be telling.",tone:"bad"});
+  if(hurtYou)out.push({t:stepTrip(P,rng),x:"You are home with eleven stitches and a story you will not be telling.",tone:"bad"});
   if(sign){
     c.status="crew";c._touched=true;S.crewIds.push(c.id);
     if(cutAdd)c.cut=Math.round((c.cut+cutAdd)*1000)/1000;
     if(loy)c.loyalty=clamp(c.loyalty+loy,0,100);
     stats().hired++;
-    out.push({t:"— —",x:fill2(freshPick(rng,TRIP_SIGN),v),tone:"good",at:"deal",who:"*",act:"paper"});
-    out.push({t:"— —",x:fill2(freshPick(rng,TRIP_HOME),v),tone:"good",at:"deal",who:"*",act:"walk"});
+    out.push({t:stepTrip(P,rng),x:fill2(freshPick(rng,TRIP_SIGN),v),tone:"good",at:"deal",who:"*",act:"paper"});
+    out.push({t:stepTrip(P,rng),x:fill2(freshPick(rng,TRIP_HOME),v),tone:"good",at:"deal",who:"*",act:"walk"});
     logMsg("Hired "+c.n+" — "+TECH_BY_K[c.tech].l+", "+c.nat+", "+(c.role==="commander"?"commander":"soldier")
       +" ("+money(spend)+(foundingWeek()?", and the week is still week one":", one week in "+P.city)+").","");
   } else {
     // a refusal is not permanent, but it is not this month either
     c.coolUntil=S.week+ri(rng,6,14);c._touched=true;
-    out.push({t:"— —",x:fill2(freshPick(rng,TRIP_NO),v),tone:"bad",at:"deal",who:"*",act:"down"});
+    out.push({t:stepTrip(P,rng),x:fill2(freshPick(rng,TRIP_NO),v),tone:"bad",at:"deal",who:"*",act:"down"});
     logMsg("No deal with "+c.n+" in "+P.city+"."+(foundingWeek()?" No week gone — it is still week one":" A week gone")
       +(spend?", "+money(spend)+" with it":"")+".","warn");
   }

@@ -382,7 +382,7 @@ decisions at the end.
   adds a point to the attributes the job leaned on, but **getting better gets harder**: a 40
   climbs quickly, an 85 barely moves. A crew of Legends is a career's work, not ten jobs'.
 - **Places, and other crews.** Four soldiers' places to start; a Respected name (ranking 65)
-  opens two more, for six soldiers and you. From week 104 (two years in), Feared, with seven on
+  opens two more, for six soldiers and you. From week 52 (a year in), Feared, with seven on
   your crew, you can **found a second crew**: a commander-type and four soldiers out of your
   seven, named after its commander, which takes a job of its own each week from the same board
   without you — its own reckoning (its commander's score instead of yours, no twists because
@@ -413,7 +413,7 @@ decisions at the end.
   unaffected — the roster is rebuilt from its seed, and the first 5,000 files come out exactly as
   they did.
 - **Milestones, announced.** A box in the middle of the screen, once each: the two places a
-  Respected name opens; the operations those places open; each year mark (weeks 104, 156, 208) when another crew is within reach,
+  Respected name opens; the operations those places open; each year mark (weeks 52, 156, 208 — `EXTRA_CREW_WEEKS`) when another crew is within reach,
   with what is still missing; and the moment a second, third or fourth crew can actually be
   founded, with a button straight into founding it. Later closes it; the Crew tab and the case
   log keep the record.
