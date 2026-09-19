@@ -253,6 +253,8 @@
   .prof b{font-weight:500;color:var(--ink)}
   .prof .lim{color:var(--stamp)}
   .id .foot{margin-top:auto;border-top:1px dashed var(--line-2);padding:8px 11px;display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
+  .id .foot.stack{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:7px}
+  .id .foot.stack .btn.sm{font-size:10px;padding:5px 8px;letter-spacing:.04em}
   .fee{font-family:var(--f-mono);font-size:13px;font-weight:500}
   .stampmark{position:absolute;top:8px;right:8px;font-family:var(--f-disp);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--stamp);border:2px solid var(--stamp);padding:1px 5px;transform:rotate(-8deg);opacity:.9;background:rgba(251,250,246,.85)}
   .stampmark.ink{color:var(--ink-2);border-color:var(--ink-2)}
@@ -4017,8 +4019,8 @@ function memberCard(c,cr,opts){
     +'<div style="padding:0 11px 4px"><div class="field" style="gap:2px"><label>Loyalty '+c.loyalty+' · takes '+Math.round(c.cut*100)+'% of each score</label>'
       +'<div class="loy'+(low?" low":"")+'"><i style="width:'+c.loyalty+'%"></i></div></div></div>'
     +'<div class="attrs">'+attrRow(c)+'</div>'+xpLine(c)+profLine(c)
-    +'<div class="foot"><span class="mono" style="font-size:11px;color:var(--muted)">upkeep '+money(c.upkeep)+'/wk</span>'
-      +'<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">'+btns+'</span></div></div>';
+    +'<div class="foot stack"><span class="mono" style="font-size:11px;color:var(--muted)">upkeep '+money(c.upkeep)+'/wk</span>'
+      +'<span style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end">'+btns+'</span></div></div>';
 }
 /* Your own file, which is not the same card as anybody else's: no vetting stamp, because you do
    not vet yourself; no loyalty bar, because you cannot walk out on yourself; and no buttons,
@@ -7942,7 +7944,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 89 · 19 September 2026";
+const BUILD="build 90 · 19 September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
