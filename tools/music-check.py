@@ -3,6 +3,7 @@
 
     python3 tools/music-check.py                       # whatever MUSIC_HOME says
     python3 tools/music-check.py https://host/         # somewhere else, before committing to it
+    python3 tools/music-check.py --record              # rewrite music/sizes.json from the masters
 
 Moving 54MB of mp3 off the site is a good idea with one bad failure mode: it is silent. The game
 already plays without music — that is deliberate, and it is why a bucket that is half uploaded, or
@@ -29,14 +30,15 @@ import os, re, sys, time, urllib.request, urllib.error
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GAME = os.path.join(ROOT, "play.html")
-LOCAL = os.path.join(ROOT, "music")
+SIZES = os.path.join(ROOT, "music", "sizes.json")
 
 game = open(GAME, encoding="utf-8").read()
 
 m = re.search(r'const MUSIC_HOME="([^"]*)"', game)
 if not m:
     raise SystemExit("no const MUSIC_HOME= in play.html")
-base = sys.argv[1] if len(sys.argv) > 1 else m.group(1)
+args = [a for a in sys.argv[1:] if a != "--record"]
+base = args[0] if args else m.group(1)
 
 if not base:
     raise SystemExit(
@@ -51,6 +53,30 @@ if not base.endswith("/"):
 tracks = sorted(set(re.findall(r'"(music/[^"]+\.mp3)"', game)))
 if not tracks:
     raise SystemExit("no music/*.mp3 paths found in play.html — has TRACKS moved?")
+
+# What each track should weigh. Kept in the repository because the masters are not: once the
+# mp3s live in the bucket and not here, "is it there" is a much weaker question than "is it
+# there and is it the whole file", and a half-written object answers the first one yes. 18
+# numbers and about 600 bytes buys back the second.
+if "--record" in sys.argv[1:]:
+    import json
+    rec = {}
+    for t in tracks:
+        f = os.path.join(ROOT, t)
+        if not os.path.exists(f):
+            raise SystemExit("%s is not here — --record only works with the masters in place" % t)
+        rec[t] = os.path.getsize(f)
+    with open(SIZES, "w", encoding="utf-8") as fh:
+        json.dump(rec, fh, indent=1, sort_keys=True); fh.write("\n")
+    print("wrote %s — %d tracks, %.1f MB in total" % (SIZES, len(rec), sum(rec.values()) / 1048576.0))
+    raise SystemExit(0)
+
+expect = {}
+try:
+    import json
+    expect = json.load(open(SIZES, encoding="utf-8"))
+except Exception:
+    pass
 
 print("%d tracks, against %s\n" % (len(tracks), base))
 
@@ -75,7 +101,9 @@ def head(url, tries=4):
 bad = slowed = 0
 for n, t in enumerate(tracks):
     if n: time.sleep(GAP)
-    want = os.path.getsize(os.path.join(ROOT, t)) if os.path.exists(os.path.join(ROOT, t)) else None
+    # The master if it is still here, otherwise the size recorded when it was.
+    local = os.path.join(ROOT, t)
+    want = os.path.getsize(local) if os.path.exists(local) else expect.get(t)
     status, head_or_err, retries = head(base + t)
     if retries: slowed += 1
     short = t.split("/")[-1]
@@ -84,7 +112,7 @@ for n, t in enumerate(tracks):
         ctype = (head_or_err.get("content-type") or "").split(";")[0]
         note = ""
         if want is not None and got != want:
-            note = "  SIZE %d, master is %d" % (got, want); bad += 1
+            note = "  SIZE %d, should be %d" % (got, want); bad += 1
         elif not ctype.startswith("audio/"):
             # Not fatal: a bucket that serves octet-stream still plays. Worth saying.
             note = "  (served as %s, not audio/*)" % (ctype or "nothing")
@@ -100,6 +128,11 @@ print()
 if bad:
     raise SystemExit("%d of %d did not answer as they should. The music would be silent for "
                      "those, and nothing in the game would say so." % (bad, len(tracks)))
-print("all %d answer, and all match the masters in music/" % len(tracks))
+unchecked = [t for t in tracks if not os.path.exists(os.path.join(ROOT, t)) and t not in expect]
+print("all %d answer%s" % (len(tracks),
+      ", and all are the size they should be" if not unchecked
+      else " — but %d have no recorded size to check against" % len(unchecked)))
+if unchecked:
+    print("run  python3 tools/music-check.py --record  while the masters are in place.")
 if slowed:
     print("%d of them had to be asked more than once." % slowed)

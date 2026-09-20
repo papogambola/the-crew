@@ -14,7 +14,7 @@ domain existed still find their music: their `MEDIA_BASE` is the old address and
 
 Or on Windows, as a program: **https://playthecrew.com/desktop/The-Crew-Windows.zip** — unzip,
 keep the two files together, double-click `The Crew.exe`. The game is inside it and runs with no
-internet at all; the music is streamed from the address above, and a line in the footer says when
+internet at all; the music is streamed from object storage, and a line in the footer says when
 a newer build is out. It was a shell that fetched the game until build 85, which meant it went
 dark whenever the address did (`desktop/README.md` says what changed and how it is built).
 
@@ -27,14 +27,17 @@ Handbook button under it, the controls book, and the footer of every screen.
 
 `index.html` at the root is **the download page**, not the game — that is what a stranger who
 types the domain should be handed. The game is `play.html` beside it. It was `index.html` until
-the domain existed, which is the whole of why the rename happened; everything else — the music, the handbook, `version.txt`, the
-zip — is at the same path it always was, so nothing the exe or the handbook reaches for moved.
+the domain existed, which is the whole of why the rename happened; the handbook, `version.txt`
+and the zip are at the paths they always were, so nothing the exe or the handbook reaches for
+moved with it. The music did move, but later and for its own reasons — see the table.
+
 Inside the exe the game is `index.html` again, because Neutralino opens the resource root;
 `desktop/tools/build.py` is where those two facts are reconciled.
 
 | | |
 |---|---|
 | `index.html` | the download page — `tools/site.py` stamps its build and sizes, `tools/site-drive.js` drives it |
+| `music/` | **the tunes are not here any more.** 54MB of mp3 was ninety-seven per cent of this site's bandwidth against a 1.4MB download, so they live in Cloudflare R2; `MUSIC_HOME` in the game is the one line that says where, and `tools/music-check.py` asks whether all 18 are still there and still the right size. What is left is `sizes.json`, which is what it checks against, and the split manifest |
 | `play.html` | the game, one file. Served, but not offered on the download page — the page is for the Windows build, and a free browser copy beside the button is an argument against pressing it. The handbook still links back to it |
 | `handbook.html` | the handbook, built by `tools/handbook/`. Served, but not offered on the download page either — the game reaches it on key 5, and a copy ships inside the exe |
 | `shots/*.png` | the four screenshots on the page, taken from the running game by `tools/shots.js` |

@@ -21,7 +21,7 @@ first and the build second.
 |---|---|---|
 | The game | inside `resources.neu` | runs |
 | The handbook | inside `resources.neu` | opens |
-| The music | the site | silence; everything else is unaffected |
+| The music | object storage (R2) | silence; everything else is unaffected |
 | "A newer build is out" | `version.txt` on the site | nothing is said |
 
 The music is streamed rather than shipped because it is 54MB against 1MB of everything else — and
@@ -29,12 +29,13 @@ the zip that carries the exe is committed to this repository and served out of i
 mp3s would have added 57MB to its history on **every release, for ever**. The game already plays
 without music; it is the one part worth a connection.
 
-`window.THE_CREW_MEDIA` and `window.THE_CREW_BUILD` are injected into the packed copy by
-`tools/build.py` and exist only there. The same script rewrites one thing on the way in: the
+`window.THE_CREW_MEDIA`, `window.THE_CREW_MUSIC` and `window.THE_CREW_BUILD` are injected into
+the packed copy by `tools/build.py` and exist only there. The music one is read out of the game's
+own `MUSIC_HOME`, so the tunes moving to object storage did not need a second edit here. The same script rewrites one thing on the way in: the
 handbook's "← The game" button, which is `play.html` on the site and `index.html` in here,
 because the site's `index.html` is the download page and the app's is the game. It bails rather
-than guess if it cannot find the button to rewrite. The web build has neither, reads its music from beside
-itself exactly as before, and never asks whether it is current, because it is: you just fetched it.
+than guess if it cannot find the button to rewrite. The web build has none of them: it reads `MUSIC_HOME` as it stands, and never asks whether it is
+current, because it is — you just fetched it.
 
 ## Building it
 

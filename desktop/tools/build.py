@@ -3,10 +3,11 @@
 
 The exe used to be a window pointed at https://papogambola.github.io/the-crew/ — it carried no
 game at all, and would have gone dark the moment that address did. It carries the game now. What
-it does not carry is the music: 54MB of mp3 against 1MB of everything else, in a zip that is
-committed and served out of the repository, which would have meant 57MB added to its history on
-every release, for ever. So the music is fetched from the site when there is a connection and the
-game runs without it when there is not.
+it does not carry is the music: 54MB of mp3 against 1MB of everything else, which would have
+meant 57MB added to the repository's history on every release, for ever. So the music is fetched
+over the wire when there is a connection and the game runs without it when there is not. It is
+fetched from object storage rather than from the site, because 54MB against a 1.4MB download is
+ninety-seven per cent of the site's bandwidth and Pages' soft cap is 100GB a month.
 
 Injected into the copy, and nowhere else, so the web build is untouched:
 
@@ -22,11 +23,13 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROOT = os.path.dirname(HERE)
 RES  = os.path.join(HERE, "resources")
 
-# Where a packed copy reaches back to: the music, version.txt, and the zip it offers when it finds
-# it is behind. It is the domain and not papogambola.github.io/the-crew/ because the github.io
-# address is the one that goes away — the repository is going private, and a site served out of a
-# private repository needs a paid plan to exist at all. An exe built before the domain resolves
-# will be a silent exe, so the DNS comes first and the build second.
+# Where a packed copy reaches back to for version.txt and for the zip it offers when it finds it
+# is behind. Not the music any more — that has its own address; see MUSIC_HOME below.
+#
+# The domain and not papogambola.github.io/the-crew/, because the github.io address is the one
+# that goes away: the repository is going private, and a site served out of a private repository
+# needs a paid plan to exist at all. An exe built before the domain resolves cannot find its own
+# version.txt, so the DNS comes first and the build second.
 SITE = "https://playthecrew.com/"
 
 GAME = os.path.join(ROOT, "play.html")
