@@ -85,7 +85,17 @@ with zipfile.ZipFile(sys.argv[1]) as z:
   const webBuild=(fs.readFileSync(path.join(ROOT,"play.html"),"utf8").match(/const BUILD="([^"]+)"/)||[])[1];
   const zipMB=(fs.statSync(ZIP).size/1048576).toFixed(1)+" MB";
   const facts=(await page.textContent(".facts")).replace(/\s+/g," ").trim();
-  ok(facts.includes(zipBuild),"the version line names the build inside the zip ("+zipBuild+")");
+  /* Checked in pieces rather than against the whole stamp, because the page deliberately does
+     not print the whole stamp: the day of the month comes off. Asserting the pieces, and the
+     absence of the day, tests what the page is meant to say instead of re-running site.py's
+     own regex and agreeing with it. */
+  const bNum=(zipBuild.match(/build\s+\d+/i)||[])[0];
+  const bWhen=(zipBuild.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}/)||[])[0];
+  ok(!!bNum&&facts.toLowerCase().includes(bNum.toLowerCase()),
+    "the version line names the build inside the zip ("+bNum+")");
+  ok(!!bWhen&&facts.toUpperCase().includes(bWhen.toUpperCase()),"and when it is from ("+bWhen+")");
+  ok(!/\d{1,2}\s+(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)/i.test(facts),
+    "and no day of the month, which is a date nobody is going to act on: \""+facts+"\"");
   ok(facts.toUpperCase().includes(zipMB.toUpperCase()),"and the size the zip actually is ("+zipMB+")");
   ok(/Windows 10 \/ 11/.test(facts),"and which Windows: \""+facts+"\"");
   if(zipBuild!==webBuild)
@@ -126,12 +136,17 @@ with zipfile.ZipFile(sys.argv[1]) as z:
   ok(local.length>0,"there are "+local.length+" links to files beside the page");
   for(const h of local)
     ok(fs.existsSync(path.join(ROOT,h)),"  "+h+" exists");
-  ok(local.includes("handbook.html"),"the handbook is offered");
-  /* The page used to offer "play it in your browser" beside the download and no longer does:
-     this is a page for a Windows program, and a free browser copy next to the button is an
-     argument against pressing it. play.html is still served — the handbook links back to it,
-     and the drive above loads it directly — it is just not offered here. */
-  ok(!local.includes("play.html"),"and the browser copy is not offered beside the download");
+  /* The page offers one thing: the download. It used to offer a browser copy of the game and the
+     handbook beside it, and both were arguments against pressing the button — one says you need
+     not download anything, the other hands over the whole product as a web page. Both files are
+     still served; the game reaches the handbook on key 5 and the drive above loads play.html
+     directly. They are simply not on offer here. Asserted as an absence, because "we took the
+     links out" and "the links are out" are not the same claim. */
+  ok(local.length===1&&local[0]==="desktop/The-Crew-Windows.zip",
+    "the only thing the page offers is the download itself: "+JSON.stringify(local));
+  ok(!local.includes("play.html"),"  not the browser copy");
+  ok(!local.includes("handbook.html")&&!local.includes("The-Crew-Handbook.pdf"),
+    "  and not the handbook, in either form");
 
   const mail=hrefs.filter(h=>/^mailto:/.test(h));
   ok(mail.length===1,"one address to write to: "+mail.join(", "));

@@ -46,6 +46,14 @@ if not m:
     raise SystemExit("no const BUILD= inside the zip's resources.neu")
 build = m.group(1).decode("utf-8")
 
+# The day of the month comes off: "build 91 · 19 September 2026" reads as a date somebody needs
+# to act on, and nobody does — the month and the year say how current it is, which is the only
+# thing the line is for. Done here as well as at the source because the zip carries whatever
+# stamp it was packed with, and the one on the site right now predates the change. Once every
+# build in circulation is stamped without a day this is a no-op, and harmless as one.
+MONTH = ("January|February|March|April|May|June|July|August|September|October|November|December")
+build = re.sub(r"\b\d{1,2} (?=(?:%s) \d{4}\b)" % MONTH, "", build)
+
 icon = re.search(r'<link rel="icon" href="[^"]+">', game)
 if not icon:
     raise SystemExit("no <link rel=\"icon\"> in play.html — run tools/favicon.js?")

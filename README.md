@@ -36,7 +36,7 @@ Inside the exe the game is `index.html` again, because Neutralino opens the reso
 |---|---|
 | `index.html` | the download page — `tools/site.py` stamps its build and sizes, `tools/site-drive.js` drives it |
 | `play.html` | the game, one file. Served, but not offered on the download page — the page is for the Windows build, and a free browser copy beside the button is an argument against pressing it. The handbook still links back to it |
-| `handbook.html` | the handbook, built by `tools/handbook/` |
+| `handbook.html` | the handbook, built by `tools/handbook/`. Served, but not offered on the download page either — the game reaches it on key 5, and a copy ships inside the exe |
 | `shots/*.png` | the four screenshots on the page, taken from the running game by `tools/shots.js` |
 | `CNAME` | `playthecrew.com`. Written by GitHub, not by hand — setting the custom domain in Settings → Pages commits it for you, and writing it yourself is the same act, so doing it before the DNS resolves points the live site at an address that answers nothing |
 | `desktop/` | the Windows exe and the zip it ships in |
