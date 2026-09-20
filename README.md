@@ -26,9 +26,8 @@ Handbook button under it, the controls book, and the footer of every screen.
 ### What is served where
 
 `index.html` at the root is **the download page**, not the game — that is what a stranger who
-types the domain should be handed. The game is `play.html` beside it, and is linked from the
-page as "play it in your browser". It was `index.html` until the domain existed, which is the
-whole of why the rename happened; everything else — the music, the handbook, `version.txt`, the
+types the domain should be handed. The game is `play.html` beside it. It was `index.html` until
+the domain existed, which is the whole of why the rename happened; everything else — the music, the handbook, `version.txt`, the
 zip — is at the same path it always was, so nothing the exe or the handbook reaches for moved.
 Inside the exe the game is `index.html` again, because Neutralino opens the resource root;
 `desktop/tools/build.py` is where those two facts are reconciled.
@@ -36,7 +35,7 @@ Inside the exe the game is `index.html` again, because Neutralino opens the reso
 | | |
 |---|---|
 | `index.html` | the download page — `tools/site.py` stamps its build and sizes, `tools/site-drive.js` drives it |
-| `play.html` | the game, one file |
+| `play.html` | the game, one file. Served, but not offered on the download page — the page is for the Windows build, and a free browser copy beside the button is an argument against pressing it. The handbook still links back to it |
 | `handbook.html` | the handbook, built by `tools/handbook/` |
 | `shots/*.png` | the four screenshots on the page, taken from the running game by `tools/shots.js` |
 | `CNAME` | `playthecrew.com`. Written by GitHub, not by hand — setting the custom domain in Settings → Pages commits it for you, and writing it yourself is the same act, so doing it before the DNS resolves points the live site at an address that answers nothing |

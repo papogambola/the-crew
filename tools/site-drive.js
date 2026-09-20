@@ -126,8 +126,12 @@ with zipfile.ZipFile(sys.argv[1]) as z:
   ok(local.length>0,"there are "+local.length+" links to files beside the page");
   for(const h of local)
     ok(fs.existsSync(path.join(ROOT,h)),"  "+h+" exists");
-  ok(local.includes("play.html"),"the browser version is offered too, at play.html");
-  ok(local.includes("handbook.html"),"and the handbook");
+  ok(local.includes("handbook.html"),"the handbook is offered");
+  /* The page used to offer "play it in your browser" beside the download and no longer does:
+     this is a page for a Windows program, and a free browser copy next to the button is an
+     argument against pressing it. play.html is still served — the handbook links back to it,
+     and the drive above loads it directly — it is just not offered here. */
+  ok(!local.includes("play.html"),"and the browser copy is not offered beside the download");
 
   const mail=hrefs.filter(h=>/^mailto:/.test(h));
   ok(mail.length===1,"one address to write to: "+mail.join(", "));
