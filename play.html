@@ -7111,7 +7111,7 @@ const MEDIA_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_MEDIA==="s
 
    Only the tunes move. version.txt and the zip stay on the site and stay on MEDIA_BASE, which is
    why this is a second constant and not a wider one. */
-const MUSIC_HOME="";
+const MUSIC_HOME="https://pub-9011c74a2e45458392a39484d36e4f48.r2.dev/";
 const MUSIC_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_MUSIC==="string")
   ?window.THE_CREW_MUSIC:MUSIC_HOME;
 function musicURL(p){return /^(?:https?:|blob:|data:)/i.test(p)?p:MUSIC_BASE+p;}
@@ -7962,7 +7962,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 94 · September 2026";
+const BUILD="build 95 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a

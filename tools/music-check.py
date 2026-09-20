@@ -14,8 +14,18 @@ for by name, and the answer is compared against the file on disk. A track that 4
 a different size from the master beside it, fails.
 
 HEAD only: nothing is downloaded, so running it costs a Class B operation apiece and no egress.
+
+It sends a User-Agent, and that is load-bearing. The first real run against R2 got 403 on all
+eighteen and read exactly like a bucket that was not public. It was not that, and it was not
+rate limiting either, though that was the second guess: Cloudflare refuses the string urllib
+sends by default. Same URL, same second, same method — "Python-urllib/3.11" gets 403 and
+"curl/8.5.0" gets 200. So this says what it is instead of saying nothing, which is also the
+more honest thing for a tool that is hammering somebody's bucket.
+
+The gap and the backoff below are for the transient cases that are real — 429, a 503 mid-deploy
+— and not for that one.
 """
-import os, re, sys, urllib.request, urllib.error
+import os, re, sys, time, urllib.request, urllib.error
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GAME = os.path.join(ROOT, "play.html")
@@ -44,29 +54,52 @@ if not tracks:
 
 print("%d tracks, against %s\n" % (len(tracks), base))
 
-bad = 0
-for t in tracks:
+GAP = float(os.environ.get("MUSIC_CHECK_GAP", "0.25"))
+UA  = "the-crew-music-check/1 (+https://playthecrew.com)"
+
+def head(url, tries=4):
+    """status, headers, how many times it had to be asked again."""
+    delay = 1.5
+    for i in range(tries):
+        try:
+            rq = urllib.request.Request(url, method="HEAD", headers={"User-Agent": UA})
+            with urllib.request.urlopen(rq, timeout=30) as r:
+                return r.status, r.headers, i
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 503) and i < tries - 1:
+                time.sleep(delay); delay *= 2; continue
+            return e.code, None, i
+        except Exception as e:
+            return None, e, i
+
+bad = slowed = 0
+for n, t in enumerate(tracks):
+    if n: time.sleep(GAP)
     want = os.path.getsize(os.path.join(ROOT, t)) if os.path.exists(os.path.join(ROOT, t)) else None
-    url = base + t
-    rq = urllib.request.Request(url, method="HEAD")
-    try:
-        with urllib.request.urlopen(rq, timeout=30) as r:
-            got = int(r.headers.get("content-length") or 0)
-            ctype = (r.headers.get("content-type") or "").split(";")[0]
-            note = ""
-            if want is not None and got != want:
-                note = "  SIZE %d, master is %d" % (got, want); bad += 1
-            elif not ctype.startswith("audio/"):
-                # Not fatal: a bucket that serves octet-stream still plays. Worth saying.
-                note = "  (served as %s, not audio/*)" % (ctype or "nothing")
-            print("  %-28s %3d  %9d bytes%s" % (t.split("/")[-1], r.status, got, note))
-    except urllib.error.HTTPError as e:
-        print("  %-28s %3d  --" % (t.split("/")[-1], e.code)); bad += 1
-    except Exception as e:
-        print("  %-28s  ??  %s" % (t.split("/")[-1], e)); bad += 1
+    status, head_or_err, retries = head(base + t)
+    if retries: slowed += 1
+    short = t.split("/")[-1]
+    if status == 200:
+        got = int(head_or_err.get("content-length") or 0)
+        ctype = (head_or_err.get("content-type") or "").split(";")[0]
+        note = ""
+        if want is not None and got != want:
+            note = "  SIZE %d, master is %d" % (got, want); bad += 1
+        elif not ctype.startswith("audio/"):
+            # Not fatal: a bucket that serves octet-stream still plays. Worth saying.
+            note = "  (served as %s, not audio/*)" % (ctype or "nothing")
+        if retries: note += "  (asked %d times)" % (retries + 1)
+        print("  %-28s %3d  %9d bytes%s" % (short, status, got, note))
+    elif status is None:
+        print("  %-28s  ??  %s" % (short, head_or_err)); bad += 1
+    else:
+        print("  %-28s %3d  --%s" % (short, status,
+              "  (refused, not missing — is the bucket public?)" if status == 403 else "")); bad += 1
 
 print()
 if bad:
     raise SystemExit("%d of %d did not answer as they should. The music would be silent for "
                      "those, and nothing in the game would say so." % (bad, len(tracks)))
 print("all %d answer, and all match the masters in music/" % len(tracks))
+if slowed:
+    print("%d of them had to be asked more than once." % slowed)
