@@ -2,8 +2,8 @@
 // Usage: node sim.js [runs] [file] [skill]     skill: good | median | poor
 const fs=require("fs");
 const RUNS=+(process.argv[2]||60);
-// by default, read the game out of index.html next door
-const FILE=process.argv[3]||(__dirname+"/../index.html");
+// by default, read the game out of play.html next door
+const FILE=process.argv[3]||(__dirname+"/../play.html");
 const SKILL=process.argv[4]||"good";
 let src=fs.readFileSync(FILE,"utf8");
 if(/\.html?$/i.test(FILE)){const i=src.indexOf("<script>"),j=src.lastIndexOf("</script>");src=src.slice(i+8,j);}

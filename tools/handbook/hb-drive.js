@@ -310,7 +310,7 @@ const ok=(c,m)=>{if(c){pass++;console.log("  ok   "+m);}else{fail++;console.log(
   await pg.click("#closed");await settle();
   ok(await pg.evaluate(()=>window.bookOpen()),"and it opens again");
   const href=await pg.getAttribute("#back","href");
-  ok(href==="index.html","back to the game points at the game beside it ('"+href+"')");
+  ok(href==="play.html","back to the game points at the game beside it ('"+href+"')");
   ok(/The game/i.test(await pg.textContent("#back")),"in words: \""+(await pg.textContent("#back")).trim()+"\"");
 
   console.log("\n— errors —");

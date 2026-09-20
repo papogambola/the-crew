@@ -1,8 +1,8 @@
 /* Loads the game's own script in a VM with a stubbed DOM and writes gamedata.json, so the
    handbook's tables are the game's constants rather than a description of them.
-   Usage: node dump.js [path to the game's html]   (default ../../index.html) */
+   Usage: node dump.js [path to the game's html]   (default ../../play.html) */
 const fs=require("fs");const vm=require("vm");const path=require("path");
-const GAME=process.argv[2]||path.join(__dirname,"..","..","index.html");
+const GAME=process.argv[2]||path.join(__dirname,"..","..","play.html");
 const html=fs.readFileSync(GAME,"utf8");
 const a=html.indexOf("<script>"),b=html.lastIndexOf("</"+"script>");
 if(a<0||b<a)throw new Error("no <script> block in "+GAME);

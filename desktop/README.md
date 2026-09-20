@@ -10,6 +10,11 @@ answered. It carried no game, needed a connection to start, and would have gone 
 that address did — which it nearly did, because the repository it is served from was about to be
 made private.
 
+What it still reaches for now points at **https://playthecrew.com/** rather than github.io, for
+the same reason: github.io is the address that goes away. The site is one `SITE =` line in
+`tools/build.py`, and a copy built before the domain resolves is a silent copy, so the DNS comes
+first and the build second.
+
 ## What still wants a connection, and what happens without one
 
 | | where it comes from | with no connection |
@@ -25,7 +30,10 @@ mp3s would have added 57MB to its history on **every release, for ever**. The ga
 without music; it is the one part worth a connection.
 
 `window.THE_CREW_MEDIA` and `window.THE_CREW_BUILD` are injected into the packed copy by
-`tools/build.py` and exist only there. The web build has neither, reads its music from beside
+`tools/build.py` and exist only there. The same script rewrites one thing on the way in: the
+handbook's "← The game" button, which is `play.html` on the site and `index.html` in here,
+because the site's `index.html` is the download page and the app's is the game. It bails rather
+than guess if it cannot find the button to rewrite. The web build has neither, reads its music from beside
 itself exactly as before, and never asks whether it is current, because it is: you just fetched it.
 
 ## Building it
@@ -38,14 +46,14 @@ which is `tools/build.py` (assemble the resources — this is where the game goe
 `neu build --release` (the binaries around them), then `tools/pack.py` (the zip). Doing the three
 by hand is three chances to ship the previous one's work; a zip once went out holding build 84 out
 of a tree that had moved to 85, so `pack.py` reads the build stamp back out of `resources.neu` and
-refuses to pack when it disagrees with `../index.html`.
+refuses to pack when it disagrees with `../play.html`.
 
 First time only: `npm install -g @neutralinojs/neu`, then `neu update` in this folder to fetch the
 Neutralino binaries into `bin/` (not committed).
 
 What ships is `The-Crew-Windows.zip` in this folder — `The Crew.exe` (2.4MB), `resources.neu`
-(1.0MB, the game), and a READ ME. Players download it from
-**https://papogambola.github.io/the-crew/desktop/The-Crew-Windows.zip**. Bundling the whole game
+(1.0MB, the game), and a READ ME. Players download it from **https://playthecrew.com/desktop/The-Crew-Windows.zip**, which is
+what the button on the download page points at. Bundling the whole game
 cost 324KB on the download: 1.18MB before, 1.50MB now, because 800KB of HTML compresses hard.
 
 Commit the zip and `version.txt` together with the build they were made from. `version.txt` is

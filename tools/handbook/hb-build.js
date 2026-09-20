@@ -867,7 +867,7 @@ const html=`<!doctype html>
   <div class="nav">
     <button class="nbtn" id="bcover">Cover</button>
     <button class="nbtn" id="bcon">Contents</button>
-    <a class="nbtn solid" id="back" href="index.html">← The game</a>
+    <a class="nbtn solid" id="back" href="play.html">← The game</a>
   </div>
 </div>
 

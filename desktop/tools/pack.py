@@ -40,7 +40,7 @@ for f in (EXE, RES):
 import re
 stamp = lambda b: (re.search(rb'const BUILD="([^"]+)"', b) or [None, b""])[1].decode("utf-8", "replace")
 packed = stamp(open(RES, "rb").read())
-here   = stamp(open(os.path.join(os.path.dirname(HERE), "index.html"), "rb").read())
+here   = stamp(open(os.path.join(os.path.dirname(HERE), "play.html"), "rb").read())
 if not packed:
     raise SystemExit("no game found inside resources.neu — run `python3 tools/build.py` first")
 if packed != here:

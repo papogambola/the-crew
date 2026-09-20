@@ -49,17 +49,17 @@ Electron and not a game engine.
 | Native API | **disabled** (`enableNativeAPI: false`, `nativeAllowList: []`) |
 | Signing | unsigned; SmartScreen warns on first run |
 
-`desktop/tools/build.py` copies `index.html` into the app's resources and injects exactly two
+`desktop/tools/build.py` copies `play.html` into the app's resources and injects exactly two
 globals — `window.THE_CREW_MEDIA` and `window.THE_CREW_BUILD`. **Nothing is hard-coded in the game
 itself**; the site address lives in the build script. That matters for §14: repointing the client
 away from GitHub is a one-line change to a build script, not a code change.
 
 **The EXE does not need rebuilding for this migration in any structural sense.** It is a webview
-around `index.html`. Changing what `index.html` does changes the app.
+around `play.html`. Changing what `play.html` does changes the app.
 
 ## 2. What currently runs client-side
 
-Everything. Measured across the single `<script>` block in `index.html` (8,569 lines, 470
+Everything. Measured across the single `<script>` block in `play.html` (8,569 lines, 470
 top-level functions):
 
 | Category | Functions | Lines | Verdict |
@@ -142,7 +142,7 @@ closest thing to a database is `buildRoster(seed)` — a pure function standing 
 
 ## 7. Where game calculations happen
 
-All in the client. The decisive one is inside `finishJob` (`index.html:3144`):
+All in the client. The decisive one is inside `finishJob` (`play.html:3144`):
 
 ```
 m = a.margin + P.roll + dm                      // crew quality + the roll + twist damage
@@ -151,7 +151,7 @@ take = payout × (1.08 | 1.00 | BAL.messyPay | 0 | 0)
 heatGain = round(job.heat × heatMul × rank.heatMul) − a.heatCut + traitHeat + (leaked ? 12 : 0)
 ```
 
-Every threshold lives in one object, `BAL` (`index.html:694`) — verdict cut-offs, roll spread,
+Every threshold lives in one object, `BAL` (`play.html:694`) — verdict cut-offs, roll spread,
 difficulty curve, weeks per tier, casing costs, XP steps. **The entire balance table is shipped to
 the player**, and under a server-authoritative model it must not be.
 
@@ -241,7 +241,7 @@ All client-side, all from constants in `BAL` and `RANKS`:
 
 ## 14. GitHub runtime dependencies of the running game
 
-Three, all through the injected `MEDIA_BASE`, none hard-coded in `index.html`:
+Three, all through the injected `MEDIA_BASE`, none hard-coded in `play.html`:
 
 1. `MEDIA_BASE + "music/*.mp3"` — music. Absent, the game plays silently; nothing else changes.
 2. `MEDIA_BASE + "version.txt"` — the update check. Absent, it says nothing.
@@ -320,7 +320,7 @@ In dependency order. **Nothing below has been started.**
 **0. Commit the tests.** 10,216 lines currently exist only in a scratchpad. Fix `tools/sim.js`
 while doing it. Without this the rest is uninsurable.
 
-**1. Split rules from screen.** Carve `index.html` into a core module (the 1,718 save-bound lines
+**1. Split rules from screen.** Carve `play.html` into a core module (the 1,718 save-bound lines
 plus the 1,417 pure ones) and a UI module. The core must not reference `document`, `window` or
 `localStorage`, and must take state as an argument rather than reading the global `S`. This is the
 long pole and it produces nothing visible. It can be done in slices that each stay green.

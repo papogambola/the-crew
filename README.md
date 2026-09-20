@@ -8,18 +8,37 @@ online — country by country, each with its own language, money, politics, reli
 and job categories. Everyone on the crew goes on every job, if the border lets them in and the job
 doesn't hit one of their limits.
 
-Play it here: **https://papogambola.github.io/the-crew/** — every push to `main` redeploys it.
+**https://playthecrew.com** — the download page. Every push to `main` redeploys it.
 
-Or on Windows, as a program: **https://papogambola.github.io/the-crew/desktop/The-Crew-Windows.zip**
-— unzip, keep the two files together, double-click `The Crew.exe`. The game is inside it and runs
-with no internet at all; the music is streamed from the address above, and a line in the footer
-says when a newer build is out. It was a shell that fetched the game until build 85, which meant it
-went dark whenever the address did (`desktop/README.md` says what changed and how it is built).
+Or on Windows, as a program: **https://playthecrew.com/desktop/The-Crew-Windows.zip** — unzip,
+keep the two files together, double-click `The Crew.exe`. The game is inside it and runs with no
+internet at all; the music is streamed from the address above, and a line in the footer says when
+a newer build is out. It was a shell that fetched the game until build 85, which meant it went
+dark whenever the address did (`desktop/README.md` says what changed and how it is built).
 
-The rules, in full: **https://papogambola.github.io/the-crew/handbook.html** — a player's handbook
-of nineteen chapters with a pinned search bar and a clickable index, and the same thing as a
+The rules, in full: **https://playthecrew.com/handbook.html** — a player's handbook of nineteen
+chapters with a pinned search bar and a clickable index, and the same thing as a
 [PDF](The-Crew-Handbook.pdf). It is reached from inside the game too: the office's bookshelf, the
 Handbook button under it, the controls book, and the footer of every screen.
+
+### What is served where
+
+`index.html` at the root is **the download page**, not the game — that is what a stranger who
+types the domain should be handed. The game is `play.html` beside it, and is linked from the
+page as "play it in your browser". It was `index.html` until the domain existed, which is the
+whole of why the rename happened; everything else — the music, the handbook, `version.txt`, the
+zip — is at the same path it always was, so nothing the exe or the handbook reaches for moved.
+Inside the exe the game is `index.html` again, because Neutralino opens the resource root;
+`desktop/tools/build.py` is where those two facts are reconciled.
+
+| | |
+|---|---|
+| `index.html` | the download page — `tools/site.py` stamps its build and sizes, `tools/site-drive.js` drives it |
+| `play.html` | the game, one file |
+| `handbook.html` | the handbook, built by `tools/handbook/` |
+| `shots/*.png` | the four screenshots on the page, taken from the running game by `tools/shots.js` |
+| `CNAME` | *not committed here.* Setting the custom domain in Settings → Pages writes it, and writing it by hand is the same act — which is why it is not in this commit: a `CNAME` pushed before the DNS resolves points the live site at an address that answers nothing |
+| `desktop/` | the Windows exe and the zip it ships in |
 
 The working foundation for the design is `CONCEPT.md`, kept as written, with a dated log of
 decisions at the end.
@@ -60,7 +79,7 @@ decisions at the end.
   game's own `avatarBody()` and draws a specific face — spiked hair, heavy brows, a long nose, a
   mouth that is not pleased — so the tab is the same ink as every dossier on the roster. Run
   `node tools/favicon.js` after changing the face builder, and `--check` fails if what is in
-  `index.html` is no longer what the code would draw. The framing is cropped to the head and
+  `play.html` is no longer what the code would draw. The framing is cropped to the head and
   shoulders because a whole bust at 16px is a smudge.
 - **Faces, built part by part.** Every portrait is a set of choices: hair or hat (six styles for
   a man, fifteen for a woman), face shape, eyebrows, eyes, nose, mouth, ears, glasses, facial

@@ -8,7 +8,7 @@ The first argument is the compilation, the second the pool it feeds: `trip` (the
 trip) or `news` (the week's news pop-up). It finds the silences with ffmpeg, cuts a tune between
 each pair of them into music/<pool>-01.mp3, music/<pool>-02.mp3 ... (128 kbps, like the rest),
 measures each one, writes them into music/manifest.json under the pool's name, and rewrites the
-pool's line in index.html so the game draws from them.
+pool's line in play.html so the game draws from them.
 
 It prints how many tunes it found before it cuts anything. If that is not the number you expect,
 adjust --noise (how quiet counts as silence, in dB; -30 is loud room tone, -50 is near digital
@@ -93,14 +93,14 @@ def main():
     manifest[a.pool] = entries
     json.dump(manifest, open(mpath, "w", encoding="utf-8"), indent=1)
     open(mpath, "a", encoding="utf-8").write("\n")
-    ipath = os.path.join(root, "index.html")
+    ipath = os.path.join(root, "play.html")
     html = open(ipath, encoding="utf-8").read()
     line = re.compile(rf"^(  {a.pool}:)\[[^\]]*\](,\s*//.*)$", re.M)
     if not line.search(html):
-        sys.exit(f"could not find the {a.pool} pool line in index.html")
+        sys.exit(f"could not find the {a.pool} pool line in play.html")
     html = line.sub(lambda m: m.group(1) + "[" + ",".join(json.dumps(n) for n in names) + "]" + m.group(2), html, count=1)
     open(ipath, "w", encoding="utf-8").write(html)
-    print(f"wrote {len(names)} tunes, the manifest, and the {a.pool} pool in index.html")
+    print(f"wrote {len(names)} tunes, the manifest, and the {a.pool} pool in play.html")
 
 if __name__ == "__main__":
     main()

@@ -15,26 +15,34 @@ Injected into the copy, and nowhere else, so the web build is untouched:
 
 Run from the desktop folder, before `neu build --release`:  python3 tools/build.py
 """
-import os, re, shutil, sys
+import os, re
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROOT = os.path.dirname(HERE)
 RES  = os.path.join(HERE, "resources")
-SITE = "https://papogambola.github.io/the-crew/"
 
-game = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+# Where a packed copy reaches back to: the music, version.txt, and the zip it offers when it finds
+# it is behind. It is the domain and not papogambola.github.io/the-crew/ because the github.io
+# address is the one that goes away — the repository is going private, and a site served out of a
+# private repository needs a paid plan to exist at all. An exe built before the domain resolves
+# will be a silent exe, so the DNS comes first and the build second.
+SITE = "https://playthecrew.com/"
+
+GAME = os.path.join(ROOT, "play.html")
+
+game = open(GAME, encoding="utf-8").read()
 
 # The build stamp is read out of the game rather than passed in or typed here, for the same reason
 # every other number in this project is read rather than copied: a second copy is the one that
 # goes stale, and this one decides whether a player is told their build is old.
 m = re.search(r'const BUILD="([^"]+)"', game)
 if not m:
-    raise SystemExit("no const BUILD= in index.html — has the game moved it?")
+    raise SystemExit("no const BUILD= in play.html — has the game moved it?")
 build = m.group(1)
 
 # One <script> in the game, and the tests rely on that too. Bail rather than guess if it changes.
 if game.count("<script>") != 1:
-    raise SystemExit("expected exactly one <script> in index.html, found %d" % game.count("<script>"))
+    raise SystemExit("expected exactly one <script> in play.html, found %d" % game.count("<script>"))
 
 inject = (
     '<script>\n'
@@ -48,8 +56,17 @@ inject = inject.replace("'", '"')
 game = game.replace("<script>", inject + "<script>", 1)
 
 os.makedirs(RES, exist_ok=True)
+# The game is index.html *inside the app* — Neutralino opens the resource root — even though on
+# the site it is play.html, because the site's index.html is the download page.
 open(os.path.join(RES, "index.html"), "w", encoding="utf-8").write(game)
-shutil.copyfile(os.path.join(ROOT, "handbook.html"), os.path.join(RES, "handbook.html"))
+
+# ...which is also why the handbook's "← The game" button has to be rewritten on the way in. It
+# points at play.html beside the game on the site; there is no play.html in here.
+hb = open(os.path.join(ROOT, "handbook.html"), encoding="utf-8").read()
+BACK_SITE, BACK_APP = 'id="back" href="play.html"', 'id="back" href="index.html"'
+if BACK_SITE not in hb:
+    raise SystemExit("no %r in handbook.html — has the back button moved?" % BACK_SITE)
+open(os.path.join(RES, "handbook.html"), "w", encoding="utf-8").write(hb.replace(BACK_SITE, BACK_APP))
 
 # What the site serves so a bundled copy can ask whether it is behind. Generated from the same
 # constant the game prints, so the two cannot disagree.

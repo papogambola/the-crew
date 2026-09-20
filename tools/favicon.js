@@ -1,11 +1,11 @@
-/* Regenerates the game's favicon and writes it into index.html.
+/* Regenerates the game's favicon and writes it into play.html.
 
    The icon is one of the crew — drawn by the game's own face builder rather than traced by hand,
    so it is the same ink as every dossier on the roster and it cannot drift away from the way the
    game draws people. Run it after changing avatarBody() or the face parts:
 
-       node tools/favicon.js            # writes index.html
-       node tools/favicon.js --check    # exits 1 if index.html is out of date
+       node tools/favicon.js            # writes play.html
+       node tools/favicon.js --check    # exits 1 if play.html is out of date
 
    The framing is the decision that mattered. A favicon is read at 16px, and the whole bust at
    that size is a black smudge with a speck of face on top — so it is cropped to the head, the
@@ -14,12 +14,12 @@ const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
 
-const GAME=path.join(__dirname,"..","index.html");
+const GAME=path.join(__dirname,"..","play.html");
 const html=fs.readFileSync(GAME,"utf8");
 
 /* ---- load the game's script with a stubbed DOM, the same way dump.js does ---- */
 const a=html.indexOf("<script>"),b=html.lastIndexOf("</"+"script>");
-if(a<0||b<a)throw new Error("no <script> block in index.html");
+if(a<0||b<a)throw new Error("no <script> block in play.html");
 const mk=()=>({style:{setProperty(){},removeProperty(){}},classList:{add(){},remove(){},contains:()=>false,
   toggle(){}},children:[],dataset:{},innerHTML:"",value:"",textContent:"",setAttribute(){},getAttribute:()=>null,
   appendChild(){},insertAdjacentHTML(){},querySelector:()=>null,querySelectorAll:()=>[],addEventListener(){},
@@ -55,7 +55,7 @@ const href="data:image/svg+xml;base64,"+Buffer.from(svg,"utf8").toString("base64
 const line='<link rel="icon" href="'+href+'">';
 
 const re=/<link rel="icon" href="[^"]*">/;
-if(!re.test(html))throw new Error('no <link rel="icon"> in index.html');
+if(!re.test(html))throw new Error('no <link rel="icon"> in play.html');
 const out=html.replace(re,line);
 
 if(process.argv.indexOf("--check")>=0){
