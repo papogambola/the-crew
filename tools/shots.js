@@ -23,6 +23,48 @@ const {chromium}=require("/opt/node22/lib/node_modules/playwright");
 const {execFileSync}=require("child_process");
 const path=require("path"),fs=require("fs");
 
+/* The four faces the game is set in. A screenshot taken before they arrive is a screenshot of
+   the fallbacks — Liberation Sans for the logotype, DejaVu for the tabs — and it does not look
+   broken, it just looks like a different game. That is what shipped: four shots went onto the
+   download page with the masthead in a grotesque, because this ran, the CDN did not answer, and
+   nothing here was watching.
+
+   The watch is not document.fonts.check(). That was written first and is worthless for this: in
+   a run whose masthead came out in Liberation Sans it answered true for all four. It reports
+   whether a matching face is *available*, which is a different question from the only one that
+   matters — what did the renderer actually draw with. So ask the renderer, through CDP, after it
+   has drawn: one hidden span per family, each asking for that family and nothing else, so a
+   fallback shows up as a different name rather than as nothing. */
+const FACES=["Anton","Oswald","Spectral","IBM Plex Mono"];
+
+async function wrongFaces(page){
+  await page.evaluate(async fams=>{
+    if(!document.getElementById("__faceprobe")){
+      const el=document.createElement("div");
+      el.id="__faceprobe";
+      el.style.cssText="position:fixed;left:-9999px;top:0;font-size:40px;line-height:1";
+      el.innerHTML=fams.map((f,i)=>'<span id="__f'+i+'" style="font-family:\''+f+'\'">Handgloves</span>').join("");
+      document.body.appendChild(el);
+    }
+    try{await Promise.all(fams.map(f=>document.fonts.load('400 40px "'+f+'"')));}catch(e){}
+    try{await document.fonts.ready;}catch(e){}
+  },FACES);
+  const cdp=await page.context().newCDPSession(page);
+  await cdp.send("DOM.enable");await cdp.send("CSS.enable");
+  const {root}=await cdp.send("DOM.getDocument");
+  const bad=[];
+  for(let i=0;i<FACES.length;i++){
+    const {nodeId}=await cdp.send("DOM.querySelector",{nodeId:root.nodeId,selector:"#__f"+i});
+    const r=nodeId?await cdp.send("CSS.getPlatformFontsForNode",{nodeId}):{fonts:[]};
+    const used=((r.fonts||[])[0]||{}).familyName||"nothing";
+    if(used!==FACES[i])bad.push(FACES[i]+" (drew as "+used+")");
+  }
+  await cdp.detach();
+  return bad;
+}
+const dropProbe=page=>page.evaluate(()=>{
+  const el=document.getElementById("__faceprobe");if(el)el.remove();});
+
 const ROOT=path.join(__dirname,"..");
 const GAME=process.argv[2]||path.join(ROOT,"play.html");
 const OUT=path.join(ROOT,"shots");
@@ -51,7 +93,12 @@ async function putDownPaper(page){
 
 (async()=>{
   const browser=await chromium.launch({executablePath:CHROME});
-  const page=await browser.newPage({viewport:{width:W,height:H},deviceScaleFactor:2});
+  /* Strict TLS by default. A machine that re-terminates TLS in front of the browser — an agent
+     sandbox, a corporate proxy — cannot fetch fonts.gstatic.com without its CA installed, and
+     the failure it produces is the silent one above. The opt-out is explicit and named so that
+     nobody sets it by accident; the check below says so when it is what you need. */
+  const page=await browser.newPage({viewport:{width:W,height:H},deviceScaleFactor:2,
+    ignoreHTTPSErrors:process.env.CREW_SHOTS_INSECURE_TLS==="1"});
   const errors=[];page.on("pageerror",e=>errors.push(String(e)));
   await page.goto("file://"+GAME);
   await page.evaluate(()=>{try{localStorage.clear();}catch(e){}});
@@ -85,6 +132,27 @@ async function putDownPaper(page){
   await drain();
   await page.evaluate(()=>{S.modal=null;S.notices=[];render();});
   await page.waitForTimeout(400);
+
+  /* Before a single pixel. The probe needs a body to hang off, so it runs here rather than on
+     the title screen, and it is torn down before anything is photographed. */
+  let wrong=await wrongFaces(page);
+  for(let i=0;i<3&&wrong.length;i++){
+    console.error("  not there yet: "+wrong.join(", ")+" — waiting (attempt "+(i+1)+")");
+    await page.waitForTimeout(3000);
+    wrong=await wrongFaces(page);
+  }
+  if(wrong.length){
+    console.error("\nthe renderer is not using: "+wrong.join(", ")
+      +"\nEvery shot would come out in the fallbacks, which is how four went onto the download"
+      +"\npage with the masthead in a grotesque. Nothing written."
+      +(process.env.CREW_SHOTS_INSECURE_TLS==="1"?""
+        :"\n\nBehind a TLS-inspecting proxy, the font CDN cannot be reached and this is what it"
+        +"\nlooks like:  CREW_SHOTS_INSECURE_TLS=1 node tools/shots.js"));
+    await browser.close();
+    process.exit(1);
+  }
+  await dropProbe(page);
+  console.log("  drawn with: "+FACES.join(", "));
 
   const taken=[];
   const shot=async(name,note)=>{
@@ -135,7 +203,12 @@ async function putDownPaper(page){
      "0 jobs · 0 on file" over half a screen of nothing. A good screen to have, a bad one to
      photograph, and a screenshot that has to be explained is not a screenshot. */
 
+  const after=await wrongFaces(page);
   await browser.close();
+  if(after.length){
+    console.error("\nlost mid-run: "+after.join(", ")+" — the later shots are not trustworthy.");
+    process.exitCode=1;
+  }
 
   // Palette, in place, after the fact — Playwright writes truecolour and has no say in it.
   const py=taken.map(t=>t.p);
