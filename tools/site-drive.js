@@ -238,6 +238,49 @@ with zipfile.ZipFile(sys.argv[1]) as z:
     ok(r.g2h==="handbook.html","at "+origin+" the game reaches the handbook beside it ('"+r.g2h+"')");
     ok(r.h2g==="play.html","at "+origin+" the handbook reaches the game beside it ('"+r.h2g+"')");
   }
+  /* ---------------------------------------------------------------------------------------
+     The music has its own address now. 54MB of mp3 against a 1.4MB download is ninety-seven per
+     cent of this site's bandwidth, and Pages' soft cap is 100GB a month — about eighteen hundred
+     players on the music, against sixty-six thousand on the game. So the tunes go to object
+     storage and the site keeps serving what is small.
+
+     The thing that can go wrong is doing it by moving MEDIA_BASE, which would take version.txt
+     and the zip link with it and point the "a newer build is out" check at a bucket. So: two
+     bases, and this checks they actually come apart. */
+  console.log("\n— the music and the site are two addresses —");
+  {
+    const ctx=await browser.newContext({viewport:{width:1100,height:800}});
+    await ctx.addInitScript(()=>{
+      window.THE_CREW_MEDIA="https://site.example/";
+      window.THE_CREW_MUSIC="https://tunes.example/";});
+    const pg=await ctx.newPage();
+    await pg.goto("file://"+path.join(ROOT,"play.html"));
+    await pg.waitForSelector('[data-act="begin"]',{timeout:60000});
+    const w=await pg.evaluate(()=>({
+      siren:musicURL("music/siren.mp3"), amb:musicURL(TRACKS.ambient),
+      already:musicURL("https://elsewhere.example/x.mp3"),
+      media:MEDIA_BASE, music:MUSIC_BASE, key:TRACKS.ambient}));
+    ok(w.siren==="https://tunes.example/music/siren.mp3","a tune resolves to the music address ('"+w.siren+"')");
+    ok(w.amb.indexOf("https://tunes.example/")===0,"and so does every track in the pools ('"+w.amb+"')");
+    ok(w.key==="music/ambient.mp3","while the stored path stays relative — it is the key the "
+      +"music system compares against, not an address ('"+w.key+"')");
+    ok(w.already==="https://elsewhere.example/x.mp3","an address that is already an address is left alone");
+    ok(w.media==="https://site.example/","version.txt and the zip stay on the site's address, "
+      +"which is the whole reason this is a second constant");
+    await ctx.close();
+  }
+  {
+    // ...and with nothing injected, which is the web build: whatever MUSIC_HOME says.
+    const ctx=await browser.newContext({viewport:{width:1100,height:800}});
+    const pg=await ctx.newPage();
+    await pg.goto("file://"+path.join(ROOT,"play.html"));
+    await pg.waitForSelector('[data-act="begin"]',{timeout:60000});
+    const w=await pg.evaluate(()=>({home:MUSIC_HOME,base:MUSIC_BASE,siren:musicURL("music/siren.mp3")}));
+    ok(w.base===w.home,"the web build takes MUSIC_HOME as it stands ('"+w.home+"')");
+    ok(w.siren===w.home+"music/siren.mp3","and a tune hangs off it ('"+w.siren+"')");
+    await ctx.close();
+  }
+
   ok(missing.length===0,"nothing 404'd while the page loaded"+(missing.length?": "+missing.join(", "):""));
 
   await browser.close();server.close();

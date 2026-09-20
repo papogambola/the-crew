@@ -7098,7 +7098,23 @@ function modalNews(){
    The paths below stay relative because they are also the keys the music system compares against
    (musicWant.src===TRACKS.ambient). They are turned into addresses only where one is needed. */
 const MEDIA_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_MEDIA==="string")?window.THE_CREW_MEDIA:"";
-function mediaURL(p){return /^(?:https?:|blob:|data:)/i.test(p)?p:MEDIA_BASE+p;}
+
+/* Music has its own address, separate from the site's, and this is the one line that says where.
+   Empty means beside the game, which is where it started and is still a working answer.
+
+   It gets its own because of arithmetic. GitHub Pages has a soft limit of 100GB a month. The zip
+   is 1.4MB, so the download itself would take about sixty-six thousand people to reach that. The
+   music is 54MB, so it reaches it at about eighteen hundred. The music is ninety-seven per cent
+   of the bandwidth of a game that is otherwise one small HTML file — and it is the one part that
+   is pure object storage: nineteen files that never change and are never read by anything but a
+   browser asking for them by name.
+
+   Only the tunes move. version.txt and the zip stay on the site and stay on MEDIA_BASE, which is
+   why this is a second constant and not a wider one. */
+const MUSIC_HOME="";
+const MUSIC_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_MUSIC==="string")
+  ?window.THE_CREW_MUSIC:MUSIC_HOME;
+function musicURL(p){return /^(?:https?:|blob:|data:)/i.test(p)?p:MUSIC_BASE+p;}
 const TRACKS={
   report:["music/report-01.mp3","music/report-02.mp3","music/report-03.mp3","music/report-04.mp3","music/report-05.mp3","music/report-06.mp3","music/report-07.mp3","music/report-08.mp3","music/report-09.mp3","music/report-10.mp3","music/report-11.mp3"],
   result:{good:"music/result-success.mp3",messy:"music/result-messy.mp3",bad:"music/result-disaster.mp3"},
@@ -7149,7 +7165,7 @@ function sirenFx(){
     if(SIREN.timer)clearTimeout(SIREN.timer);
     SIREN.timer=setTimeout(sirenEnd,8000);
     if(!already&&SET.sound&&SET.volume>0){
-      if(!SIREN.audio){SIREN.audio=new Audio(mediaURL("music/siren.mp3"));SIREN.audio.preload="auto";}
+      if(!SIREN.audio){SIREN.audio=new Audio(musicURL("music/siren.mp3"));SIREN.audio.preload="auto";}
       SIREN.audio.volume=clamp(SET.volume*0.9,0,1);SIREN.audio.currentTime=0;
       const p=SIREN.audio.play();if(p&&p.catch)p.catch(()=>{});
     }
@@ -7182,7 +7198,7 @@ function musicLoadFallback(){
   if(musicBlobTried[src]){fail("media blocked");return;}
   musicBlobTried[src]=true;
   try{
-    fetch(mediaURL(src)).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.blob();})
+    fetch(musicURL(src)).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.blob();})
       .then(b=>{if(musicSrc!==src)return;MUSIC.src=URL.createObjectURL(b);musicSync();})
       .catch(e=>fail(e&&e.message?e.message:"fetch failed"));
   }catch(e){fail("fetch unavailable");}
@@ -7198,7 +7214,7 @@ function musicSync(){
     const held=!!(UI.hold&&feedData()&&!feedData().done);
     const allowed=SET.sound&&SET.music&&SET.volume>0&&userGestured&&!document.hidden&&!held;
     if(musicWant&&allowed){
-      if(musicSrc!==musicWant.src){musicSrc=musicWant.src;m.src=mediaURL(musicWant.src);musicState="idle";}
+      if(musicSrc!==musicWant.src){musicSrc=musicWant.src;m.src=musicURL(musicWant.src);musicState="idle";}
       m.loop=musicWant.loop;
       if(m.paused){
         const p=m.play();
@@ -7946,7 +7962,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 93 · September 2026";
+const BUILD="build 94 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a

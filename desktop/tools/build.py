@@ -10,7 +10,8 @@ game runs without it when there is not.
 
 Injected into the copy, and nowhere else, so the web build is untouched:
 
-  THE_CREW_MEDIA  where to fetch music from       -> MEDIA_BASE / mediaURL() in the game
+  THE_CREW_MEDIA  the site: version.txt, the zip -> MEDIA_BASE in the game
+  THE_CREW_MUSIC  where the tunes are            -> MUSIC_BASE / musicURL() in the game
   THE_CREW_BUILD  which build this copy is        -> the "newer build" note in the footer
 
 Run from the desktop folder, before `neu build --release`:  python3 tools/build.py
@@ -44,14 +45,24 @@ build = m.group(1)
 if game.count("<script>") != 1:
     raise SystemExit("expected exactly one <script> in play.html, found %d" % game.count("<script>"))
 
+# Where the music is, read out of the game rather than decided here. MUSIC_HOME empty means
+# "beside the game", which is true on the site and false inside the app — there is no music in
+# resources.neu — so an empty one becomes the site. An absolute one is already an answer and is
+# passed straight through, which is what happens once the tunes live in object storage.
+mh = re.search(r'const MUSIC_HOME="([^"]*)"', game)
+if not mh:
+    raise SystemExit("no const MUSIC_HOME= in play.html — has the music moved?")
+MUSIC = mh.group(1) if mh.group(1).startswith(("http://", "https://")) else SITE
+
 inject = (
     '<script>\n'
     '/* Written by desktop/tools/build.py. This copy of the game is inside the app rather than on\n'
-    '   the site, so it is told where the music lives and which build it is. */\n'
+    '   the site, so it is told where the site is, where the music is, and which build it is. */\n'
     'window.THE_CREW_MEDIA=%r;\n'
+    'window.THE_CREW_MUSIC=%r;\n'
     'window.THE_CREW_BUILD=%r;\n'
     '</script>\n'
-) % (SITE, build)
+) % (SITE, MUSIC, build)
 inject = inject.replace("'", '"')
 game = game.replace("<script>", inject + "<script>", 1)
 
@@ -78,5 +89,5 @@ size = lambda p: os.path.getsize(os.path.join(RES, p))
 print("assembled %s" % RES)
 print("  index.html    %7d bytes  (the game, %s)" % (size("index.html"), build))
 print("  handbook.html %7d bytes" % size("handbook.html"))
-print("  music         fetched from %s when there is a connection" % SITE)
+print("  music         fetched from %s when there is a connection" % MUSIC)
 print("\nnext: neu build --release   then   python3 tools/pack.py")
