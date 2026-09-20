@@ -574,6 +574,12 @@ told you whether the night had anything in it before you had read a line of it. 
   outright in three moves: heat falls 7, then 9, then 11 a week, and the best one keeps most of
   the float through a raid. And a **desk** that will lose a file: heat −20, priced by how hot
   you are.
+- **The crew's name.** From week 4 the game asks what the crew is called — typed, or taken off
+  the shelf with ↻ Random, which draws from a list in the game's voice and from the file itself
+  (the commander's surname the way the rival's outfit is built, a city the crew has worked, the
+  commander's first name). Later puts it off three weeks; the Crew tab's ✎ Rename opens the same
+  card at any time. The name heads the Crew tab, sits on the Dashboard, the job reports and the
+  saved-game line, and is what the rival's standing is measured against.
 - **The competition and the law.** From Small time on, a rival outfit works the same board, run
   by somebody with a name. They take the best posting left most weeks and their standing climbs
   when they do; once it passes your ranking they start buying your crew drinks. You can buy a

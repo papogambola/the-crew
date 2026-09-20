@@ -646,6 +646,10 @@ ch("heat","Heat and the law","Being looked for",[
 
 /* ---------------- 13 -------------------------------- */
 ch("rival","The competition","Somebody else is working the board",[
+  S("name","Your crew's name",
+    p("The competition has a name from the day it appears; yours is asked for from <b>week 4</b>. Type one, or take one off the shelf with <b>↻ Random</b> — a list in the game's voice, plus names built from your file: your surname the way the rival's outfit is built, a city the crew has worked, your first name. "
+      +"<b>Later</b> puts the question off three weeks. The Crew tab's <b>✎ Rename</b> opens the same card whenever you like; the log keeps what it was.")
+    +p("The name heads the Crew tab, sits on the Dashboard beside your alias, on the job reports and on the saved-game line, and is what the rival's standing is measured against. It goes on nothing the police can read.")),
   S("who","The other outfit",
     p("Once you reach ranking 20, somebody else appears on the same board with their own boss, their own name and their own standing. They are not an event — they are a second player.")
     +ul([

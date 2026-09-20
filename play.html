@@ -1762,6 +1762,69 @@ function rivalEnforce(){
   save();render();
 }
 
+/* ------------------------------ THE CREW'S NAME ----------------------- */
+// The competition has a name from the day it appears; the crew earns one. From week 4 the game
+// asks — once, and again three weeks on if the answer was Later — and the Crew tab's Rename opens
+// the same card at any time after. The name is stored as typed and shown with a capital where a
+// sentence starts, the way the rival's is. Typed, or taken off the shelf: the shelf is a list of
+// names in the game's voice plus a few built from the file — the player's surname the way the
+// rival's outfit is built, a city the crew has worked, the player's first name.
+const CREW_NAME_ASK_WEEK=4, CREW_NAME_AGAIN=3, CREW_NAME_MAX=28;
+const CREW_NAMES=[
+  "the Long Table","the Quiet Hands","the Paper Wolves","the Night Ledger","the Second Passport","No Fixed Address",
+  "the Late Shift","Borrowed Time","the Blue Passports","the Ninth Floor","the Departure Lounge","the Small Hours",
+  "the Transit Crowd","the Wrong Address","the Ferry Lot","Low Season","the Back Office","Cash and Carry",
+  "the Old Firm","the Cold Hands","the Layover","Dead Letters","the Side Door","Duty Free",
+  "the Freight Set","the Shipping Forecast","the Understudies","the Long Weekend","the Grey Passports","Terminal Two",
+  "the Lost Luggage","the Night Desk","the Last Ferry","the Quiet Firm","Plain Clothes","the Clearing House",
+  "Rain Check","the Six Percent","the Harbour Board","the Spare Keys","the Tuesday People","the Fourth Floor",
+  "the Overnight Bag","the Return Tickets","the Slow Train","the Cover Story","the Room Service","the Half Light",
+  "the Weather Report","the Wire Transfer","the Sleeping Car","the Bonded Warehouse","the Empty Chairs","the Exit Row",
+];
+const CREW_SET=["set","table","lot","crowd","board","standard","firm","company","people"];
+function crewNameGen(rng){
+  const you=S.player;
+  const words=String(you.n||"").trim().split(/\s+/);
+  const first=words[0]||"Nobody",last=words[words.length-1]||first;
+  // the cities the crew has worked; before the first job, the ones on the commander's passport
+  const worked=Object.keys(stats().countries||{}).map(k=>COUNTRY_BY_NAME[k]).filter(c=>c&&c.cities&&c.cities.length);
+  const home=COUNTRY_BY_NAME[you.nat];
+  const cos=worked.length?worked:(home&&home.cities&&home.cities.length?[home]:[]);
+  const r=rng();
+  if(r<0.20)return "the "+last+" "+pick(rng,OUTFIT);
+  if(r<0.38&&cos.length){const co=pick(rng,cos);return "the "+pick(rng,co.cities)+" "+pick(rng,CREW_SET);}
+  if(r<0.46)return first+"'s "+pick(rng,["people","lot","crew","table"]);
+  return pick(rng,CREW_NAMES);
+}
+function crewName(){return S&&S.crewName?S.crewName:null;}
+function crewTitle(){return crewName()?cap(crewName()):"The Crew";}   // the heading form: a capital on the front
+function crewNameDue(){return !!(S&&!S.over&&!S.crewName&&S.week>=CREW_NAME_ASK_WEEK&&(S.crewAsk||0)<=S.week);}
+function crewNameSet(v){
+  v=String(v||"").replace(/\s+/g," ").trim().slice(0,CREW_NAME_MAX);
+  if(!v)return false;
+  const was=S.crewName;S.crewName=v;S.modal=null;UI.cname=null;
+  logMsg(was?"The crew is called "+cap(v)+" now. It was "+cap(was)+".":"The crew has a name: "+cap(v)+". It goes on the log and the ladder, and on nothing the police can read.","good",true);
+  sfx("stamp");save();return true;
+}
+function crewNameLater(){if(!S)return;S.crewAsk=S.week+CREW_NAME_AGAIN;S.modal=null;UI.cname=null;save();}
+function modalCrewName(){
+  const edit=!!(S.modal&&S.modal.edit);
+  const v=UI.cname!=null?UI.cname:(edit&&S.crewName?S.crewName:"");
+  const rv=rival(),dt=detective();
+  const text=edit?"A name is not a tattoo. Change it here; the log keeps what it was."
+    :"Three weeks on the board and the clients have started asking who they are hiring. "+(rv?cap(rv.name)+" has a name. ":"")+(dt?dt.name+" has a folder with your alias on the tab. ":"")
+      +"Your crew has none. Pick one, or take one off the shelf. It goes on the log, the dashboard and the ladder, and on nothing the police can read.";
+  return '<div class="scrim center"><div class="modal notice" role="dialog" aria-modal="true">'
+    +'<div class="modal-h"><div><div class="kicker" style="color:var(--stamp)">'+(edit?"The crew":"The crew · week "+S.week)+'</div><h2 style="font-size:28px;margin-top:4px">'+(edit?"Another name":"What are you called?")+'</h2></div>'
+    +(edit?'<button class="x" data-act="crewname-close" aria-label="Close">✕</button>':'')+'</div>'
+    +'<div class="modal-b"><p style="margin:0 0 14px;font-size:15px;line-height:1.6">'+esc(text)+'</p>'
+    +'<div class="field" style="margin-bottom:14px"><label for="cname" style="display:flex;justify-content:space-between;align-items:center;gap:8px">The name'
+      +'<button class="btn ghost sm" data-act="crewname-random" title="One off the shelf — as many times as you like" style="padding:3px 8px">↻ Random</button></label>'
+      +'<input type="text" id="cname" maxlength="'+CREW_NAME_MAX+'" value="'+esc(v)+'" placeholder="e.g. the Long Table" autocomplete="off"></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" data-act="'+(edit?"crewname-close":"crewname-later")+'">'+(edit?"Leave it":"Later")+'</button>'
+    +'<button class="btn" data-act="crewname-ok" '+(v.trim()?"":"disabled")+'>That\'s the name →</button></div></div></div></div>';
+}
+
 /* ------------------------------ THE RECORD ---------------------------- */
 // Everything the crew has done, counted — and a ladder of things worth doing next.
 function stats(){
@@ -3796,6 +3859,7 @@ function render(){
     if(S.loose&&S.loose.length&&!S.modal&&!S.event&&!S.over){S.modal={type:"loose"};sfx("bad");}
     if(S.revenge&&!S.modal&&!S.over){S.modal={type:"revenge"};sfx("bad");}
     if(S.event&&!S.modal&&!S.over)S.modal={type:"event"};
+    if(crewNameDue()&&!S.modal){S.modal={type:"crewname"};UI.cname=null;sfx("open");}   // last: a name can wait for the week's business
   }
   musicRoute();   // after the pop-ups are decided, so the week's news is scored as it opens
   if(S.over&&!(S.modal&&(isFeed(S.modal.type)||S.modal.type==="event"))){root.innerHTML=screenOver()+chrome();bind();fitQRH();return;}
@@ -4097,7 +4161,8 @@ function tabCrew(){
   const ct=recruits().filter(c=>c.role==="commander");
   const note=ct.length?'<div class="warnbox" style="color:var(--ink-2);border-color:var(--line-2)">'+ct.map(c=>c.first).join(", ")+(ct.length>1?" are commanders":" is a commander")+' by nature — takes your orders badly (−3 each on a job you lead), but can run the crew on a job you can\'t get into, or lead a crew of their own.</div>':'';
   let out=note+'<div class="crewtop">'
-    +'<div class="crewtop-l"><div class="panel-h" style="border:0;padding:0 0 6px"><h2>The Crew</h2><span class="kicker">'+(seats+1)+' places · everyone goes on every job</span></div></div>'
+    +'<div class="crewtop-l"><div class="panel-h" style="border:0;padding:0 0 6px;flex-wrap:wrap"><h2>'+esc(crewTitle())+'</h2><span class="kicker" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+(S.crewName?'your crew · ':'')+(seats+1)+' places · everyone goes on every job'
+    +'<button class="btn ghost sm" data-act="crewname-open" title="'+(S.crewName?"Another name for the crew":"Give the crew a name — or take one off the shelf")+'" style="padding:2px 8px">'+(S.crewName?"✎ Rename":"✎ Name the crew")+'</button></span></div></div>'
     +jokerCard()+'</div>'
     +'<div class="cards">'+cards.join("")+'</div>';
   // other crews: a commander and four soldiers each, working without you
@@ -4631,7 +4696,7 @@ function tabLog(){
   const left='<div class="panel"><div class="panel-h"><h2>Case Log</h2>'+wsel+'</div><div class="panel-b"><div class="log">'
     +(lines.length?lines.map(l=>'<div class="logline '+l.tone+(l.big?" big":"")+'"><span class="wk">'+String(l.wk).padStart(2,"0")+'</span><span class="tx">'+esc(l.t)+'</span></div>').join(""):'<div class="empty">Nothing logged'+(wk!==null?' in week '+wk:' yet')+'.</div>')
     +'</div></div></div>';
-  const right='<div class="panel"><div class="panel-h"><h2>The Operation</h2><span class="kicker">'+esc(S.player.n)+' · '+flagSvg(natOf(S.player))+'</span></div><div class="panel-b">'
+  const right='<div class="panel"><div class="panel-h"><h2>The Operation</h2><span class="kicker">'+(S.crewName?esc(crewTitle())+' · ':'')+esc(S.player.n)+' · '+flagSvg(natOf(S.player))+'</span></div><div class="panel-b">'
     +'<div class="kv">'+status.map(r=>'<span class="k">'+r[0]+'</span><span class="num">'+r[1]+'</span>').join("")+'</div>'
     +'<hr class="rule"><div class="kicker">Ranking — what the name buys</div>'
     +'<div class="mono" style="font-size:13px;margin-top:6px"><b>'+esc(rkNow.name)+'</b> · '+S.rep+' points</div>'
@@ -4676,7 +4741,7 @@ function tabLog(){
   const watch=(rv||dt)?'<div class="panel" style="margin-top:14px"><div class="panel-h"><h2>The competition and the law</h2><span class="kicker">'+(rv?cap(rv.name):"")+(rv&&dt?" · ":"")+(dt?dt.name:"")+'</span></div><div class="panel-b">'
     +(rv?'<div class="mono" style="font-size:12.5px;line-height:1.7"><b>'+esc(cap(rv.name))+'</b> — '+esc(rv.boss)+' runs it, working the same board since week '+rv.since+'. They have taken <b>'+rv.took+'</b> posting'+(rv.took===1?'':'s')+' off it.</div>'
       +'<div class="loy'+(rivalAhead()?" low":"")+'" style="height:9px;margin-top:6px"><i style="width:'+clamp(rv.standing,0,100)+'%"></i></div>'
-      +'<div class="mono" style="font-size:11.5px;margin-top:5px">Their standing <b>'+rv.standing+'</b> against your <b>'+S.rep+'</b> — '+(rivalAhead()?'<span style="color:var(--stamp)">they are ahead, and they take the best posting most weeks and buy your crew drinks</span>':rv.standing===S.rep?'you are level with them':'you are ahead of them')+'.</div>'
+      +'<div class="mono" style="font-size:11.5px;margin-top:5px">Their standing <b>'+rv.standing+'</b> against '+(S.crewName?esc(crewTitle())+"'s":"your")+' <b>'+S.rep+'</b> — '+(rivalAhead()?'<span style="color:var(--stamp)">they are ahead, and they take the best posting most weeks and buy your crew drinks</span>':rv.standing===S.rep?'you are level with them':'you are ahead of them')+'.</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn ghost sm" data-act="rival-buy" '+(S.money>=Math.max(40000,rv.standing*3000)?"":"disabled")+'>Buy a name inside · '+money(Math.max(40000,rv.standing*3000))+'</button>'
       +'<button class="btn ghost sm" data-act="rival-enforce" '+(payroll().some(c=>c.status==="crew"&&c.tech==="enforcer")?"":'disabled title="Needs an Enforcer"')+'>Send the enforcer</button></div>':'')
     +(rv&&dt?'<hr class="rule">':'')
@@ -4756,6 +4821,7 @@ function renderModal(){
   if(m.type==="streetdone")return modalStreetDone();
   if(m.type==="notice")return modalNotice();
   if(m.type==="news")return modalNews();
+  if(m.type==="crewname")return modalCrewName();
   if(m.type==="loose")return modalLoose();
   if(m.type==="revenge")return modalRevenge();
   return "";
@@ -5491,7 +5557,7 @@ function modalResult(d){
   const team=d.teamIds.map(byId).filter(Boolean);
   const live=!d.done;
   const ticker='<div class="ticker" id="ticker">'+d.narrative.slice(0,d.revealed).map(tickLine).join("")+'</div>';
-  const h='<div class="modal-h"><div><div class="kicker">'+(d.crew?esc(d.crew)+' · ':'')+flagSvg(COUNTRY_BY_NAME[d.job.country])+' '+esc(d.job.city)+', '+esc(d.job.country)+' · week '+(d.week||S.week-1)+(d.replay?' · recap':'')+(live?' · <span class="live">● LIVE</span>':'')+'</div>'
+  const h='<div class="modal-h"><div><div class="kicker">'+(d.crew?esc(d.crew)+' · ':S.crewName?esc(crewTitle())+' · ':'')+flagSvg(COUNTRY_BY_NAME[d.job.country])+' '+esc(d.job.city)+', '+esc(d.job.country)+' · week '+(d.week||S.week-1)+(d.replay?' · recap':'')+(live?' · <span class="live">● LIVE</span>':'')+'</div>'
     +(live?'<h2 style="font-size:22px;margin-top:4px">'+esc(d.job.title)+'</h2>'
           :'<div class="result-verdict" style="margin-top:6px;color:'+col+'"><span class="verdict-stamp" style="border-color:'+col+'">'+d.verdictName+'</span></div>')
     +'</div>'+(live?'':'<button class="x" data-act="scrim" aria-label="Close">✕</button>')+'</div>';
@@ -7868,7 +7934,7 @@ function screenTitle(){
       +'You are the name at the top of the police\'s chart. Everyone below is '+redact(6)+' — a passport, a set of hands, a record, a price, and a secret. '
       +'Some of them are '+redact(9)+'. Your job is to know which, before the border does.</div>'
     +'<hr class="rule">'
-    +(sv?'<div class="mono" style="font-size:12px;margin-bottom:10px">Saved game: <b>'+esc(sv.n)+'</b> · week '+sv.week+' · ranking '+sv.rep+' ('+esc(rankName(sv.rep))+') · '+money(sv.money)+'</div>':'')
+    +(sv?'<div class="mono" style="font-size:12px;margin-bottom:10px">Saved game: <b>'+esc(sv.n)+'</b>'+(sv.crew?' of '+esc(cap(sv.crew)):'')+' · week '+sv.week+' · ranking '+sv.rep+' ('+esc(rankName(sv.rep))+') · '+money(sv.money)+'</div>':'')
     +(STORAGE_OK?'':'<div class="warnbox">This browser is not keeping saves — a private window, or site data blocked. You can play, but progress is lost when you leave.</div>')
     +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
     +(sv?'<button class="btn stamp" data-act="continue">Continue →</button><button class="btn ghost" data-act="begin">New game</button>'
@@ -7886,7 +7952,7 @@ function titleFoot(){
     +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div></div>';
 }
 function savedSummary(){
-  try{const r=localStorage.getItem(SAVE_KEY);if(!r)return null;const d=JSON.parse(r);if(!d||!d.player||d.over)return null;return {n:d.player.n,week:d.week,rep:d.rep||0,money:d.money||0};}catch(e){return null;}
+  try{const r=localStorage.getItem(SAVE_KEY);if(!r)return null;const d=JSON.parse(r);if(!d||!d.player||d.over)return null;return {n:d.player.n,crew:d.crewName||null,week:d.week,rep:d.rep||0,money:d.money||0};}catch(e){return null;}
 }
 function rollDraftProfile(){
   const rng=freshRng();
@@ -7954,7 +8020,7 @@ function screenOver(){
   const col=win?"var(--good)":"var(--stamp)";
   return '<div class="wrap"><div class="hero" style="padding:60px 0 30px"><div class="eyebrow">'+(win?"Case closed":"The file is burned")+'</div>'
     +'<h1 style="color:'+col+'">'+(win?"You are<br>The Crew":"Game<br>Over")+'</h1>'
-    +'<p class="tagline">'+(win?'The score cleared, and the name at the top of the chart was never spoken aloud. '+esc(S.player.n)+' walks away, and the crew walks too.'
+    +'<p class="tagline">'+(win?'The score cleared, and the name at the top of the chart was never spoken aloud. '+esc(S.player.n)+' walks away, and '+(S.crewName?esc(crewTitle()):'the crew')+' walks too.'
       :'The heat won, the loyalty didn\'t hold, and the float ran dry. Somewhere a detective closes a folder with your alias on the tab.')+'</p></div>'
     +'<div class="panel" style="max-width:520px;margin:0 auto"><div class="panel-b"><div class="num-grid">'
       +'<div class="b"><div class="k">Weeks run</div><div class="v num">'+S.week+'</div></div>'
@@ -7962,7 +8028,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 95 · September 2026";
+const BUILD="build 96 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
@@ -7997,6 +8063,10 @@ function bind(){
   const js=document.getElementById("jsort");if(js)js.onchange=()=>{S.jobSort=js.value;save();render();};
   const lw=document.getElementById("logweek");if(lw)lw.onchange=()=>{S.logWeek=lw.value;save();render();};
   const pn=document.getElementById("pname");if(pn)pn.oninput=()=>{draft.name=pn.value;const btn=document.querySelector('[data-act=confirm-create]');if(btn)btn.disabled=!draft.name.trim();};
+  const cn=document.getElementById("cname");if(cn){
+    cn.oninput=()=>{UI.cname=cn.value;const btn=document.querySelector('[data-act=crewname-ok]');if(btn)btn.disabled=!cn.value.trim();};
+    cn.onkeydown=ev=>{if(ev.key==="Enter"&&cn.value.trim()){ev.preventDefault();if(crewNameSet(cn.value))render();}};
+  }
   const pnat=document.getElementById("pnat");if(pnat)pnat.onchange=()=>{draft.nat=pnat.value;rollDraftProfile();showCreate();};
   const pt=document.getElementById("ptech");if(pt)pt.onchange=()=>{draft.tech=pt.value;rollDraftProfile();showCreate();};
   // the face sliders redraw the picture alone, so dragging one doesn't rebuild the screen under the hand
@@ -8167,6 +8237,16 @@ document.addEventListener("click",e=>{
     case "notice-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){noticeDone();render();} break;
     case "news-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){newsClose();save();render();} break;
     case "news-open": if(S&&S.news&&!S.modal){S.modal={type:"news"};render();} break;
+    case "crewname-open": if(S&&!S.modal){UI.cname=null;S.modal={type:"crewname",edit:!!S.crewName};render();const cn=document.getElementById("cname");if(cn)cn.focus();} break;
+    case "crewname-random": {   // fills the box in place, so the card does not rebuild under the hand
+      UI.cname=crewNameGen(freshRng());
+      const cn=document.getElementById("cname");if(cn){cn.value=UI.cname;cn.focus();cn.setSelectionRange(cn.value.length,cn.value.length);}
+      const ok=document.querySelector('[data-act=crewname-ok]');if(ok)ok.disabled=false;
+      break;
+    }
+    case "crewname-ok": { const cn=document.getElementById("cname"); if(crewNameSet(cn?cn.value:UI.cname))render(); break; }
+    case "crewname-later": crewNameLater(); render(); break;
+    case "crewname-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){S.modal=null;UI.cname=null;render();} break;
     case "notice-go": noticeDone(); if(k==="found"){UI.found={lead:null,ids:[]};S.modal={type:"found"};} else if(k){S.tab=k;S.jobOpen=null;} render(); window.scrollTo(0,0); break;
     case "found-lead": if(UI.found){UI.found.lead=UI.found.lead===id?null:id;UI.found.ids=UI.found.ids.filter(x=>x!==id);} render(); break;
     case "found-pick": if(UI.found){const f=UI.found;if(f.ids.includes(id))f.ids=f.ids.filter(x=>x!==id);else if(f.ids.length<4)f.ids.push(id);} render(); break;
@@ -8205,6 +8285,7 @@ document.addEventListener("keydown",e=>{
       if(S.modal.type==="event"){if(S.event&&S.event.outcome){S.event=null;S.modal=null;save();render();}}
       else if(S.modal.type==="notice"){noticeDone();render();}
       else if(S.modal.type==="news"){newsClose();save();render();}
+      else if(S.modal.type==="crewname"){if(S.modal.edit){S.modal=null;UI.cname=null;}else crewNameLater();render();}
       else if(S.modal.type==="loose"||S.modal.type==="revenge"){}
       else if(isFeed(S.modal.type)&&S.modal.data.awaiting){}
       else if(isFeed(S.modal.type)&&!S.modal.data.done)tickerFinish();

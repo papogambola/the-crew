@@ -127,16 +127,18 @@ for(let run=0;run<RUNS;run++){
       const d=startJob(best.j,{});
       jobsRun++;
       if(S.pendingJob){
-        twistsSeen++;
-        const tw=S.pendingJob.twist;
+        // a big job goes wrong more than once: one answer a twist, in order, the way twistChoose gathers them
         const team=S.pendingJob.teamIds.map(byId).filter(Boolean);
-        let idx;
-        if(r()<P.twist){ // the right call
-          let bestI=0,bestP=99;
-          tw.opts.forEach((o,i)=>{const can=!o.req||!o.req.tech||o.req.tech.some(t=>team.some(c=>c.tech===t));if(can&&o.pri<bestP){bestP=o.pri;bestI=i;}});
-          idx=bestI;twistsRight++;
-        } else idx=Math.floor(r()*tw.opts.length);
-        finishJob(S.pendingJob,idx,d);
+        const answers=pendingTwists(S.pendingJob).map(tw=>{
+          twistsSeen++;
+          if(r()<P.twist){ // the right call
+            let bestI=0,bestP=99;
+            tw.opts.forEach((o,i)=>{const can=!o.req||!o.req.tech||o.req.tech.some(t=>team.some(c=>c.tech===t));if(can&&o.pri<bestP){bestP=o.pri;bestI=i;}});
+            twistsRight++;return bestI;
+          }
+          return Math.floor(r()*tw.opts.length);
+        });
+        finishJob(S.pendingJob,answers,d);
       }
       if(d.tier>=4)clean++;
       if(d.tier<=1)failed++;
