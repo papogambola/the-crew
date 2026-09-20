@@ -9,6 +9,8 @@ and job categories. Everyone on the crew goes on every job, if the border lets t
 doesn't hit one of their limits.
 
 **https://playthecrew.com** — the download page. Every push to `main` redeploys it.
+`papogambola.github.io/the-crew/` redirects there, which is why copies of the exe built before the
+domain existed still find their music: their `MEDIA_BASE` is the old address and it 301s.
 
 Or on Windows, as a program: **https://playthecrew.com/desktop/The-Crew-Windows.zip** — unzip,
 keep the two files together, double-click `The Crew.exe`. The game is inside it and runs with no
@@ -37,7 +39,7 @@ Inside the exe the game is `index.html` again, because Neutralino opens the reso
 | `play.html` | the game, one file |
 | `handbook.html` | the handbook, built by `tools/handbook/` |
 | `shots/*.png` | the four screenshots on the page, taken from the running game by `tools/shots.js` |
-| `CNAME` | *not committed here.* Setting the custom domain in Settings → Pages writes it, and writing it by hand is the same act — which is why it is not in this commit: a `CNAME` pushed before the DNS resolves points the live site at an address that answers nothing |
+| `CNAME` | `playthecrew.com`. Written by GitHub, not by hand — setting the custom domain in Settings → Pages commits it for you, and writing it yourself is the same act, so doing it before the DNS resolves points the live site at an address that answers nothing |
 | `desktop/` | the Windows exe and the zip it ships in |
 
 The working foundation for the design is `CONCEPT.md`, kept as written, with a dated log of
