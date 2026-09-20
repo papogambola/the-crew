@@ -7612,25 +7612,20 @@ function chrome(){
     +(UI.crew&&S?crewFilesHTML():"")
     +(TUT.on&&S&&!S.over?tutHTML():"");
 }
-/* The handbook is a separate page: every rule, number and screen in the game, with a search bar and
-   a clickable index. It sits beside the game — on the site, inside the app, on disk — and that is
-   the default here, because it is true everywhere but one place: a published artifact runs on its
-   own sandboxed origin with nothing beside it, so that, and only that, needs the absolute address.
+/* The handbook is a separate page: every rule, number and screen in the game, with a search bar
+   and a clickable index. It is beside the game. Always — on the site, inside the app, on a local
+   server, on disk. There is no second address any more, and so nothing to decide.
 
-   This was the other way round — a list of the hosts we knew about, github.io and localhost and
-   127.0.0.1, with everything else sent to the artifact. The day the game moved to playthecrew.com
-   every route into the handbook started sending players to claude.ai, and the old github.io
-   address did it too, because it redirects to the new one and this reads the hostname it landed
-   on rather than the one it was asked for. A list of hosts is wrong the day the host changes.
-   "Beside me, unless I am an artifact" is not. */
-const HANDBOOK_URL="https://claude.ai/artifact/UYYQtiV9EfynY4pZTGvmMc";
-const ARTIFACT_HOST=/(^|\.)(claude\.ai|claude\.site|claudeusercontent\.com)$/;
-function handbookHref(){
-  try{
-    if(ARTIFACT_HOST.test(location.hostname))return HANDBOOK_URL;
-  }catch(e){}
-  return "handbook.html";
-}
+   There was, and it did damage. The game and the handbook were each published as a claude.ai
+   artifact, which runs on its own sandboxed origin with nothing beside it, so each carried an
+   absolute fallback to the other's artifact and a rule for when to reach for it. The rule was a
+   list of the hosts we knew about — github.io, localhost, 127.0.0.1 — and the day the game moved
+   to playthecrew.com every route into the handbook started sending players to claude.ai. The old
+   github.io address did it too, because it redirects, so what the rule read was the hostname it
+   landed on rather than the one it was asked for. Inverting the rule fixed that. The artifacts
+   being finished lets the whole branch go, which is better than a fixed rule: one link, no
+   condition, and nothing left to be wrong the next time the address changes. */
+function handbookHref(){return "handbook.html";}
 function openHandbook(){try{window.open(handbookHref(),"_blank","noopener");}catch(e){location.href=handbookHref();}}
 function officeSVG(){
   const K="#111010";
@@ -7951,7 +7946,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 92 · September 2026";
+const BUILD="build 93 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a

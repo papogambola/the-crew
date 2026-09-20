@@ -202,8 +202,12 @@ with zipfile.ZipFile(sys.argv[1]) as z:
      it; the static href in the file was right the whole time and the running page was not.
 
      So this serves the real files under real hostnames and reads what the running page decided.
-     Two ordinary hosts, one of them invented, because a fix that only knows about
-     playthecrew.com is the same bug with today's date on it. */
+     Three hosts: the real one, an invented one, and claude.site — which used to be the one
+     exception, the artifact origin that got an absolute address because it had no game beside
+     it. Those artifacts are finished and the exception is gone, so it is tested here as an
+     ordinary host like the others, which is the whole point: there is no host left that gets a
+     different answer. A fix that only knows about playthecrew.com is the same bug with today's
+     date on it. */
   console.log("\n— where the two pages think each other are —");
   const atHost=async(origin,what)=>{
     const ctx=await browser.newContext({viewport:{width:1100,height:800}});
@@ -228,17 +232,12 @@ with zipfile.ZipFile(sys.argv[1]) as z:
     return {g2h,h2g,what};
   };
 
-  for(const origin of ["https://playthecrew.com","https://some-address-nobody-listed.example"]){
+  for(const origin of ["https://playthecrew.com","https://some-address-nobody-listed.example",
+                       "https://claude.site"]){
     const r=await atHost(origin,origin);
     ok(r.g2h==="handbook.html","at "+origin+" the game reaches the handbook beside it ('"+r.g2h+"')");
     ok(r.h2g==="play.html","at "+origin+" the handbook reaches the game beside it ('"+r.h2g+"')");
   }
-  // ...and the one place where there is nothing beside them still gets the absolute address.
-  const art=await atHost("https://claude.site","artifact");
-  ok(/^https:\/\/claude\.ai\/artifact\//.test(art.g2h),"on an artifact origin the game still "
-    +"gives the handbook's own address ('"+art.g2h+"')");
-  ok(/^https:\/\/claude\.ai\/artifact\//.test(art.h2g),"and the handbook the game's ('"+art.h2g+"')");
-
   ok(missing.length===0,"nothing 404'd while the page loaded"+(missing.length?": "+missing.join(", "):""));
 
   await browser.close();server.close();

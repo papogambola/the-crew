@@ -789,19 +789,13 @@ function wire(){
   window.addEventListener("resize",fit);   /* the book does not repaginate: it is the same book */
 }
 
-/* Where the game is — the same rule the game uses to find the handbook, inverted the same way and
-   for the same reason. The game is beside this page everywhere except a published artifact, which
-   runs on its own sandboxed origin with nothing beside it. This used to be a list of the hosts we
-   knew about, and the day the site moved to playthecrew.com the button started sending readers to
-   claude.ai — from the old github.io address too, because that redirects to the new one and this
-   reads the hostname it landed on. */
-(function(){
-  var a=document.getElementById("back");
-  try{
-    if(/(^|\\.)(claude\\.ai|claude\\.site|claudeusercontent\\.com)$/.test(location.hostname))
-      a.href="https://claude.ai/artifact/4epD8iym482mpSqEj7ZJhN";
-  }catch(e){}
-})();
+/* Where the game is: beside this page, at the href already in the markup. There used to be a
+   rule here, because this was published as a claude.ai artifact too — its own sandboxed origin,
+   no game next to it — so it carried an absolute fallback and a host test for when to use it.
+   That test is what sent readers to claude.ai the day the site moved to playthecrew.com. The
+   artifacts are finished, so the rule is gone rather than fixed: the button is the static
+   href="play.html" in the markup, which desktop/tools/build.py rewrites to index.html on the way
+   into the app, and nothing decides anything at runtime. */
 
 /* Every page here is measured, so wait for the faces the book is set in. */
 function boot(){
