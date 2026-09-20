@@ -801,12 +801,16 @@ function wire(){
   window.addEventListener("resize",fit);   /* the book does not repaginate: it is the same book */
 }
 
-/* Where the game is — the same rule the game uses to find the handbook. */
+/* Where the game is — the same rule the game uses to find the handbook, inverted the same way and
+   for the same reason. The game is beside this page everywhere except a published artifact, which
+   runs on its own sandboxed origin with nothing beside it. This used to be a list of the hosts we
+   knew about, and the day the site moved to playthecrew.com the button started sending readers to
+   claude.ai — from the old github.io address too, because that redirects to the new one and this
+   reads the hostname it landed on. */
 (function(){
   var a=document.getElementById("back");
   try{
-    var h=location.hostname,file=location.protocol==="file:";
-    if(!(file||/(^|\.)github\.io$/.test(h)||h==="localhost"||h==="127.0.0.1"))
+    if(/(^|\.)(claude\.ai|claude\.site|claudeusercontent\.com)$/.test(location.hostname))
       a.href="https://claude.ai/artifact/4epD8iym482mpSqEj7ZJhN";
   }catch(e){}
 })();

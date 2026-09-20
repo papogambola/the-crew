@@ -15,6 +15,7 @@
    Needs Playwright and the handbook tooling's Chromium. */
 const {chromium}=require("/opt/node22/lib/node_modules/playwright");
 const http=require("http"),fs=require("fs"),path=require("path"),url=require("url"),os=require("os");
+const {execFileSync}=require("child_process");
 
 const ROOT=path.join(__dirname,"..");
 const CHROME="/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
@@ -69,12 +70,33 @@ const server=http.createServer((rq,rs)=>{
     +"the domain, on github.io and on disk ('"+dl.href+"')");
   ok(dl.dl,"with a download attribute, so the browser saves it rather than reasoning about it");
 
-  const build=(fs.readFileSync(path.join(ROOT,"play.html"),"utf8").match(/const BUILD="([^"]+)"/)||[])[1];
-  const zipMB=(fs.statSync(path.join(ROOT,"desktop","The-Crew-Windows.zip")).size/1048576).toFixed(1)+" MB";
+  /* The build the page names is the build of the zip, read out of the game packed inside it —
+     NOT the build of play.html beside it. Those are usually the same number and were assumed to
+     be, until a web-only fix moved the site to 92 with no Windows toolchain to repack 91 with,
+     and reading play.html would have had the download page advertising a build nobody could
+     download. Read from where the truth is, which is the file being offered. */
+  const ZIP=path.join(ROOT,"desktop","The-Crew-Windows.zip");
+  const zipBuild=execFileSync("python3",["-c",`
+import re,sys,zipfile
+with zipfile.ZipFile(sys.argv[1]) as z:
+    neu=next(i for i in z.infolist() if i.filename.endswith("resources.neu"))
+    print(re.search(rb'const BUILD="([^"]+)"',z.read(neu)).group(1).decode())
+`,ZIP],{encoding:"utf8"}).trim();
+  const webBuild=(fs.readFileSync(path.join(ROOT,"play.html"),"utf8").match(/const BUILD="([^"]+)"/)||[])[1];
+  const zipMB=(fs.statSync(ZIP).size/1048576).toFixed(1)+" MB";
   const facts=(await page.textContent(".facts")).replace(/\s+/g," ").trim();
-  ok(facts.includes(build),"the version line names the build the zip actually is ("+build+")");
+  ok(facts.includes(zipBuild),"the version line names the build inside the zip ("+zipBuild+")");
   ok(facts.toUpperCase().includes(zipMB.toUpperCase()),"and the size the zip actually is ("+zipMB+")");
   ok(/Windows 10 \/ 11/.test(facts),"and which Windows: \""+facts+"\"");
+  if(zipBuild!==webBuild)
+    console.log("     (the site is on "+webBuild+" and the download on "+zipBuild+" — that is allowed, "
+      +"and version.txt below is what decides whether anybody is told about it)");
+
+  /* The one that must never drift: version.txt is what a packed copy asks the site in order to
+     find out it is behind. If it runs ahead of the zip, every exe in the world is told a newer
+     build exists and handed the one it already has. */
+  const vtxt=fs.readFileSync(path.join(ROOT,"version.txt"),"utf8").trim();
+  ok(vtxt===zipBuild,"version.txt names the build people can actually download ('"+vtxt+"')");
 
   const icoPage=await page.$eval('link[rel="icon"]',l=>l.getAttribute("href"));
   const icoGame=(fs.readFileSync(path.join(ROOT,"play.html"),"utf8").match(/<link rel="icon" href="([^"]+)">/)||[])[1];
@@ -150,6 +172,53 @@ const server=http.createServer((rq,rs)=>{
   const deskNote=await page.$eval(".phoneonly",e=>getComputedStyle(e).display);
   ok(deskNote==="none","and does not say it on a PC, where it would be nonsense");
   await ph.screenshot({path:path.join(TMP,"phone.png"),fullPage:false});
+
+  /* ---------------------------------------------------------------------------------------
+     The game and the handbook link to each other, and each decides between the file beside it
+     and an absolute claude.ai address by looking at location.hostname. That decision used to be
+     a list of the hosts we knew about — github.io, localhost, 127.0.0.1 — and the day the site
+     moved to playthecrew.com both links started sending people to claude.ai. The old github.io
+     address did it too: it redirects to the new one, so the hostname this reads is the new one
+     there as well. Every check that existed ran on a listed host, which is why none of them saw
+     it; the static href in the file was right the whole time and the running page was not.
+
+     So this serves the real files under real hostnames and reads what the running page decided.
+     Two ordinary hosts, one of them invented, because a fix that only knows about
+     playthecrew.com is the same bug with today's date on it. */
+  console.log("\n— where the two pages think each other are —");
+  const atHost=async(origin,what)=>{
+    const ctx=await browser.newContext({viewport:{width:1100,height:800}});
+    const pg=await ctx.newPage();
+    await pg.route("**/*",route=>{
+      const u=new URL(route.request().url());
+      if(u.origin!==origin)return route.continue();
+      const f=path.join(ROOT,decodeURIComponent(u.pathname).replace(/^\/+/,"")||"index.html");
+      if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory())
+        return route.fulfill({status:404,body:"no"});
+      route.fulfill({status:200,headers:{"content-type":TYPES[path.extname(f)]||"application/octet-stream"},
+        body:fs.readFileSync(f)});
+    });
+    await pg.goto(origin+"/play.html",{waitUntil:"domcontentloaded"});
+    await pg.waitForSelector('[data-act="begin"]',{timeout:60000});
+    const g2h=await pg.evaluate(()=>handbookHref());
+    await pg.goto(origin+"/handbook.html",{waitUntil:"domcontentloaded"});
+    await pg.waitForSelector("#back",{state:"attached",timeout:60000});
+    await pg.waitForTimeout(600);
+    const h2g=await pg.$eval("#back",a=>a.getAttribute("href"));
+    await ctx.close();
+    return {g2h,h2g,what};
+  };
+
+  for(const origin of ["https://playthecrew.com","https://some-address-nobody-listed.example"]){
+    const r=await atHost(origin,origin);
+    ok(r.g2h==="handbook.html","at "+origin+" the game reaches the handbook beside it ('"+r.g2h+"')");
+    ok(r.h2g==="play.html","at "+origin+" the handbook reaches the game beside it ('"+r.h2g+"')");
+  }
+  // ...and the one place where there is nothing beside them still gets the absolute address.
+  const art=await atHost("https://claude.site","artifact");
+  ok(/^https:\/\/claude\.ai\/artifact\//.test(art.g2h),"on an artifact origin the game still "
+    +"gives the handbook's own address ('"+art.g2h+"')");
+  ok(/^https:\/\/claude\.ai\/artifact\//.test(art.h2g),"and the handbook the game's ('"+art.h2g+"')");
 
   ok(missing.length===0,"nothing 404'd while the page loaded"+(missing.length?": "+missing.join(", "):""));
 

@@ -51,4 +51,11 @@ with zipfile.ZipFile(OUT, "w", zipfile.ZIP_DEFLATED) as z:
     z.write(EXE, "The Crew/The Crew.exe")
     z.write(RES, "The Crew/resources.neu")
     z.writestr("The Crew/READ ME.txt", README)
+# Now, and only now, is there a build people can download — so now is when the site is allowed to
+# say so. version.txt is what a packed copy asks in order to find out it is behind; written here,
+# out of the stamp checked above, it cannot name a build that is not in the zip beside it.
+VER = os.path.join(os.path.dirname(HERE), "version.txt")
+open(VER, "w", encoding="utf-8").write(packed + "\n")
+
 print(f"{OUT}: {os.path.getsize(OUT)} bytes — {packed}")
+print(f"{VER}: {packed}")

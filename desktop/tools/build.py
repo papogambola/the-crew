@@ -68,14 +68,15 @@ if BACK_SITE not in hb:
     raise SystemExit("no %r in handbook.html — has the back button moved?" % BACK_SITE)
 open(os.path.join(RES, "handbook.html"), "w", encoding="utf-8").write(hb.replace(BACK_SITE, BACK_APP))
 
-# What the site serves so a bundled copy can ask whether it is behind. Generated from the same
-# constant the game prints, so the two cannot disagree.
-open(os.path.join(ROOT, "version.txt"), "w", encoding="utf-8").write(build + "\n")
+# version.txt is NOT written here, though it was. It is what a packed copy asks the site in order
+# to find out it is behind, so it describes the zip — and this step runs before there is one. When
+# a web-only fix moves the game ahead of the last exe, writing it here says a newer build exists
+# and then hands everybody the build they already have. pack.py writes it, out of the bundle it
+# has just checked, because that is the moment the claim becomes true.
 
 size = lambda p: os.path.getsize(os.path.join(RES, p))
 print("assembled %s" % RES)
 print("  index.html    %7d bytes  (the game, %s)" % (size("index.html"), build))
 print("  handbook.html %7d bytes" % size("handbook.html"))
 print("  music         fetched from %s when there is a connection" % SITE)
-print("wrote %s" % os.path.join(ROOT, "version.txt"))
 print("\nnext: neu build --release   then   python3 tools/pack.py")

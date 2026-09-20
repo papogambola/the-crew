@@ -7613,16 +7613,23 @@ function chrome(){
     +(TUT.on&&S&&!S.over?tutHTML():"");
 }
 /* The handbook is a separate page: every rule, number and screen in the game, with a search bar and
-   a clickable index. It sits beside the game on Pages and on disk; anywhere else — an artifact runs
-   on its own sandboxed origin — the only address that certainly reaches it is its own. */
+   a clickable index. It sits beside the game — on the site, inside the app, on disk — and that is
+   the default here, because it is true everywhere but one place: a published artifact runs on its
+   own sandboxed origin with nothing beside it, so that, and only that, needs the absolute address.
+
+   This was the other way round — a list of the hosts we knew about, github.io and localhost and
+   127.0.0.1, with everything else sent to the artifact. The day the game moved to playthecrew.com
+   every route into the handbook started sending players to claude.ai, and the old github.io
+   address did it too, because it redirects to the new one and this reads the hostname it landed
+   on rather than the one it was asked for. A list of hosts is wrong the day the host changes.
+   "Beside me, unless I am an artifact" is not. */
 const HANDBOOK_URL="https://claude.ai/artifact/UYYQtiV9EfynY4pZTGvmMc";
+const ARTIFACT_HOST=/(^|\.)(claude\.ai|claude\.site|claudeusercontent\.com)$/;
 function handbookHref(){
   try{
-    if(location.protocol==="file:")return "handbook.html";
-    const h=location.hostname;
-    if(/(^|\.)github\.io$/.test(h)||h==="localhost"||h==="127.0.0.1")return "handbook.html";
+    if(ARTIFACT_HOST.test(location.hostname))return HANDBOOK_URL;
   }catch(e){}
-  return HANDBOOK_URL;
+  return "handbook.html";
 }
 function openHandbook(){try{window.open(handbookHref(),"_blank","noopener");}catch(e){location.href=handbookHref();}}
 function officeSVG(){
@@ -7944,7 +7951,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 91 · 19 September 2026";
+const BUILD="build 92 · 20 September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a

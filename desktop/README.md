@@ -56,9 +56,10 @@ What ships is `The-Crew-Windows.zip` in this folder — `The Crew.exe` (2.4MB), 
 what the button on the download page points at. Bundling the whole game
 cost 324KB on the download: 1.18MB before, 1.50MB now, because 800KB of HTML compresses hard.
 
-Commit the zip and `version.txt` together with the build they were made from. `version.txt` is
-what a packed copy asks the site in order to find out it is behind, and it is generated from the
-game's own `const BUILD` rather than typed, so the two cannot drift.
+Commit the zip and `version.txt` together: `pack.py` writes the second out of the first, at the
+one moment they are certainly the same build. It used to be written by `build.py`, which runs
+before the zip exists — so a web-only fix that moved the game ahead of the last exe would have
+told every copy in the world that a newer build was out and then handed it the one it already had.
 
 To point a build at a test server, open it with `?game=` — no longer, in fact: there is nothing to
 point. A test copy is `desktop/resources/` served over http, which is exactly what Neutralino does;

@@ -31,10 +31,20 @@ check = "--check" in sys.argv[1:]
 
 game = open(GAME, encoding="utf-8").read()
 
-m = re.search(r'const BUILD="([^"]+)"', game)
+# The build the PAGE names is the build of the THING IT OFFERS, which is the zip — not the game
+# sitting next to it in the repository. Those were the same number until the web build moved ahead
+# of the exe (a web-only fix, and no Windows toolchain to repack with), at which point reading it
+# out of play.html would have had the download page advertising a build nobody could download.
+# So it is read out of resources.neu inside the zip, the same way pack.py reads it back to check
+# it packed what it meant to.
+with zipfile.ZipFile(ZIP) as z:
+    neu = next((i for i in z.infolist() if i.filename.endswith("resources.neu")), None)
+    if not neu:
+        raise SystemExit("no resources.neu in %s — what is in that zip?" % ZIP)
+    m = re.search(rb'const BUILD="([^"]+)"', z.read(neu))
 if not m:
-    raise SystemExit("no const BUILD= in play.html — has the game moved it?")
-build = m.group(1)
+    raise SystemExit("no const BUILD= inside the zip's resources.neu")
+build = m.group(1).decode("utf-8")
 
 icon = re.search(r'<link rel="icon" href="[^"]+">', game)
 if not icon:
