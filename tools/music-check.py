@@ -14,6 +14,13 @@ So the list of tracks is read out of the game rather than typed here, every one 
 for by name, and the answer is compared against the file on disk. A track that 404s, or comes back
 a different size from the master beside it, fails.
 
+It asks with an Origin header and looks at what comes back, because the game reaches a tune two
+ways and they have different requirements. An <audio> element loads cross-origin with no CORS at
+all, and that is the path that plays. The blob fetch in musicLoadFallback() — the last resort
+once an <audio> element has already failed — needs access-control-allow-origin, and a bucket
+policy is invisible configuration that can be deleted by somebody tidying up. Losing it does not
+silence anything on its own, so it is reported rather than failed, but it is reported loudly.
+
 HEAD only: nothing is downloaded, so running it costs a Class B operation apiece and no egress.
 
 It sends a User-Agent, and that is load-bearing. The first real run against R2 got 403 on all
@@ -82,13 +89,15 @@ print("%d tracks, against %s\n" % (len(tracks), base))
 
 GAP = float(os.environ.get("MUSIC_CHECK_GAP", "0.25"))
 UA  = "the-crew-music-check/1 (+https://playthecrew.com)"
+ORIGIN = "https://playthecrew.com"
 
 def head(url, tries=4):
     """status, headers, how many times it had to be asked again."""
     delay = 1.5
     for i in range(tries):
         try:
-            rq = urllib.request.Request(url, method="HEAD", headers={"User-Agent": UA})
+            rq = urllib.request.Request(url, method="HEAD",
+                                        headers={"User-Agent": UA, "Origin": ORIGIN})
             with urllib.request.urlopen(rq, timeout=30) as r:
                 return r.status, r.headers, i
         except urllib.error.HTTPError as e:
@@ -99,6 +108,7 @@ def head(url, tries=4):
             return None, e, i
 
 bad = slowed = 0
+nocors = []
 for n, t in enumerate(tracks):
     if n: time.sleep(GAP)
     # The master if it is still here, otherwise the size recorded when it was.
@@ -116,6 +126,8 @@ for n, t in enumerate(tracks):
         elif not ctype.startswith("audio/"):
             # Not fatal: a bucket that serves octet-stream still plays. Worth saying.
             note = "  (served as %s, not audio/*)" % (ctype or "nothing")
+        acao = head_or_err.get("access-control-allow-origin")
+        if not (acao == "*" or acao == ORIGIN): nocors.append(short)
         if retries: note += "  (asked %d times)" % (retries + 1)
         print("  %-28s %3d  %9d bytes%s" % (short, status, got, note))
     elif status is None:
@@ -136,3 +148,12 @@ if unchecked:
     print("run  python3 tools/music-check.py --record  while the masters are in place.")
 if slowed:
     print("%d of them had to be asked more than once." % slowed)
+if nocors:
+    print("\nBUT %d of %d send no access-control-allow-origin for %s." % (len(nocors), len(tracks), ORIGIN))
+    print("The game still plays them — an <audio> element does not need CORS — but the blob")
+    print("fallback in musicLoadFallback() cannot, so a track that fails to load as a plain")
+    print("source has nothing left to try. Add a CORS policy to the bucket:")
+    print('  [{"AllowedOrigins":["*"],"AllowedMethods":["GET","HEAD"],'
+          '"AllowedHeaders":["*"],"MaxAgeSeconds":86400}]')
+else:
+    print("and all allow a cross-origin read, so the blob fallback still has somewhere to go.")
