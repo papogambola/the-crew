@@ -160,7 +160,9 @@
       so you will be warned twice and both are about the signature, not about the file.
       <b>Chrome</b>, as it downloads: <i>“This file isn’t commonly downloaded”</i> — click the
       arrow beside it and <b>Keep</b>. <b>Windows</b>, the first time you run it:
-      <i>“Windows protected your PC”</i> — <b>More info → Run anyway</b>.</p>
+      <i>“Windows protected your PC”</i> — <b>More info → Run anyway</b>. The second one can be
+      avoided entirely by ticking <b>Unblock</b> in the zip’s Properties before unzipping —
+      <a href="#running">how, and why that works</a>.</p>
 
     <p class="smallprint" style="margin-top:10px;color:var(--muted)">Neither is a virus report.
       A code-signing certificate needs a registered company, and until there is one every new
@@ -250,7 +252,7 @@
       </div>
 
       <div class="spec">
-        <h3>Getting it running</h3>
+        <h3 id="running">Getting it running</h3>
         <dl>
           <dt>1</dt><dd>Download the zip. Chrome says <i>“This file isn’t commonly downloaded”</i>
             because the build is unsigned — click the arrow beside the download and
@@ -260,8 +262,17 @@
           <dt>2</dt><dd>Keep <span class="mono">The Crew.exe</span> and
             <span class="mono">resources.neu</span> together in the same folder. The game is
             inside the second one.</dd>
-          <dt>3</dt><dd>Run <span class="mono">The Crew.exe</span>. SmartScreen will object once,
-            because the build is unsigned: <b>More info → Run anyway</b>.</dd>
+          <dt>2½</dt><dd><b>To skip the blue screen altogether:</b> before you unzip, right-click
+            the downloaded <span class="mono">.zip</span>, choose <b>Properties</b>, tick
+            <b>Unblock</b> at the bottom, <b>OK</b>. Then unzip. Windows marks anything that came
+            off the internet and passes the mark on to whatever comes out of the archive, and it
+            is that mark SmartScreen reacts to — clear it on the zip and nothing inside carries
+            it. Do this only because you decided to trust the download, which is the whole of what
+            the tick means.</dd>
+          <dt>3</dt><dd>Run <span class="mono">The Crew.exe</span>. If you skipped 2½, SmartScreen
+            objects once because the build is unsigned: <b>More info → Run anyway</b>. It will say
+            <i>Unknown publisher</i>, and it will keep saying that until there is a code-signing
+            certificate — that line comes from the signature, and there isn't one.</dd>
           <dt>Saving</dt><dd>It saves itself as you play and picks up where you left off. There is
             no save button and nothing to name.</dd>
         </dl>
