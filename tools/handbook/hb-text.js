@@ -631,6 +631,9 @@ ch("night","The night itself","The live report",[
     p("Three seconds of skyline before the first line of the night: where you are, what kind of job it is, and what it is called. "
       +"The crew has just landed somewhere, and the report reads differently once you have been told where you are standing. "
       +"Click it, or press any key, to go straight on.")
+    +p("It has its own sound — soft music and a sea, cut to the length of the card so it fades out exactly as the card goes. "
+      +"The report's own track is held under it and comes in with the first line of the night, so the three seconds belong to "
+      +"the city. Going straight on cuts it short. It answers to the music switch in the office like everything else.")
     +p("Every one of the "+m(D.CITY_COUNT||129)+" cities has its own, and the skyline behind it is <b>generated</b> rather than "
       +"collected — from a hash of the city's own name, so it is the same place every time on every machine, and from the "
       +"country's ground, so a mountain town has a ridge behind it, a port has water and a gantry crane under it, a delta has a "
