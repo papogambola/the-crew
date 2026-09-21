@@ -37,6 +37,24 @@ because the site's `index.html` is the download page and the app's is the game. 
 than guess if it cannot find the button to rewrite. The web build has none of them: it reads `MUSIC_HOME` as it stands, and never asks whether it is
 current, because it is — you just fetched it.
 
+## Anything the exe reaches for must outlive the exe
+
+An exe in somebody's hands is frozen. Whatever address was baked into it when it was packed is
+the address it will keep asking, for as long as that copy exists — so **moving or deleting
+anything the site serves silences every copy already downloaded**, and it does it quietly.
+
+This has happened. The music moved to object storage and the mp3s were deleted from the site in
+the same breath. Build 95 and later were fine, because they carry `THE_CREW_MUSIC`. Build 91 was
+not: it predates `musicURL()` and reaches for tunes through `MEDIA_BASE`, which is the site, where
+`/music/*.mp3` had just become 404. Nothing said so. `sfx()` is synthesised with oscillators
+rather than files, so the interface kept clicking and beeping while every track failed — which is
+what it sounded like from the outside, and how it was found: by somebody playing it.
+
+So before removing anything from the published tree, ask what the *oldest* exe still in
+circulation asks for. If the answer is "that", either leave it there or ship a new zip in the same
+push — and remember `version.txt` is what tells an old copy there is a newer one, so it has to keep
+answering whatever else moves.
+
 ## Building it
 
 One command, from this folder:
