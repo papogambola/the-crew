@@ -2533,18 +2533,24 @@ function makeJob(rng,tierBias){
   const payout=Math.round(payBase*(0.7+rng()*0.8)*rk.pay/1000)*1000;
   const heat=Math.round(cat.heat*(0.8+tier*0.12)*(co.auth?1.2:1));
   const techs=[];const pool=cat.techs.slice();
-  /* Two, at most, on an ordinary posting. Three used to arrive at tier 4 and it is the wrong
-     place for three: three trades named by one client is the signature of an operation, which
-     asks seven people and three to five of them, and having the top of the weekly board ask
-     the same question blurred the one screen that is supposed to be a different kind of night.
-     Tier 4 is still the hardest posting on the board — the difficulty, the five in the field
-     and the second kind of knowledge all still arrive with it.
+  /* One at tier 1, two at tiers 2 and 3, three at tier 4 — and THREE IS DELIBERATE. It was
+     capped at two for one build, on the argument that three trades named by one client should
+     be the signature of an operation and nothing else. The argument was fine and the number
+     was wrong: three names are three chances for the crew to match one of them, so asking for
+     fewer made the hardest postings blanker, not friendlier.
 
-     Measured, on one crew held still over 200 weeks of boards with the seed pinned so both
-     runs saw the same world: tier-4 postings where the crew held NONE of the wanted trades
-     went from 55.2% to 68.5%, which is the honest cost of the change — three names are three
-     chances to match one. That is what the one-night hand is now for. */
-  const nt=clamp(1+Math.floor(tier/2),1,2);
+     Measured before putting it back: one crew held still over 200 weeks of boards, seed pinned,
+     four seeds. Tier-4 postings where the crew held NONE of the wanted trades came out worse at
+     two on three of the four (55→61, 40→58, 27→42) and better on one (91→84) — about eight
+     points worse on average. Not a clean result, and it cannot be one: changing how many trades
+     a posting draws changes how many numbers makeJob pulls, so the two runs see the same world's
+     generator rather than the same boards. The direction is consistent enough to act on and the
+     size is not worth quoting to a decimal.
+
+     What an operation is distinguished by is seven in the field, three to five trades, two or
+     three kinds of knowledge and a difficulty that starts where tier 4 ends — not by the count
+     alone. Do not cap this again without measuring it again. */
+  const nt=clamp(1+Math.floor(tier/2),1,3);
   for(let i=0;i<nt&&pool.length;i++)techs.push(pool.splice(Math.floor(rng()*pool.length),1)[0]);
   const know=[pick(rng,cat.know)];
   if(tier>=3&&cat.know.length>1){const k=pick(rng,cat.know);if(!know.includes(k))know.push(k);}
@@ -8695,7 +8701,7 @@ const INFO={
     "Postings from clients, by country. The verdict comes first on the row — <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go — and hovering it gives the sum behind it: your reckoning against the job's difficulty, the roll on top, and the odds of each ending. Then the category, the trades and knowledge it wants, the city, country and language, the crew needed, the fee, the heat and the week it expires.",
     "<b>Every requirement says what it is worth</b>, in the same points the reckoning is counted in, so the board and the job file are the same argument. A bare <b>+9</b> in green is being counted for you right now. A bracketed <b>(+9)</b> in red is what somebody who held it would be worth — you are not being charged for missing it, you are declining a bonus. A bare <b>−6</b> in red <i>is</i> a charge. That distinction is the point: a trade nobody has costs you nothing you had, while knowledge nobody has, and a language nobody speaks, come off the reckoning.",
     "A trade is worth <b>+"+TRADE_COVER+"</b> to the crew for being covered at all, plus <b>+"+TECH_BONUS+"</b> to the one who <i>is</i> it or <b>+"+TECH_BONUS_2+"</b> to one who learned it as a second — and because the reckoning averages the field, that bonus is divided by how many go. A specialist in a room of three is most of the room; the same person in a room of seven is a seventh of it. This is why the number on a chip changes when you bench somebody, and it is not a bug.",
-    "An ordinary posting names <b>at most two trades</b> — one at tier 1, two from tier 2 up. Three or more from one client is the signature of an <b>operation</b>, which is a different kind of night. Tier 4 is still the hardest thing on the board; it is the difficulty, the five in the field and the second kind of knowledge that make it so.",
+    "<b>How many trades a posting names goes with its tier</b>: one at tier 1, two at tiers 2 and 3, three at tier 4. More names is not simply more difficulty — each name is another chance that somebody on your crew is the one it wants, so the biggest postings are often the ones your crew has something to say about.",
     "<b>The board does not wait.</b> Every posting carries the week it expires, on the row and again on its own screen with the weeks left counted off. It matters because a trip to fetch somebody is a week: a posting wanting a trade nobody has, with three weeks on it, is a job you can still go and fit. With one week on it, it is a job you run with the crew you have or not at all — and the screen says which of the two you are looking at.",
     "<b>You are not the only crew reading it.</b> A rival takes the best posting still standing, some weeks, and you are told which one, what it paid, and whether you could have run it — or, worse, how many weeks you had already spent watching it.",
     "<b>Clients remember.</b> Botch a job badly enough and the client may stop posting to you for twenty or thirty weeks, take one or two other clients with them, and pull the postings they already had. The board says who will not deal with you and until when — and whether one of them is not finished with you.",
@@ -9323,7 +9329,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 100 · September 2026";
+const BUILD="build 101 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a

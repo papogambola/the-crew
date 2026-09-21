@@ -438,11 +438,14 @@ ch("board","The board","Where the work comes from",[
       +"and "+m(String(D.KNOW_MISSING||-6).replace("-","−"))+" if nobody going knows it. The <b>language</b> is "+m("+"+(D.LANG_BONUS||6))
       +" spoken, "+m(String(D.LANG_MISS||-8).replace("-","−"))+" not — "+m(String(D.LANG_MISS_TALK||-14).replace("-","−"))
       +" on a job that is all talk.")
-    +p("<b>An ordinary posting names at most two trades</b> — one at tier 1, two from tier 2 up. Three or more named by one "
-      +"client is the signature of <a href=\"#ops\">an operation</a>, and the top of the weekly board asking the same "
-      +"question blurred the one screen that is meant to be a different kind of night. A tier-4 posting is still the "
-      +"hardest thing on the board: the difficulty, the five in the field and the second kind of knowledge all still "
-      +"arrive with it.")
+    +p("<b>How many trades a posting names goes with its tier</b> — one at tier 1, two at tiers 2 and 3, three at tier 4. "
+      +"That is not simply more difficulty piled on the big ones: every name is another chance that somebody on your crew "
+      +"is the one it wants, so a tier-4 posting is often the one your crew has <i>something</i> to say about, even while "
+      +"it is the hardest room on the board.")
+    +note("This was briefly capped at two, on the argument that three names should mean <a href=\"#ops\">an operation</a> "
+      +"and nothing else. Measured over 200 weeks of boards on a crew held still, across four pinned seeds, the cap left "
+      +"the crew holding none of the wanted trades on MORE of the hardest postings, not fewer — about eight points more. "
+      +"Fewer names is fewer chances. It was put back.")
     +note("So a missing trade and a missing piece of knowledge are not the same red. One of them costs you nothing you had; "
       +"the other comes off the night. Both used to be drawn as a plain cross, which said they were the same thing.")),
   S("tiers","Tiers",
