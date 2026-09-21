@@ -3731,6 +3731,9 @@ function eventApply(ev,i){
 }
 
 function weekTick(rng){
+  // A carbon of the week just finished, taken before this one starts spending its money —
+  // so "go back to last week" means the board as it stood, not as it stood after payroll.
+  slotCarbon();
   S.week++;
   const rc=payroll().filter(c=>c.status==="crew");   // every crew's people are on the books
   let up=retainerCost();rc.forEach(c=>up+=c.upkeep);
@@ -3976,6 +3979,97 @@ function importCode(code){
 }
 function wipe(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}}
 function hasSave(){try{return !!localStorage.getItem(SAVE_KEY);}catch(e){return false;}}
+
+/* ------------------------------ THE DRAWER ----------------------------
+   More than one game at a time, and a way back to last week.
+
+   SAVE_KEY holds the game being played and is overwritten constantly — which is the whole of
+   what a save was, and it meant one game per browser and no way back from a night that went
+   wrong. Two long campaigns were lost this month to a bug that put that single key out of
+   reach, and the only remedy on offer was a code the player had to have thought to copy out
+   beforehand. Nobody thinks to.
+
+   So the drawer: an index of what is in it, and one key per file, which keeps writing a save
+   cheap — a list of a dozen games is a few hundred bytes to read, and only the file being
+   opened is ever parsed.
+
+   Two kinds share it. A FILE is one the player made and named, and nothing removes it but
+   them. A CARBON is taken without being asked, one a week, and the oldest falls off the back
+   of a rolling few — the point being that it is there on the week you wish you had taken one,
+   which is never the week you would have. */
+const SLOTS_KEY="thecrew_slots", SLOT_AT="thecrew_slot_";
+const CARBONS=6;          // weeks of rolling autosave kept
+const FILES_MAX=12;       // named files, after which saving asks you to clear one
+
+function slotIndex(){
+  try{const r=localStorage.getItem(SLOTS_KEY);const a=r?JSON.parse(r):[];return Array.isArray(a)?a:[];}
+  catch(e){return [];}
+}
+function slotIndexWrite(a){try{localStorage.setItem(SLOTS_KEY,JSON.stringify(a));return true;}catch(e){return false;}}
+// What the list shows, taken off the packed state rather than off S, so a file written from an
+// imported code describes itself the same way as one written from the game in front of you.
+function slotFacts(d){
+  return {n:(d.player&&d.player.n)||"—",crew:d.crewName||null,week:d.week||1,
+          rep:d.rep||0,money:d.money||0,crewN:(d.crewIds||[]).length,at:Date.now()};
+}
+function slotPut(label,auto){
+  if(!S)return null;
+  const d=packState();
+  const id=(auto?"a":"f")+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
+  const rec=Object.assign({id:id,auto:!!auto,label:label||""},slotFacts(d));
+  let list=slotIndex();
+  list.unshift(rec);
+  // Carbons are a rolling window; files are not. Trimming them separately is what keeps a
+  // week of autosaves from quietly pushing out a game somebody meant to keep.
+  const keep=[],drop=[];
+  let nA=0,nF=0;
+  list.forEach(r=>{
+    if(r.auto){nA++;(nA<=CARBONS?keep:drop).push(r);}
+    else{nF++;(nF<=FILES_MAX?keep:drop).push(r);}
+  });
+  try{localStorage.setItem(SLOT_AT+id,JSON.stringify(d));}
+  catch(e){
+    // Out of room. Drop the oldest carbon and try once more; a named file is never sacrificed
+    // to make space for an automatic one.
+    const old=keep.filter(r=>r.auto&&r.id!==id).pop();
+    if(!old)return null;
+    drop.push(old);keep.splice(keep.indexOf(old),1);
+    try{localStorage.setItem(SLOT_AT+id,JSON.stringify(d));}catch(e2){return null;}
+  }
+  drop.forEach(r=>{try{localStorage.removeItem(SLOT_AT+r.id);}catch(e){}});
+  slotIndexWrite(keep);
+  return id;
+}
+function slotRead(id){
+  try{const r=localStorage.getItem(SLOT_AT+id);if(!r)return null;
+    const d=JSON.parse(r);return (d&&d.v===2&&d.seed&&d.player)?d:null;}catch(e){return null;}
+}
+function slotOpen(id){
+  const d=slotRead(id);
+  if(!d){note("That file is not in the drawer any more.");return false;}
+  // Taken before anything is replaced: opening an old week with the current game unsaved is
+  // the one move in here that can lose something, so it does not.
+  if(S)slotPut("before opening another file",true);
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){note("This browser is refusing to keep saves.");return false;}
+  if(!load()){note("The file would not open.");return false;}
+  UI.panel=null;UI.office=false;
+  logMsg("Opened a file from the drawer — "+((S.player&&S.player.n)||"—")+", week "+S.week+".","good",true);
+  save();render();window.scrollTo(0,0);
+  return true;
+}
+function slotDrop(id){
+  try{localStorage.removeItem(SLOT_AT+id);}catch(e){}
+  slotIndexWrite(slotIndex().filter(r=>r.id!==id));
+}
+// One a week, and only when the week actually turned — weekTick is the one place that happens.
+function slotCarbon(){try{if(S&&!S.over)slotPut("week "+S.week,true);}catch(e){}}
+function slotWhen(t){
+  const s=Math.max(0,Math.round((Date.now()-t)/1000));
+  if(s<90)return "just now";
+  const m=Math.round(s/60);if(m<60)return m+" min ago";
+  const h=Math.round(m/60);if(h<24)return h+(h===1?" hour ago":" hours ago");
+  const d=Math.round(h/24);return d+(d===1?" day ago":" days ago");
+}
 
 /* ------------------------------ FORMAT -------------------------------- */
 function money(n){n=Math.round(n);const neg=n<0;n=Math.abs(n);let s;
@@ -8185,8 +8279,36 @@ function officePanel(){
   } else if(UI.panel==="cabinet"){
     h="The file cabinet";
     const info=UI.impInfo;
-    b='<div class="mono" style="font-size:12.5px;line-height:1.7;color:var(--ink-2)">A game lives in this browser only. Clear its data, play on another machine, or lose the laptop, and the crew goes with it. Write the file out as a code and it can be kept anywhere and read back in here or on any other browser.</div>'
-      +(S?'<hr class="rule"><div class="kicker">Write it out</div><div class="sel-help">Select the whole box and copy it. It is one long line of text.</div>'
+    const files=slotIndex();
+    const row=r=>{
+      const here=S&&r.auto&&r.week===S.week;
+      return '<div class="check" style="align-items:center">'
+        +'<div style="flex:1;min-width:0">'
+          +'<div class="mono" style="font-size:12.5px">'+esc(r.n)
+            +(r.crew?' <span style="color:var(--muted)">· '+esc(cap(r.crew))+'</span>':'')
+            +(r.auto?' <span class="tag" style="margin-left:6px">carbon</span>'
+                    :(r.label?' <span class="mono" style="color:var(--muted);font-size:11px">· '+esc(r.label)+'</span>':''))+'</div>'
+          +'<div class="why">week '+r.week+' · ranking '+r.rep+' ('+esc(rankName(r.rep))+') · '
+            +money(r.money)+' · '+r.crewN+' on the crew · '+esc(slotWhen(r.at))+'</div>'
+        +'</div>'
+        +'<span style="display:flex;gap:6px;flex:none;align-items:center">'
+        +'<button class="btn ghost sm" data-act="slot-open" data-id="'+esc(r.id)+'"'+(here?' disabled title="This is the week you are on"':'')+'>Open</button>'
+        +'<button class="btn ghost sm" data-act="slot-drop" data-id="'+esc(r.id)+'" title="Take it out of the drawer">\u2715</button>'
+        +'</span></div>';
+    };
+    const nF=files.filter(r=>!r.auto).length;
+    b='<div class="mono" style="font-size:12.5px;line-height:1.7;color:var(--ink-2)">The drawer holds more than one game, and keeps a carbon of the last '+CARBONS+' weeks without being asked. It is still this browser, though — clear its data and the drawer goes with it — so a crew you would hate to lose also wants writing out as a code, at the bottom.</div>'
+      +(S?'<hr class="rule"><div class="kicker">Put this one in the drawer</div>'
+        +'<div class="sel-help">'+esc(S.player.n)+' · week '+S.week+' · '+money(S.money)+' · '+nF+' of '+FILES_MAX+' named files</div>'
+        +'<div class="field" style="margin:8px 0"><input type="text" id="slotName" maxlength="40" placeholder="what to call it \u2014 optional" autocomplete="off"></div>'
+        +'<button class="btn sm" data-act="slot-put">Save it \u2192</button>':'')
+      +'<hr class="rule"><div class="kicker">In the drawer</div>'
+      +(files.length
+        ?'<div style="margin-top:6px">'+files.map(row).join("")+'</div>'
+        :'<div class="empty">Nothing in it yet. The first carbon is taken when the week turns.</div>')
+      +'<hr class="rule"><div class="kicker">Off this machine altogether</div>'
+      +'<div class="mono" style="font-size:12.5px;line-height:1.7;color:var(--ink-2)">A code is the only copy that survives this browser being cleared, and the only way to carry a crew to another computer.</div>'
+      +(S?'<div class="kicker" style="margin-top:12px">Write it out</div><div class="sel-help">Select the whole box and copy it. It is one long line of text.</div>'
         +'<textarea id="expCode" readonly rows="4" style="width:100%;font-family:var(--f-mono);font-size:10.5px;border:1px solid var(--line-2);background:var(--card);color:var(--ink);padding:8px;resize:vertical">'+esc(exportCode())+'</textarea>'
         +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn ghost sm" data-act="exp-select">Select it all</button><span class="mono" style="font-size:11px;color:var(--muted);align-self:center">week '+S.week+' · '+esc(S.player.n)+' · ranking '+S.rep+'</span></div>':'')
       +'<hr class="rule"><div class="kicker">Read one in</div><div class="sel-help">Paste a code and read it before you load it. Loading replaces whatever is in this browser.</div>'
@@ -8465,6 +8587,15 @@ document.addEventListener("click",e=>{
       const r=readCode(UI.impRaw);
       if(r.err){UI.impInfo=null;note(r.err);} else {UI.impInfo=r;render();} break; }
     case "imp-load": { const el=document.getElementById("impCode"); const raw=(el&&el.value)||UI.impRaw||""; importCode(raw); break; }
+    case "slot-put": {
+      const nm=document.getElementById("slotName");
+      const id=slotPut((nm&&nm.value.trim())||"",false);
+      note(id?"In the drawer — "+S.player.n+", week "+S.week+"."
+             :"There is no room left. Take something out of the drawer first.");
+      render();break;
+    }
+    case "slot-open": slotOpen(t.getAttribute("data-id")); break;
+    case "slot-drop": slotDrop(t.getAttribute("data-id")); render(); break;
     case "tut-jump": if(S&&!S.over){UI.info=false;UI.office=false;UI.panel=null;TUT.mode="full";TUT.on=true;tutGo(+t.getAttribute("data-i"));} break;
     case "off-exit": UI.panel="exit"; UI.confirmNew=false; render(); break;
     case "off-hat": if(S){UI.panel="file";render();} break;

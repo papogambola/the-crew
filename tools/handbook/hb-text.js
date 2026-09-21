@@ -784,8 +784,14 @@ ch("controls","Controls and the file cabinet","Keys, saving, settings",[
       +"and wrong at speed is worse than absent.")),
   S("save","Saving",
     p("Automatic, in this browser, after everything. Settings are kept separately and survive a new game.")
-    +p("A game lives in one browser only. Clear its data, play on another machine, or lose the laptop, and the crew goes with it. "
-      +"The office's <b>file cabinet</b> writes the whole game out as one long code you can keep anywhere, and reads one back in — on this browser or any other. "
+    +p("The office's <b>file cabinet</b> is a drawer rather than a single slot. Put the game you are on into it under any name you like and it stays "
+      +"until you take it out, so more than one campaign can be running at once. Alongside those it keeps a <b>carbon</b> of each of the last six weeks, "
+      +"taken without being asked — the point being that one is there on the week you wish you had saved, which is never the week you would have. "
+      +"Every line says whose game it is, the week, the ranking, the money and how long ago, so you are choosing between games rather than between dates. "
+      +"Opening one files a carbon of where you were first, so the one move in the drawer that could lose a game does not.")
+    +p("The drawer is still this browser. Clear its data, play on another machine, or lose the laptop and the whole drawer goes with it. "
+      +"For that there is the <b>code</b>: the same cabinet writes the whole game out as one long line of text you can keep anywhere and read back in, "
+      +"here or on any other browser, on any computer. It is the only copy that outlives this one, and it is worth taking after a night you would hate to repeat. "
       +"Reading a code in tells you whose file it is, which week and which ranking, <i>before</i> it replaces what is in the browser.")),
   S("settings","Settings",
     p("Sound, music, brightness and report speed, all in the office. The report speed runs from "+m("Slowest")+" to "+m("Fastest")+" — "
