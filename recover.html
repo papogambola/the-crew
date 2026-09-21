@@ -73,25 +73,40 @@
   <h2>1 · Close the game</h2>
   <p>All of it — the window, and any copy still running. The files are locked while it is open.</p>
 
-  <h2 style="margin-top:26px">2 · Find the folder the game saves into</h2>
-  <p>Open the folder you unzipped the game into — the one holding <b>The Crew.exe</b> — and look for
-  a folder beside it called <b>The Crew.exe.WebView2</b>. Inside it, roughly:</p>
-  <pre>The Crew.exe.WebView2\EBWebView\Default\Local Storage\leveldb</pre>
-  <p>There may be an extra folder level or a slightly different name. What you are looking for is a
-  folder called <b>leveldb</b> holding files that end <code>.ldb</code> and <code>.log</code>.</p>
-  <p class="note">If you re-downloaded and unzipped the game somewhere new, your old games are beside
-  the <b>old</b> copy, not the new one. Check every folder you ever unzipped it into — "The Crew",
-  "The Crew (2)", and so on.</p>
+  <h2 style="margin-top:26px">2 · Find where the game lives</h2>
+  <p>Press <kbd>Win</kbd>, type <b>The Crew</b>, right-click the result and choose
+  <b>Open file location</b>. That is the folder — most likely inside <b>Downloads</b>, wherever you
+  unzipped it. You are looking for <b>The Crew.exe</b>.</p>
+  <p>In that folder, beside <b>The Crew.exe</b>, <b>resources.neu</b> and <b>READ ME</b>, there will
+  be a folder called <b>.tmp</b>. That is the one. You can tell it apart from the rest by its date:
+  the other three are from when you unzipped the game, and <b>.tmp</b> is from the first time you
+  <i>ran</i> it — the app made it, and the browser inside the app keeps its storage there.</p>
+  <p>If you cannot see it, it is hidden: in File Explorer, <b>View → Show → Hidden items</b>.</p>
+  <p class="note">A folder called <b>The Crew.exe.WebView2</b> beside the exe is the other place this
+  can land, and it was the only one this page named at first — wrongly, for the build Paz had. If
+  you have that one instead, it works the same way. Either way what you are hunting for inside is a
+  folder called <b>leveldb</b>, holding files that end <code>.ldb</code> and <code>.log</code>.</p>
 
-  <h2 style="margin-top:26px">3 · Copy that whole folder to your Desktop. Now, before anything else.</h2>
-  <p>Right-click <b>The Crew.exe.WebView2</b>, Copy, then paste it on your Desktop. This is the step
-  that actually saves you: everything below can be retried as often as you like once you have a copy,
-  and nothing below can hurt a copy that is already made.</p>
+  <h2 style="margin-top:26px">3 · Or just ask the computer where it is</h2>
+  <p>Press <kbd>Win</kbd>+<kbd>R</kbd>, type <code>powershell</code>, press Enter, paste this one
+  line, press Enter. It only looks and prints — it changes nothing, creates nothing, and deletes
+  nothing. Give it a few minutes.</p>
+  <pre>Get-ChildItem $env:USERPROFILE -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq 'The Crew.exe' -or $_.Name -eq 'leveldb' } | ForEach-Object { $_.FullName }</pre>
+  <p>Every line it prints ending in <b>leveldb</b> is a folder that may hold a saved game. Every line
+  ending in <b>The Crew.exe</b> is a copy of the game. If it prints nothing at all, say so — that is
+  information too, and it rules out the whole of your user folder in one go.</p>
+
+  <h2 style="margin-top:26px">4 · Copy that whole folder to your Desktop. Now, before anything else.</h2>
+  <p>Right-click <b>.tmp</b> (or <b>The Crew.exe.WebView2</b>, whichever you have), Copy, then paste
+  it on your Desktop. This is the step that actually saves you: everything below can be retried as
+  often as you like once you have a copy, and nothing below can hurt a copy that is already made.</p>
+  <p class="note warn">Do this before you uninstall, delete or move anything. Deleting the game
+  folder deletes this with it, and that is the only copy there is.</p>
   <p class="note warn">Chromium reclaims storage for addresses nothing visits any more. Your old games
   are at addresses nothing will ever visit again, so they are exactly the kind it eventually clears.
   A copy on the Desktop is outside all of that.</p>
 
-  <h2 style="margin-top:26px">4 · Or let the computer find it</h2>
+  <h2 style="margin-top:26px">5 · Or let the computer gather them</h2>
   <p>Press <kbd>Win</kbd>+<kbd>R</kbd>, type <code>powershell</code>, press Enter. Then select all of
   this, copy it, right-click in the PowerShell window to paste, and press Enter. It only reads and
   copies. Searching your whole user folder can take a couple of minutes.</p>
@@ -117,7 +132,7 @@ Start-Process $dst</pre>
   <p class="note warn">The Desktop path is read from Windows itself rather than assumed, because
   OneDrive moves the Desktop and an earlier version of this wrote to a folder that was not there.</p>
 
-  <h2 style="margin-top:26px">5 · Drop them here</h2>
+  <h2 style="margin-top:26px">6 · Drop them here</h2>
   <p>Select everything in that folder and drag it onto the box. Nothing is uploaded — this page reads
   the files in your own browser and has nowhere to send them.</p>
   <div class="drop" id="drop" tabindex="0" role="button">
@@ -130,7 +145,7 @@ Start-Process $dst</pre>
 <section id="out" class="hide">
   <h2>What was in them</h2>
   <div id="list"></div>
-  <h2 style="margin-top:26px">6 · Put it back</h2>
+  <h2 style="margin-top:26px">7 · Put it back</h2>
   <ol>
     <li>Open The Crew (build 98 or later — older builds will lose it again).</li>
     <li>Press <kbd>Esc</kbd> to open the office.</li>
