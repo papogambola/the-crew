@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
-"""Stamp the download page with the things it claims about the download.
+"""Stamp the front page with the things it claims about the game.
 
     python3 tools/site.py            # rewrite index.html
     python3 tools/site.py --check    # exit 1 if it is out of date, change nothing
 
-index.html says which build the zip is, how big it is, and how much disk it wants unzipped, and
-it wears the game's own favicon so the tab does not change character between the page and the
-thing it is offering. Every one of those is a fact about a file sitting next to it, and a fact
-typed by hand is a fact that goes stale — a download page advertising build 84 of a 1.1MB zip
-while serving build 91 at 1.5MB is worse than one that says nothing, because it is read as the
-product being careless rather than the page.
+index.html names a build, wears the game's own favicon so the tab does not change character
+between the page and the thing behind it, and points at four screenshots. Every one of those is
+a fact about a file sitting next to it, and a fact typed by hand goes stale — a page advertising
+build 84 while serving 91 is worse than one that says nothing, because it is read as the product
+being careless rather than the page.
 
-So they are read: the build stamp out of play.html, the sizes out of the zip and its contents,
-the icon out of play.html's <head>. Same argument, and the same shape, as version.txt in
+So they are read rather than typed: the build stamp, the icon out of play.html's <head>, and a
+content hash over the screenshots. Same argument, and the same shape, as version.txt in
 desktop/tools/build.py and the icon in tools/favicon.js. --check runs in the test suite.
+
+The page used to sell a Windows download and carried its size in two places. It offers the
+browser now, so those two markers are gone — see WANT, and the note there about why the zip
+itself is still built and still published.
 
 Each value is marked in the page with an HTML comment and replaced up to the next tag:
 
@@ -61,13 +64,14 @@ icon = icon.group(0)
 
 mb = lambda n: "%.1f MB" % (n / 1048576.0)
 zipped   = os.path.getsize(ZIP)
-unzipped = sum(i.file_size for i in zipfile.ZipFile(ZIP).infolist())
 
+# The page offers the browser now and no longer advertises the zip, so the two size markers are
+# gone from it. The zip itself is still built, still published and still what version.txt names —
+# every exe already on somebody's machine checks that file and links to it, and pulling it would
+# break the players who are least able to do anything about it. Built and served, just not sold.
 WANT = {
     "build":  build,
     "build2": build,
-    "size":   mb(zipped),
-    "size2":  "%s to download, about %s unzipped." % (mb(zipped), mb(unzipped)),
 }
 
 page = open(PAGE, encoding="utf-8").read()

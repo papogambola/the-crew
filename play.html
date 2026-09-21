@@ -8373,7 +8373,14 @@ function updateCheck(){
 }
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD
-  +(NEWER?' · <span style="color:var(--stamp)">'+esc(NEWER)+' is out — <a href="'+esc(MEDIA_BASE)+'desktop/The-Crew-Windows.zip">download it</a></span>':'')
+  /* The download is no longer what the site offers — the game runs in a browser now, and the
+     packaged copy is kept published only so the ones already installed keep working. So a
+     packaged copy that finds it is behind is told where the game actually lives, as TEXT and
+     not as a link: this is a WebView with no address bar and no back button, and a plain <a>
+     in it navigates the game away with no way home. An address somebody types is slower and
+     cannot strand them. The zip link stays because it is the one that has always been here. */
+  +(NEWER?' · <span style="color:var(--stamp)">'+esc(NEWER)+' is out — it plays in your browser at '
+    +'<b>playthecrew.com</b>, or <a href="'+esc(MEDIA_BASE)+'desktop/The-Crew-Windows.zip">download it</a></span>':'')
   +'</div>';}
 
 /* ------------------------------ ACTIONS ------------------------------- */

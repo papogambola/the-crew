@@ -65,42 +65,48 @@ const server=http.createServer((rq,rs)=>{
 
   console.log("\n— the button, and what it claims —");
   const dl=await page.$eval('.hero a.btn.big',a=>({href:a.getAttribute("href"),text:a.innerText.trim(),dl:a.hasAttribute("download")}));
-  ok(/download for windows/i.test(dl.text),"the button says what it does: \""+dl.text+"\"");
-  ok(dl.href==="desktop/The-Crew-Windows.zip","and points at the zip, relatively — so it works on "
-    +"the domain, on github.io and on disk ('"+dl.href+"')");
-  ok(dl.dl,"with a download attribute, so the browser saves it rather than reasoning about it");
+  ok(/play now/i.test(dl.text),"the button says what it does: \""+dl.text+"\"");
+  ok(dl.href==="play.html","and points at the game beside it, relatively — so it works on the "
+    +"domain, on github.io and on disk ('"+dl.href+"')");
+  ok(!dl.dl,"and does NOT carry a download attribute, which would save the page instead of opening it");
+  ok(fs.existsSync(path.join(ROOT,"play.html")),"and the game is actually there to open");
 
-  /* The build the page names is the build of the zip, read out of the game packed inside it —
-     NOT the build of play.html beside it. Those are usually the same number and were assumed to
-     be, until a web-only fix moved the site to 92 with no Windows toolchain to repack 91 with,
-     and reading play.html would have had the download page advertising a build nobody could
-     download. Read from where the truth is, which is the file being offered. */
+  /* The page stopped selling the Windows build, so it no longer names a size and no longer
+     names Windows. What it still names is a build, and that number has to be the build of the
+     thing the button opens — which is now play.html beside it, not the zip. It was the zip's
+     for as long as the zip was what the button handed you, and reading the wrong one of those
+     two was a real bug once: a web-only fix moved the site to 92 with no Windows toolchain to
+     repack 91, and the page advertised a build nobody could download. Same rule, new subject. */
+  const webBuild=(fs.readFileSync(path.join(ROOT,"play.html"),"utf8").match(/const BUILD="([^"]+)"/)||[])[1];
+  const facts=(await page.textContent(".facts")).replace(/\s+/g," ").trim();
+  const bNum=(webBuild.match(/build\s+\d+/i)||[])[0];
+  const bWhen=(webBuild.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}/)||[])[0];
+  ok(!!bNum&&facts.toLowerCase().includes(bNum.toLowerCase()),
+    "the version line names the build you would be playing ("+bNum+")");
+  ok(!!bWhen&&facts.toUpperCase().includes(bWhen.toUpperCase()),"and when it is from ("+bWhen+")");
+  ok(!/\d{1,2}\s+(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)/i.test(facts),
+    "and no day of the month, which is a date nobody is going to act on: \""+facts+"\"");
+  ok(/macos/i.test(facts)&&/linux/i.test(facts)&&/windows/i.test(facts),
+    "and all three platforms, which is the point of moving: \""+facts+"\"");
+  ok(!/\bMB\b/i.test(facts),"and no download size, because there is no download");
+
+  console.log("\n— and nothing still sells the zip —");
+  const html=fs.readFileSync(path.join(ROOT,"index.html"),"utf8");
+  ok(!/The-Crew-Windows\.zip/.test(html),"no link to the zip anywhere on the page");
+  ok(!/SmartScreen|isn.t commonly downloaded|Run anyway/i.test(html),
+    "and none of the warnings copy that only a download needed");
+
+  /* The zip is still BUILT and still PUBLISHED even though nothing points at it: every exe
+     already on somebody's machine reads version.txt and links to that file, and pulling it
+     would break exactly the players who can do least about it. */
   const ZIP=path.join(ROOT,"desktop","The-Crew-Windows.zip");
+  ok(fs.existsSync(ZIP),"the zip is still there for the copies already installed");
   const zipBuild=execFileSync("python3",["-c",`
 import re,sys,zipfile
 with zipfile.ZipFile(sys.argv[1]) as z:
     neu=next(i for i in z.infolist() if i.filename.endswith("resources.neu"))
     print(re.search(rb'const BUILD="([^"]+)"',z.read(neu)).group(1).decode())
 `,ZIP],{encoding:"utf8"}).trim();
-  const webBuild=(fs.readFileSync(path.join(ROOT,"play.html"),"utf8").match(/const BUILD="([^"]+)"/)||[])[1];
-  const zipMB=(fs.statSync(ZIP).size/1048576).toFixed(1)+" MB";
-  const facts=(await page.textContent(".facts")).replace(/\s+/g," ").trim();
-  /* Checked in pieces rather than against the whole stamp, because the page deliberately does
-     not print the whole stamp: the day of the month comes off. Asserting the pieces, and the
-     absence of the day, tests what the page is meant to say instead of re-running site.py's
-     own regex and agreeing with it. */
-  const bNum=(zipBuild.match(/build\s+\d+/i)||[])[0];
-  const bWhen=(zipBuild.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}/)||[])[0];
-  ok(!!bNum&&facts.toLowerCase().includes(bNum.toLowerCase()),
-    "the version line names the build inside the zip ("+bNum+")");
-  ok(!!bWhen&&facts.toUpperCase().includes(bWhen.toUpperCase()),"and when it is from ("+bWhen+")");
-  ok(!/\d{1,2}\s+(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)/i.test(facts),
-    "and no day of the month, which is a date nobody is going to act on: \""+facts+"\"");
-  ok(facts.toUpperCase().includes(zipMB.toUpperCase()),"and the size the zip actually is ("+zipMB+")");
-  ok(/Windows 10 \/ 11/.test(facts),"and which Windows: \""+facts+"\"");
-  if(zipBuild!==webBuild)
-    console.log("     (the site is on "+webBuild+" and the download on "+zipBuild+" — that is allowed, "
-      +"and version.txt below is what decides whether anybody is told about it)");
 
   /* The one that must never drift: version.txt is what a packed copy asks the site in order to
      find out it is behind. If it runs ahead of the zip, every exe in the world is told a newer
@@ -136,15 +142,20 @@ with zipfile.ZipFile(sys.argv[1]) as z:
   ok(local.length>0,"there are "+local.length+" links to files beside the page");
   for(const h of local)
     ok(fs.existsSync(path.join(ROOT,h)),"  "+h+" exists");
-  /* The page offers one thing: the download. It used to offer a browser copy of the game and the
-     handbook beside it, and both were arguments against pressing the button — one says you need
-     not download anything, the other hands over the whole product as a web page. Both files are
-     still served; the game reaches the handbook on key 5 and the drive above loads play.html
-     directly. They are simply not on offer here. Asserted as an absence, because "we took the
-     links out" and "the links are out" are not the same claim. */
-  ok(local.length===1&&local[0]==="desktop/The-Crew-Windows.zip",
-    "the only thing the page offers is the download itself: "+JSON.stringify(local));
-  ok(!local.includes("play.html"),"  not the browser copy");
+  /* The page offers one thing, and it is now the game itself. It offered the Windows download
+     for as long as that was the product; the download is what produced every problem the game
+     never had — two destroyed saves, a silent build, and a warning in front of the file at both
+     ends. The zip is still built and still served for the copies already installed, which is
+     why this checks the page and not the folder.
+
+     The handbook stays off the page for the reason it always was: it hands over the whole thing
+     as a web page and argues against pressing the button. The game reaches it on key 5.
+
+     Asserted as an absence as well as a presence, because "we took the links out" and "the
+     links are out" are not the same claim. */
+  ok(local.length===1&&local[0]==="play.html",
+    "the only thing the page offers is the game itself: "+JSON.stringify(local));
+  ok(!local.some(h=>/\.zip$/i.test(h)),"  no download, which is the change");
   ok(!local.includes("handbook.html")&&!local.includes("The-Crew-Handbook.pdf"),
     "  and not the handbook, in either form");
 
