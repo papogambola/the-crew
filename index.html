@@ -156,9 +156,16 @@
     <p class="facts">Version 1.0 · <b><!-- site.py:build -->build 98 · September 2026</b>
       · Windows 10 / 11 · <b><!-- site.py:size -->1.4 MB</b></p>
 
-    <p class="smallprint">Free. No installer — unzip it and run it. It is not code-signed, so
-      Windows will say <i>“Windows protected your PC”</i> the first time: <b>More info →
-      Run anyway</b>.</p>
+    <p class="smallprint">Free. No installer — unzip it and run it. The build is not code-signed,
+      so you will be warned twice and both are about the signature, not about the file.
+      <b>Chrome</b>, as it downloads: <i>“This file isn’t commonly downloaded”</i> — click the
+      arrow beside it and <b>Keep</b>. <b>Windows</b>, the first time you run it:
+      <i>“Windows protected your PC”</i> — <b>More info → Run anyway</b>.</p>
+
+    <p class="smallprint" style="margin-top:10px;color:var(--muted)">Neither is a virus report.
+      A code-signing certificate needs a registered company, and until there is one every new
+      build is a file the world has never seen before, which is the whole of what those two
+      messages say.</p>
 
     <p class="smallprint phoneonly" style="margin-top:14px;color:var(--stamp)">
       That download is a Windows program, and this is a game for a desk. Open this page on a PC.</p>
@@ -245,7 +252,11 @@
       <div class="spec">
         <h3>Getting it running</h3>
         <dl>
-          <dt>1</dt><dd>Download the zip and unzip it anywhere — the Desktop is fine.</dd>
+          <dt>1</dt><dd>Download the zip. Chrome says <i>“This file isn’t commonly downloaded”</i>
+            because the build is unsigned — click the arrow beside the download and
+            <b>Keep</b>. Then unzip it somewhere on your <b>main drive</b>, not a USB or
+            external disk: the game keeps its saves in a folder it makes beside itself, and an
+            external drive is the one place that can quietly fail to work.</dd>
           <dt>2</dt><dd>Keep <span class="mono">The Crew.exe</span> and
             <span class="mono">resources.neu</span> together in the same folder. The game is
             inside the second one.</dd>
