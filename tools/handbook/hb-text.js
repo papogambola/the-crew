@@ -627,6 +627,23 @@ ch("reckon","The reckoning","Exactly how a job is decided",[
 
 /* ---------------- 10 -------------------------------- */
 ch("night","The night itself","The live report",[
+  S("estab","It opens on the city",
+    p("Three seconds of skyline before the first line of the night: where you are, what kind of job it is, and what it is called. "
+      +"The crew has just landed somewhere, and the report reads differently once you have been told where you are standing. "
+      +"Click it, or press any key, to go straight on.")
+    +p("Every one of the "+m(D.CITY_COUNT||129)+" cities has its own, and the skyline behind it is <b>generated</b> rather than "
+      +"collected — from a hash of the city's own name, so it is the same place every time on every machine, and from the "
+      +"country's ground, so a mountain town has a ridge behind it, a port has water and a gantry crane under it, a delta has a "
+      +"bridge, and a jungle coast has palms at the edge. It is drawn in outline: black line on white paper, the far things "
+      +"thinner and fainter than the near ones, which is the whole of why it reads at that size.")
+    +p("<b>"+m(D.LANDMARK_COUNT||87)+" of those cities have the real landmark standing in front of it</b>, drawn by hand — the "
+      +"Eiffel Tower, the CN Tower, the Opera House with the Harbour Bridge behind it, the Statue of Liberty, Fuji behind Tokyo "
+      +"Tower. Where a city has one, its generated skyline is held down to about two thirds of its usual height, so the thing you "
+      +"came to see is the tallest thing on the card rather than one more rectangle in the row.")
+    +(D.LANDMARKS&&D.LANDMARKS.length?p("The whole list, in the order the game keeps it, which runs by region:")+G.landmarks():"")
+    +note("The other "+m((D.CITY_COUNT||129)-(D.LANDMARK_COUNT||87))+" cities get the skyline and nothing else, and that is the "
+      +"answer rather than the unfinished part of it. Accra has its gate and Kumasi does not. A made-up landmark would be the one "
+      +"thing on the card that was a lie, and a player who knows the city would catch it inside the three seconds it is up.")),
   S("live","Reading the report",
     p("A job does not resolve into a number. It plays out: a clock in the top left, a line at a time, with the crew named and what each of them is doing named with them. "
       +"You can run it at five speeds, hold it where it is with Pause, or press through it as fast as you can read.")),

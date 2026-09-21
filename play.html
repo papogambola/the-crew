@@ -38,6 +38,49 @@
   .wrap{max-width:1060px;margin:0 auto;padding:0 16px 64px}
   .mono{font-family:var(--f-mono)}
   .flag{display:inline-block;width:18px;height:12px;vertical-align:-1px;border:1px solid rgba(17,16,16,.4);background:#fff;box-sizing:content-box}
+  /* The city, for three seconds. Near things solid, far things outlined — the whole legibility
+     of the drawing is that one distinction, so it lives here rather than on every shape. */
+  .sky{display:block;width:100%;height:auto}
+  /* Outline, not fill. Every near shape is drawn in paper with an ink edge, which is what makes
+     a landmark legible at all: a solid black Eiffel Tower in front of solid black buildings is
+     one black shape, and the whole reason for drawing the tower goes with it. The paper fill is
+     what does the occluding — take it out for `fill:none` and the city becomes a tangle of
+     lines through each other.
+     non-scaling-stroke because a landmark rides in on a group transform scaled by about 1:1
+     down to 1:3; without it the edge on a small landmark is a hairline and on a big one a slab. */
+  .sky-near>*,.sky-lm>*{fill:var(--card);stroke:var(--ink);stroke-width:1.5;
+    stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+  /* The pure lines: water, guy wires, a crane's rigging. Filling a two-unit-wide rule with
+     paper and drawing an edge round it makes a smear, so these carry no fill at all. */
+  .sky-line>*{fill:none;stroke:var(--ink);stroke-width:1.5;stroke-linecap:round;vector-effect:non-scaling-stroke}
+  .sky-far>*{fill:none;stroke:var(--ink);stroke-width:1.3;stroke-linejoin:round;stroke-linecap:round;opacity:.4}
+  .sky-ground{fill:var(--ink);stroke:none}
+  /* The three-second card. Paper, a lot of air, and the city set as large as the logo — it is
+     a cut to a place, and a cut to a place that needs reading twice has not cut anywhere. */
+  /* Three classes, and every one of them is load-bearing. The card rides in on the feed's own
+     wrapper, so it is competing with `.modal.feed{max-width:1060px}` — which is two classes,
+     like `.modal.estab-wrap`, and sits LATER in this stylesheet, so it wins a tie. Twice now
+     the card has rendered at full feed width with the skyline adrift in the middle of it: once
+     at one class, once at two. `.modal.feed.estab-wrap` beats it on specificity rather than on
+     where it happens to sit in the file. */
+  .modal.feed.estab-wrap{max-width:560px;cursor:pointer}
+  .estab{padding:30px 30px 26px;text-align:center;user-select:none}
+  .estab:focus-visible{outline:2px solid var(--stamp);outline-offset:-4px}
+  .estab-kick{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:16px}
+  .estab .sky{margin:0 auto 14px;max-width:420px}
+  .estab-city{font-family:var(--f-logo);font-weight:400;font-size:clamp(34px,7vw,56px);
+    letter-spacing:.02em;text-transform:uppercase;line-height:1}
+  .estab-co{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-2);margin-top:7px}
+  .estab-rule{height:2px;background:var(--ink);width:56px;margin:16px auto}
+  .estab-title{font-family:var(--f-disp);font-size:16px;letter-spacing:.02em;color:var(--ink-2)}
+  /* It arrives rather than appearing — a quarter-second of paper coming up to the light. Held
+     to a fade and a hair of travel so it cannot read as a swoosh, and off entirely for anybody
+     who has asked for that (who does not get the card at all, but the rule belongs here too). */
+  @keyframes estabIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .estab{animation:estabIn .26s ease-out}
+  @media(prefers-reduced-motion:reduce){.estab{animation:none}}
   .num{font-variant-numeric:tabular-nums}
   h1,h2,h3{font-family:var(--f-disp);font-weight:600;margin:0;letter-spacing:.02em;text-wrap:balance;line-height:1.05}
   button{font-family:inherit;color:inherit;cursor:pointer}
@@ -1040,7 +1083,9 @@ function techOptions(cur){
     +'</optgroup>';
   return g("Trade",TECHS)+g("Specialist",TECHS_BIG);
 }
-function isBigTech(k){const t=TECH_BY_K[k];return !!(t&&t.big);}
+// isBigTech lives further down, with the specialists. This was a second copy of it, and the two
+// agreed on all fourteen trades — which is the only reason it was harmless rather than the same
+// bug signed() turned out to be. Both cannot stay: the check in the suite counts names, not luck.
 const SITES=[
   {k:"road",  l:"The street", x:14, y:50, ly:-10.5},
   {k:"watch", l:"The post",   x:20, y:20, ly:-10.5},
@@ -3038,7 +3083,13 @@ function langWorth(pool,co,cat){
   const spoke=co.langs.filter(l=>pool.some(c=>c.langs.includes(l)));
   return {held:spoke.length>0,spoke,v:spoke.length?LANG_BONUS:(cat.lang?LANG_MISS_TALK:LANG_MISS)};
 }
-function signed(v){return (v>=0?"+":"−")+Math.abs(v);}
+/* signed() is NOT redeclared here. There is one at the bond log, a thousand lines up, and the
+   chips used to carry a second copy — which differed from it in exactly one case, zero, and
+   which won, because a function declaration hoists over the whole script and the last one
+   wins. So every caller of the original started printing "+0" where it had printed "0": the
+   bond log, a night that moved nothing, a hired hand who was worth nothing either way. It
+   shipped in build 101 and nothing in the suite noticed, because the suite had no test that
+   two things in this file cannot be called the same name. It has one now. */
 /* Bare, or in brackets. A bare number is being applied to the reckoning right now; a bracketed
    one is what it would be worth if you had it. That distinction is the whole difference between
    a missing trade, which costs nothing you had, and missing knowledge, which is charged — and
@@ -3823,7 +3874,7 @@ function startJob(job,opts){
     crewId:cr?cr.id:null,crewName:cr?cr.name:null,leadId:cr?cr.leadId||null:null,memberIds:members?members.map(c=>c.id):null,
     hiredId:(hiredFor(job)||{}).id||null};
   S.pendingJob=P;
-  const d={id:job.id+"-w"+S.week+(cr?"-c"+cr.id:""),week:S.week,job:P.job,crew:P.crewName,narrative:pre.lines.slice(),revealed:0,done:false,twist:twist?{h:twist.h,s:twist.s,opts:twist.opts.map(o=>o.t)}:null,twistNo:twists.length?1:0,twistOf:twists.length,awaiting:false,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}};
+  const d={id:job.id+"-w"+S.week+(cr?"-c"+cr.id:""),week:S.week,job:P.job,crew:P.crewName,narrative:pre.lines.slice(),revealed:0,done:false,estab:true,twist:twist?{h:twist.h,s:twist.s,opts:twist.opts.map(o=>o.t)}:null,twistNo:twists.length?1:0,twistOf:twists.length,awaiting:false,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}};
   // The twist block runs on the same clock as the story around it, and the times are recorded on
   // P as they are made, because finishJob rebuilds this narrative later and it has to come out as
   // the night the player actually watched rather than a fresh roll of the dice.
@@ -4677,6 +4728,7 @@ function render(){
   fitQRH();          // after bind, because it measures what is on the screen
   syncScrolled();
   tutMark();
+  estabArm();      // before tickerArm: it reads d.estab to know the night has not started
   tickerArm();
   mapArm();
 }
@@ -5942,6 +5994,885 @@ function fmGlyphFor(line,c){
   return (line&&(FM_SITE_GLYPH[line.at]||TRIP_SITE_GLYPH[line.at]))||"walk";
 }
 /* --------------------------- THE JOB, AS A PLAN ------------------------ */
+/* ======================== THE ESTABLISHING SHOT ========================
+   Three seconds of the city before the night starts. A film cuts to a skyline and a caption
+   before it cuts to the room, and for the same reason: the crew has just landed somewhere, and
+   the report reads differently when you have been told where you are standing.
+
+   One hundred and twenty-nine cities, so the SKYLINE is drawn rather than collected. Nobody is
+   going to hand-letter a hundred and twenty-nine of them, and a stock silhouette would be the
+   one thing on the screen that is not this game's ink. Each is built from a hash of the city's
+   own name, so Cairo is the same Cairo every time, on every machine, forever — and from the
+   country's terrain and economy, so a port has a crane over the water and a mountain town has a
+   ridge behind it. What that generated row says is "a coast, a harbour, tall money" or "a ridge,
+   low stone, a river": what the crew would see out of the taxi.
+
+   In FRONT of it, on eighty-seven of the hundred and twenty-nine, stands the actual landmark,
+   drawn by hand — see THE LANDMARKS below. A city that has one keeps its generated row down to
+   about two thirds height so the thing you came to see is the tallest thing on the card.
+
+   Three layers, and the difference between them is the whole readability of it: far things are
+   OUTLINED and faint, near things are drawn in PAPER with an ink edge, and pure lines — water,
+   guys, rigging — carry no fill at all. Everything was solid black to begin with, which is fine
+   for a row of boxes and hopeless the moment a tower has to be seen in front of them: two solid
+   black shapes overlapping are one solid black shape. The paper fill is what does the occluding;
+   `fill:none` would be a tangle of lines through each other instead. */
+/* ------------------------------ THE LANDMARKS ------------------------------
+   Paz: "what about the specific landmarks of each city: CN tower in Toronto, the Eiffel Tower
+   in Paris, the opera house in Sydney, the Statue of Liberty in New York, Fuji mountain in
+   Tokyo and more to distinct each city."
+
+   Eighty-seven of them, drawn by hand, for the cities that have a shape somebody would
+   recognise with the name covered up. The other forty-two keep their generated skyline,
+   because a made-up landmark is worse than none: it would be the one thing on the card that is
+   a lie, and a player who knows the city would spot it in the three seconds it is up. Accra
+   gets its gate and Kumasi does not, and that asymmetry is the honest answer rather than an
+   oversight — some cities have one shape everybody draws, and some have a skyline.
+
+   Each is drawn in its own box with the origin on the ground and +y going UP — which is how a
+   building is actually thought about, and saves every coordinate here being a subtraction. The
+   group transform flips it into SVG space. Heights run 0..100 so placement is one scale factor.
+
+   Religious buildings are in here — Hagia Sophia, the Dome of the Rock, Sagrada Família, St
+   Basil's, the Faisal Mosque, Christ the Redeemer over Rio and Cristo Rei over Lisbon — and
+   that is a completely different thing from the accident the masts were. Those were a symbol
+   dealt out at random to cities that have nothing to do with it. These are the actual,
+   specific, named building that the actual, specific city is known for, drawn because it is
+   what is there.
+
+   What that does NOT license is drawing one carelessly. A statue with its arms out has to be a
+   figure: a body with width and the head clear above the arms, the way Rio's is. Lisbon's was a
+   one-unit pole under a twelve-unit bar to begin with, which at card size is a crucifix on a
+   pillar over a city — the same accident again, arriving through the front door this time.
+   browser76 walks every drawing for that shape and names the ones allowed to have it. */
+/* Its own number formatter rather than f1(): f1 is a `const` declared further down with the
+   map's helpers, and this table is BUILT at load, not called later — so every LM_R in here ran
+   against f1 in its temporal dead zone and the whole script died on line one with "LANDMARKS is
+   not defined" three hundred lines away. */
+const lmf=v=>(+v).toFixed(1);
+const LM_P=d=>'<path d="'+d+'"/>';
+const LM_R=(x,y,w,h)=>'<rect x="'+lmf(x)+'" y="'+lmf(y)+'" width="'+lmf(w)+'" height="'+lmf(h)+'"/>';
+const LM_C=(x,y,r)=>'<circle cx="'+lmf(x)+'" cy="'+lmf(y)+'" r="'+lmf(r)+'"/>';
+// A dome: half-circle of radius r sitting on y, optionally with a finial.
+const LM_DOME=(x,y,r,fin)=>'<path d="M'+lmf(x-r)+' '+lmf(y)+' A'+lmf(r)+' '+lmf(r)+' 0 0 0 '+lmf(x+r)+' '+lmf(y)+'"/>'
+  +(fin?LM_R(x-0.7,y+r,1.4,fin):"");
+// An onion dome, for St Basil's: wider than its neck and drawn to a point.
+const LM_ONION=(x,y,w,h)=>LM_P("M"+lmf(x-w/2)+" "+lmf(y)+" C"+lmf(x-w*0.95)+" "+lmf(y+h*0.42)+" "+lmf(x-w*0.30)+" "+lmf(y+h*0.72)+" "+lmf(x)+" "+lmf(y+h)
+  +" C"+lmf(x+w*0.30)+" "+lmf(y+h*0.72)+" "+lmf(x+w*0.95)+" "+lmf(y+h*0.42)+" "+lmf(x+w/2)+" "+lmf(y)+" Z");
+// A minaret: shaft, gallery, cap.
+const LM_MIN=(x,y,h,w)=>LM_R(x-w/2,y,w,h)+LM_R(x-w,y+h*0.72,w*2,h*0.055)
+  +LM_P("M"+lmf(x-w*0.7)+" "+lmf(y+h)+" L"+lmf(x)+" "+lmf(y+h+h*0.22)+" L"+lmf(x+w*0.7)+" "+lmf(y+h)+" Z");
+// A hump of ribbon, for the dragon lying along the bridge at Da Nang: two nested arcs from a to
+// b, closed into a band of thickness t, so the paper fill stays inside the dragon rather than
+// under it — an open wavy path would fill the whole bay beneath the wave and rub out the deck.
+const LM_HUMP=(a,b,y,h,t)=>LM_P("M"+lmf(a)+" "+lmf(y)
+  +" C"+lmf(a)+" "+lmf(y+h*1.34)+" "+lmf(b)+" "+lmf(y+h*1.34)+" "+lmf(b)+" "+lmf(y)
+  +" L"+lmf(b-t)+" "+lmf(y)
+  +" C"+lmf(b-t)+" "+lmf(y+h*1.34-t*1.6)+" "+lmf(a+t)+" "+lmf(y+h*1.34-t*1.6)+" "+lmf(a+t)+" "+lmf(y)+" Z");
+// A five-pointed star, for the Black Star Gate at Accra.
+const LM_STAR=(x,y,r)=>{let p="";for(let i=0;i<10;i++){const ang=(90+i*36)*Math.PI/180,rr=i%2?r*0.42:r;
+  p+=(i?" L":"M")+lmf(x+Math.cos(ang)*rr)+" "+lmf(y+Math.sin(ang)*rr);}return LM_P(p+" Z");};
+
+const LANDMARKS={
+  /* ---- the ones Paz named ---- */
+  "Paris":{w:44,name:"the Eiffel Tower",d:
+    LM_P("M-20 0 L-8 46 L-3.4 84 L-3.4 92 L3.4 92 L3.4 84 L8 46 L20 0 L13 0 L5.6 46 L2.1 84 L-2.1 84 L-5.6 46 L-13 0 Z")
+    +LM_P("M-14.6 18 C-8 26 8 26 14.6 18 L13.2 14 C7 21 -7 21 -13.2 14 Z")
+    +LM_R(-9.4,44,18.8,3.2)+LM_R(-4.6,82,9.2,2.6)+LM_R(-1,92,2,10)},
+  "Toronto":{w:26,name:"the CN Tower",d:
+    LM_P("M-4.6 0 L-1.7 58 L1.7 58 L4.6 0 Z")
+    +LM_P("M-7.4 62 L7.4 62 L5.4 56 L-5.4 56 Z")
+    +LM_P("M-6.2 62 L6.2 62 L4.4 70 L-4.4 70 Z")
+    +LM_R(-3.1,70,6.2,5)+LM_P("M-2.2 75 L2.2 75 L1.5 84 L-1.5 84 Z")
+    +LM_R(-0.8,84,1.6,16)},
+  "Sydney":{w:74,name:"the Opera House and the Harbour Bridge",d:
+    // the shells, three of them, each a leaning quarter-shell
+    LM_P("M-30 0 C-30 22 -22 34 -10 38 C-16 26 -18 12 -17 0 Z")
+    +LM_P("M-15 0 C-15 26 -6 40 8 45 C0 31 -2 14 -1 0 Z")
+    +LM_P("M2 0 C2 20 9 31 20 35 C14 24 12 11 13 0 Z")
+    +LM_R(-32,0,54,3.4)
+    // the bridge, behind and to the right
+    +LM_P("M22 4 C34 26 52 26 64 4 L64 8.6 C53 29 33 29 22 8.6 Z")
+    +LM_R(22,0,2.6,22)+LM_R(61.4,0,2.6,22)+LM_R(22,20,42,2.4)},
+  "New York":{w:34,name:"the Statue of Liberty",d:
+    // pedestal and star fort
+    LM_P("M-15 0 L15 0 L11 9 L-11 9 Z")+LM_R(-8.4,9,16.8,17)+LM_R(-9.6,26,19.2,2.4)
+    // robe
+    +LM_P("M-7 28.4 C-6 44 -5 56 -3.6 64 L4.4 64 C5.6 55 6.4 44 6 28.4 Z")
+    // raised arm with the torch
+    +LM_P("M3.6 60 L7.4 74 L9.6 73.4 L6 59.4 Z")
+    +LM_P("M7.6 74 L11.6 74 L10.9 78 L8.3 78 Z")+LM_P("M8 78 L11.2 78 L9.6 85 Z")
+    // the tablet, and the head with its crown
+    +LM_P("M-8.6 52 L-4.6 60 L-6.8 61 L-10.8 53 Z")
+    +LM_C(0.6,68,3.4)
+    +LM_P("M-3 70 L-4.6 74 L-2.4 71.6 L-1.6 75 L0.6 71.8 L2.8 75 L3.6 71.6 L5.8 74 L4.2 70 Z")},
+  "Tokyo":{w:96,name:"Mount Fuji and Tokyo Tower",d:
+    // Fuji, behind: a long shallow cone with a notched snow line
+    LM_P("M-48 0 L-11 46 C-7 49 -3 50 0 50 C3 50 7 49 11 46 L48 0 Z")
+    +LM_P("M-13.6 44 L-9.5 47.4 L-6.6 45.6 L-3.4 48.2 L0 46.4 L3.4 48.6 L6.6 46 L9.6 47.6 L13.6 44 L11 46 C7 49 3 50 0 50 C-3 50 -7 49 -11 46 Z")
+    // the tower, in front and to the right
+    +LM_P("M22 0 L30.6 40 L33.4 40 L42 0 L37.6 0 L32.2 40 L31.8 40 L26.4 0 Z")
+    +LM_P("M25.4 16 L38.6 16 L37.8 12.6 L26.2 12.6 Z")
+    +LM_R(28.6,38,6.8,4)+LM_R(30,50,4,3)
+    +LM_P("M30.6 42 L33.4 42 L32.6 50 L31.4 50 Z")+LM_R(31.4,53,1.2,16)},
+
+  /* ---- Europe ---- */
+  "London":{w:54,name:"the Elizabeth Tower and the Gherkin",d:
+    LM_R(-24,0,13,58)+LM_R(-25.4,58,15.8,3)+LM_R(-22.6,61,12.2,10)
+    +LM_C(-16.5,66,3.6)+LM_R(-24.4,71,16.4,2.6)
+    +LM_P("M-23 73.6 L-10 73.6 L-16.5 86 Z")+LM_R(-17.1,86,1.2,7)
+    +LM_P("M8 0 C8 0 4.4 20 4.4 32 C4.4 42 8.6 48 13.6 48 C18.6 48 22.8 42 22.8 32 C22.8 20 19.2 0 19.2 0 Z")
+    +LM_P("M4.8 26 L22.4 26")+LM_P("M5.6 14 L21.6 14")},
+  "Rome":{w:62,name:"the Colosseum",d:
+    LM_P("M-30 0 L-30 40 C-30 47 -16 52 0 52 C16 52 30 47 30 40 L30 0 Z")
+    +LM_P("M-30 13 L30 13")+LM_P("M-30 26 L30 26")+LM_P("M-30 38 L30 38")
+    +LM_P("M-22 0 L-22 13")+LM_P("M-11 0 L-11 13")+LM_P("M0 0 L0 13")+LM_P("M11 0 L11 13")+LM_P("M22 0 L22 13")
+    +LM_P("M-22 13 L-22 26")+LM_P("M-11 13 L-11 26")+LM_P("M0 13 L0 26")+LM_P("M11 13 L11 26")+LM_P("M22 13 L22 26")
+    // the broken half: the outer wall stops, and the inner ring is lower
+    +LM_P("M6 40 C14 41 22 44 26 47 L26 52 C20 50 12 49 6 49 Z")},
+  "Milan":{w:56,name:"the Duomo",d:
+    LM_P("M-26 0 L-26 30 L-18 30 L-18 44 L-9 44 L-9 54 L0 54 L0 68 L9 54 L9 44 L18 44 L18 30 L26 30 L26 0 Z")
+    +LM_P("M-22 30 L-22 42 L-20.8 42 L-21.4 30 Z")+LM_P("M-13 44 L-13 56 L-11.8 56 L-12.4 44 Z")
+    +LM_P("M13 44 L13 56 L11.8 56 L12.4 44 Z")+LM_P("M22 30 L22 42 L20.8 42 L21.4 30 Z")
+    +LM_R(-0.9,68,1.8,10)+LM_C(0,80,2)},
+  "Naples":{w:88,name:"Vesuvius",d:
+    LM_P("M-44 0 L-13 30 L-5 33 L5 33 L13 30 L44 0 Z")
+    +LM_P("M-8 31.6 C-5 34.6 5 34.6 8 31.6")
+    +LM_P("M-3 36 C-4 40 -2 42 -1 45")+LM_P("M2 36 C1 41 3 43 4 47")},
+  "Barcelona":{w:52,name:"the Sagrada Família",d:
+    LM_R(-24,0,48,26)
+    +LM_P("M-19 26 C-19 46 -20 58 -20.6 66 L-16 78 L-11.4 66 C-12 58 -13 46 -13 26 Z")
+    +LM_P("M-8 26 C-8 50 -9 64 -9.6 74 L-5 88 L-0.4 74 C-1 64 -2 50 -2 26 Z")
+    +LM_P("M3 26 C3 50 2 64 1.4 74 L6 88 L10.6 74 C10 64 9 50 9 26 Z")
+    +LM_P("M14 26 C14 46 13 58 12.4 66 L17 78 L21.6 66 C21 58 20 46 20 26 Z")
+    +LM_P("M-20 40 L-12.4 40")+LM_P("M-9 40 L-1.4 40")+LM_P("M2 40 L9.6 40")+LM_P("M13 40 L20.6 40")},
+  "Athens":{w:60,name:"the Parthenon",d:
+    LM_R(-29,0,58,4)+LM_R(-27,4,54,3)
+    +LM_R(-24,7,4.6,30)+LM_R(-16,7,4.6,30)+LM_R(-8,7,4.6,30)+LM_R(0,7,4.6,30)+LM_R(8,7,4.6,30)+LM_R(16,7,4.6,30)
+    +LM_R(-27,37,54,4)
+    +LM_P("M-29 41 L0 55 L29 41 Z")},
+  "Amsterdam":{w:64,name:"the canal houses and a windmill",d:
+    // four gabled houses
+    LM_P("M-32 0 L-32 30 L-27.5 36 L-23 30 L-23 0 Z")
+    +LM_P("M-21 0 L-21 26 L-19 26 L-19 30 L-15 30 L-15 34 L-13 34 L-11 34 L-11 30 L-7 30 L-7 26 L-5 26 L-5 0 Z")
+    +LM_P("M-3 0 L-3 32 L1.5 38 L6 32 L6 0 Z")
+    +LM_P("M8 0 L8 28 L10 28 L10 32 L16 32 L16 28 L18 28 L18 0 Z")
+    // the mill, to the right
+    +LM_P("M24 0 L27.4 40 L34.6 40 L38 0 Z")+LM_R(28.4,40,5.2,4)
+    +LM_P("M31 46 L31 66")+LM_P("M31 46 L31 26")+LM_P("M21 46 L41 46")
+    +LM_C(31,46,1.8)},
+  "Berlin":{w:30,name:"the Fernsehturm",d:
+    LM_P("M-5 0 L-2 44 L2 44 L5 0 Z")
+    +LM_C(0,52,8.4)+LM_R(-8.4,49,16.8,2)
+    +LM_P("M-2.4 60 L2.4 60 L1.8 68 L-1.8 68 Z")+LM_R(-0.9,68,1.8,32)},
+  "Hamburg":{w:56,name:"the Elbphilharmonie",d:
+    LM_R(-26,0,52,26)+LM_P("M-26 26 L26 26 L26 30 L-26 30 Z")
+    +LM_P("M-26 30 L-26 52 L-16 44 L-6 54 L4 44 L14 54 L24 44 L26 48 L26 30 Z")
+    +LM_P("M-26 38 L26 38")+LM_P("M-26 13 L26 13")},
+  "Moscow":{w:62,name:"Saint Basil's",d:
+    LM_R(-30,0,60,20)
+    +LM_R(-5,20,10,18)+LM_ONION(0,38,13,17)+LM_R(-0.7,55,1.4,7)
+    +LM_R(-20,16,8,14)+LM_ONION(-16,30,10,13)+LM_R(-16.6,43,1.2,5)
+    +LM_R(12,16,8,14)+LM_ONION(16,30,10,13)+LM_R(15.4,43,1.2,5)
+    +LM_R(-29,12,7,10)+LM_ONION(-25.5,22,8.6,11)
+    +LM_R(22,12,7,10)+LM_ONION(25.5,22,8.6,11)},
+  "St Petersburg":{w:40,name:"the Peter and Paul spire",d:
+    LM_R(-18,0,36,16)+LM_R(-9,16,18,22)
+    +LM_P("M-9 38 L9 38 L6 46 L-6 46 Z")+LM_R(-6,46,12,10)
+    +LM_P("M-6 56 L6 56 L2.6 64 L-2.6 64 Z")
+    +LM_P("M-1 64 L1 64 L0.5 92 L-0.5 92 Z")+LM_R(-0.4,92,0.8,8)},
+  "Warsaw":{w:46,name:"the Palace of Culture",d:
+    LM_R(-22,0,44,14)+LM_R(-16,14,32,18)+LM_R(-11,32,22,20)
+    +LM_R(-7,52,14,16)+LM_R(-4.6,68,9.2,10)
+    +LM_P("M-4.6 78 L4.6 78 L2.4 84 L-2.4 84 Z")+LM_R(-0.7,84,1.4,16)},
+  "Prague":{w:58,name:"the Týn towers and the castle",d:
+    LM_R(-28,0,26,18)+LM_R(-24,18,4,10)+LM_R(-10,18,4,10)
+    +LM_P("M-26.6 28 L-17.4 28 L-22 44 Z")+LM_P("M-12.6 28 L-3.4 28 L-8 44 Z")
+    +LM_R(-22.4,44,0.8,6)+LM_R(-8.4,44,0.8,6)
+    +LM_R(4,0,24,20)+LM_P("M4 20 L28 20 L28 24 L4 24 Z")
+    +LM_R(12,24,8,14)+LM_P("M11 38 L21 38 L16 50 Z")+LM_R(15.6,50,0.8,5)},
+  "Helsinki":{w:52,name:"the Cathedral",d:
+    LM_R(-25,0,50,6)+LM_R(-19,6,38,4)
+    +LM_R(-15,10,4,18)+LM_R(-7,10,4,18)+LM_R(3,10,4,18)+LM_R(11,10,4,18)
+    +LM_R(-19,28,38,4)+LM_P("M-19 32 L0 42 L19 32 Z")
+    +LM_R(-7,40,14,8)+LM_DOME(0,48,10,7)
+    +LM_DOME(-17,32,4.6,3)+LM_DOME(17,32,4.6,3)},
+  "Dublin":{w:22,name:"the Spire",d:
+    LM_P("M-2.6 0 L-0.35 100 L0.35 100 L2.6 0 Z")+LM_R(-5,0,10,2.4)},
+  "Lisbon":{w:80,name:"the 25 de Abril bridge and Cristo Rei",d:
+    LM_P("M-40 12 C-22 30 4 30 22 12")+LM_P("M-40 12 L-40 16 C-22 34 4 34 22 16 L22 12")
+    +LM_R(-42,0,3.4,46)+LM_R(20,0,3.4,46)+LM_R(-42,42,65.4,2.2)
+    +LM_R(30,0,14,14)+LM_R(33,14,8,30)
+    /* Cristo Rei, the same pose as Rio's and drawn the same way on purpose: a body with WIDTH,
+       arms not much wider than it, and the head sitting clear above them. A one-unit body under
+       a twelve-unit bar is not a figure with its arms out, it is a crucifix on a pillar — which
+       is the accident the generated masts made twice, arriving this time as a real building. */
+    +LM_P("M35.3 44 L38.7 44 L38.3 55.4 L35.7 55.4 Z")
+    +LM_R(30.6,49.4,12.8,1.8)+LM_C(37,57.6,2.4)},
+  "Oslo":{w:56,name:"the Opera House",d:
+    LM_P("M-26 0 L-26 6 L2 30 L26 30 L26 0 Z")
+    +LM_P("M-26 6 L2 30")+LM_P("M-14 0 L-14 16")+LM_P("M-2 0 L-2 26")
+    +LM_R(4,30,20,14)},
+  "Rotterdam":{w:88,name:"the Erasmus Bridge",d:
+    LM_R(-44,13,88,3)+LM_R(-44,0,3.4,13)+LM_R(40.6,0,3.4,13)
+    // the pylon kinks: up and right to the bend, then back over to the left. That bend is the
+    // whole reason the city calls it the Swan.
+    +LM_P("M-12 16 L0 56 L-9 96 L-5.4 96 L4 56 L-8 16 Z")
+    +LM_P("M-7.4 92 L30 16")+LM_P("M-6.6 84 L21 16")+LM_P("M-5.8 76 L12 16")+LM_P("M-5 68 L4 16")
+    +LM_P("M-10.4 58 L-32 16")+LM_P("M-11.2 50 L-24 16")
+    +LM_R(-12,0,10,16)},
+  "Geneva":{w:60,name:"the Jet d'Eau",d:
+    // the jet: narrow at the nozzle, feathering apart as it falls back
+    LM_P("M-2.6 0 C-2 34 -3.6 70 -8 98 C-3.4 76 -1 50 0 26 C1 50 3.4 76 8 98 C3.6 70 2 34 2.6 0 Z")
+    +LM_R(-28,0,20,3.4)+LM_R(8,0,20,3.4)
+    // the little pier the nozzle stands on, and a lake boat
+    +LM_R(-6,0,12,2.2)
+    +LM_P("M-24 3.4 L-14 3.4 L-16 7 L-22 7 Z")+LM_R(-19.4,7,1.2,9)
+    +LM_P("M-18.8 16 L-18.8 8 L-13 15 Z")},
+  "Frankfurt":{w:44,name:"the Messeturm",d:
+    LM_R(-13,0,26,56)+LM_R(-11.4,56,22.8,4)+LM_R(-11.4,60,22.8,14)
+    +LM_P("M-11.4 74 L11.4 74 L0 98 Z")+LM_R(-0.6,98,1.2,4)
+    +LM_P("M-13 19 L13 19")+LM_P("M-13 38 L13 38")
+    +LM_R(-22,0,7,30)+LM_R(15,0,7,38)},
+  "Stockholm":{w:50,name:"the City Hall tower",d:
+    LM_R(-24,0,48,22)+LM_P("M-24 22 L24 22 L22 27 L-22 27 Z")
+    +LM_P("M-21 7 L-21 22")+LM_P("M-15 7 L-15 22")+LM_P("M-9 7 L-9 22")+LM_P("M-3 7 L-3 22")
+    +LM_R(4,0,17,62)+LM_R(2.6,62,19.8,3)
+    // the lantern is open: four posts, a little roof, and the three crowns on top
+    +LM_R(3.6,65,2.6,12)+LM_R(11.2,65,2.6,12)+LM_R(18.8,65,2.6,12)
+    +LM_R(2.6,77,19.8,3)+LM_P("M4 80 L21 80 L12.5 92 Z")
+    +LM_C(8.5,94,1.7)+LM_C(12.5,96.4,1.7)+LM_C(16.5,94,1.7)},
+  "Madrid":{w:60,name:"the Puerta de Europa",d:
+    // the two towers lean in towards each other — that lean is the whole building
+    LM_P("M-28 0 L-12 0 L-2 86 L-18 86 Z")
+    +LM_P("M28 0 L12 0 L2 86 L18 86 Z")
+    +LM_P("M-24.7 28 L-8.7 28")+LM_P("M-21.4 57 L-5.4 57")
+    +LM_P("M24.7 28 L8.7 28")+LM_P("M21.4 57 L5.4 57")
+    +LM_C(-10,89,2.4)+LM_C(10,89,2.4)},
+  "Marseille":{w:70,name:"Notre-Dame de la Garde",d:
+    LM_P("M-35 0 C-26 14 -14 22 0 24 C14 22 26 14 35 0 Z")
+    +LM_R(-18,24,36,10)+LM_R(-15,34,26,13)+LM_DOME(-7,47,7,0)
+    +LM_R(4,34,13,32)+LM_R(2.6,66,15.8,3)
+    +LM_P("M4 69 L17 69 L14.4 76 L6.6 76 Z")
+    +LM_P("M9.2 76 L11.8 76 L11.2 84 L9.8 84 Z")+LM_C(10.5,88,3.2)
+    +LM_P("M-18 29 L18 29")},
+  "Malmö":{w:32,name:"the Turning Torso",d:
+    // nine cubes, each turned a little further than the one under it
+    LM_P("M-10 0 L-11.6 11 L-11.8 22 L-10.4 33 L-7.6 44 L-4 55 L-0.4 66 L2.6 77 L4.4 88 L4.8 99"
+      +" L13.4 98 L12.2 87 L10 76 L6.8 65 L3 54 L-0.6 43 L-3.4 32 L-4.6 21 L-4.2 10 L-2.6 0 Z")
+    +LM_P("M-11.6 11 L-4.2 10")+LM_P("M-11.8 22 L-4.6 21")+LM_P("M-10.4 33 L-3.4 32")
+    +LM_P("M-7.6 44 L-0.6 43")+LM_P("M-4 55 L3 54")+LM_P("M-0.4 66 L6.8 65")
+    +LM_P("M2.6 77 L10 76")+LM_P("M4.4 88 L12.2 87")},
+  "Porto":{w:94,name:"the Dom Luís I bridge",d:
+    LM_P("M-38 4 C-30 58 30 58 38 4 L34 4 C27 52 -27 52 -34 4 Z")
+    +LM_R(-46,48,92,3.4)+LM_R(-40,4,80,2.6)
+    +LM_P("M-30 24 L-30 48")+LM_P("M-20 37 L-20 48")+LM_P("M-10 43 L-10 48")
+    +LM_P("M10 43 L10 48")+LM_P("M20 37 L20 48")+LM_P("M30 24 L30 48")
+    +LM_R(-46,0,4.6,48)+LM_R(41.4,0,4.6,48)},
+  "Thessaloniki":{w:34,name:"the White Tower",d:
+    LM_R(-13,0,26,64)+LM_R(-14.6,64,29.2,4)
+    +LM_R(-14.6,68,4.4,5)+LM_R(10.2,68,4.4,5)
+    +LM_R(-6,68,12,20)+LM_R(-7.2,88,14.4,3)
+    +LM_R(-7.2,91,3.4,4)+LM_R(-1.7,91,3.4,4)+LM_R(3.8,91,3.4,4)
+    +LM_P("M-13 24 L13 24")+LM_P("M-13 46 L13 46")},
+  "Gdańsk":{w:76,name:"the Crane",d:
+    // Two brick towers with cone caps, and wedged between them the timber hoist house, which is
+    // the bigger half of the shape: it oversails the quay and carries the beam. The first go had
+    // the towers big and the timber small, and it came out as three ordinary buildings with a
+    // scratch across one — the crane has to be the tall thing or there is no crane.
+    LM_R(-25,0,11,46)+LM_P("M-26.4 46 L-12.6 46 L-19.5 66 Z")+LM_R(-20.1,66,1.2,6)
+    +LM_R(14,0,11,46)+LM_P("M12.6 46 L26.4 46 L19.5 66 Z")+LM_R(18.9,66,1.2,6)
+    +LM_P("M-14 0 L14 0 L14 44 L-14 44 Z")
+    +LM_P("M-14 44 L14 44 L17 60 L-17 60 Z")
+    +LM_P("M-17 60 L17 60 L0 84 Z")
+    +LM_P("M-14 20 L14 20")+LM_P("M-14 32 L14 32")
+    // the beam out over the water, with the rope and the hook on the end of it
+    +LM_P("M-17 56 L-36 42 L-36 37.6 L-15 50 Z")
+    +LM_P("M-34 39.6 L-34 16")+LM_P("M-36.6 16 L-31.4 16 L-34 22 Z")},
+  "Kraków":{w:50,name:"the towers of St Mary's",d:
+    LM_R(-22,0,44,34)+LM_P("M-22 34 L22 34 L18 42 L-18 42 Z")
+    // the two towers are famously unequal, and the taller one wears a ring of little turrets
+    +LM_R(-21,0,16,58)+LM_R(-22.4,58,18.8,3)
+    +LM_P("M-21 61 L-5 61 L-7.4 70 L-18.6 70 Z")
+    +LM_P("M-18.6 70 L-7.4 70 L-13 92 Z")+LM_R(-13.6,92,1.2,6)
+    +LM_R(-22.6,61,2.4,7)+LM_R(-7,61,2.4,7)
+    +LM_R(6,0,15,48)+LM_R(4.6,48,17.8,3)
+    +LM_DOME(13.5,51,7.4,0)+LM_R(12.9,58.4,1.2,6)
+    +LM_P("M-21 22 L-5 22")+LM_P("M6 22 L21 22")},
+  "Belgrade":{w:38,name:"the Avala Tower",d:
+    // it stands on a tripod rather than a foundation, which nothing else does
+    LM_P("M-16 0 L-2.6 40 L2.6 40 L16 0 L9.4 0 L0.8 34 L-0.8 34 L-9.4 0 Z")
+    +LM_R(-0.9,0,1.8,34)
+    +LM_R(-2.6,40,5.2,26)
+    +LM_P("M-8.4 66 L8.4 66 L6.6 74 L-6.6 74 Z")+LM_R(-6.6,74,13.2,5)
+    +LM_R(-0.8,79,1.6,21)},
+  "Vladivostok":{w:96,name:"the Golden Bridge",d:
+    LM_R(-48,22,96,3)+LM_R(-48,0,4,22)+LM_R(44,0,4,22)
+    +LM_P("M-32 25 L-25.4 84 L-22.6 84 L-16 25 L-19.4 25 L-23.6 66 L-24.4 66 L-28.6 25 Z")
+    +LM_R(-27.8,48,7.6,2.4)
+    +LM_P("M-24.6 80 L-44 26")+LM_P("M-24.6 72 L-38 26")+LM_P("M-24.6 64 L-32 26")
+    +LM_P("M-23.4 80 L-4 26")+LM_P("M-23.4 72 L-10 26")+LM_P("M-23.4 64 L-16 26")
+    +LM_P("M32 25 L25.4 84 L22.6 84 L16 25 L19.4 25 L23.6 66 L24.4 66 L28.6 25 Z")
+    +LM_R(20.2,48,7.6,2.4)
+    +LM_P("M24.6 80 L44 26")+LM_P("M24.6 72 L38 26")+LM_P("M24.6 64 L32 26")
+    +LM_P("M23.4 80 L4 26")+LM_P("M23.4 72 L10 26")+LM_P("M23.4 64 L16 26")},
+
+  /* ---- the Americas ---- */
+  "Chicago":{w:36,name:"the Willis Tower",d:
+    LM_R(-16,0,32,44)+LM_R(-16,44,20,18)+LM_R(-4,44,12,30)
+    +LM_R(-16,62,9,10)+LM_R(-1,74,9,14)
+    +LM_R(-13,72,1.4,26)+LM_R(2.6,88,1.4,12)},
+  "Mexico City":{w:30,name:"the Angel of Independence",d:
+    LM_P("M-13 0 L13 0 L9 6 L-9 6 Z")+LM_R(-6,6,12,6)
+    +LM_P("M-4.4 12 L4.4 12 L3 62 L-3 62 Z")+LM_R(-5.4,62,10.8,4)
+    +LM_C(0,71,3.6)
+    +LM_P("M-1.6 68 L-10 78 L-3.4 73 Z")+LM_P("M1.6 68 L10 78 L3.4 73 Z")
+    +LM_P("M-2.6 67 L-3.6 74 L2.6 67 L1.6 60 Z")},
+  "Rio de Janeiro":{w:82,name:"Christ the Redeemer and Sugarloaf",d:
+    // Sugarloaf, behind right
+    LM_P("M16 0 C18 20 24 34 34 36 C44 34 50 20 52 0 Z")
+    // the mountain, and the statue on it
+    +LM_P("M-42 0 C-38 18 -30 30 -20 34 C-10 30 -2 18 2 0 Z")
+    +LM_R(-21.6,34,3.2,4)+LM_R(-22.4,38,4.8,22)
+    +LM_R(-34,46,24,3.2)+LM_C(-20,63,2.8)},
+  "Buenos Aires":{w:24,name:"the Obelisco",d:
+    LM_R(-11,0,22,5)+LM_P("M-6.6 5 L6.6 5 L1.4 92 L-1.4 92 Z")+LM_P("M-1.4 92 L1.4 92 L0 100 Z")},
+  "Montreal":{w:84,name:"the Olympic Stadium",d:
+    LM_P("M-40 0 C-40 20 -22 30 0 30 C22 30 40 20 40 0 Z")
+    +LM_P("M-34 12 C-28 22 -14 27 0 27")
+    // the mast leans right out over the bowl — the tallest inclined tower there is
+    +LM_P("M22 0 C26 30 20 62 -4 86 L-4 90 C24 64 32 30 28 0 Z")
+    +LM_P("M-3 88 L-2 30")+LM_P("M1 85 L9 28")+LM_P("M5 81 L18 25")},
+  "Los Angeles":{w:86,name:"the Griffith Observatory",d:
+    LM_P("M-43 0 C-30 11 -16 17 0 18 C16 17 30 11 43 0 Z")
+    +LM_R(-26,18,52,14)+LM_P("M-16 18 L-16 32")+LM_P("M16 18 L16 32")
+    +LM_R(-8,32,16,10)+LM_DOME(0,42,10,3)
+    +LM_R(-26,18,10,9)+LM_DOME(-21,27,5.4,2)
+    +LM_R(16,18,10,9)+LM_DOME(21,27,5.4,2)
+    +LM_P("M-11 22 L11 22")},
+  "Monterrey":{w:96,name:"the Cerro de la Silla",d:
+    // the saddle: two peaks with the dip between them that the city is named for
+    LM_P("M-48 0 L-34 22 L-22 44 L-16 54 L-8 46 L0 41 L10 45 L18 56 L26 42 L36 20 L48 0 Z")
+    +LM_P("M-22 44 L-15 38 L-8 33")+LM_P("M18 56 L24 46 L30 38")},
+  "Tijuana":{w:62,name:"the Arch",d:
+    LM_P("M-24 0 C-22 58 -10 88 0 88 C10 88 22 58 24 0 L16.6 0 C14.8 50 6 81 0 81 C-6 81 -14.8 50 -16.6 0 Z")
+    +LM_P("M-21.2 26 L-14.4 26")+LM_P("M21.2 26 L14.4 26")
+    +LM_P("M-17.8 54 L-11.4 54")+LM_P("M17.8 54 L11.4 54")
+    +LM_R(-27,0,10,4.4)+LM_R(17,0,10,4.4)},
+  "Bogotá":{w:78,name:"Monserrate",d:
+    LM_P("M-38 0 C-26 22 -14 44 0 56 C14 44 26 22 38 0 Z")
+    +LM_R(-9,56,18,8)+LM_P("M-9 60 L9 60")
+    +LM_R(-5,64,10,8)+LM_P("M-5 72 L5 72 L0 81 Z")+LM_R(-0.6,81,1.2,5)
+    +LM_P("M-34 6 L-2 54")},
+  "Rosario":{w:58,name:"the Monumento a la Bandera",d:
+    LM_R(-26,0,52,6)+LM_R(-20,6,40,5)
+    +LM_R(-9,11,18,52)+LM_P("M-9 26 L9 26")+LM_P("M-9 44 L9 44")
+    +LM_P("M-9 63 L9 63 L6 72 L-6 72 Z")
+    +LM_P("M-6 72 L6 72 L2.6 84 L-2.6 84 Z")+LM_R(-0.8,84,1.6,10)
+    +LM_R(-24,11,8,15)+LM_R(16,11,8,15)},
+  "Santiago":{w:58,name:"the Gran Torre",d:
+    LM_R(-9,0,18,84)+LM_P("M-9 28 L9 28")+LM_P("M-9 56 L9 56")
+    +LM_P("M-9 84 L-1.4 84 L-1.4 97 L-9 92 Z")+LM_P("M9 84 L1.4 84 L1.4 97 L9 92 Z")
+    +LM_R(-27,0,15,21)+LM_R(11,0,18,27)+LM_R(-12,0,3,15)},
+  "São Paulo":{w:88,name:"the Estaiada bridge",d:
+    LM_R(-42,20,84,3)+LM_R(-42,0,3.4,20)+LM_R(38.6,0,3.4,20)
+    // the pylon is an X, which no other bridge in the game is
+    +LM_P("M-12 0 L8.6 90 L12 90 L-8.6 0 Z")
+    +LM_P("M12 0 L-8.6 90 L-12 90 L8.6 0 Z")
+    +LM_P("M-10.3 86 L-38 23")+LM_P("M-9 76 L-28 23")+LM_P("M-7.6 66 L-19 23")
+    +LM_P("M10.3 86 L38 23")+LM_P("M9 76 L28 23")+LM_P("M7.6 66 L19 23")},
+  "Manaus":{w:60,name:"the Teatro Amazonas",d:
+    LM_R(-28,0,56,26)+LM_R(-30,26,60,4)
+    +LM_P("M-20 5 L-20 26")+LM_P("M-12 5 L-12 26")+LM_P("M-4 5 L-4 26")
+    +LM_P("M4 5 L4 26")+LM_P("M12 5 L12 26")+LM_P("M20 5 L20 26")
+    +LM_R(-13,30,26,7)+LM_DOME(0,37,13,0)
+    +LM_P("M-9 39 C-8 46 -4 50 0 50")+LM_P("M9 39 C8 46 4 50 0 50")
+    +LM_R(-0.8,50,1.6,7)+LM_C(0,59,2)},
+  "Panama City":{w:72,name:"the locks",d:
+    LM_R(-34,0,68,6)
+    +LM_R(-34,6,8,24)+LM_R(-4,6,8,24)+LM_R(26,6,8,24)
+    +LM_P("M-26 8 L-4 8 L-4 22 L-26 22 Z")+LM_P("M4 8 L26 8 L26 22 L4 22 Z")
+    +LM_P("M6 22 L24 22 L21 34 L9 34 Z")+LM_R(12,34,6,10)+LM_R(13.4,44,3.2,8)},
+
+  /* ---- Africa and the Middle East ---- */
+  "Cairo":{w:96,name:"the Pyramids and the Sphinx",d:
+    LM_P("M-48 0 L-18 52 L12 0 Z")+LM_P("M6 0 L26 36 L46 0 Z")+LM_P("M32 0 L44 22 L56 0 Z")
+    +LM_P("M-44 0 C-44 8 -40 12 -34 12 L-14 12 L-16 6 L-20 8 C-22 4 -26 2 -30 2 Z")
+    +LM_P("M-34 12 L-34 20 L-28 20 L-28 12")
+    +LM_C(-31,16,1)},
+  "Alexandria":{w:80,name:"the Bibliotheca",d:
+    // a disc the size of a stadium, tilted out of the ground towards the sea
+    LM_P("M-36 0 C-36 26 -14 46 12 46 C26 46 34 40 39 32 L39 0 Z")
+    +LM_P("M-30 7 C-28 25 -12 39 8 40")
+    +LM_P("M-22 2 C-20 20 -6 34 13 36")
+    +LM_P("M-12 0 C-10 16 2 28 19 31")
+    +LM_R(-40,0,80,3.4)},
+  "Accra":{w:58,name:"the Black Star Gate",d:
+    LM_R(-25,0,8,40)+LM_R(17,0,8,40)+LM_R(-14,0,5,40)+LM_R(9,0,5,40)
+    +LM_P("M-9 40 L-9 27 C-9 21 9 21 9 27 L9 40")
+    +LM_R(-27,40,54,7)+LM_R(-5,47,10,5)
+    +LM_STAR(0,63,11)},
+  "Nairobi":{w:50,name:"the Kenyatta Centre",d:
+    LM_R(-8,0,16,72)
+    +LM_P("M-8 14 L8 14")+LM_P("M-8 30 L8 30")+LM_P("M-8 46 L8 46")+LM_P("M-8 60 L8 60")
+    +LM_P("M-11.4 72 L11.4 72 L11.4 76 L-11.4 76 Z")
+    +LM_R(-6,76,12,6)+LM_P("M-8.4 82 L8.4 82 L0 93 Z")
+    // the conical amphitheatre at its foot, which is half of the shape people know
+    +LM_P("M12 0 L25 0 L21.6 27 L15.4 27 Z")+LM_P("M14 27 L23 27 L18.5 36 Z")
+    +LM_R(-25,0,13,19)},
+  "Mombasa":{w:86,name:"the Tusks",d:
+    LM_P("M-40 0 C-38 30 -32 46 -20 54 L-20 50 C-31 42 -34 28 -35 0 Z")
+    +LM_P("M0 0 C-2 30 -8 46 -20 54 L-20 50 C-9 42 -6 28 -5 0 Z")
+    +LM_P("M4 0 C6 30 10 46 20 54 L20 50 C11 42 8 28 9 0 Z")
+    +LM_P("M40 0 C38 30 32 46 20 54 L20 50 C31 42 34 28 35 0 Z")
+    +LM_R(-42,0,84,2.4)},
+  "Johannesburg":{w:38,name:"the Hillbrow Tower",d:
+    LM_P("M-8 0 L-3.4 58 L3.4 58 L8 0 Z")
+    +LM_P("M-11 58 L11 58 L9.6 70 L-9.6 70 Z")+LM_R(-9.6,70,19.2,3)
+    +LM_P("M-9.4 63 L9.4 63")
+    +LM_P("M-6 73 L6 73 L4.6 82 L-4.6 82 Z")+LM_R(-0.9,82,1.8,18)
+    +LM_R(-19,0,8,26)},
+  "Durban":{w:94,name:"the Moses Mabhida arch",d:
+    LM_P("M-42 0 C-42 18 -24 28 0 28 C24 28 42 18 42 0 Z")
+    +LM_P("M-38 10 C-30 20 -16 25 0 25")
+    +LM_P("M-40 0 C-36 46 -18 76 0 76 C18 76 36 46 40 0 L36 0 C33 42 16 71 0 71 C-16 71 -33 42 -36 0 Z")
+    +LM_P("M0 74 L0 28")},
+  "Cape Town":{w:96,name:"Table Mountain",d:
+    LM_P("M-48 0 L-40 24 L-34 34 L-20 40 L22 40 L34 32 L40 20 L48 0 Z")
+    +LM_P("M-20 40 L22 40")
+    +LM_P("M30 40 C34 46 38 50 44 52 L48 0 L40 20 L34 32 Z")},
+  "Casablanca":{w:56,name:"the Hassan II Mosque",d:
+    LM_R(-26,0,52,20)+LM_DOME(-12,20,9,0)+LM_DOME(10,20,9,0)
+    +LM_R(-4,0,20,14)
+    +LM_R(1,14,10,62)+LM_R(-1,76,14,3)+LM_R(2,79,8,10)
+    +LM_P("M2 89 L10 89 L6 98 Z")+LM_R(5.4,98,1.2,4)
+    +LM_P("M2 34 L10 34")+LM_P("M2 52 L10 52")},
+  "Marrakesh":{w:52,name:"the Koutoubia",d:
+    LM_R(-24,0,48,14)
+    +LM_R(-7,0,16,58)+LM_R(-9,58,20,3)+LM_R(-5,61,12,14)
+    +LM_P("M-5 75 L7 75 L1 84 Z")+LM_R(0.4,84,1.2,6)
+    +LM_C(1,92,1.6)+LM_C(1,96,1.2)
+    +LM_P("M-4 28 L6 28")+LM_P("M-4 44 L6 44")},
+  "Dubai":{w:40,name:"the Burj Khalifa",d:
+    LM_P("M-17 0 L-17 22 L-11 22 L-11 44 L-6.4 44 L-6.4 62 L-3.4 62 L-3.4 78 L-1.1 78 L-0.35 92 L0.35 92 L1.1 78 L3.4 78 L3.4 62 L6.4 62 L6.4 44 L11 44 L11 22 L17 22 L17 0 Z")
+    +LM_R(-0.4,92,0.8,8)
+    +LM_P("M-11 30 L11 30")+LM_P("M-6.4 52 L6.4 52")+LM_P("M-3.4 70 L3.4 70")},
+  "Abu Dhabi":{w:76,name:"the Sheikh Zayed Mosque",d:
+    LM_R(-36,0,72,18)
+    +LM_DOME(0,18,15,6)+LM_DOME(-20,18,8.6,4)+LM_DOME(20,18,8.6,4)
+    +LM_MIN(-32,18,34,4.4)+LM_MIN(32,18,34,4.4)
+    +LM_P("M-30 18 L-30 10 L-10 10")+LM_P("M30 18 L30 10 L10 10")},
+  "Riyadh":{w:44,name:"the Kingdom Centre",d:
+    LM_P("M-20 0 L-15 58 C-9 70 -6 76 -6 84 L-13 84 L-13 90 L13 90 L13 84 L6 84 C6 76 9 70 15 58 L20 0 Z")
+    +LM_P("M-17.4 28 L17.4 28")
+    +LM_P("M-15.6 52 L15.6 52")},
+  "Istanbul":{w:80,name:"the Hagia Sophia",d:
+    LM_R(-30,0,60,20)
+    +LM_DOME(0,26,17,5)+LM_R(-17,20,34,6)
+    +LM_DOME(-21,20,9,0)+LM_DOME(21,20,9,0)
+    +LM_MIN(-34,0,52,4)+LM_MIN(34,0,52,4)
+    +LM_MIN(-25,0,42,3.4)+LM_MIN(25,0,42,3.4)},
+  "Jeddah":{w:58,name:"the King Fahd Fountain",d:
+    // Geneva throws the other one of these, so the two must not arrive as the same picture. This
+    // one is the taller by half and it comes APART at the top into spray, where Geneva's stays a
+    // lance; and it stands on a sea wall rather than in a lake. The first go put palm trees on
+    // the corniche to tell them apart and they came out as two little crosses in the sand.
+    LM_P("M-3.4 4 C-2.6 34 -5.6 64 -12 100 C-6 78 -2 54 0 30 C2 54 6 78 12 100 C5.6 64 2.6 34 3.4 4 Z")
+    +LM_P("M-5.6 70 C-9 79 -11.4 88 -12.6 96")+LM_P("M5.6 70 C9 79 11.4 88 12.6 96")
+    +LM_P("M-8.4 84 C-12 88 -15 92 -16.6 97")+LM_P("M8.4 84 C12 88 15 92 16.6 97")
+    +LM_R(-29,0,58,4)+LM_P("M-29 6.4 L29 6.4")},
+  "Ankara":{w:80,name:"Anıtkabir",d:
+    LM_R(-38,0,76,6)+LM_P("M-31 6 L31 6 L26 15 L-26 15 Z")
+    +LM_R(-24,15,48,4)
+    +LM_R(-21,19,4.6,26)+LM_R(-13,19,4.6,26)+LM_R(-5,19,4.6,26)
+    +LM_R(3,19,4.6,26)+LM_R(11,19,4.6,26)+LM_R(17.4,19,4.6,26)
+    +LM_R(-24,45,48,5)+LM_R(-22,50,44,4)
+    +LM_R(-35,6,6,11)+LM_R(29,6,6,11)},
+  "Tel Aviv":{w:58,name:"the Azrieli towers",d:
+    // three towers, and the game is which top belongs to which plan: round, triangle, square.
+    // They have to clear the city to be read as three, not as a busier part of the row.
+    LM_R(-25,0,15,88)+LM_P("M-25 88 C-25 96 -10 96 -10 88 Z")
+    +LM_R(-6,0,16,72)+LM_P("M-6 72 L10 72 L2 85 Z")
+    +LM_R(14,0,14,62)+LM_R(12.6,62,16.8,3)
+    +LM_P("M-25 30 L-10 30")+LM_P("M-25 60 L-10 60")
+    +LM_P("M-6 36 L10 36")+LM_P("M14 31 L28 31")},
+  "Jerusalem":{w:56,name:"the Dome of the Rock",d:
+    LM_R(-26,0,52,6)
+    +LM_P("M-17 6 L-17 30 L17 30 L17 6 Z")
+    +LM_P("M-17 12 L17 12")
+    +LM_R(-19,30,38,3)
+    +LM_DOME(0,33,15,0)+LM_R(-0.8,48,1.6,7)+LM_C(0,57,2)
+    +LM_P("M-11 6 L-11 30")+LM_P("M-4 6 L-4 30")+LM_P("M4 6 L4 30")+LM_P("M11 6 L11 30")},
+
+  /* ---- Asia and the Pacific ---- */
+  "Osaka":{w:56,name:"Osaka Castle",d:
+    LM_P("M-27 0 L-22 20 L22 20 L27 0 Z")
+    +LM_R(-18,20,36,12)+LM_P("M-22 32 L22 32 L18 37 L-18 37 Z")
+    +LM_R(-14,37,28,10)+LM_P("M-18 47 L18 47 L14 52 L-14 52 Z")
+    +LM_R(-10,52,20,9)+LM_P("M-14 61 L14 61 L10 66 L-10 66 Z")
+    +LM_R(-6,66,12,8)+LM_P("M-10 74 L10 74 L0 82 Z")
+    +LM_R(-0.6,82,1.2,5)},
+  "Seoul":{w:34,name:"the N Seoul Tower",d:
+    LM_P("M-15 0 C-12 14 -10 22 -9 30 L9 30 C10 22 12 14 15 0 Z")
+    +LM_P("M-4.4 30 L-2.4 52 L2.4 52 L4.4 30 Z")
+    +LM_P("M-8.6 58 L8.6 58 L6.4 50 L-6.4 50 Z")+LM_R(-6.4,58,12.8,6)
+    +LM_P("M-4 64 L4 64 L2.6 72 L-2.6 72 Z")+LM_R(-0.9,72,1.8,28)},
+  "Shanghai":{w:40,name:"the Oriental Pearl",d:
+    LM_P("M-14 0 L-4.4 30 L-2 30 L-2 0 Z")+LM_P("M14 0 L4.4 30 L2 30 L2 0 Z")
+    +LM_R(-3,0,6,26)
+    +LM_C(0,32,9.6)+LM_R(-2.4,40,4.8,14)+LM_C(0,60,6.4)
+    +LM_R(-1.6,66,3.2,14)+LM_C(0,83,3)+LM_R(-0.7,86,1.4,14)},
+  "Beijing":{w:60,name:"the Temple of Heaven",d:
+    LM_R(-28,0,56,5)+LM_R(-22,5,44,4)
+    +LM_P("M-26 9 L26 9 L20 22 L-20 22 Z")+LM_R(-18,22,36,4)
+    +LM_P("M-21 26 L21 26 L15 38 L-15 38 Z")+LM_R(-13,38,26,4)
+    +LM_P("M-16 42 L16 42 L0 60 Z")
+    +LM_R(-1,60,2,5)+LM_C(0,67,2.4)},
+  "Hong Kong":{w:46,name:"the Bank of China Tower",d:
+    LM_P("M-14 0 L-14 40 L0 92 L14 40 L14 0 Z")
+    +LM_P("M-14 40 L0 20 L14 40")+LM_P("M-14 0 L0 20")+LM_P("M14 0 L0 20")
+    +LM_P("M0 20 L0 92")
+    +LM_R(-3.4,92,1.2,14)+LM_R(2.2,92,1.2,14)
+    +LM_P("M-22 0 C-20 12 -14 18 -14 18")+LM_P("M22 0 C20 10 16 14 14 16")},
+  "Singapore":{w:76,name:"Marina Bay Sands",d:
+    LM_P("M-32 0 C-30 30 -28 52 -26 66 L-17 66 C-19 50 -21 28 -22 0 Z")
+    +LM_P("M-8 0 C-7 30 -6 52 -5 66 L4 66 C3 50 2 28 2 0 Z")
+    +LM_P("M16 0 C16 30 17 52 18 66 L27 66 C26 50 25 28 26 0 Z")
+    +LM_P("M-34 66 L34 66 L34 71 L-34 71 Z")
+    +LM_P("M28 71 C33 71 37 73 38 76 L30 74 Z")
+    +LM_R(-24,71,4,3)+LM_R(-4,71,4,3)+LM_R(18,71,4,3)},
+  "Mumbai":{w:52,name:"the Gateway of India",d:
+    LM_R(-24,0,48,8)
+    +LM_P("M-24 8 L-24 46 L24 46 L24 8 Z")
+    +LM_P("M-11 8 L-11 30 C-11 38 -5 42 0 42 C5 42 11 38 11 30 L11 8")
+    +LM_R(-26,46,52,5)
+    +LM_DOME(0,51,11,4)
+    +LM_R(-24,46,6,10)+LM_R(18,46,6,10)+LM_DOME(-21,56,3.4,3)+LM_DOME(21,56,3.4,3)},
+  "Delhi":{w:56,name:"India Gate",d:
+    LM_R(-26,0,52,6)
+    +LM_P("M-20 6 L-20 58 L20 58 L20 6 Z")
+    +LM_P("M-9 6 L-9 40 C-9 50 -4 54 0 54 C4 54 9 50 9 40 L9 6")
+    +LM_R(-23,58,46,5)+LM_R(-18,63,36,4)
+    +LM_R(-4,67,8,5)+LM_P("M-3 72 C-3 78 3 78 3 72 Z")},
+  "Bangkok":{w:56,name:"Wat Arun",d:
+    LM_R(-26,0,52,10)
+    +LM_P("M-8 10 L8 10 L5.6 34 L-5.6 34 Z")
+    +LM_P("M-5.6 34 C-4 52 -2 66 -1 76 L1 76 C2 66 4 52 5.6 34 Z")
+    +LM_P("M-1 76 L1 76 L0.5 92 L-0.5 92 Z")+LM_R(-0.4,92,0.8,8)
+    +LM_P("M-20 10 L-13 10 L-11.6 24 C-10.6 34 -9.6 40 -9 46 L-10.6 46 C-12 38 -14 28 -16.5 24 Z")
+    +LM_P("M20 10 L13 10 L11.6 24 C10.6 34 9.6 40 9 46 L10.6 46 C12 38 14 28 16.5 24 Z")},
+  "Jakarta":{w:32,name:"Monas",d:
+    LM_P("M-15 0 L15 0 L11 7 L-11 7 Z")+LM_R(-8,7,16,5)
+    +LM_P("M-4.6 12 L4.6 12 L2.4 78 L-2.4 78 Z")
+    +LM_P("M-2.4 78 L2.4 78 L4.4 84 L-4.4 84 Z")
+    +LM_P("M-4.4 84 C-3 92 -1 96 0 100 C1 96 3 92 4.4 84 Z")},
+  "Islamabad":{w:64,name:"the Faisal Mosque",d:
+    LM_P("M-26 0 L0 52 L26 0 Z")+LM_P("M-13 0 L0 26 L13 0")
+    +LM_MIN(-30,0,72,3.4)+LM_MIN(30,0,72,3.4)
+    +LM_R(-34,0,68,3.4)},
+  "Melbourne":{w:46,name:"the Arts Centre spire",d:
+    LM_R(-21,0,42,16)+LM_P("M-13 16 C-13 26 13 26 13 16 Z")
+    +LM_P("M-11 24 L11 24 L2 62 L-2 62 Z")
+    +LM_P("M-9.2 32 L9.2 32")+LM_P("M-6.6 43 L6.6 43")+LM_P("M-4.2 53 L4.2 53")
+    +LM_P("M-2 62 L2 62 L0.5 96 L-0.5 96 Z")
+    +LM_P("M-1.5 73 L1.5 73")+LM_P("M-1 84 L1 84")},
+  "Yokohama":{w:84,name:"the Landmark Tower and the big wheel",d:
+    LM_P("M-32 0 L-28 72 L-12 72 L-8 0 Z")
+    +LM_P("M-30.6 24 L-9.4 24")+LM_P("M-29.2 48 L-10.8 48")
+    +LM_P("M-28 72 L-12 72 L-13.6 82 L-26.4 82 Z")+LM_R(-26.4,82,12.8,4)
+    +LM_R(-21,86,1.6,12)
+    +LM_C(20,42,20)+LM_C(20,42,3.4)
+    +LM_P("M0 42 L40 42")+LM_P("M20 22 L20 62")+LM_P("M5.9 27.9 L34.1 56.1")+LM_P("M5.9 56.1 L34.1 27.9")
+    +LM_P("M12 0 L18.4 39")+LM_P("M28 0 L21.6 39")},
+  "Busan":{w:46,name:"the Busan Tower",d:
+    LM_P("M-17 0 L-15 11 L15 11 L17 0 Z")+LM_R(-5,11,10,52)
+    +LM_P("M-5 30 L5 30")+LM_P("M-5 48 L5 48")
+    +LM_P("M-11 63 L11 63 L9 57 L-9 57 Z")+LM_R(-9,63,18,8)
+    +LM_P("M-11.6 71 L11.6 71 L8 78 L-8 78 Z")+LM_R(-6,78,12,5)
+    +LM_P("M-8.4 83 L8.4 83 L0 93 Z")+LM_R(-0.6,93,1.2,5)},
+  "Shenzhen":{w:46,name:"the Ping An tower",d:
+    LM_P("M-13 0 L-4.6 86 L4.6 86 L13 0 Z")
+    +LM_P("M-13 0 L-6 93 L-4.8 93 L-11.2 0 Z")
+    +LM_P("M13 0 L6 93 L4.8 93 L11.2 0 Z")
+    +LM_P("M-11.6 22 L11.6 22")+LM_P("M-9.4 46 L9.4 46")+LM_P("M-7 70 L7 70")
+    +LM_R(-1,86,2,10)+LM_R(-20,0,6,24)+LM_R(14,0,6,30)},
+  "Karachi":{w:62,name:"the Mazar-e-Quaid",d:
+    LM_R(-28,0,56,5)+LM_R(-23,5,46,4)
+    +LM_R(-18,9,36,34)
+    +LM_P("M-8 9 L-8 26 C-8 33 -3 37 0 40 C3 37 8 33 8 26 L8 9")
+    +LM_P("M-18 20 L-11 20")+LM_P("M11 20 L18 20")
+    +LM_R(-20,43,40,4)
+    +LM_P("M-14 47 C-14 62 -8 70 0 70 C8 70 14 62 14 47 Z")
+    +LM_R(-0.8,70,1.6,7)+LM_C(0,78,1.8)},
+  "Lahore":{w:50,name:"the Minar-e-Pakistan",d:
+    LM_P("M-22 0 L22 0 L18 5 L-18 5 Z")+LM_P("M-18 5 L18 5 L14 10 L-14 10 Z")
+    // the base opens into petals, which is what stops it being just another tower
+    +LM_P("M-12 10 C-11 20 -8 24 -5 26 L-5 10 Z")+LM_P("M12 10 C11 20 8 24 5 26 L5 10 Z")
+    +LM_P("M-6 10 L6 10 L4 26 L-4 26 Z")
+    +LM_P("M-4 26 L4 26 L2.2 86 L-2.2 86 Z")
+    +LM_P("M-3.4 46 L3.4 46")+LM_P("M-2.8 66 L2.8 66")
+    +LM_P("M-2.2 86 L2.2 86 L0 100 Z")},
+  "Ho Chi Minh City":{w:52,name:"the Bitexco tower",d:
+    LM_P("M-11 0 C-10 30 -8 54 -5 74 L5 74 C8 54 10 30 11 0 Z")
+    +LM_P("M-9.8 26 L9.8 26")+LM_P("M-8.4 50 L8.4 50")
+    +LM_P("M-5 74 L5 74 L3.4 90 L-3.4 90 Z")+LM_R(-0.8,90,1.6,10)
+    // the helipad sticks out of the side two thirds up, which nothing else does
+    +LM_P("M-6.2 62 L-19 66 L-19 69.4 L-6 68 Z")
+    +LM_P("M-19 63.4 C-25 64.4 -25 71 -19 72 Z")},
+  "Hanoi":{w:58,name:"the Turtle Tower",d:
+    LM_P("M-26 0 C-18 6 18 6 26 0 Z")
+    +LM_R(-11,5,22,16)+LM_P("M-13.4 21 L13.4 21 L11 25.4 L-11 25.4 Z")
+    +LM_R(-8.6,25.4,17.2,14)+LM_P("M-11 39.4 L11 39.4 L8.6 43.8 L-8.6 43.8 Z")
+    +LM_R(-6,43.8,12,12)+LM_P("M-8.4 55.8 L8.4 55.8 L6 60 L-6 60 Z")
+    +LM_R(-3.4,60,6.8,8)+LM_P("M-5.6 68 L5.6 68 L0 77 Z")
+    +LM_R(-0.6,77,1.2,5)
+    +LM_P("M-31 1.4 L-26.6 1.4")+LM_P("M26.6 1.4 L31 1.4")},
+  "Da Nang":{w:96,name:"the Dragon Bridge",d:
+    LM_R(-46,8,92,3.4)+LM_R(-46,0,4,8)+LM_R(42,0,4,8)
+    +LM_HUMP(-38,-14,11.4,17,4.4)+LM_HUMP(-14,10,11.4,17,4.4)+LM_HUMP(10,34,11.4,17,4.4)
+    // the head rears off the end of the deck, which is the whole joke of the bridge
+    +LM_P("M34 11.4 C39 12 43 17 44.6 23 L40 25.6 C42 28.6 39.6 31.4 36.6 30 L33.4 27 C31.4 22.6 30.6 15.6 34 11.4 Z")
+    +LM_C(37.6,22.6,1.1)},
+};
+function landmarkFor(city){return LANDMARKS[cityName(city)]||null;}
+const CITY_COUNT=COUNTRIES.reduce((n,c)=>n+c.cities.length,0);
+// Counted, not typed: both books print this, and a number typed into prose goes stale the first
+// time a landmark is added and nobody remembers the sentence it was in.
+const LANDMARK_COUNT=Object.keys(LANDMARKS).length;
+const SKY_W=320, SKY_H=132, SKY_GY=110;      // ground line, with room for water beneath it
+/* The rival's yard arrives as "Cairo, and a yard they think nobody knows about" — a sentence
+   where a city name goes. Everything here wants the city: the card so the name fits on one
+   line, and the seed so that job's Cairo is the SAME Cairo as every other Cairo. No real city
+   in the game has a comma in it, which tests/browser76 checks, so the first comma is the seam. */
+function cityName(s){const i=String(s||"").indexOf(",");return i<0?String(s||""):String(s).slice(0,i);}
+function citySeed(city,country){return fmHash("sky|"+cityName(city)+"|"+(country||""));}
+function citySkyline(city,country){
+  const co=COUNTRY_BY_NAME[country]||{terrain:[],eco:2};
+  const T=co.terrain||[];
+  const has=k=>T.indexOf(k)>=0;
+  const r=mulberry32(citySeed(city,country));
+  const ri_=(a,b)=>a+Math.floor(r()*(b-a+1));
+  const pick_=a=>a[Math.floor(r()*a.length)];
+  const far=[],near=[],line=[];               // distant outline · paper-filled with an edge · pure stroke
+  const water=has("coast")||has("port")||has("islands")||has("fjords")||has("delta")
+    ||has("canal")||has("river")||has("rivers")||has("lakes");
+  const hilly=has("mountains")||has("hills")||has("highlands")||has("fjords");
+  const big=has("megacity");
+  const green=has("jungle")||has("forest");
+  const flatland=has("desert")||has("savanna")||has("plains")||has("tundra");
+  const eco=co.eco||2;
+
+  /* ---- the far layer: what is behind the city ---- */
+  if(hilly){
+    // A ridge, in outline, drawn as one polyline so the peaks share a skyline rather than
+    // stacking as separate triangles. Two passes when the country is properly mountainous.
+    const ridge=n=>{
+      const pts=[];let x=-6;
+      const top=SKY_GY-(n===0?54:38), floor=SKY_GY-(n===0?14:8);
+      pts.push(x+","+SKY_GY);
+      while(x<SKY_W+6){
+        const w=ri_(26,54);
+        pts.push((x+w/2)+","+(floor-r()*(floor-top)));
+        x+=w;
+      }
+      pts.push((SKY_W+6)+","+SKY_GY);
+      return '<polyline points="'+pts.join(" ")+'"/>';
+    };
+    if(has("mountains"))far.push(ridge(0));
+    far.push(ridge(1));
+  } else if(flatland){
+    // Nothing behind a plain but the distance itself — two low dunes, or a flat line.
+    const y=SKY_GY-ri_(6,12);
+    far.push('<polyline points="-6,'+SKY_GY+' '+ri_(40,90)+','+y+' '+ri_(150,210)+','+(y+ri_(2,6))+' '+(SKY_W+6)+','+SKY_GY+'"/>');
+  }
+
+  /* ---- the city itself ---- */
+  // How tall the money is. A megacity goes up, a poor country stays down, and a mountain town
+  // is lower than the same money on a plain because there is nowhere to put a tower.
+  // And a city with a landmark keeps its skyline down, so the thing you came to see is the
+  // tallest thing on the card rather than one more rectangle in a row of them.
+  const LM=landmarkFor(city);
+  const tall=(big?86:eco===3?70:eco===1?42:56)*(hilly&&!big?0.82:1)*(LM?0.62:1);
+  const lo=Math.round(tall*0.26);
+  const N=big?ri_(13,17):eco===1?ri_(7,10):ri_(9,13);
+  let x=4;
+  const step=(SKY_W-8)/N;
+  const mid=SKY_W/2;
+  for(let i=0;i<N&&x<SKY_W-6;i++){
+    const w=Math.max(9,Math.round(step*(0.62+r()*0.8)));
+    // A skyline has a middle. Height falls away from it, or the row reads as a fence.
+    const bell=1-Math.pow(Math.abs((x+w/2)-mid)/mid,1.7)*0.62;
+    const h=Math.max(lo,Math.round((lo+r()*(tall-lo))*bell));
+    const y=SKY_GY-h;
+    const top=pick_(h>tall*0.62?["flat","flat","step","spire","mast"]
+                   :h>tall*0.36?["flat","flat","flat","step","dome"]
+                   :["flat","flat","pitch","dome"]);
+    if(top==="step"){
+      const in1=Math.round(w*0.18), h2=Math.round(h*ri_(18,34)/100);
+      near.push('<path d="M'+x+' '+SKY_GY+' L'+x+' '+(y+h2)+' L'+(x+in1)+' '+(y+h2)+' L'+(x+in1)+' '+y
+        +' L'+(x+w-in1)+' '+y+' L'+(x+w-in1)+' '+(y+h2)+' L'+(x+w)+' '+(y+h2)+' L'+(x+w)+' '+SKY_GY+' Z"/>');
+    } else if(top==="pitch"){
+      near.push('<path d="M'+x+' '+SKY_GY+' L'+x+' '+(y+6)+' L'+(x+w/2)+' '+y+' L'+(x+w)+' '+(y+6)+' L'+(x+w)+' '+SKY_GY+' Z"/>');
+    } else if(top==="dome"){
+      const rr=w/2;
+      near.push('<path d="M'+x+' '+SKY_GY+' L'+x+' '+y+' A'+rr+' '+rr+' 0 0 1 '+(x+w)+' '+y+' L'+(x+w)+' '+SKY_GY+' Z"/>');
+    } else {
+      near.push('<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'"/>');
+      if(top==="spire"){
+        const cx=x+w/2;
+        near.push('<path d="M'+(cx-2)+' '+y+' L'+cx+' '+(y-ri_(10,20))+' L'+(cx+2)+' '+y+' Z"/>');
+      } else if(top==="mast"){
+        /* A GUYED mast: a needle with two stays running down to the roof. No horizontal bar,
+           anywhere, ever.
+
+           This took two goes to get right and both wrong ones shipped to a contact sheet. One
+           arm across a mast is a crucifix, and the first sheet had one standing over New York,
+           Rome, Athens and St Petersburg. Two arms is worse, not better — it is a patriarchal
+           cross, and the second sheet had that one over Riyadh, Jerusalem and Abu Dhabi. At
+           this size ANY bar across a vertical reads as a cross, so there is no bar. Stays run
+           diagonally, which no religious symbol does, and they say "radio mast" outright.
+
+           Do not add a crossbar back to make it "read better". It reads fine. */
+        const cx=x+w/2, mh=ri_(12,20), sp=Math.min(w*0.42,5.5);
+        line.push('<path d="M'+cx+' '+y+' L'+cx+' '+(y-mh)+'"/>');
+        line.push('<path d="M'+cx+' '+(y-mh)+' L'+(cx-sp)+' '+y+'"/>');
+        line.push('<path d="M'+cx+' '+(y-mh)+' L'+(cx+sp)+' '+y+'"/>');
+      }
+    }
+    x+=w+ri_(1,4);
+  }
+
+  /* ---- what the place is made of ---- */
+  if(water){
+    // Water is three or four short rules under the ground line. Anything more elaborate at this
+    // size turns into a smudge, and a smudge under a skyline reads as a mistake.
+    for(let i=0;i<4;i++){
+      const wl=ri_(26,86), wx=ri_(6,SKY_W-wl-6), wy=SKY_GY+5+i*5;
+      line.push('<path d="M'+wx+' '+wy+' L'+(wx+wl)+' '+wy+'"/>');
+    }
+    if(has("port")||has("islands")||(has("coast")&&r()<0.5)){
+      // A gantry crane on the quay: the one shape that says this is a working harbour.
+      const gx=r()<0.5?ri_(14,54):ri_(SKY_W-84,SKY_W-40), gh=ri_(26,38), gy=SKY_GY-gh;
+      line.push('<path d="M'+(gx+1.2)+' '+SKY_GY+' L'+(gx+1.2)+' '+gy+'"/>');
+      line.push('<path d="M'+(gx+17.2)+' '+SKY_GY+' L'+(gx+17.2)+' '+gy+'"/>');
+      line.push('<path d="M'+(gx-9)+' '+gy+' L'+(gx+33)+' '+gy+'"/>');
+      line.push('<path d="M'+(gx-8)+' '+gy+' L'+(gx-8)+' '+(gy+9)+'"/>');
+    }
+    if(r()<0.55){
+      const bx=ri_(10,SKY_W-60), by=SKY_GY+ri_(8,16);
+      near.push('<path d="M'+bx+' '+by+' L'+(bx+26)+' '+by+' L'+(bx+22)+' '+(by+4)+' L'+(bx+3)+' '+(by+4)+' Z"/>');
+      line.push('<path d="M'+(bx+11.8)+' '+by+' L'+(bx+11.8)+' '+(by-8)+'"/>');
+    }
+  }
+  if(has("delta")||has("canal")||has("river")||has("rivers")){
+    // A bridge, low and to one side, over the water rather than through the city.
+    const bx=r()<0.5?8:SKY_W-116, by=SKY_GY+7;
+    line.push('<path d="M'+bx+' '+by+' Q'+(bx+54)+' '+(by-13)+' '+(bx+108)+' '+by+'"/>');
+    for(let i=1;i<4;i++){const px=bx+i*27,py=by-(i===2?10:7);
+      line.push('<path d="M'+px+' '+(by-1)+' L'+px+' '+py+'"/>');}
+  }
+  if(green){
+    // Trees at the edge, where they do not eat the skyline. Jungle gets palms, forest gets firs.
+    const side=r()<0.5?-1:1;
+    for(let i=0;i<ri_(2,4);i++){
+      const tx=side<0?ri_(4,40):ri_(SKY_W-44,SKY_W-6), ty=SKY_GY, th=ri_(14,26);
+      if(has("jungle")){
+        line.push('<path d="M'+tx+' '+ty+' L'+tx+' '+(ty-th)+'"/>');
+        for(let f=0;f<5;f++){
+          const a=-150+f*30, rad=a*Math.PI/180, L=ri_(7,11);
+          near.push('<path d="M'+tx+' '+(ty-th)+' q'+(Math.cos(rad)*L*0.6)+' '+(Math.sin(rad)*L*0.6-2)+' '
+            +(Math.cos(rad)*L)+' '+(Math.sin(rad)*L+3)+' q'+(-Math.cos(rad)*L*0.5)+' '+(-Math.sin(rad)*L*0.5-3)+' '
+            +(-Math.cos(rad)*L)+' '+(-Math.sin(rad)*L)+' Z"/>');
+        }
+      } else {
+        near.push('<path d="M'+tx+' '+(ty-th)+' L'+(tx+6)+' '+ty+' L'+(tx-6)+' '+ty+' Z"/>');
+        line.push('<path d="M'+tx+' '+ty+' L'+tx+' '+(ty-4)+'"/>');
+      }
+    }
+  }
+
+  /* The landmark goes on last, so it stands in front of the city rather than among it. Its own
+     box is 100 tall with the origin on the ground and +y up; the group flips and scales it. It
+     is placed a little off centre, by seed, because dead centre reads as a logo. */
+  let lmName="";
+  if(LM){
+    const k=(SKY_GY-14)/100*(LM.tallScale||1);
+    const halfW=LM.w/2*k;
+    const cx=clamp(SKY_W/2+(r()*2-1)*28,halfW+6,SKY_W-halfW-6);
+    near.push('<g class="sky-lm" transform="translate('+f1(cx)+' '+SKY_GY+') scale('+f1(k)+' '+f1(-k)+')">'+LM.d+'</g>');
+    lmName=LM.name;
+  }
+  return '<svg class="sky" viewBox="0 0 '+SKY_W+' '+SKY_H+'" role="img" aria-label="'+esc(cityName(city))+(lmName?", with "+esc(lmName):"")+'">'
+    +'<g class="sky-far">'+far.join("")+'</g>'
+    +'<g class="sky-near">'+near.join("")+'</g>'
+    +'<g class="sky-line">'+line.join("")+'</g>'
+    +'<rect class="sky-ground" x="0" y="'+SKY_GY+'" width="'+SKY_W+'" height="2"/>'
+    +'</svg>';
+}
+/* The card itself: where you are, for three seconds, before the first line of the night.
+
+   It replaces the whole modal rather than sitting above the feed — a title card with the feed's
+   header over it is not a title card, it is a picture in a panel. Clicking it, or any key, goes
+   on immediately; nobody should have to wait three seconds twice for the same city. */
+const ESTAB_MS=3000;
+function estabCard(d){
+  const city=cityName(d.job.city), co=COUNTRY_BY_NAME[d.job.country];
+  const cat=CAT_BY_K[d.job.cat];
+  const lm=landmarkFor(city);
+  /* role="button" stops a screen reader descending into the card, so everything on it has to be
+     in this one string or it is not read at all: the skyline's own aria-label, the country, the
+     title. Somebody who cannot see the drawing should still be told they are looking at Paris,
+     with the Eiffel Tower, in France, about to do a named job. */
+  const said="Week "+(d.week||S.week)+(cat?", "+cat.l:"")+". "+city+", "+d.job.country
+    +(lm?", with "+lm.name:"")+". "+d.job.title+". Press to go on.";
+  return '<div class="estab" data-act="estab-skip" role="button" tabindex="0" aria-label="'+esc(said)+'">'
+    +'<div class="estab-in">'
+    +'<div class="estab-kick">Week '+(d.week||S.week)+(cat?' · '+esc(cat.l):'')+(d.crew?' · '+esc(d.crew):'')+'</div>'
+    +citySkyline(city,d.job.country)
+    +'<div class="estab-city">'+esc(city)+'</div>'
+    +'<div class="estab-co">'+flagSvg(co)+' '+esc(d.job.country)+'</div>'
+    +'<div class="estab-rule"></div>'
+    +'<div class="estab-title">'+esc(d.job.title)+'</div>'
+    +'</div></div>';
+}
+let ESTAB=null;
+// Put the card down without drawing anything: for callers that are about to draw anyway.
+function estabDrop(d){
+  if(ESTAB){clearTimeout(ESTAB);ESTAB=null;}
+  if(d)d.estab=false;
+}
+function estabClear(){
+  const d=feedData();
+  const had=!!(d&&d.estab);
+  estabDrop(d);
+  if(had)render();
+}
+/* Armed from render, beside tickerArm, and ALWAYS before it — tickerArm reads d.estab to decide
+   whether the night has started, so arming them the other way round runs the first line of the
+   report underneath the card. */
+function estabArm(){
+  if(ESTAB){clearTimeout(ESTAB);ESTAB=null;}
+  if(!S||!S.modal||S.modal.type!=="result")return;
+  const d=S.modal.data;
+  if(!d||!d.estab)return;
+  // Somebody who has asked not to be animated is not asking for a three-second pause either,
+  // and tickerFinish() runs the whole feed at once for them a moment later.
+  let reduced=false;
+  try{reduced=!!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);}catch(e){}
+  if(reduced||UI.office){
+    /* Clearing the flag is not enough: this runs FROM render, after the card has already been
+       written to the screen, so dropping the flag with nothing to draw again leaves the card
+       sitting there with no timer behind it and nothing coming to move it. It hung for exactly
+       the people who had asked for less, which is the worst possible set. */
+    d.estab=false;
+    setTimeout(()=>{if(S&&S.modal&&S.modal.data===d)render();},0);
+    return;
+  }
+  ESTAB=setTimeout(()=>{ESTAB=null;
+    if(!S||!S.modal||S.modal.type!=="result"||S.modal.data!==d)return;
+    d.estab=false;render();},ESTAB_MS);
+}
+
 // The live map is a plan of the place, not the world: the streets and the building on a vault job,
 // the quay and the stacks on a port job, the road and the ridge on an interception, the runway on
 // an air lift. It is drawn from the posting itself — its kind, its tags, the country's terrain —
@@ -6434,6 +7365,7 @@ function tickerArm(){
   if(!d.done){const el0=document.getElementById("ticker");if(el0)el0.scrollTop=el0.scrollHeight;
     for(let i=0;i<d.revealed;i++)feedMapStep(d,d.narrative[i]);}
   if(d.done||d.awaiting)return;
+  if(d.estab)return;              // the establishing card is up; the night has not started
   if(UI.hold||UI.office)return;   // Pause on the feed, or the office open: the clock stops where it is
   let reduced=false;
   try{reduced=!!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);}catch(e){}
@@ -6458,6 +7390,10 @@ function tickerArm(){
 function tickerFinish(){
   if(TICK){clearInterval(TICK);TICK=null;}
   const d=feedData();if(!d)return;
+  /* Skip means nothing is left waiting, and the card of the city is a wait. Nobody can reach
+     this from the card — it draws no Skip and swallows the keys — but leaving the flag set
+     would put the report behind a card with a timer still running towards it. */
+  estabDrop(d);
   /* Skip stops at whatever is waiting for a decision — a job's twist or a trip's meeting.
      Checking only d.twist let Skip jump a recruitment trip straight past its meeting, which
      left the trip unresolved and the week unspent.
@@ -6580,6 +7516,7 @@ function modalTrip(T){
 }
 
 function modalResult(d){
+  if(d.estab&&!d.done)return modalWrap(estabCard(d),"feed estab-wrap");
   const colors=["var(--stamp)","var(--stamp)","var(--warn)","var(--good)","var(--good)"];
   const col=colors[d.tier];
   const team=d.teamIds.map(byId).filter(Boolean);
@@ -8774,6 +9711,8 @@ const INFO={
     "<b>Vet</b> reads the file for informant ties against your crew's instincts. <b>Hire</b> needs an open place and the fee."]},
   result:{h:"The job report",t:[
     "First the job as it happened, minute by minute — who got in and who didn't, who did the talking, what each trade bought, what went right and what went wrong, the exit, the split. <b>Skip</b> runs the rest of it at once — as far as the end, or as far as the next thing that wants an answer from you, and it does not say in advance which.",
+    "<b>It opens on the city.</b> Three seconds of a skyline, the place and the job, before the first line of the night — the crew has just landed somewhere, and the report reads differently once you have been told where you are standing. Every one of the "+CITY_COUNT+" cities has its own, drawn from its name and its country's ground: a ridge behind a mountain town, water and a crane under a port, a bridge on a delta. Click it, or press anything, to go straight on.",
+    "<b>"+LANDMARK_COUNT+" of those cities have the actual landmark standing in front of it</b> — the Eiffel Tower, the CN Tower, the Opera House with the Harbour Bridge behind it, the Statue of Liberty, Fuji behind Tokyo Tower, and so on down the list — each drawn by hand and each named on the picture. Where a city has one, its own skyline is held down so the thing you came to see is the tallest thing on the card. The other "+(CITY_COUNT-LANDMARK_COUNT)+" get the skyline alone, because a made-up landmark would be the one thing on the card that was a lie.",
     "Then the verdict: <b>Clean</b>, <b>Success</b>, <b>Messy</b>, <b>Botched</b> or <b>Disaster</b> — crew power against difficulty, plus the roll. Gross is the fee earned, cuts go to the crew, the net is yours.",
     "<b>Ranking — why</b> lists every reason the crew's ranking moved: up for a clean or successful job (more for a bigger job, a little more if nobody was hurt), down for messy, botched or disastrous work, a leak, an arrest, or a member walking with the money. <b>What they learned</b>: everyone who went gains experience; ranks are earned at "+XP_STEPS.slice(1,-1).join(", ")+" and "+XP_STEPS[XP_STEPS.length-1]+" xp, and good work adds a point to the attributes the job leaned on. If the job wanted a trade nobody on the crew has, somebody spends the week before learning enough of it to stand in — and if the job comes off, that week is worth a point of brains, marked <i>stood in as</i>. A job that doesn't come off teaches them nothing.",
     "<b>Fallout</b>: injuries (out two weeks), arrests (held for weeks, then back on the roster), leaks (an informant talked), and betrayals (someone skimmed the split and vanished).",
@@ -9329,7 +10268,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 101 · September 2026";
+const BUILD="build 102 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
@@ -9416,6 +10355,7 @@ document.addEventListener("click",e=>{
     case "off-sound": SET.sound=!SET.sound; saveSettings(); if(SET.sound)sfx("open"); musicSync(); render(); break;
     case "off-music": SET.music=!SET.music; saveSettings(); musicSync(); render(); break;
     case "off-radio-start": SET.sound=true; SET.music=true; if(SET.volume<=0)SET.volume=0.6; saveSettings(); userGestured=true; musicState="idle"; musicSync(); render(); break;
+    case "estab-skip": estabClear(); break;
     case "skip-ticker": UI.hold=false; tickerFinish(); break;
     case "tick-hold": UI.hold=!UI.hold; render(); musicSync(); break;   // the report keeps its own track, so the hold tells the music itself
     case "twist": twistChoose(+t.getAttribute("data-i")); break;
@@ -9481,6 +10421,10 @@ document.addEventListener("click",e=>{
     case "tab": S.tab=k; S.modal=null; UI.confirmDrop=null; UI.scrollBack=null; render(); window.scrollTo(0,0); break;
     case "scrim":
       if(e.target===t||cl.contains("x")||cl.contains("btn")){
+        // The card of the city is up. Clicking the paper around it means "go on" — the same as
+        // clicking the card — not "skip the whole night", which is what a scrim click means
+        // once the feed is running and is a rotten thing to get by mis-aiming at a title card.
+        if(feedData()&&feedData().estab){estabClear();break;}
         if(feedData()&&feedData().awaiting)break; // the decision cannot be clicked away
         if(feedData()&&!feedData().done){tickerFinish();break;}
         if(S)S.modal=null;UI.panel=null;render();
@@ -9591,6 +10535,13 @@ document.addEventListener("keydown",e=>{
   userGestured=true;musicSync();
   const tag=e.target&&e.target.tagName;
   const typing=tag==="INPUT"||tag==="SELECT"||tag==="TEXTAREA";
+  /* The establishing card goes on any key, before anything else reads one — three seconds is
+     short, and somebody who has decided they are done looking at it should not have to find a
+     particular key. Escape is the exception: it opens the office, from here as from anywhere. */
+  if(!typing&&e.key!=="Escape"&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
+    const fd=feedData();
+    if(fd&&fd.estab){estabClear();return;}
+  }
   if(!typing&&(e.key==="i"||e.key==="I")&&!e.ctrlKey&&!e.metaKey&&!e.altKey){UI.info=!UI.info;UI.qrh=false;UI.crew=false;render();return;}
   // The quick reference opens over anything — including a twist waiting for an answer, which is
   // the moment it is most wanted. Q from anywhere; 5 is the same key as the tab it sits on, and

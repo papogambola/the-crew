@@ -104,6 +104,20 @@ exports.sites=()=>T(["On the plan","Who stands there"],
     D.TECHS.filter(t=>({wheelman:"exit",smuggler:"exit",cleaner:"exit",lookout:"watch",overwatch:"watch",hacker:"watch",launderer:"watch",fixer:"watch",forger:"door",grifter:"door",face:"door",infiltrator:"door",pickpocket:"door",safecracker:"inside",demolitions:"inside",enforcer:"inside"})[t.k]===p.k)
       .map(t=>esc(t.l)).join(", ")||'whoever the line is about']));
 
+/* Every city that has a landmark on its establishing card, and what the landmark is. Two pairs
+   to a row: eighty-seven of these down a single column is four pages of a book that is meant to
+   be looked things up in, and the order is the table's own — by region, the way the card set was
+   drawn — because alphabetical would scatter Rome, Milan and Naples across three screens. */
+exports.landmarks=()=>{
+  const L=D.LANDMARKS||[],rows=[];
+  for(let i=0;i<L.length;i+=2){
+    const a=L[i],b=L[i+1];
+    rows.push(['<b>'+esc(a.city)+'</b>',esc(a.name),
+      b?'<b>'+esc(b.city)+'</b>':'',b?esc(b.name):'']);
+  }
+  return T(["City","What is on the card","City","What is on the card"],rows,"lm");
+};
+
 exports.pay=()=>T(["Tier","Postings called","Typical fee","Weeks on the ground","Weeks you may case it"],
   [1,2,3,4].map(t=>['<b class="mono">'+t+'</b>',
     esc(["","small","middling","big","the big rooms"][t]),

@@ -63,6 +63,12 @@ const out={
   LANG_MISS_TALK:(typeof LANG_MISS_TALK!=="undefined"?LANG_MISS_TALK:null),
   HIRED:(typeof HIRED!=="undefined"?HIRED:null),
   RIVAL:(typeof RIVAL!=="undefined"?RIVAL:null),
+  CITY_COUNT:(typeof CITY_COUNT!=="undefined"?CITY_COUNT:null),
+  LANDMARK_COUNT:(typeof LANDMARK_COUNT!=="undefined"?LANDMARK_COUNT:null),
+  // City and the name of the thing, in the table's own order, which runs by region rather than
+  // by alphabet. The drawings themselves are not dumped: a printed book cannot use them.
+  LANDMARKS:(typeof LANDMARKS!=="undefined"
+    ?Object.keys(LANDMARKS).map(k=>({city:k,name:LANDMARKS[k].name})):null),
   PAID_WEEKS:(typeof PAID_WEEKS!=="undefined"?PAID_WEEKS:null),
   CREW_MAX_SEATS:(typeof CREW_MAX_SEATS!=="undefined"?CREW_MAX_SEATS:null),
   EXTRA_CREW_SIZE:(typeof EXTRA_CREW_SIZE!=="undefined"?EXTRA_CREW_SIZE:null),
