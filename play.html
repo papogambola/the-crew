@@ -1703,7 +1703,13 @@ function randomName(rng,g){
 function makeRival(rng){
   const g=chance(rng,0.5)?"M":"F";
   const n=randomName(rng,g);
-  return {boss:n.first+" "+n.last,last:n.last,gender:g,name:"the "+n.last+" "+pick(rng,OUTFIT),standing:Math.max(6,S.rep-ri(rng,0,8)),took:0,since:S.week};
+  /* Each one starts from what the last one reached, plus a step — so the ladder climbs with
+     the player instead of resetting to "a bit behind you" every time. The first starts just
+     behind; the fourth starts as a problem. */
+  const n_=(S.beat||[]).length+1;
+  const floor=Math.max(6,(S.rivalHigh||0)+(n_>1?RIVAL.stepUp:0));
+  return {boss:n.first+" "+n.last,last:n.last,gender:g,name:"the "+n.last+" "+pick(rng,OUTFIT),
+    standing:Math.max(floor,S.rep-ri(rng,0,8)),took:0,since:S.week,n:n_,lead:0};
 }
 function makeDetective(rng){
   const g=chance(rng,0.5)?"M":"F";
@@ -1724,7 +1730,7 @@ function jobLeft(j){return j.final?99:Math.max(0,j.expires-S.week+1);}
 // The rival takes a posting off the board — the best one still there.
 function rivalWorks(rng){
   const rv=rival();if(!rv)return;
-  const open=S.jobs.filter(j=>!j.final&&!j.big);
+  const open=S.jobs.filter(j=>!j.final&&!j.big&&!j.rival);   // they do not take the job against themselves
   if(open.length<5)return;
   if(!chance(rng,rivalAhead()?0.5:0.38))return;
   const j=open.slice().sort((a,b)=>b.tier-a.tier||b.payout-a.payout)[0];
@@ -1751,6 +1757,136 @@ function detWatch(rng){
   const now=detFile();
   if(was<50&&now>=50)logMsg(d.name+"'s file is thick enough to brief a squad. A raid will come at heat "+raidAt()+" now.","bad",true);
   else if(was<25&&now>=25)logMsg(d.name+" has opened a file on your alias.","warn",true);
+}
+/* ====================== ENDING A RIVAL ======================
+   The competition arrived at ranking 20, took the best posting most weeks, and never went
+   away. It had a cause and a consequence and no RESULT — a permanent tax with no verb attached,
+   and the two buttons on it only ever moved a number a few points and let it climb back.
+
+   A rival is a chapter now, with four ways to close it, each of them a thing the game already
+   knows how to do:
+
+     BUY THEM OUT   money, and a lot of it. Clean, no heat, and two or three of their people
+                    come looking for work — beating somebody is how you meet their Forger.
+     TAKE THE BOARD hold a standing clear of theirs for six straight weeks and the clients
+                    stop calling them. Free, slow, and the only one that is pure skill.
+     BURN THEM      hand the detective what you know. Fast and nearly free, and your own file
+                    thickens by a third, because you had to be in the room to do it. The raid
+                    comes sooner. The cost is real and it arrives later, which is the point.
+     MOVE ON THEM   a posting on the board like any other: your crew, their people, twists,
+                    heat, and somebody can get hurt. Run it well and they are finished.
+
+   Then the next one is worse. Each arrives with a standing set from what the last one reached,
+   so the ladder climbs with the player instead of resetting. There is always an end in sight
+   and never a final end, which is what an ending should mean in a game about a career. */
+const RIVAL={
+  leadGap:15,          // how far clear of them you must be for a week to count
+  leadWeeks:6,         // and how many such weeks finishes them
+  buyoutMin:250000,    // what buying them out starts at
+  buyoutPer:9000,      // and what each point of their standing adds
+  burnFile:34,         // what feeding the detective adds to the file on YOU
+  backMin:6, backMax:12, // weeks before the next one turns up
+  stepUp:8,            // and how much higher the next one starts
+};
+function rivalBuyoutCost(){const rv=rival();return rv?Math.max(RIVAL.buyoutMin,rv.standing*RIVAL.buyoutPer):0;}
+// Their people, loose on the roster. Beating a crew is how you meet the specialists on it.
+function rivalScatter(rng,n){
+  const out=[];
+  const pool=S.roster.filter(c=>c.status==="available"&&!c.vetted);
+  for(let i=0;i<n&&pool.length;i++){
+    const c=pool.splice(Math.floor(rng()*pool.length),1)[0];
+    c.vetted=true;c._touched=true;out.push(c);
+  }
+  return out;
+}
+/* The one place a rival ends, whichever way it was done — so the succession, the record and the
+   scattering cannot drift apart from each other. */
+function rivalEnd(how,text,tone){
+  const rv=rival();if(!rv)return;
+  const rng=freshRng();
+  S.beat=(S.beat||[]).concat([{name:rv.name,boss:rv.boss,how:how,week:S.week,standing:rv.standing,n:rv.n||1}]);
+  const loose=rivalScatter(rng,how==="bought"?ri(rng,2,3):ri(rng,1,2));
+  const names=loose.map(c=>c.first+" the "+TECH_BY_K[c.tech].l.toLowerCase());
+  S.rivalHigh=Math.max(S.rivalHigh||0,rv.standing);
+  S.rival=null;
+  S.rivalNext=S.week+ri(rng,RIVAL.backMin,RIVAL.backMax);
+  logMsg(cap(rv.name)+" is finished. "+text,tone||"good",true);
+  S.notices=(S.notices||[]).concat([{k:"The competition · week "+S.week,h:cap(rv.name)+" is finished",
+    text:text+(names.length?" Their people are looking for work: "+listAnd(names)+" are on the roster, already vetted."
+                           :" Their people have scattered and none of them came to you.")
+      +" Somebody else will work this board soon enough; they always do.",
+    go:"roster",goText:"Who is loose →"}]);
+  save();
+}
+function rivalBuyout(){
+  const rv=rival();if(!rv)return;
+  const cost=rivalBuyoutCost();
+  if(S.money<cost){note("Buying out "+rv.name+" costs "+money(cost)+".");return;}
+  S.money-=cost;
+  rivalEnd("bought",rv.boss+" took "+money(cost)+" and the name off the door. No noise, no heat, "
+    +"and a receipt nobody will ever see.","good");
+  render();
+}
+function rivalBurn(){
+  const rv=rival(),dt=detective();
+  if(!rv)return;
+  if(!dt){note("There is nobody to tell yet.");return;}
+  dt.file=clamp(dt.file+RIVAL.burnFile,0,100);
+  rivalEnd("burned",rv.boss+" was arrested on a Tuesday on the strength of something nobody can "
+    +"trace to you. It worked. It also put you in a room with "+dt.name+", and "+dt.name
+    +"'s file on your alias is "+detFile()+" now — a raid comes at heat "+raidAt()+".","warn");
+  render();
+}
+/* Six weeks clear of them and the clients stop calling. Counted at the turn of the week, and
+   the streak breaks the moment they close the gap — this is the slow one, and it should feel
+   like holding something rather than reaching it once. */
+function rivalLeadTick(){
+  const rv=rival();if(!rv)return;
+  const clear=S.rep-rv.standing;
+  if(clear>=RIVAL.leadGap){
+    rv.lead=(rv.lead||0)+1;
+    if(rv.lead>=RIVAL.leadWeeks){
+      rivalEnd("outworked",rv.boss+" has not taken a posting worth having in "+RIVAL.leadWeeks
+        +" weeks. The clients ring the name at the top of the chart, and that has been yours all "
+        +"quarter. They are not in prison and nobody paid them off — they simply stopped being "
+        +"the other option.","good");
+      return;
+    }
+    if(rv.lead===RIVAL.leadWeeks-2)
+      logMsg("Two more weeks clear of "+rv.name+" and the clients stop calling them altogether.","good",true);
+  } else if(rv.lead){
+    if(rv.lead>=3)logMsg(cap(rv.name)+" closed the gap. The run of weeks clear of them is back to nothing.","warn");
+    rv.lead=0;
+  }
+}
+/* The fourth way is a posting, because everything good in this game is a posting: a crew you
+   chose, a night that goes wrong in the middle, and a report that says who did what. It stands
+   on the board like any other and expires like any other, and it only appears once you are
+   close enough to them for it to be worth the heat. */
+function rivalJobReady(){
+  const rv=rival();
+  return !!(rv&&!S.over&&S.rep>=rv.standing-20&&(rv.since||0)+4<=S.week);
+}
+function maybeUnlockRivalJob(){
+  const rv=rival();
+  if(!rv||!rivalJobReady()){S.jobs=(S.jobs||[]).filter(j=>!j.rival);return;}
+  if((S.jobs||[]).some(j=>j.rival))return;
+  if(S.rivalJobBack&&S.week<S.rivalJobBack)return;
+  const rng=freshRng();
+  const co=pick(rng,COUNTRIES.filter(c=>c.cats.indexOf("sabotage")>=0))||COUNTRIES[0];
+  S.jobs.unshift({
+    id:"JRIV"+S.week, rival:true, cat:"sabotage", tier:4,
+    country:co.name, city:pick(rng,co.cities)+", and a yard they think nobody knows about",
+    need:4, diff:Math.max(60,Math.round(rv.standing*1.5+40)), payout:Math.round(rv.standing*4200)+90000,
+    heat:30, techs:["enforcer","hacker","lookout"], know:["Logistics","Weapons"], tags:["night"],
+    client:rv.boss+", without knowing it", expires:S.week+3, weeks:1,
+    title:"Take "+cap(rv.name)+" apart",
+    kicker:"The competition",
+    brief:"Everything "+rv.boss+" has runs out of one yard: the vans, the lock-ups, the phones, and "
+      +"the two people who know which client is which. Nobody has to die. It has to stop working, "
+      +"in one night, so completely that the clients hear about it before "+rv.last+" does. Do it well "
+      +"and there is no competition on this board. Do it badly and they will know exactly who it was."});
+  logMsg("There is a way to finish "+rv.name+" on the board this week — their yard, one night.","big",true);
 }
 function rivalPressure(){
   const rv=rival();if(!rv)return;
@@ -2347,10 +2483,10 @@ function refreshJobs(fill){
   try{refreshJobsInner(fill,rng);}finally{newsSync();}
 }
 function refreshJobsInner(fill,rng){
-  S.jobs=S.jobs.filter(j=>j.final||j.expires>=S.week);
+  S.jobs=S.jobs.filter(j=>j.final||j.expires>=S.week);   // a rival posting expires like any other
   let guard=0;
   const want=7+(hasRetainer("fixer")?2:0);
-  while(S.jobs.filter(j=>!j.final).length<want&&guard++<40)S.jobs.push(makeJob(rng,0));
+  while(S.jobs.filter(j=>!j.final&&!j.rival).length<want&&guard++<40)S.jobs.push(makeJob(rng,0));
   const top=Math.min(3,rankInfo(S.rep).maxTier);
   if(!S.jobs.some(j=>!j.big&&j.tier>=top)&&(fill||chance(rng,0.5)))S.jobs.push(makeJob(rng,2));
   // the seven-place work: one or two standing on the board, drawn from the five hundred
@@ -3575,9 +3711,24 @@ function finishJob(P,choiceIdx,d){
       logMsg("The stage went wrong. The Committee will have moved things by morning — it will be weeks before that door is worth trying again.","bad",true);
     }
   }
+  if(job.rival&&rival()){
+    if(tier>=3){
+      rivalEnd("broken","The yard burned down at four in the morning and the vans were already gone. "
+        +"By the weekend the clients had all been told the same thing by somebody they trusted: "
+        +"do not ring that number.","good");
+    } else {
+      // They know. The next one starts hostile, and this one is harder to get at again.
+      const rv=rival();
+      rv.standing=clamp(rv.standing+ri(rng,6,12),0,999);
+      rv.hostile=true;
+      S.rivalJobBack=S.week+ri(rng,5,9);
+      logMsg("The night at the yard went wrong, and "+rv.boss+" knows exactly whose people those were. "
+        +"Their standing "+rv.standing+", and the yard will be watched for weeks.","bad",true);
+    }
+  }
   // A client who lost money on this takes it personally often enough to matter. Not the
   // Committee — the last score has no client to offend — and not another crew's job.
-  if(!job.final&&!P.crewId&&tier<=2&&job.client){
+  if(!job.final&&!job.rival&&!P.crewId&&tier<=2&&job.client){
     const pg=tier===0?GRUDGE.pDisaster:tier===1?GRUDGE.pBotched:GRUDGE.pMessy;
     if(chance(rng,pg*(1+(job.tier-1)*0.12)))grudgeAdd(job.client,rng,job,tier);
   }
@@ -3806,13 +3957,14 @@ function weekTick(rng){
   S.idle=(S.idle||0)+1;
   if(S.idle>=BAL.idleEvery){S.idle=0;if(S.rep>0)S.rep=Math.max(0,S.rep-BAL.idleDecay);}
   // somebody else is working the board, and somebody is keeping a file
-  if(!S.rival&&S.rep>=20){S.rival=makeRival(rng);
+  // The first arrives on the name; every one after arrives on the clock, once the last is done.
+  if(!S.rival&&S.rep>=20&&(!S.rivalNext||S.week>=S.rivalNext)){S.rival=makeRival(rng);
     S.notices=(S.notices||[]).concat([{k:"The competition · week "+S.week,h:cap(S.rival.name),
       text:S.rival.boss+" runs "+S.rival.name+" out of the same online board as you. They take a posting most weeks — the best one left — and their standing rises when they do. When they are ahead of you, they start buying your crew drinks. The Log says where they stand.",go:"log",goText:"The record →"}]);
     logMsg(cap(S.rival.name)+" is working the same board. "+S.rival.boss+" runs it.","warn",true);}
   if(!S.det&&(S.heat>=30||S.rep>=40)){S.det=makeDetective(rng);
     logMsg(S.det.name+" has your alias in a folder.","warn",true);}
-  rivalWorks(rng);detWatch(rng);looseTick(rng);grudgeTick(rng);
+  rivalWorks(rng);rivalLeadTick();maybeUnlockRivalJob();detWatch(rng);looseTick(rng);grudgeTick(rng);
   if(S.heat>=raidAt()){
     const rc2=recruits().filter(c=>c.status==="crew");
     if(rc2.length){
@@ -3864,6 +4016,8 @@ function packState(){
     tech:c.tech,tech2:c.tech2||null,know:c.know,langs:c.langs,
     learn:c.learn||null,tutor:c.tutor||null,learnAskedUntil:c.learnAskedUntil||0,
     goneAs:c.goneAs||null,goneWeek:c.goneWeek||0,funeralPaid:!!c.funeralPaid};}});
+  // S carries the rival chapter now — who has been beaten, how high they got, when the next
+  // one is due — and all of it rides along in S, which is copied wholesale below.
   const d=Object.assign({},S);delete d.roster;delete d.modal;d.ov=ov;
   return d;
 }
@@ -5103,8 +5257,22 @@ function tabLog(){
     +(rv?'<div class="mono" style="font-size:12.5px;line-height:1.7"><b>'+esc(cap(rv.name))+'</b> — '+esc(rv.boss)+' runs it, working the same board since week '+rv.since+'. They have taken <b>'+rv.took+'</b> posting'+(rv.took===1?'':'s')+' off it.</div>'
       +'<div class="loy'+(rivalAhead()?" low":"")+'" style="height:9px;margin-top:6px"><i style="width:'+clamp(rv.standing,0,100)+'%"></i></div>'
       +'<div class="mono" style="font-size:11.5px;margin-top:5px">Their standing <b>'+rv.standing+'</b> against '+(S.crewName?esc(crewTitle())+"'s":"your")+' <b>'+S.rep+'</b> — '+(rivalAhead()?'<span style="color:var(--stamp)">they are ahead, and they take the best posting most weeks and buy your crew drinks</span>':rv.standing===S.rep?'you are level with them':'you are ahead of them')+'.</div>'
-      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn ghost sm" data-act="rival-buy" '+(S.money>=Math.max(40000,rv.standing*3000)?"":"disabled")+'>Buy a name inside · '+money(Math.max(40000,rv.standing*3000))+'</button>'
-      +'<button class="btn ghost sm" data-act="rival-enforce" '+(payroll().some(c=>c.status==="crew"&&hasTech(c,"enforcer"))?"":'disabled title="Needs an Enforcer"')+'>Send the enforcer</button></div>':'')
+      +'<div class="mono" style="font-size:11.5px;margin-top:8px;color:var(--ink-2)">'
+        +(rv.lead?'Clear of them <b>'+rv.lead+'</b> week'+(rv.lead>1?'s':'')+' running — '+RIVAL.leadWeeks+' and the clients stop calling them.'
+                 :'Hold a standing '+RIVAL.leadGap+' clear of theirs for '+RIVAL.leadWeeks+' straight weeks and they are finished on their own.')
+        +(rv.hostile?' <span style="color:var(--stamp)">They know you moved on them once.</span>':'')+'</div>'
+      +'<div class="loy" style="height:5px;margin-top:4px"><i style="width:'+Math.round(100*clamp(rv.lead||0,0,RIVAL.leadWeeks)/RIVAL.leadWeeks)+'%"></i></div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+        +'<button class="btn ghost sm" data-act="rival-buy" '+(S.money>=Math.max(40000,rv.standing*3000)?"":"disabled")+'>Buy a name inside · '+money(Math.max(40000,rv.standing*3000))+'</button>'
+        +'<button class="btn ghost sm" data-act="rival-enforce" '+(payroll().some(c=>c.status==="crew"&&hasTech(c,"enforcer"))?"":'disabled title="Needs an Enforcer"')+'>Send the enforcer</button>'
+      +'</div>'
+      +'<hr class="rule"><div class="kicker" style="color:var(--stamp)">Finish them</div>'
+      +'<div class="sel-help">Four ways out of this, and three of them are on this screen. The fourth is a posting: it stands on the board when you are close enough to them to be worth the heat.</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">'
+        +'<button class="btn sm" data-act="rival-buyout" '+(S.money>=rivalBuyoutCost()?"":'disabled title="'+money(rivalBuyoutCost())+' — you do not have it"')+'>Buy them out · '+money(rivalBuyoutCost())+'</button>'
+        +'<button class="btn ghost sm" data-act="rival-burn" '+(dt?"":'disabled title="Nobody to tell yet"')+' title="'+(dt?'Adds '+RIVAL.burnFile+' to '+esc(dt.name)+"'s file on YOU":"")+'">Give them to the law</button>'
+        +((S.jobs||[]).some(j=>j.rival)?'<span class="tag ok" style="align-self:center">their yard is on the board</span>':'')
+      +'</div>':'')
     +(rv&&dt?'<hr class="rule">':'')
     +(dt?'<div class="mono" style="font-size:12.5px;line-height:1.7"><b>'+esc(dt.name)+'</b> ('+esc(dt.full)+') has been on your alias since week '+dt.since+'.</div>'
       +'<div class="loy'+(detFile()>=50?" low":"")+'" style="height:9px;margin-top:6px"><i style="width:'+clamp(detFile(),0,100)+'%"></i></div>'
@@ -8842,6 +9010,8 @@ document.addEventListener("click",e=>{
     case "bribe": bribe(); break;
     case "rival-buy": rivalPressure(); break;
     case "rival-enforce": rivalEnforce(); break;
+    case "rival-buyout": rivalBuyout(); break;
+    case "rival-burn": rivalBurn(); break;
     case "close-job": S.jobOpen=null; render(); window.scrollTo(0,0); syncScrolled(); break;
     case "to-top": try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){window.scrollTo(0,0);} syncScrolled(); break;
     case "map-country": S.jobOpen=null; S.jobCountry=(S.jobCountry===t.getAttribute("data-cn"))?null:t.getAttribute("data-cn"); render(); break;

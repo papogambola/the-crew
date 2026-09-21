@@ -664,11 +664,21 @@ ch("rival","The competition","Somebody else is working the board",[
   S("poach","Being poached",
     p("While another crew is buying drinks, your least loyal member who is not paid up has a real chance of walking every week. Loyalty below 60 is the danger zone. "
       +"A bonus makes somebody deaf to it for "+m(D.PAID_WEEKS)+" weeks — which is the cheapest counter in the game.")),
-  S("hit","What you can do about them",
-    ul([
+  S("hit","Leaning on them",
+    p("Two ways to take points off a rival without finishing them. Neither ends anything — their standing climbs back — but a few points at the right moment is the difference between taking the best posting and watching it go.")
+    +ul([
       "<b>Buy a name inside</b> — costs at least "+money(40000)+", or their standing × "+money(3000)+", and takes 8 to 14 points off them. No heat.",
-      "<b>Send the enforcer</b> — free, needs an Enforcer on the books. 65% it takes 12 to 20 points off them for "+m("+6")+" heat. 35% it goes loud in a street with windows: "+m("+16")+" heat, and they are not frightened.",
+      "<b>Send the enforcer</b> — free, needs an Enforcer on the books. 65% it takes 12 to 20 points off them for "+m("+6")+" heat. 35% it goes loud in a street with windows: "+m("+16")+" heat and they are not frightened.",
     ])),
+  S("finish","Finishing them",
+    p("A rival is a <b>chapter</b>, not a permanent tax. There are four ways to close one, and each of them costs something different — which is the whole of the choice.")
+    +ul([
+      "<b>Buy them out</b> — at least "+money(250000)+", or their standing × "+money(9000)+". Clean: no heat, no night, no risk. Two or three of their people come looking for work and arrive on your roster already vetted, which is how you meet somebody else's Forger.",
+      "<b>Take the board</b> — hold a standing <b>15 clear</b> of theirs for <b>6 straight weeks</b> and the clients stop calling them. Free, slow, and the only one that is pure skill. Let them close the gap and the run goes back to nothing.",
+      "<b>Give them to the law</b> — costs no money and no heat, and finishes them at once. It also puts you in a room with the detective: <b>34 points</b> onto the file on <i>your</i> alias, and the file is what decides how early the raid comes. The price is real and it arrives later.",
+      "<b>Take them apart</b> — a posting on the board like any other, against their yard. Your crew, a night that can go wrong, and somebody can get hurt. Run it well and there is no competition. Run it badly and they know exactly whose people those were: their standing climbs, and the yard is watched for weeks.",
+    ])
+    +note("Beating one does not end the competition. Somebody else works the board within six to twelve weeks, and they start from where the last one got to — so the fourth is a problem where the first was an irritation.")),
 ]);
 
 /* ---------------- 14 -------------------------------- */
