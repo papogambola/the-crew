@@ -574,6 +574,14 @@ told you whether the night had anything in it before you had read a line of it. 
   outright in three moves: heat falls 7, then 9, then 11 a week, and the best one keeps most of
   the float through a raid. And a **desk** that will lose a file: heat −20, priced by how hot
   you are.
+- **The till.** Free to a point, then $12 once for life. The free run is twelve weeks of play in
+  this browser or a Known name, whichever comes first, counted across every game the browser
+  opens; then the game stops on a card that does not close, with the checkout and a box for the
+  key. The money and the keys are Lemon Squeezy's: `SHOP` at the top of the till section holds the
+  checkout link, the store and product ids, the price and the two limits, and while `checkout` is
+  empty the till is shut and nobody is stopped. A key that activates is kept in the browser and
+  asked about weekly; only an explicit "not valid" locks the door again. There is no server, so
+  clearing the browser's storage restarts the count — the accepted price of not having one.
 - **The crew's name.** From week 4 the game asks what the crew is called — typed, or taken off
   the shelf with ↻ Random, which draws from a list in the game's voice and from the file itself
   (the commander's surname the way the rival's outfit is built, a city the crew has worked, the

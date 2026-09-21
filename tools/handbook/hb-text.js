@@ -765,6 +765,9 @@ ch("final","The last score","Three operations against the Committee",[
 
 /* ---------------- 18 -------------------------------- */
 ch("controls","Controls and the file cabinet","Keys, saving, settings",[
+  S("till","Paying for it",
+    p("The game is free to a point and then <b>$12, once, for life</b>. The free run is <b>twelve weeks of play in this browser, or a Known name</b>, whichever comes first — counted across every game the browser opens, so a new dossier is not a new run. When it is up the game stops on a card that does not close: the crew, the float and the file stay saved where they stand, and pick up the moment the door is paid for.")
+    +p("The button on the card opens the checkout in a new tab. The key is on the receipt and in the email; paste it in the box, press <b>Unlock</b>, and the game goes on. The key opens the game on any machine — <b>Have a key?</b> on the title screen is where it goes in on another one — and every build after this one. Esc opens the office over the wall, with the door out in it.")),
   S("keys","The keys",
     G.T(["Key","What it does"],[
       [m("Esc"),"The office — pause and settings. Also closes whatever is open."],

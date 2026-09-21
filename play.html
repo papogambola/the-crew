@@ -3735,6 +3735,7 @@ function weekTick(rng){
   // so "go back to last week" means the board as it stood, not as it stood after payroll.
   slotCarbon();
   S.week++;
+  SET.weeksPlayed=(SET.weeksPlayed||0)+1;saveSettings();   // the free run is counted here, across every game this browser opens; going back a week does not give one back
   const rc=payroll().filter(c=>c.status==="crew");   // every crew's people are on the books
   let up=retainerCost();rc.forEach(c=>up+=c.upkeep);
   if(up>0){
@@ -4098,6 +4099,8 @@ function render(){
   if(S&&!S.clash&&!S.over)clashCheck();
   newsSync();
   if(!TUT.on){   // nothing pops up under a tutorial; it all waits for the last card
+    // the free run over: the till, over everything but a report still being watched
+    if(paywallDue()&&!(S.modal&&isFeed(S.modal.type))&&!(S.modal&&S.modal.type==="paywall")){S.modal={type:"paywall"};UI.tillMsg="";sfx("stamp");}
     if(S.notices&&S.notices.length&&S.notices[0].siren&&!S.modal&&!S.over){S.modal={type:"notice"};if(!S.notices[0].sirened){S.notices[0].sirened=true;sirenFx();}}
     if(S.news&&S.newsRead!==S.week&&!S.modal&&!S.over){S.modal={type:"news"};sfx("open");}
     if(S.notices&&S.notices.length&&!S.modal&&!S.over){S.modal={type:"notice"};sfx("stamp");}
@@ -5143,6 +5146,7 @@ function renderModal(){
   if(m.type==="notice")return modalNotice();
   if(m.type==="news")return modalNews();
   if(m.type==="crewname")return modalCrewName();
+  if(m.type==="paywall")return modalTill("wall");
   if(m.type==="loose")return modalLoose();
   if(m.type==="revenge")return modalRevenge();
   return "";
@@ -7341,6 +7345,131 @@ const SET={sound:true,music:true,volume:0.6,bright:100,lang:"en",tutorialDone:fa
 const PLAY_GAP_MS=30*60*1000;
 function loadSettings(){try{const r=localStorage.getItem(SET_KEY);if(r)Object.assign(SET,JSON.parse(r));}catch(e){}}
 function saveSettings(){try{localStorage.setItem(SET_KEY,JSON.stringify(SET));}catch(e){}}
+
+/* ------------------------------ THE TILL ------------------------------ */
+// Free to a point, then one payment for life. The free run is counted in this browser across
+// every game it opens — twelve weeks of play, or a name that reaches Known, whichever comes
+// first — so a new dossier is not a new free run. Then the game stops, on a card that cannot be
+// closed, with the checkout and a box for the key. The key comes from Lemon Squeezy, who take
+// the money, handle the tax, and hand out one key per order; its licence endpoints need no
+// secret and answer a browser directly (checked: no auth, CORS open), so nothing here has a
+// server. A key that activates is kept in this browser and asked about again once a week, and
+// only an explicit "not valid" from the till locks the door again — a dead connection never does.
+//
+// The whole of it is honest rather than hard: the game is a file the browser has, and anybody who
+// clears this browser's storage starts the count again. That is the price of having no server,
+// and it is the right price for twelve dollars.
+//
+// Until `checkout` is filled in the till is shut and nobody is stopped: a wall with no way to pay
+// is worse than no wall.
+const SHOP={
+  price:"$12",
+  checkout:"",                 // the Lemon Squeezy checkout link — https://<store>.lemonsqueezy.com/buy/<uuid>
+  store:0,                     // the store id the key must come from — 0 accepts any store
+  product:0,                   // the product id the key must be for — 0 accepts any product
+  api:"https://api.lemonsqueezy.com/v1/licenses/",
+  freeWeeks:12,                // weeks of play on the house, counted across every game in this browser
+  freeRep:35,                  // or the name reaching this — Known — whichever comes first
+  recheckDays:7,               // how often a kept key is asked about again
+};
+const LIC_KEY="thecrew_licence_v1";
+let LIC=null;                  // {key, instance, ok, at, name, product} — the key this browser was paid for with
+function licLoad(){try{const r=localStorage.getItem(LIC_KEY);LIC=r?JSON.parse(r):null;}catch(e){LIC=null;}}
+function licSave(){try{if(LIC)localStorage.setItem(LIC_KEY,JSON.stringify(LIC));else localStorage.removeItem(LIC_KEY);}catch(e){}}
+function shopOpen(){return !!SHOP.checkout;}
+function licensed(){return !!(LIC&&LIC.ok&&LIC.key);}
+function freeOver(){return (SET.weeksPlayed||0)>=SHOP.freeWeeks||!!(S&&S.rep>=SHOP.freeRep);}
+function freeRepName(){return rankNameAt(SHOP.freeRep);}
+function paywallDue(){return shopOpen()&&!licensed()&&!!S&&!S.over&&freeOver();}
+function licPost(path,fields,done){
+  const body=Object.keys(fields).filter(k=>fields[k]!=null&&fields[k]!=="").map(k=>k+"="+encodeURIComponent(fields[k])).join("&");
+  let p;
+  try{p=fetch(SHOP.api+path,{method:"POST",headers:{"Accept":"application/json","Content-Type":"application/x-www-form-urlencoded"},body});}
+  catch(e){done(null);return;}
+  p.then(r=>r.json()).then(b=>done(b&&typeof b==="object"?b:null)).catch(()=>done(null));
+}
+function licInstanceName(){let where="browser";try{where=navigator.platform||where;}catch(e){}return "The Crew · "+where+" · "+new Date().toISOString().slice(0,10);}
+// Activate the key on this machine. done(null) on success, done("why") otherwise, in words a
+// player can act on.
+function licActivate(key,done){
+  key=String(key||"").trim();
+  if(!key){done("Paste the key first — it is on the receipt, and in the email.");return;}
+  licPost("activate",{license_key:key,instance_name:licInstanceName()},b=>{
+    if(!b){done("Could not reach the till. Check the connection, then try again.");return;}
+    if(!b.activated){
+      const err=String(b.error||"");
+      if(/activation limit/i.test(err))done("That key is already on every machine it allows. Free one up on the receipt's page, or write to us.");
+      else if(/not found/i.test(err))done("That key is not on the list. Check it against the receipt — every character counts.");
+      else if(/disabled|expired|inactive/i.test(err))done("That key has been switched off. Write to us with the receipt.");
+      else done(err||"The till said no, and did not say why. Try again in a minute.");
+      return;
+    }
+    const meta=b.meta||{};
+    if((SHOP.store&&+meta.store_id!==SHOP.store)||(SHOP.product&&+meta.product_id!==SHOP.product)){done("That key is for something else.");return;}
+    LIC={key,instance:(b.instance&&b.instance.id)||null,ok:true,at:Date.now(),name:meta.customer_name||"",product:meta.product_name||""};
+    licSave();done(null);
+  });
+}
+// Once a week, ask whether the key is still good. Only a plain "not valid" closes the door —
+// a machine that cannot reach the till keeps playing.
+function licRecheck(){
+  if(!licensed())return;
+  if(Date.now()-(LIC.at||0)<SHOP.recheckDays*864e5)return;
+  licPost("validate",{license_key:LIC.key,instance_id:LIC.instance},b=>{
+    if(!b)return;
+    if(b.valid===false){LIC.ok=false;LIC.why=String(b.error||"");licSave();render();}
+    else if(b.valid){LIC.at=Date.now();licSave();}
+  });
+}
+function tillUnlock(v){
+  if(UI.tillBusy)return;
+  UI.tillBusy=true;UI.tillMsg="Asking the till…";render();
+  licActivate(v,err=>{
+    UI.tillBusy=false;UI.tillMsg=err||"";
+    if(!err){
+      sfx("stamp");UI.tillKey="";
+      if(S&&S.modal&&S.modal.type==="paywall")S.modal=null;
+      if(S&&!S.over)logMsg("Paid for. Lifetime access — this build and every one after it.","good",true);
+      UI.till=true;   // the same card, now saying so
+    }
+    render();
+  });
+}
+// One card, two moods: the wall — the free run is over and it does not close — and the till on
+// the title screen, where a key bought elsewhere goes in, or a paid-for browser says so.
+function modalTill(mode){
+  const wall=mode==="wall";
+  const lic=licensed();
+  const msg=UI.tillMsg||"";const busy=!!UI.tillBusy;
+  const key=UI.tillKey||"";
+  const head=wall
+    ?'<div class="kicker" style="color:var(--stamp)">The till · week '+S.week+'</div><h2 style="font-size:28px;margin-top:4px">That\'s the free run.</h2>'
+    :'<div class="kicker" style="color:var(--stamp)">The till</div><h2 style="font-size:28px;margin-top:4px">'+(lic?"Paid for.":"Have a key?")+'</h2>';
+  const text=wall
+    ?SHOP.freeWeeks+" weeks of play on the house in this browser, or a "+esc(freeRepName())+" name, whichever comes first — and that is where you are. The game stops here. Nothing is lost: the crew, the float and the file are saved where they stand, and they pick up the moment the door is paid for. <b>"+esc(SHOP.price)+", once.</b> Lifetime access — this build, every build after it, and any other machine you bring the key to."
+    :lic?"This browser is paid for"+(LIC.name?" — the key is in "+esc(LIC.name)+"'s name":"")+". Lifetime access: every build, and any other machine you bring the key to."
+    :"Lifetime access is <b>"+esc(SHOP.price)+", once</b>, and the key it comes with opens the game on any machine. The free run is "+SHOP.freeWeeks+" weeks of play in this browser, or a "+esc(freeRepName())+" name, whichever comes first. Bought already? Paste the key from the receipt or the email, and this browser is paid for too.";
+  const buy=lic?"":'<a class="btn stamp" href="'+esc(SHOP.checkout)+'" target="_blank" rel="noopener" data-act="till-buy">Buy lifetime access · '+esc(SHOP.price)+' →</a>';
+  const entry=lic?"":'<hr class="rule"><div class="field" style="margin-bottom:10px"><label for="lkey">'+(wall?"Already paid? The key is on the receipt and in the email":"The key")+'</label>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="lkey" value="'+esc(key)+'" placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" autocomplete="off" spellcheck="false" style="flex:1;min-width:220px" '+(busy?"disabled":"")+'>'
+    +'<button class="btn" data-act="till-unlock" '+(busy?"disabled":"")+'>Unlock</button></div>'
+    +(msg?'<div class="mono" style="font-size:12px;margin-top:8px;color:'+(busy?"var(--muted)":"var(--stamp)")+'">'+esc(msg)+'</div>':'')+'</div>';
+  const foot='<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:'+(lic||wall?"14px":"4px")+'">'
+    +(wall?'<span class="mono" style="font-size:11px;color:var(--muted);align-self:center;margin-right:auto">Esc opens the office; the door out is in there.</span>':'<button class="btn ghost" data-act="till-close">'+(lic?"Close":"Not now")+'</button>')+'</div>';
+  // the title card sits over the logotype, and black type through a thin scrim is still black — so this one is thick
+  return '<div class="scrim center"'+(wall?'':' data-act="till-close" style="background:rgba(17,16,16,.84)"')+'><div class="modal notice" role="dialog" aria-modal="true">'
+    +'<div class="modal-h"><div>'+head+'</div>'+(wall?'':'<button class="x" data-act="till-close" aria-label="Close">✕</button>')+'</div>'
+    +'<div class="modal-b"><p style="margin:0 0 14px;font-size:15px;line-height:1.6">'+text+'</p>'
+    +(buy?'<div style="display:flex;gap:8px;flex-wrap:wrap">'+buy+'</div>':'')+entry+foot+'</div></div></div>';
+}
+// The title screen's line about it: paid for, or how long the house is buying, with the way in.
+function tillLine(){
+  if(!shopOpen())return "";
+  return '<div class="mono" style="font-size:12px;margin-bottom:10px;color:var(--ink-2)">'
+    +(licensed()?'<span style="color:var(--good)">✓ Paid for — lifetime access.</span>'
+      :'On the house for '+SHOP.freeWeeks+' weeks of play, or a '+esc(freeRepName())+' name. Then '+esc(SHOP.price)+', once, for life. ')
+    +'<a href="#" data-act="till-open">'+(licensed()?'The key':'Have a key?')+'</a></div>';
+}
 function applySettings(){
   const b=clamp(SET.bright,55,100)/100;
   const dim=hex=>{const n=parseInt(hex.slice(1),16);return "#"+[(n>>16)&255,(n>>8)&255,n&255].map(v=>Math.round(v*b).toString(16).padStart(2,"0")).join("");};
@@ -7810,6 +7939,13 @@ const INFO={
     "<b>Bonus</b> (three weeks' upkeep, $4K at least) buys +14 loyalty and three weeks <b>paid up</b>: +2 on every reckoning that member goes on, deaf to another crew's drinks, never the one who skims the split, and not the one trouble picks on. One at a time; the card says until when. It also settles any grumbling about small jobs.",
     "<b>Small money.</b> Every member has a price: a cut under two weeks of their own upkeep is a job done for you, not for them. The job file says who calls a posting small money before you take it. Three small jobs in a row and they <b>grumble</b> (−5 loyalty a job, −2 on the reckoning, a chip on the card); five, and they may walk out at the split — back on the roster, wanting more. A proper score, or a bonus, resets the count.",
     "<b>Places.</b> Four to start. A <b>Respected</b> name opens places six and seven. <b>Other crews.</b> From week "+EXTRA_CREW_WEEKS[0]+" ("+yearsIn(EXTRA_CREW_WEEKS[0])+"), Feared, with seven on your crew, you can found a second crew — a commander-type and four soldiers out of your seven, named after its commander — that takes a job of its own each week without you, from the same board, with its own reckoning and report; its take, heat and ranking are yours, and so is its payroll. A third crew at three years, a fourth at four, no more. Send and recall people between crews from their cards; dissolve a crew and its people come back as far as your places allow."]},
+  crewname:{h:"The crew's name",t:[
+    "The competition has a name from the day it appears; yours is asked for from week "+CREW_NAME_ASK_WEEK+". Type one, or <b>↻ Random</b> takes one off the shelf — a list in the game's voice, and names built from your file: your surname the way the rival's outfit is built, a city the crew has worked, your first name.",
+    "<b>Later</b> puts it off "+CREW_NAME_AGAIN+" weeks. <b>✎ Rename</b> on the Crew tab opens the same card whenever you like; the log keeps what it was. The name heads the Crew tab, sits on the Dashboard, the reports and the saved-game line, and the rival's standing is measured against it."]},
+  paywall:{h:"The till",t:[
+    "The free run is <b>"+SHOP.freeWeeks+" weeks of play in this browser, or a "+rankNameAt(SHOP.freeRep)+" name</b>, whichever comes first — across every game this browser opens, so a new dossier is not a new run. When it is up the game stops on this card, and the card does not close.",
+    "<b>"+SHOP.price+", once</b>, for lifetime access: this build, every build after it, and any other machine you bring the key to. The button opens the checkout in a new tab; the key is on the receipt and in the email. Paste it in the box and press <b>Unlock</b> — the game picks up exactly where it stopped. Nothing is lost while you decide.",
+    "<b>Esc</b> opens the office over the wall — sound, brightness, the handbook, the door out. On the title screen, <b>Have a key?</b> is where a key bought on another machine goes in."]},
   notice:{h:"A milestone",t:[
     "Announced once, in the middle of the screen, when the game reaches it: the two places a Respected name opens; each year mark (weeks "+EXTRA_CREW_WEEKS.join(", ")+") when another crew is within reach, with what is still missing; and the moment a second, third or fourth crew can actually be founded, with a button straight into founding it.",
     "<b>Later</b> closes it; nothing is lost — the Crew tab keeps the places and the founding panel, and the case log keeps the record."]},
@@ -8093,6 +8229,7 @@ function chrome(){
     +'<button class="totop" data-act="to-top" aria-label="Back to the top" title="Back to the top">↑</button>'
     +'<button class="ibtn" data-act="info" aria-label="What is this screen? (i)" title="What is this screen? (i)">i</button>'
     +'<button class="burger" data-act="office" aria-label="The office — pause and settings (Esc)" title="The office (Esc)"><span></span><span></span><span></span></button>'
+    +(UI.till?'<div class="above">'+modalTill("key")+'</div>':"")   // above the title's logotype, like the i card
     +(UI.office?officeHTML():"")
     +(UI.info?infoHTML():"")
     +(UI.qrh?qrhHTML():"")
@@ -8380,6 +8517,7 @@ function screenTitle(){
     +'<hr class="rule">'
     +(sv?'<div class="mono" style="font-size:12px;margin-bottom:10px">Saved game: <b>'+esc(sv.n)+'</b>'+(sv.crew?' of '+esc(cap(sv.crew)):'')+' · week '+sv.week+' · ranking '+sv.rep+' ('+esc(rankName(sv.rep))+') · '+money(sv.money)+'</div>':'')
     +(STORAGE_OK?'':'<div class="warnbox">This browser is not keeping saves — a private window, or site data blocked. You can play, but progress is lost when you leave.</div>')
+    +tillLine()
     +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
     +(sv?'<button class="btn stamp" data-act="continue">Continue →</button><button class="btn ghost" data-act="begin">New game</button>'
         :'<button class="btn stamp" data-act="begin">New game →</button>'+(has?'<button class="btn ghost" data-act="continue">Continue last game</button>':''))
@@ -8472,7 +8610,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 98 · September 2026";
+const BUILD="build 99 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
@@ -8514,6 +8652,10 @@ function bind(){
   const js=document.getElementById("jsort");if(js)js.onchange=()=>{S.jobSort=js.value;save();render();};
   const lw=document.getElementById("logweek");if(lw)lw.onchange=()=>{S.logWeek=lw.value;save();render();};
   const pn=document.getElementById("pname");if(pn)pn.oninput=()=>{draft.name=pn.value;const btn=document.querySelector('[data-act=confirm-create]');if(btn)btn.disabled=!draft.name.trim();};
+  const lk=document.getElementById("lkey");if(lk){
+    lk.oninput=()=>{UI.tillKey=lk.value;};
+    lk.onkeydown=ev=>{if(ev.key==="Enter"){ev.preventDefault();tillUnlock(lk.value);}};
+  }
   const cn=document.getElementById("cname");if(cn){
     cn.oninput=()=>{UI.cname=cn.value;const btn=document.querySelector('[data-act=crewname-ok]');if(btn)btn.disabled=!cn.value.trim();};
     cn.onkeydown=ev=>{if(ev.key==="Enter"&&cn.value.trim()){ev.preventDefault();if(crewNameSet(cn.value))render();}};
@@ -8706,6 +8848,9 @@ document.addEventListener("click",e=>{
     }
     case "crewname-ok": { const cn=document.getElementById("cname"); if(crewNameSet(cn?cn.value:UI.cname))render(); break; }
     case "crewname-later": crewNameLater(); render(); break;
+    case "till-open": e.preventDefault(); UI.till=true; UI.tillMsg=""; render(); { const el=document.getElementById("lkey"); if(el)el.focus(); } break;
+    case "till-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){UI.till=false;UI.tillMsg="";render();} break;
+    case "till-unlock": { const el=document.getElementById("lkey"); tillUnlock(el?el.value:UI.tillKey); break; }
     case "crewname-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){S.modal=null;UI.cname=null;render();} break;
     case "notice-go": noticeDone(); if(k==="found"){UI.found={lead:null,ids:[]};S.modal={type:"found"};} else if(k){S.tab=k;S.jobOpen=null;} render(); window.scrollTo(0,0); break;
     case "found-lead": if(UI.found){UI.found.lead=UI.found.lead===id?null:id;UI.found.ids=UI.found.ids.filter(x=>x!==id);} render(); break;
@@ -8739,6 +8884,7 @@ document.addEventListener("keydown",e=>{
     else if(UI.crew){UI.crew=false;render();}
     else if(UI.info){UI.info=false;render();}
     else if(TUT.on){tutEnd();}
+    else if(UI.till&&!UI.office){UI.till=false;UI.tillMsg="";render();}
     else if(UI.panel){UI.panel=null;render();}
     else if(UI.office){UI.office=false;render();}
     else if(S&&S.modal){
@@ -8746,6 +8892,7 @@ document.addEventListener("keydown",e=>{
       else if(S.modal.type==="notice"){noticeDone();render();}
       else if(S.modal.type==="news"){newsClose();save();render();}
       else if(S.modal.type==="crewname"){if(S.modal.edit){S.modal=null;UI.cname=null;}else crewNameLater();render();}
+      else if(S.modal.type==="paywall"){UI.office=true;UI.panel=null;render();}   // the wall does not close; the office opens over it
       else if(S.modal.type==="loose"||S.modal.type==="revenge"){}
       else if(isFeed(S.modal.type)&&S.modal.data.awaiting){}
       else if(isFeed(S.modal.type)&&!S.modal.data.done)tickerFinish();
@@ -9788,6 +9935,7 @@ function pcOnlyDoor(){
 (function boot(){
   if(mobileDevice()){pcOnlyDoor();return;}
   loadSettings();applySettings();
+  licLoad();licRecheck();   // the key this browser was paid for with, and a weekly word with the till about it
   // Once, on the way up, and only in a bundled copy. It has to be here rather than beside the
   // other startup lines further up the file: MEDIA_BASE is a const declared with the music, and
   // reading it from above its own declaration throws — which a try/catch then hides, so the check
