@@ -699,6 +699,7 @@
 // capped at 96, so any competent crew took CLEAN on every job and the game was over in
 // eighteen weeks. The world now answers the name — the bigger the crew, the better defended
 // the rooms it is given, and a country worked lately is watching for it.
+const TECH_BONUS=14, TECH_BONUS_2=8;   // the trade you are, and the trade you learned
 const BAL={
   // --- the job ---
   // The spread between tiers widens rather than the floor rising: a tier-1 errand stays a way
@@ -1761,7 +1762,7 @@ function rivalPressure(){
 }
 function rivalEnforce(){
   const rv=rival();if(!rv)return;
-  if(!payroll().some(c=>c.status==="crew"&&c.tech==="enforcer")){note("That needs an Enforcer on the books.");return;}
+  if(!payroll().some(c=>c.status==="crew"&&hasTech(c,"enforcer"))){note("That needs an Enforcer on the books.");return;}
   const rng=freshRng();
   if(chance(rng,0.65)){rv.standing=clamp(rv.standing-ri(rng,12,20),0,999);S.heat=clamp(S.heat+6,0,120);
     logMsg("Your enforcer had a word with "+rv.name+". Their standing "+rv.standing+". Heat +6.","good",true);}
@@ -2522,13 +2523,37 @@ function entry(c,job,forgerAboard){
   }
   return {ok:true,why:local?"local national":forgerAboard&&(co.gate>=1)?"papers from the forger":"clean entry"};
 }
+/* ---- WHAT SOMEBODY IS, AND WHAT SOMEBODY CAN DO ----
+
+   c.tech is what they ARE: the word under their name, what clients ask for them by, what their
+   fee was set by. c.tech2 is a second trade they were TAUGHT and kept, and it is why a crew can
+   now become a core instead of a roster.
+
+   It used to be that teaching replaced the trade — five weeks away, money, two ranks down, and
+   they stopped being the thing you hired them for. Hiring a stranger was strictly better, so
+   every incentive in the game pointed at churn, which is exactly the thing the game is about
+   not doing. Held one crew still for 120 weeks and it held none of the wanted trades on 58% of
+   postings; there is no crew of six that covers three named trades out of sixteen.
+
+   So the split: ANY question about what the crew can do on a job goes through hasTech(), and
+   only the words on the screen still read c.tech on its own. Getting that backwards is how a
+   taught Forger gets the crew through a border but is not listed as the reason. */
+function hasTech(c,k){return !!c&&(c.tech===k||c.tech2===k);}
+function techLabel(c){
+  const a=TECH_BY_K[c.tech]?TECH_BY_K[c.tech].l:c.tech;
+  const b=c.tech2&&TECH_BY_K[c.tech2]?TECH_BY_K[c.tech2].l:null;
+  return b?a+" · also "+b:a;
+}
 function memberEff(c,job){
   const cat=CAT_BY_K[job.cat];
   let ws=0,tw=0;
   for(const a in cat.w){ws+=cat.w[a]*c.attrs[a];tw+=cat.w[a];}
   let e=ws/tw;
   e*=(1+(c.exp-1)*0.11);
-  if(job.techs.includes(c.tech))e+=14;
+  // The trade they are is worth more than the trade they learned, and that difference is the
+  // whole price of a second one — it is not as good, it is just always there.
+  if(job.techs.includes(c.tech))e+=TECH_BONUS;
+  else if(c.tech2&&job.techs.includes(c.tech2))e+=TECH_BONUS_2;
   if((cat.w.brains||0)>=3)e+=c.edu*1.2;
   return e;
 }
@@ -2536,7 +2561,7 @@ function assessJob(job,members,leadId){
   const co=COUNTRY_BY_NAME[job.country];
   const cat=CAT_BY_K[job.cat];
   const all=members||crewAll();
-  const forger=all.some(c=>c.status==="crew"&&c.tech==="forger"&&!c.limits.some(k=>{const l=LIMIT_BY_K[k];return l.country&&l.country(co);}));
+  const forger=all.some(c=>c.status==="crew"&&hasTech(c,"forger")&&!c.limits.some(k=>{const l=LIMIT_BY_K[k];return l.country&&l.country(co);}));
   const checks=all.map(c=>Object.assign({c},entry(c,job,forger)));
   const team=checks.filter(x=>x.ok).map(x=>x.c);
   const factors=[];
@@ -2566,7 +2591,7 @@ function assessJob(job,members,leadId){
   const covered=job.know.filter(k=>team.some(c=>c.know.includes(k)));
   covered.forEach(k=>{const schooled=team.some(c=>c.know.includes(k)&&c.edu>=3);add("Knows "+k,schooled?10:5,schooled?"and studied it":"street knowledge");});
   job.know.filter(k=>!covered.includes(k)).forEach(k=>add("Nobody knows "+k,-6,"wanted for this job"));
-  const hits=job.techs.filter(t=>team.some(c=>c.tech===t)).length;
+  const hits=job.techs.filter(t=>team.some(c=>hasTech(c,t))).length;
   if(hits)add("Trades",hits*4,hits+" of "+job.techs.length+" wanted");
   const paid=team.filter(c=>paidUp(c));
   if(paid.length)add("Paid up",Math.min(6,2*paid.length),paid.map(c=>c.first).join(", ")+(paid.length>1?" are":" is")+" working for it");
@@ -2854,7 +2879,7 @@ function narrate(job,a,tier,rng,x,mode,clock){
     else if(you)push(fill2(fresh(YOU_RUN),{place:fresh(PLACES)}),"","watch",you.id);
     else if(team.length){const lead=team.filter(c=>c.role==="commander").sort((p,q)=>q.cmd-p.cmd)[0];if(lead)say(STANDIN,lead,null,"","watch");else push(fresh(LEADERLESS),"warn","watch");}
     let tb=0;
-    job.techs.forEach(t=>{const c=team.find(y=>y.tech===t);
+    job.techs.forEach(t=>{const c=team.find(y=>hasTech(y,t));
       if(c){if(tb<2){push(nm(c)+" ("+TECH_BY_K[t].l+") "+pair(fresh(TECH_BEAT[t]),c)+".","",techSite(t),c.id);tb++;}}
       else{const st=someoneNew();if(st)stood.push({id:st.id,k:t});say(NOTECH,st,{T:TECH_BY_K[t].l,aT:anA(TECH_BY_K[t].l)},"warn",techSite(t));}});
     job.know.forEach(k=>{const c=team.find(y=>y.know.includes(k));
@@ -2871,7 +2896,7 @@ function narrate(job,a,tier,rng,x,mode,clock){
     else if(tier===1){take(B.hitch,1,"warn");take(B.blow,1,"bad");}
     else take(B.blow,2,"bad");
     if(team.length&&chance(rng,0.3))say(TEXTURE,someone(),null,"","watch");
-    const wheel=team.find(c=>c.tech==="wheelman");
+    const wheel=team.find(c=>hasTech(c,"wheelman"));
     if(tier>=2){if(wheel)say(EXIT_OK,wheel,{W:nm(wheel)},"","exit");else push(fresh(EXIT_NOWHEEL),"","exit","*");}
     else{
       let s=fill2(fresh(POLICE_COME),{P:cap(police(co)),p:police(co),where:fresh(WHERE)});
@@ -3155,7 +3180,7 @@ function reqStandIn(req,team){
 // person doing their own job beats the wrong person doing it well.
 function reqRank(req,team){
   if(!req)return 0;
-  if(req.tech&&team.some(c=>req.tech.includes(c.tech)))return 2;
+  if(req.tech&&team.some(c=>req.tech.some(t=>hasTech(c,t))))return 2;
   if(req.know&&team.some(c=>req.know.some(k=>c.know.includes(k))))return 2;
   return reqStandIn(req,team)?1:0;
 }
@@ -3166,17 +3191,21 @@ function reqHand(req,team){
   if(!req||!req.tech)return null;
   let best=null;
   team.forEach(c=>{
-    if(!req.tech.includes(c.tech))return;
-    const a=TECH_BY_K[c.tech]&&TECH_BY_K[c.tech].a;if(!a)return;
+    // The attribute that matters is the one behind the trade that ANSWERS this — a Wheelman who
+    // was taught Forger is judged on brains when the option wants papers, not on nerve.
+    const t=req.tech.find(x=>hasTech(c,x));if(!t)return;
+    const a=TECH_BY_K[t]&&TECH_BY_K[t].a;if(!a)return;
     const v=(c.attrs&&c.attrs[a])||0;
-    if(!best||v>best.v)best={c:c,a:a,v:v,spec:true};
+    const own=c.tech===t;
+    // A tie goes to the one whose own trade it is; a learned trade only wins on a clear margin.
+    if(!best||v>best.v||(v===best.v&&own&&!best.own))best={c:c,a:a,v:v,spec:true,own:own,tech:t};
   });
   if(best)return best;
   const s=reqStandIn(req,team);
   return s?{c:s.c,a:s.a,v:s.v,spec:false,tech:s.tech}:null;
 }
 function reqWho(req,team){
-  const spec=team.find(c=>(req.tech&&req.tech.includes(c.tech))||(req.know&&req.know.some(k=>c.know.includes(k))));
+  const spec=team.find(c=>(req.tech&&req.tech.some(t=>hasTech(c,t)))||(req.know&&req.know.some(k=>c.know.includes(k))));
   if(spec)return spec;
   const s=reqStandIn(req,team);
   return s?s.c:null;
@@ -3275,7 +3304,7 @@ function twistWants(tw,team){
     if(!o.req)return;
     (o.req.tech||[]).forEach(k=>{
       const T=TECH_BY_K[k];
-      const hands=team.filter(c=>c.tech===k);
+      const hands=team.filter(c=>hasTech(c,k));
       if(hands.length){
         // Held — so what the tag reports is whether the hand holding it is steady.
         const h=hands.reduce((m,c)=>(!m||((c.attrs&&c.attrs[T.a])||0)>((m.attrs&&m.attrs[T.a])||0))?c:m,null);
@@ -3677,7 +3706,7 @@ function makeEvent(rng){
 // without it becoming a story — an enforcer to do it or a cleaner to make it read as nothing.
 function eventCan(o){
   if(!o||!o.req)return true;
-  const has=k=>recruits().some(c=>c.status==="crew"&&c.tech===k);
+  const has=k=>recruits().some(c=>c.status==="crew"&&hasTech(c,k));
   if(o.req==="quiet")return has("enforcer")||has("cleaner");
   return has(o.req);
 }
@@ -3832,7 +3861,7 @@ function packState(){
   // and hand back nothing: exp was saved and tech was not, so a Hacker opened as a Safecracker
   // again, two ranks down. Anything written to a roster member anywhere belongs on this line.
   S.roster.forEach(c=>{if(c.status!=="available"||c.vetted||c._touched){ov[c.id]={status:c.status,out:c.out,loyalty:c.loyalty,vetted:c.vetted,vetFlag:c.vetFlag,jail:c.jail,exp:c.exp,xp:c.xp||0,attrs:c.attrs,cut:c.cut,paidUntil:c.paidUntil==null?null:c.paidUntil,lowRun:c.lowRun||0,traits:c.traits,coolUntil:c.coolUntil||0,ranWith:c.ranWith||0,talks:c.talks||0,
-    tech:c.tech,know:c.know,langs:c.langs,
+    tech:c.tech,tech2:c.tech2||null,know:c.know,langs:c.langs,
     learn:c.learn||null,tutor:c.tutor||null,learnAskedUntil:c.learnAskedUntil||0,
     goneAs:c.goneAs||null,goneWeek:c.goneWeek||0,funeralPaid:!!c.funeralPaid};}});
   const d=Object.assign({},S);delete d.roster;delete d.modal;d.ov=ov;
@@ -4261,7 +4290,7 @@ function orList(a){return a.length<2?(a[0]||""):a.slice(0,-1).join(", ")+" or "+
    a trade nobody has is a hire across town, and "nobody going has it" cannot tell those two
    apart — so each one says why not, in the words the entry check itself used. */
 function whoFor(job,a,pred,label){
-  const forger=a.team.some(c=>c.tech==="forger");
+  const forger=a.team.some(c=>hasTech(c,"forger"));
   const going=[],out=[];
   crewAll().forEach(c=>{
     if(!pred(c))return;
@@ -4280,6 +4309,14 @@ function whoLine(w,verb,none){
   return "\n"+none;
 }
 function techTip(k){return '<span class="tip" tabindex="0" data-tip="'+esc(techBrief(k))+'">'+TECH_BY_K[k].l+'</span>';}
+/* The trade line on a card. A second trade has to appear everywhere the first does or nobody
+   will ever pay for one — and it reads as an addition, in lighter ink, because that is what it
+   is: what they also do, not what they are. */
+function techTips(c){
+  const one=techTip(c.tech);
+  if(!c.tech2||!TECH_BY_K[c.tech2])return one;
+  return one+'<span style="color:var(--muted);font-weight:400"> · also </span>'+techTip(c.tech2);
+}
 function tipShow(el){
   const t=document.getElementById("tipbox");if(!t||!el.getBoundingClientRect)return;
   t.textContent=el.getAttribute("data-tip")||"";t.hidden=false;
@@ -4319,7 +4356,7 @@ function roleChip(c){return c.role==="commander"?'<span class="chip c-ink">Comma
 function idCardTop(c,extra){
   const nat=natOf(c);
   return '<div class="top"><div class="av">'+avatar(c.avseed,c.gender,c.face)+'</div>'
-    +'<div class="who"><div class="nm">'+esc(c.n)+(c.isPlayer?' <span class="chip c-bad" style="vertical-align:middle">You</span> ':', ')+'<span class="nm-tr">'+techTip(c.tech)+'</span></div>'
+    +'<div class="who"><div class="nm">'+esc(c.n)+(c.isPlayer?' <span class="chip c-bad" style="vertical-align:middle">You</span> ':', ')+'<span class="nm-tr">'+techTips(c)+'</span></div>'
     +'<div class="sub">'+flagSvg(nat)+' '+esc(nat.name)+' · '+(c.gender==="M"?"Male":"Female")+' <span class="tag pass" title="Passport tier '+nat.tier+' — '+TIER_WORD[nat.tier]+'">P'+nat.tier+'</span> '+roleChip(c)+(extra||'')+'</div>'
     +'<div class="spec">'+EXP[c.exp-1]+'</div>'+pips(c.exp)+'</div></div>';
 }
@@ -4487,7 +4524,7 @@ function modalFound(){
   if(f.lead&&!cmdrs.some(c=>c.id===f.lead))f.lead=null;
   f.ids=f.ids.filter(id=>id!==f.lead&&ready.some(c=>c.id===id));
   const lead=f.lead?byId(f.lead):null;
-  const row=(c,act,on,dis)=>'<button class="twist-opt'+(on?' on':'')+'" data-act="'+act+'" data-id="'+c.id+'" '+(dis?"disabled":"")+'><b>'+(on?"✓":"·")+'</b> <span>'+esc(c.n)+' <span class="mono" style="color:var(--muted)">'+flagSvg(natOf(c))+' '+TECH_BY_K[c.tech].l+' · '+EXP[c.exp-1]+(c.role==="commander"?' · cmd +'+c.cmd:'')+' · loyalty '+c.loyalty+'</span></span></button>';
+  const row=(c,act,on,dis)=>'<button class="twist-opt'+(on?' on':'')+'" data-act="'+act+'" data-id="'+c.id+'" '+(dis?"disabled":"")+'><b>'+(on?"✓":"·")+'</b> <span>'+esc(c.n)+' <span class="mono" style="color:var(--muted)">'+flagSvg(natOf(c))+' '+techLabel(c)+' · '+EXP[c.exp-1]+(c.role==="commander"?' · cmd +'+c.cmd:'')+' · loyalty '+c.loyalty+'</span></span></button>';
   const h='<div class="modal-h"><div><div class="kicker">'+(crews().length?"Another crew":"A second crew")+' · week '+S.week+'</div><h2 style="font-size:22px;margin-top:4px">Found a crew</h2></div><button class="x" data-act="scrim" aria-label="Close">✕</button></div>';
   const b='<div class="modal-b"><div class="kicker">The commander</div><div class="sel-help">A commander by nature runs it, with a command score of their own. The crew takes the name.</div><div class="twist-opts">'+cmdrs.map(c=>row(c,"found-lead",f.lead===c.id,false)).join("")+'</div>'
     +'<hr class="rule"><div class="kicker">Four soldiers · '+f.ids.length+' of 4</div><div class="sel-help">Anyone ready on your crew. They leave your places; you fill them again from the roster.</div><div class="twist-opts">'+ready.filter(c=>c.id!==f.lead).map(c=>row(c,"found-pick",f.ids.includes(c.id),!f.ids.includes(c.id)&&f.ids.length>=4)).join("")+'</div>'
@@ -4664,7 +4701,7 @@ function tabJobs(){
 }
 function jobsList(){
   const inField=field();
-  const has=t=>inField.some(c=>c.tech===t);
+  const has=t=>inField.some(c=>hasTech(c,t));
   const knows=k=>inField.some(c=>c.know.includes(k));
   /* The board's chips ask a weaker question than the job file's — "is it on the crew", not "is
      it going", because no job is open here and so nobody is benched yet. They still answer with
@@ -4723,7 +4760,7 @@ function jobsList(){
   const rows=items.map(({j,a})=>{
     const co=COUNTRY_BY_NAME[j.country];
     const fit=a.canRun?(a.margin>=10?'<span class="chip c-good">Good fit</span>':a.margin>=-4?'<span class="chip c-warn">Risky</span>':'<span class="chip c-bad">Long odds</span>'):'<span class="chip c-bad">'+a.team.length+' of '+j.need+' can go</span>';
-    const techs=j.techs.map(t=>'<span class="tag spec tip '+(has(t)?"ok":"no")+'" tabindex="0" data-tip="'+esc(techBrief(t)+roll(c=>c.tech===t,"has it","Nobody on your crew has it."))+'">'+(has(t)?"✓ ":"✗ ")+TECH_BY_K[t].l+'</span>').join(" ");
+    const techs=j.techs.map(t=>'<span class="tag spec tip '+(has(t)?"ok":"no")+'" tabindex="0" data-tip="'+esc(techBrief(t)+roll(c=>hasTech(c,t),"has it","Nobody on your crew has it."))+'">'+(has(t)?"✓ ":"✗ ")+TECH_BY_K[t].l+'</span>').join(" ");
     const kn=j.know.map(x=>'<span class="tag tip '+(knows(x)?"ok":"no")+'" tabindex="0" data-tip="'+esc(knowBrief(x)+roll(c=>c.know.includes(x),"knows it","Nobody on your crew knows it."))+'">'+(knows(x)?"✓ ":"✗ ")+'knows '+x+'</span>').join(" ");
     return '<div class="jobrow" data-act="open-job" data-id="'+j.id+'" data-country="'+esc(j.country)+'" role="button" tabindex="0">'
       +'<div class="code">'+(j.final?"—":j.big?esc(j.id.slice(0,2)+"-"+j.id.slice(2)):"№"+j.id.slice(1).padStart(3,"0"))+'<br>'+diffbar(j.diff,j.heat>22)+'</div>'
@@ -4752,7 +4789,7 @@ function jobPanel(j){
   // every requirement, checked against the crew that can actually go: green tick or red cross,
   // and on the hover the names — see whoFor(). "Someone going knows it" was the wrong half of
   // the answer: which one is what decides who gets benched.
-  const has=t=>a.team.some(c=>c.tech===t),knows=k=>a.team.some(c=>c.know.includes(k));
+  const has=t=>a.team.some(c=>hasTech(c,t)),knows=k=>a.team.some(c=>c.know.includes(k));
   // Which of the country's languages actually gets spoken. The chip named co.langs[0] whatever
   // was going, so a crew getting by in Arabic in Haifa was told it spoke Hebrew — the mechanic
   // has always taken any of them (assessJob, +6), it was only the label that picked the first.
@@ -4766,7 +4803,7 @@ function jobPanel(j){
     +chip(a.team.length>=j.need,'crew of '+j.need,a.team.length+' of '+j.need+' can go.'
       +'\nGoing: '+(a.team.map(c=>nameOf(c)).join(", ")||"nobody")+'.')
     +j.techs.map(t=>chip(has(t),'wants '+TECH_BY_K[t].l,
-      techBrief(t)+whoLine(whoFor(j,a,c=>c.tech===t),'has it','Nobody on your crew has it.'))).join("")
+      techBrief(t)+whoLine(whoFor(j,a,c=>hasTech(c,t)),'has it','Nobody on your crew has it.'))).join("")
     +j.know.map(k=>chip(knows(k),'knows '+k,
       // Who studied it is worth the four words: knowBrief just said it is +10 instead of +5.
       knowBrief(k)+whoLine(whoFor(j,a,c=>c.know.includes(k),c=>c.edu>=3?" (studied it)":""),
@@ -4786,10 +4823,10 @@ function jobPanel(j){
   const benchCuts=bench.map(byId).filter(Boolean).reduce((s,c)=>s+Math.round(j.payout*c.cut),0);
   const allChecks=crewAll().map(c=>{const x=a.checks.find(y=>y.c.id===c.id);
     if(x)return Object.assign({},x,{sat:false});
-    return Object.assign({sat:true,c},entry(c,j,a.team.some(y=>y.tech==="forger")));});
+    return Object.assign({sat:true,c},entry(c,j,a.team.some(y=>hasTech(y,"forger"))));});
   const checks=allChecks.map(x=>{const c=x.c,sat=x.sat&&x.ok;
     return '<div class="check'+(x.ok?"":" out")+(sat?" sat":"")+'"><div class="av">'+avatar(c.avseed,c.gender,c.face)+'</div>'
-      +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12.5px">'+(c.isPlayer?"You":esc(c.n))+' '+flagSvg(natOf(c))+' <span class="mono" style="color:var(--muted);font-size:10.5px">'+TECH_BY_K[c.tech].l+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</span></div>'
+      +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12.5px">'+(c.isPlayer?"You":esc(c.n))+' '+flagSvg(natOf(c))+' <span class="mono" style="color:var(--muted);font-size:10.5px">'+techLabel(c)+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</span></div>'
       +'<div class="why">'+(sat?'sitting this one out'+(c.isPlayer?' — a commander-type runs it':'')+(c.cut?' · keeps '+money(Math.round(j.payout*c.cut))+' in the split':''):esc(x.why))+'</div></div>'
       // The whole file, from here. This list is where you decide who goes, and that decision is
       // made out of what is on their file — the trade, the attributes, what they will not do —
@@ -4863,7 +4900,7 @@ function jobPanel(j){
   // The whole use of a date on a posting is the sum you do with it. A recruiting trip is a week,
   // so a gap in the crew and weeks still on the board is a move you can make — and one week left
   // is the same gap with the move gone. Said only when there is a gap to say it about.
-  const missing=j.techs.filter(t=>!a.team.some(c=>c.tech===t));
+  const missing=j.techs.filter(t=>!a.team.some(c=>hasTech(c,t)));
   const gap=missing.length||a.team.length<j.need;
   const timeNote=(!j.final&&gap)?'<div class="sel-help" style="margin:6px 0 0">'
     +(jobLeft(j)<=1
@@ -4915,7 +4952,7 @@ function crewStrip(){
     // button would only make the card smaller.
     return '<div class="smc'+(c.status!=="crew"?" out":"")+'" data-act="open-recruit" data-id="'+c.id+'" role="button" tabindex="0" '
       +'title="'+esc(c.isPlayer?"Your file":c.first+"'s file")+'"><div class="sm-av">'+avatar(c.avseed,c.gender,c.face)+'</div><div class="sm-b">'
-      +'<div class="sm-n">'+esc(c.first)+(c.isPlayer?' <span class="chip c-bad">you</span> ':', ')+'<span class="nm-tr">'+techTip(c.tech)+'</span>'+(c.status==="injured"?' <span class="chip c-warn">hurt</span>':'')+'</div>'
+      +'<div class="sm-n">'+esc(c.first)+(c.isPlayer?' <span class="chip c-bad">you</span> ':', ')+'<span class="nm-tr">'+techTips(c)+'</span>'+(c.status==="injured"?' <span class="chip c-warn">hurt</span>':'')+'</div>'
       +'<div class="sm-l">'+flagSvg(nat)+' P'+nat.tier+' · '+EXP[c.exp-1]+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</div>'
       +'<div class="sm-a num">'+ATTRS.map(a=>ATTR_ABBR[a]+' '+c.attrs[a]).join(' · ')+'</div>'
       +'<div class="sm-l">'+c.langs.join(", ")+' · knows '+c.know.join(", ")+(c.limits.length?' · <span style="color:var(--stamp)">'+c.limits.map(k=>LIMIT_BY_K[k].l).join(", ")+'</span>':'')+'</div>'
@@ -4929,7 +4966,7 @@ function tabRoster(){
   const f=S.filter;
   let list=S.roster.filter(c=>c.status==="available");
   if(f.q){const q=f.q.toLowerCase();list=list.filter(c=>c.n.toLowerCase().includes(q)||c.nat.toLowerCase().includes(q)||c.langs.some(l=>l.toLowerCase().includes(q))||c.know.some(k=>k.toLowerCase().includes(q)));}
-  if(f.tech)list=list.filter(c=>c.tech===f.tech);
+  if(f.tech)list=list.filter(c=>hasTech(c,f.tech));
   if(f.role)list=list.filter(c=>c.role===f.role);
   if(f.nat)list=list.filter(c=>c.nat===f.nat);
   const sorters={fee:(a,b)=>a.fee-b.fee,feeD:(a,b)=>b.fee-a.fee,exp:(a,b)=>b.exp-a.exp||b.fee-a.fee,power:(a,b)=>avg(b.attrs)-avg(a.attrs),name:(a,b)=>a.n.localeCompare(b.n)};
@@ -5067,7 +5104,7 @@ function tabLog(){
       +'<div class="loy'+(rivalAhead()?" low":"")+'" style="height:9px;margin-top:6px"><i style="width:'+clamp(rv.standing,0,100)+'%"></i></div>'
       +'<div class="mono" style="font-size:11.5px;margin-top:5px">Their standing <b>'+rv.standing+'</b> against '+(S.crewName?esc(crewTitle())+"'s":"your")+' <b>'+S.rep+'</b> — '+(rivalAhead()?'<span style="color:var(--stamp)">they are ahead, and they take the best posting most weeks and buy your crew drinks</span>':rv.standing===S.rep?'you are level with them':'you are ahead of them')+'.</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn ghost sm" data-act="rival-buy" '+(S.money>=Math.max(40000,rv.standing*3000)?"":"disabled")+'>Buy a name inside · '+money(Math.max(40000,rv.standing*3000))+'</button>'
-      +'<button class="btn ghost sm" data-act="rival-enforce" '+(payroll().some(c=>c.status==="crew"&&c.tech==="enforcer")?"":'disabled title="Needs an Enforcer"')+'>Send the enforcer</button></div>':'')
+      +'<button class="btn ghost sm" data-act="rival-enforce" '+(payroll().some(c=>c.status==="crew"&&hasTech(c,"enforcer"))?"":'disabled title="Needs an Enforcer"')+'>Send the enforcer</button></div>':'')
     +(rv&&dt?'<hr class="rule">':'')
     +(dt?'<div class="mono" style="font-size:12.5px;line-height:1.7"><b>'+esc(dt.name)+'</b> ('+esc(dt.full)+') has been on your alias since week '+dt.since+'.</div>'
       +'<div class="loy'+(detFile()>=50?" low":"")+'" style="height:9px;margin-top:6px"><i style="width:'+clamp(detFile(),0,100)+'%"></i></div>'
@@ -5718,7 +5755,7 @@ function wentWrong(d){
     out.push({k,v,note,fix});
   });
   // the trades the room wanted and nobody brought — the reckoning only counts the ones you had
-  const miss=(W.techs||[]).filter(t=>!(d.teamIds||[]).some(id=>{const c=byId(id);return c&&c.tech===t;}));
+  const miss=(W.techs||[]).filter(t=>!(d.teamIds||[]).some(id=>{const c=byId(id);return c&&hasTech(c,t);}));
   miss.forEach(t=>out.push({k:"No "+TECH_BY_K[t].l,v:null,note:"the job asked for one",
     fix:"A "+TECH_BY_K[t].l+" on the crew. "+TECH_BY_K[t].d+" Somebody stood in for it and learned a little; that is not the same thing."}));
   // and the two that are not on the reckoning at all
@@ -6031,7 +6068,7 @@ function modalStreet(){
       :'<span class="why">fit '+o.score+' vs '+off.diff+' · hurt '+o.pHurt+'% · taken '+o.pJail+'%</span>';
     return '<div class="check'+(o.blocked?" out":"")+'">'
       +'<div class="av">'+avatar(c.avseed,c.gender,c.face)+'</div>'
-      +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12px">'+esc(c.first)+' <span style="color:var(--muted)">'+esc(TECH_BY_K[c.tech].l)+'</span></div>'+why+'</div>'
+      +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12px">'+esc(c.first)+' <span style="color:var(--muted)">'+esc(techLabel(c))+'</span></div>'+why+'</div>'
       +'<div style="text-align:right;min-width:74px"><div class="mono num" style="font-size:15px;color:'+(o.blocked?"var(--muted)":o.pClean>=55?"var(--good)":o.pClean>=35?"var(--warn)":"var(--stamp)")+'">'+(o.blocked?"—":o.pClean+"%")+'</div></div>'
       +'<button class="btn sm" data-act="street-send" data-k="'+k+'" data-id="'+c.id+'" '+(o.blocked?"disabled":"")+'>Send</button>'
       +'</div>';
@@ -6139,29 +6176,46 @@ function standingWord(v){
   return v>=80?"would follow you anywhere":v>=62?"solid with you":v>=44?"civil":v>=26?"thin":"on the way out";
 }
 
-/* ========================= LEARNING A NEW TRADE ========================= */
-/* A trade is what somebody IS in this game — it is the first thing on their card and the thing a
-   client asks for by name. So changing it is not a purchase, it is a conversation, and the answer
-   is theirs. What it costs is money, weeks off the field, and rank: nobody carries eleven years of
-   being a Safecracker into being a Hacker. A Legend comes back a Professional. That is the whole
-   reason to think about it rather than shop.
+/* ========================= LEARNING A SECOND TRADE ========================= */
+/* THIS USED TO REPLACE THE TRADE, and that was the bug at the centre of the whole game.
 
-   Who can be asked: somebody on the crew who has got somewhere in the trade they have. A Rookie
-   has nothing to unlearn and nothing to be proud of, so there is no conversation to be had. */
+   Teaching cost money, three to seven weeks off the field, and TWO RANKS — and at the end of it
+   they were no longer the thing you hired them for. A Legend Safecracker came back a Professional
+   Hacker, and the Safecracker was gone. Set beside hiring a stranger, who costs a fee and starts
+   on Monday, it was never the right move. So every incentive in the game pointed at churn, in a
+   game whose first line is "build a crew you trust", and the player was right to feel there was
+   no core: the design was quietly telling them not to have one.
+
+   Now it ADDS. They keep the trade they are, keep their rank, and come back able to do a second
+   thing — at TECH_BONUS_2 rather than TECH_BONUS, because a trade you learned at thirty is not
+   the trade you have been doing since you were nineteen. One extra, once, and never a third:
+   a crew of six covering twelve trades is a core that grew, and a crew of six covering all
+   sixteen is a shopping list with faces on it.
+
+   The conversation survives, and it had to, because what they give up changed rather than went
+   away. It is no longer their rank — it is the weeks. Five weeks at a school is five weeks of
+   cuts they do not get while the rest of the crew works, and somebody who is thin with you is
+   not spending those on your convenience. That is the term learnOdds now argues about.
+
+   Who can be asked: somebody on the crew who has got somewhere in the trade they have, and who
+   has not already been taught one. A Rookie is still learning the first thing. */
 const LEARN={
   minExp:3,                 // Professional or better — "experienced"
   base:30000,               // what a school costs before anything else
-  perRank:0.35,             // and more for somebody who has further to fall
+  perRank:0.35,             // and more for somebody worth more of the teacher's time
   bigMul:2.2,               // a specialist is taught by fewer people, for more
-  weeks:[3,5], bigWeeks:[5,7],
-  dropRank:2,               // what they come back as, off their old rank
+  // A week longer than it was. They are not swapping a trade any more, they are adding one on
+  // top of the one they already do, and the weeks are now the entire price.
+  weeks:[4,6], bigWeeks:[6,8],
   payFloor:0.5, payCeil:1.5, // what an extra fee can be, as a share of the school
 };
 function canLearn(c){
   if(!c||c.isPlayer)return "you are the commander, and nobody is teaching you a trade";
   if(c.status!=="crew")return c.status==="injured"?"injured, back week "+c.out:"not on the crew";
   if(c.learn)return "already learning "+TECH_BY_K[c.learn.to].l.toLowerCase();
-  if((c.exp||1)<LEARN.minExp)return "a "+EXP[(c.exp||1)-1]+" has nothing to unlearn yet — "+EXP[LEARN.minExp-1]+" and up";
+  // One second trade, and only one. Two is a person with no trade at all.
+  if(c.tech2)return "already carries two — "+TECH_BY_K[c.tech].l+" and "+TECH_BY_K[c.tech2].l;
+  if((c.exp||1)<LEARN.minExp)return "a "+EXP[(c.exp||1)-1]+" is still learning the first one — "+EXP[LEARN.minExp-1]+" and up";
   return "";
 }
 // The trades somebody could be taught. The fourteen specialists are taught by people you have no
@@ -6170,7 +6224,7 @@ function learnOptions(c){
   const all=(typeof TECHS_ALL!=="undefined"&&TECHS_ALL)?TECHS_ALL:TECHS;
   const big=(typeof TECHS_BIG!=="undefined"&&TECHS_BIG)?TECHS_BIG.map(t=>t.k):[];
   const open=S.rep>=(typeof EXTRA_CREW_REP!=="undefined"?EXTRA_CREW_REP:seatRankAt());
-  return all.filter(t=>t.k!==c.tech&&(open||big.indexOf(t.k)<0));
+  return all.filter(t=>t.k!==c.tech&&t.k!==c.tech2&&(open||big.indexOf(t.k)<0));
 }
 function isBigTech(k){
   const big=(typeof TECHS_BIG!=="undefined"&&TECHS_BIG)?TECHS_BIG.map(t=>t.k):[];
@@ -6184,7 +6238,10 @@ function learnWeeks(c,k,rng){
   const w=isBigTech(k)?LEARN.bigWeeks:LEARN.weeks;
   return ri(rng||freshRng(),w[0],w[1]);
 }
-function learnNewRank(c){return Math.max(1,(c.exp||1)-LEARN.dropRank);}
+// Kept for files saved before a second trade existed, where it decided what they came
+// back as. Nobody loses rank now, so it is the identity — and learnOdds no longer
+// argues about a fall that does not happen.
+function learnNewRank(c){return (c.exp||1);}
 /* Will they do it? Standing first, then three things that are about the trade rather than about
    you: how far they have to fall, whether the new work is anywhere near what they are built for,
    and what kind of person they are. Every part of it is printed on the screen that asks. */
@@ -6199,11 +6256,16 @@ function learnOdds(c,k,extra){
   // the same thing to lose. They do not: what somebody gives up is the drop AND the standing they
   // already have in the trade they are. Eleven years of being the best Safecracker anybody knows
   // is the thing that makes the answer no.
-  const fall=((c.exp||1)-learnNewRank(c));
-  const fallPart=-(8*fall+6*Math.max(0,(c.exp||1)-LEARN.minExp));
-  p+=fallPart; why.push({k:"What they give up",v:fallPart,
-    note:EXP[(c.exp||1)-1]+" again to "+EXP[learnNewRank(c)-1]
-      +((c.exp||1)>LEARN.minExp?", and being the "+TECH_BY_K[c.tech].l.toLowerCase()+" everybody asks for":"")});
+  /* What they give up is the WEEKS now, not their rank. They keep the trade they are and come
+     back able to do a second thing, so the old argument — eleven years of being the best
+     Safecracker anybody knows — is no longer on the table. What is on the table is a month and
+     a bit at a school while the rest of the crew works and gets paid, and somebody who is thin
+     with you is not spending that on your convenience. The better they are, the more a week off
+     the field is worth to them, which is why rank still appears here. */
+  const wk=Math.round((isBigTech(k)?LEARN.bigWeeks[0]+LEARN.bigWeeks[1]:LEARN.weeks[0]+LEARN.weeks[1])/2);
+  const awayPart=-(3*wk+4*Math.max(0,(c.exp||1)-LEARN.minExp));
+  p+=awayPart; why.push({k:"Weeks off the field",v:awayPart,
+    note:"about "+wk+" weeks at a school, and no cut of anything while they are there"});
   // a trade leans on one attribute; being built for the new one is most of whether it appeals
   const fit=(c.attrs&&c.attrs[t.a])||0;
   const fitPart=Math.round((fit-55)*0.45);
@@ -6238,7 +6300,7 @@ function learnStart(c,k,paidExtra){
   c.learn={to:k,until:S.week+weeks,from:c.tech,fromExp:c.exp||1,paid:cost};
   c.status="learning";c.out=S.week+weeks;c._touched=true;
   logMsg(c.first+" is out of the field until week "+c.out+", learning "+TECH_BY_K[k].l.toLowerCase()
-    +" ("+money(cost)+"). Comes back "+EXP[learnNewRank(c)-1]+" at it, and no longer "+TECH_BY_K[c.tech].l.toLowerCase()+".","warn",true);
+    +" ("+money(cost)+"). Comes back still a "+TECH_BY_K[c.tech].l+", and a "+TECH_BY_K[k].l+" as well.","warn",true);
   stats().taught=(stats().taught||0)+1;
   save();
   return {weeks,cost};
@@ -6246,16 +6308,14 @@ function learnStart(c,k,paidExtra){
 // The week their school ends. Called from the same tick that brings back the hurt and the held.
 function learnFinish(c){
   const k=c.learn&&c.learn.to;if(!k)return;
-  const was=TECH_BY_K[c.tech]?TECH_BY_K[c.tech].l:c.tech;
-  c.exp=learnNewRank(c);
-  c.xp=0;
-  c.tech=k;
+  // ADDED, not swapped: the rank, the xp and the trade they are all stay exactly as they were.
+  c.tech2=k;
   c.know=(c.know||[]).slice();
   const kn=TECH_BY_K[k].know;
   if(kn&&c.know.indexOf(kn)<0)c.know.push(kn);      // the trade brings its own domain with it
   c.learn=null;c.status="crew";c.out=0;c._touched=true;
-  logMsg(c.first+" is back, and is a "+TECH_BY_K[k].l+" now — "+EXP[c.exp-1]
-    +" at it, and no longer a "+was+".","good",true);
+  logMsg(c.first+" is back from the school — still "+EXP[(c.exp||1)-1]+" "+TECH_BY_K[c.tech].l
+    +", and a "+TECH_BY_K[k].l+" as well now.","good",true);
 }
 
 /* ========================= LEARNING A LANGUAGE ========================= */
@@ -6421,7 +6481,7 @@ const LEARN_NO=[
 // Being leaned on: comply and hate it, refuse in front of everybody, or walk out tonight.
 function forceOdds(c){
   const st=standing(c);
-  const enf=recruits().some(x=>x.status==="crew"&&x.tech==="enforcer"&&x.id!==c.id);
+  const enf=recruits().some(x=>x.status==="crew"&&hasTech(x,"enforcer")&&x.id!==c.id);
   let go=clamp(Math.round(16+st*0.62)+(enf?14:0),5,88);
   let walk=clamp(Math.round(46-st*0.42)-(enf?10:0),2,70);
   if(hasTrait(c,"hothead"))walk+=10;
@@ -6967,12 +7027,13 @@ function modalTalk(){
     const od=to?learnOdds(c,t.to,t.extra||0):null;
     const weeks=to?(isBigTech(t.to)?LEARN.bigWeeks:LEARN.weeks):null;
     return '<div class="scrim center"><div class="modal" role="dialog" aria-label="A new trade">'
-      +head("A new trade · week "+S.week,"What else could "+c.first+" be?")
+      +head("A second trade · week "+S.week,"What else could "+c.first+" do?")
       +'<div class="modal-b">'+who
-      +'<div class="jobbrief"><p>Anybody can be taught. What it costs is money, the weeks they are not in the field, '
-        +'and rank: nobody carries '+esc(EXP[(c.exp||1)-1].toLowerCase())+' at one trade into another one. '
-        +esc(c.first)+' would come back <b>'+esc(EXP[learnNewRank(c)-1])+'</b> at whatever this is, and would not be '
-        +'a '+esc(TECH_BY_K[c.tech].l)+' any more.</p></div>'
+      +'<div class="jobbrief"><p>'+esc(c.first)+' stays <b>'+esc(EXP[(c.exp||1)-1])+' '+esc(TECH_BY_K[c.tech].l)
+        +'</b> and keeps every year of it. This is a second trade on top — worth a little less than the one '
+        +'they are, and always there. What it costs is the money and the weeks: a month or so at a school, '
+        +'no cut of anything the crew earns while they are gone. <b>One each</b>, so it is worth thinking '
+        +'about which.</p></div>'
       +'<div class="kicker">What to teach them</div>'
       +'<div class="twist-opts one">'+rows+'</div>'
       +(to?'<hr class="rule"><div class="kicker">'+esc(to.l)+' · '+money(learnCost(c,t.to))
@@ -6997,7 +7058,7 @@ function modalTalk(){
       +'<div class="factors">'
         +'<span class="k">Out of the field</span><span>until <span class="num">week '+c.out+'</span> — '+t.weeks+' weeks</span>'
         +'<span class="k">Paid</span><span><span class="minus num">'+money(t.cost)+'</span></span>'
-        +'<span class="k">Comes back</span><span>'+esc(EXP[learnNewRank(c)-1])+' '+esc(TECH_BY_K[t.to].l)+', and no longer '+esc(TECH_BY_K[c.learn.from].l)+'</span>'
+        +'<span class="k">Comes back</span><span>'+esc(EXP[(c.exp||1)-1])+' '+esc(TECH_BY_K[c.learn.from].l)+' still, and a '+esc(TECH_BY_K[t.to].l)+' as well</span>'
       +'</div>'
       +'<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" data-act="talk-close">Close</button></div>'
       +'</div></div></div>';

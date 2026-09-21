@@ -287,19 +287,23 @@ ch("crew","The crew","Places, who goes, and a second crew",[
       +"it is usually the single largest number in the factor list, and it is the reason a job you are short for is not worth running at any fee.")
     +note("Every row in that list carries a <b>File</b> button, the ones who cannot go included — the whole personnel file, opened over the job and closed back onto the same row. "
       +"Who goes is decided out of what is on those files, so they are read where the decision is made rather than on another screen.")),
-  S("learn","A new craft",
+  S("learn","A second trade",
     p("A trade is what somebody <i>is</i> in this game: the first line of their card, and the thing a client asks for by name. "
-      +"So it can be changed, and changing it is a conversation rather than a purchase — <b>Teach a trade</b> on their card opens it.")
-    +p("Anybody "+m(D.EXP[2])+" or better can be asked. What it costs:")
+      +"A second one is what they can also <i>do</i> — learned, kept, and carried alongside the first. "
+      +"<b>Teach a trade</b> on their card opens the conversation.")
+    +p("Anybody "+m(D.EXP[2])+" or better can be asked, and each of them <b>once</b>. What it costs:")
     +ul([
       "<b>Money</b> — from "+money(30000)+", more for a higher rank, and about twice as much for one of the <a href=\"#bigtechs\">specialists</a>.",
-      "<b>Weeks</b> — three to five out of the field, five to seven for a specialist. They cannot go on a job while they are at it.",
-      "<b>Rank</b> — they come back <b>two ranks lower</b>, at the new trade, and are no longer the old one. A Legend Safecracker becomes a Professional Hacker.",
+      "<b>Weeks</b> — four to six out of the field, six to eight for a specialist. They cannot go on a job while they are at it, and take no cut of anything the crew earns meanwhile. That is the whole price now, and it is the thing they weigh.",
+      "<b>Not their rank, and not who they are.</b> They come back the same rank at the same trade, able to do a second one. It is worth a little less on a job than the trade they are — "+m("+8")+" against "+m("+14")+" — and it is always there.",
     ])
+    +p("<b>Why it is worth the month.</b> A job names one to three trades out of sixteen and a crew has six or seven seats, so no fixed crew covers the board. "
+      +"The answer is not to keep replacing people — it is to have the same people cover more. Six who each do two things is a crew; "
+      +"six replaced every fortnight is a roster.")
     +p("<b>And they can say no.</b> The screen prints the chance they agree before you ask, and what it is made of: where you stand with them, "
-      +"what they are being asked to give up, whether they are built for the new work, and their temperament. "
+      +"the weeks they lose, whether they are built for the new work, and their temperament. "
       +"<i>Where you stand</i> is loyalty plus the nights you have actually been through together — it is not the same number as loyalty, and it is the one that decides this.")
-    +note("Ask and be refused and they will not hear it again for a month or two. Rank matters on both sides of it: a Professional gives up less than a Legend does, and answers accordingly.")),
+    +note("Ask and be refused and they will not hear it again for a month or two. Rank matters on both sides of it: a week off the field is worth more to a Legend than to a Professional, and they answer accordingly.")),
   S("learnno","And if they say no",
     p("Four directions, and which of them is worth taking is decided by the same number the refusal was.")
     +ul([
