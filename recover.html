@@ -69,14 +69,44 @@
   <h2>1 · Close the game</h2>
   <p>All of it — the window, and any copy still running. The files are locked while it is open.</p>
 
-  <h2 style="margin-top:26px">2 · Gather the files</h2>
-  <p>Press <kbd>Win</kbd>+<kbd>R</kbd>, type <code>powershell</code>, press Enter, then paste this one
-  line and press Enter. It only reads, copies, and makes a folder on your Desktop.</p>
-  <pre id="ps">$d="$env:USERPROFILE\Desktop\crew-save-files"; ni $d -ItemType Directory -Force | Out-Null; gci @("$env:LOCALAPPDATA","$env:USERPROFILE\Downloads","$env:USERPROFILE\Desktop") -Recurse -Force -Filter "*.ldb" -ErrorAction SilentlyContinue; gci @("$env:LOCALAPPDATA","$env:USERPROFILE\Downloads","$env:USERPROFILE\Desktop") -Recurse -Force -Include "*.log","*.ldb" -ErrorAction SilentlyContinue | ? { $_.DirectoryName -like "*Local Storage\leveldb*" } | % { cp $_.FullName (Join-Path $d ("{0}_{1}" -f ($_.Directory.Parent.Parent.Parent.Name), $_.Name)) -Force }; ii $d</pre>
-  <p class="note">A Desktop folder called <b>crew-save-files</b> should open. If it is empty, the game
-  keeps its data somewhere this line did not look — tell me and I will widen it rather than guess.</p>
+  <h2 style="margin-top:26px">2 · Look in the obvious place first</h2>
+  <p>Open the folder you unzipped the game into — the one holding <b>The Crew.exe</b> — and look for
+  a folder beside it called <b>The Crew.exe.WebView2</b>. Inside:</p>
+  <pre>The Crew.exe.WebView2\EBWebView\Default\Local Storage\leveldb</pre>
+  <p>That is where the browser inside the app keeps its storage, and it is the likeliest place your
+  games are. There may be an extra folder level or a slightly different name — what you are looking
+  for is a folder called <b>leveldb</b> with files ending <code>.ldb</code> and <code>.log</code> in
+  it. If you find it, skip to step 4 and drag those files in.</p>
+  <p class="note">If you re-downloaded and unzipped the game somewhere new, the old games are beside
+  the <b>old</b> copy, not the new one. Check every folder you ever unzipped it into.</p>
 
-  <h2 style="margin-top:26px">3 · Drop them here</h2>
+  <h2 style="margin-top:26px">3 · Or let the computer find it</h2>
+  <p>Press <kbd>Win</kbd>+<kbd>R</kbd>, type <code>powershell</code>, press Enter. Then select all of
+  this, copy it, right-click in the PowerShell window to paste, and press Enter. It only reads and
+  copies. Searching your whole user folder can take a couple of minutes.</p>
+  <pre id="ps">$dst = Join-Path ([Environment]::GetFolderPath('Desktop')) 'crew-save-files'
+New-Item $dst -ItemType Directory -Force | Out-Null
+Write-Host "Searching $env:USERPROFILE - this can take a few minutes..."
+$dirs = @(Get-ChildItem $env:USERPROFILE -Recurse -Force -Directory -Filter 'leveldb' -ErrorAction SilentlyContinue)
+Write-Host "Found $($dirs.Count) leveldb folder(s):"
+$n = 0
+foreach ($d in $dirs) {
+  Write-Host "   $($d.FullName)"
+  $tag = ($d.FullName -replace '[^A-Za-z0-9]','_')
+  if ($tag.Length -gt 50) { $tag = $tag.Substring($tag.Length - 50) }
+  Get-ChildItem $d.FullName -Force -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.Extension -eq '.ldb' -or $_.Extension -eq '.log' } |
+    ForEach-Object { Copy-Item $_.FullName (Join-Path $dst ($tag + '__' + $_.Name)) -Force; $n++ }
+}
+Write-Host "Copied $n file(s) to $dst"
+Start-Process $dst</pre>
+  <p class="note">It prints every folder it found and how many files it copied, so it says something
+  useful even when it finds nothing. If the count is <b>0</b>, send me those printed lines — that
+  tells me where to look next, which is better than me guessing at another path.</p>
+  <p class="note warn">The Desktop path is read from Windows itself rather than assumed, because
+  OneDrive moves the Desktop and an earlier version of this wrote to a folder that was not there.</p>
+
+  <h2 style="margin-top:26px">4 · Drop them here</h2>
   <p>Select everything in that folder and drag it onto the box. Nothing is uploaded — this page reads
   the files in your own browser and has nowhere to send them.</p>
   <div class="drop" id="drop" tabindex="0" role="button">
@@ -89,7 +119,7 @@
 <section id="out" class="hide">
   <h2>What was in them</h2>
   <div id="list"></div>
-  <h2 style="margin-top:26px">4 · Put it back</h2>
+  <h2 style="margin-top:26px">5 · Put it back</h2>
   <ol>
     <li>Open The Crew (build 98 or later — older builds will lose it again).</li>
     <li>Press <kbd>Esc</kbd> to open the office.</li>
