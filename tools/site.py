@@ -34,20 +34,19 @@ check = "--check" in sys.argv[1:]
 
 game = open(GAME, encoding="utf-8").read()
 
-# The build the PAGE names is the build of the THING IT OFFERS, which is the zip — not the game
-# sitting next to it in the repository. Those were the same number until the web build moved ahead
-# of the exe (a web-only fix, and no Windows toolchain to repack with), at which point reading it
-# out of play.html would have had the download page advertising a build nobody could download.
-# So it is read out of resources.neu inside the zip, the same way pack.py reads it back to check
-# it packed what it meant to.
-with zipfile.ZipFile(ZIP) as z:
-    neu = next((i for i in z.infolist() if i.filename.endswith("resources.neu")), None)
-    if not neu:
-        raise SystemExit("no resources.neu in %s — what is in that zip?" % ZIP)
-    m = re.search(rb'const BUILD="([^"]+)"', z.read(neu))
+# The build the PAGE names is the build of the THING IT OFFERS. That used to be the zip, so this
+# read the stamp out of resources.neu inside it — correct then, because the web build could move
+# ahead of the exe (a web-only fix, no Windows toolchain to repack with) and the download page
+# must not advertise a build nobody can download.
+#
+# The page offers play.html now. The zip is still built and still served for the exes already on
+# people's machines, but nothing on the page points at it — so reading the stamp from it had the
+# page saying build 99 over a game that said 100, which is the exact failure the old comment was
+# written to prevent, pointing the other way. It reads the game it serves.
+m = re.search(r'const BUILD="([^"]+)"', game)
 if not m:
-    raise SystemExit("no const BUILD= inside the zip's resources.neu")
-build = m.group(1).decode("utf-8")
+    raise SystemExit("no const BUILD= in play.html")
+build = m.group(1)
 
 # The day of the month comes off: "build 91 · 19 September 2026" reads as a date somebody needs
 # to act on, and nobody does — the month and the year say how current it is, which is the only

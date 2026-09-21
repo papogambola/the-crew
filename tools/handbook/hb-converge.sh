@@ -26,4 +26,9 @@ python3 hb-pages.py
 # title page went out reading 97 from a tree on 98. Three copies of a file is fine; three copies
 # and a manual step is not.
 cp handbook.html ../../handbook.html
-echo "built, printed, read back, published to ../../handbook.html"
+# And the printed one, for exactly the same reason. The copy at the top of the tree is the PDF
+# the site serves; nothing copied it, so it was whatever somebody last remembered to move. It was
+# found 78 pages against the built book's 82 — four pages, which is to say it predated the whole
+# rival chapter while the game had shipped it. The HTML got this fix and the PDF beside it did not.
+cp The-Crew-Handbook.pdf ../../The-Crew-Handbook.pdf
+echo "built, printed, read back, published to ../../handbook.html and ../../The-Crew-Handbook.pdf"

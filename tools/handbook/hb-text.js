@@ -357,6 +357,30 @@ ch("crew","The crew","Places, who goes, and a second crew",[
       +"The job file shows both numbers side by side — what the cuts cost and what the weeks cost — for exactly this reason.")
     +p("Benching also lowers the crew size bonus, and it removes whatever that person was bringing: their trade, their language, their knowledge, their passport. "
       +"The file recalculates the odds live as you bench people, so you can see the trade being made rather than guessing at it.")),
+  S("hire1","Somebody for the one night",
+    p("A crew of six cannot hold sixteen trades, and the board does not wait while you go and fetch the one it asked for. "
+      +"When a posting names a trade nobody going has, the job file offers people who are — three of them, from the best down to the cheaper — "
+      +"for that one night.")
+    +p("What a hired hand is <i>not</i> is a cheap crew member. They take <b>no place</b>, draw <b>no wages</b>, build <b>no bonds</b> either way, "
+      +"and cost <b>"+m(D.HIRED?(D.HIRED.stranger<0?"−"+Math.abs(D.HIRED.stranger):"+"+D.HIRED.stranger):"−7")+"</b> on the reckoning, "
+      +"because nobody in that room has worked with them. What they take is a contractor's share of the score.")
+    +G.T(["What it costs","Value"],[
+      ["Their share",m(Math.round((D.HIRED?D.HIRED.cutMin:0.17)*100)+"%")+" to "+m(Math.round((D.HIRED?D.HIRED.cutMax:0.30)*100)+"%")+" of the score, by rank — four or five times a crew member's"],
+      ["A place","none — the contract is for the night, not the crew"],
+      ["Wages","none — they are never on the payroll"],
+      ["On the reckoning",m(D.HIRED?(D.HIRED.stranger<0?"−"+Math.abs(D.HIRED.stranger):"+"+D.HIRED.stranger):"−7")+", a stranger in the room"],
+      ["Afterwards","they may talk"],
+    ])
+    +p("<b>They are paid out of the score, like everybody else.</b> That one fact is the whole mechanic: a night that pays nothing pays them nothing, "
+      +"and somebody who came, took the risk and went home empty is the one who goes to the police. So is somebody the police picked up at the scene. "
+      +"Nerve and years on the street pull the odds back down — a professional stays a professional on a bad night — and the job file prints both numbers "
+      +"before you sign: what they do after a night that comes off, and after one that doesn't.")
+    +p("When one talks it is "+m("+"+(D.HIRED?D.HIRED.talkHeat:11))+" heat, a thicker file on <a href=\"#det\">the detective's</a> desk, "
+      +"and a <b>Talked</b> stamp on theirs. They are never brought in again. Hiring them properly is a different question — a place, wages, "
+      +"and a stake in the next one — and it is still yours to decide.")
+    +note("The contract is for one posting. Open a different one and it is torn up, the same as benching. "
+      +"The offer only ever appears against a trade the field is missing — it is an answer to a gap, not a way to buy a better crew by the week — "
+      +"and it never appears on <a href=\"#ops\">an operation</a> or on the final score, which are the two screens that ask whether the crew you built is broad.")),
   S("hurt","Injured and held",
     p("A bad night puts people in hospital or in a cell. A doctor on retainer halves the weeks of an injury; a lawyer on retainer halves the weeks of a sentence. "
       +"Somebody who comes out of a cell is back on the roster rather than on your crew, a year older, with that year on their record — and a record is what borders read.")),
@@ -395,6 +419,32 @@ ch("board","The board","Where the work comes from",[
       +"They expire. A posting you were saving for next week may not be there next week.")
     +p("Clients post to a <b>name</b>. A Nobody sees tier 1 and 2 only; a Known crew sees tier 3; Respected and above see everything. "
       +"A client you have botched a job for stops posting to you at all.")),
+  S("reading","Reading a posting",
+    p("Every row leads with the verdict — <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go. "
+      +"Hover it and it shows its working: your reckoning against the job's difficulty, the "+m("±"+D.BAL.roll)+" the night rolls on top, "
+      +"and the odds of each ending. A verdict with no sum behind it is the one thing this game is not supposed to print.")
+    +p("Under it, every requirement the client named, green if you hold it and red if you don't — and each one says <b>what it is worth here</b>, "
+      +"in the same points the reckoning is counted in. Three kinds of number, and the difference between them matters:")
+    +G.T(["On a chip","Means"],[
+      [m("+9"),"being counted for you right now"],
+      [m("(+9)"),"what somebody who had it would be worth — you are not charged for missing it, you are declining a bonus"],
+      [m("−6"),"a charge, being taken off the reckoning now"],
+    ])
+    +p("A <b>trade</b> is "+m("+"+(D.TRADE_COVER||4))+" to the crew for being covered at all, plus "+m("+"+(D.TECH_BONUS||14))
+      +" to the one who <i>is</i> it or "+m("+"+(D.TECH_BONUS_2||8))+" to one who <a href=\"#learn\">learned it second</a> — "
+      +"and because the reckoning averages the field, that bonus is divided by how many go. A specialist in a room of three is most of the room; "
+      +"the same person in a room of seven is a seventh of it. Bench somebody and the number moves, which is the trade being made, shown.")
+    +p("<b>Knowledge</b> is "+m("+"+(D.KNOW_BONUS||5))+", or "+m("+"+(D.KNOW_SCHOOLED||10))+" if the one who knows it went to university, "
+      +"and "+m(String(D.KNOW_MISSING||-6).replace("-","−"))+" if nobody going knows it. The <b>language</b> is "+m("+"+(D.LANG_BONUS||6))
+      +" spoken, "+m(String(D.LANG_MISS||-8).replace("-","−"))+" not — "+m(String(D.LANG_MISS_TALK||-14).replace("-","−"))
+      +" on a job that is all talk.")
+    +p("<b>An ordinary posting names at most two trades</b> — one at tier 1, two from tier 2 up. Three or more named by one "
+      +"client is the signature of <a href=\"#ops\">an operation</a>, and the top of the weekly board asking the same "
+      +"question blurred the one screen that is meant to be a different kind of night. A tier-4 posting is still the "
+      +"hardest thing on the board: the difficulty, the five in the field and the second kind of knowledge all still "
+      +"arrive with it.")
+    +note("So a missing trade and a missing piece of knowledge are not the same red. One of them costs you nothing you had; "
+      +"the other comes off the night. Both used to be drawn as a plain cross, which said they were the same thing.")),
   S("tiers","Tiers",
     p("Four of them on the open board, and the tier decides the fee, how many weeks it holds the crew, how many people the client needs, and how long you are allowed to sit outside it first.")
     +G.pay()
@@ -630,7 +680,7 @@ ch("money","Money","Where it goes",[
 
 /* ---------------- 12 -------------------------------- */
 ch("heat","Heat and the law","Being looked for",[
-  S("what","Heat",
+  S("heatwhat","Heat",
     p("A number from 0 to 120 measuring how hard the world is looking at you. Jobs add it. It falls "+m("5")+" a week by itself, "+m("7")+", "+m("9")+" or "+m("11")+" with a safe house.")
     +p("Heat costs you "+m("−0.24")+" on every job, per point — at heat 80 every job is "+m("−19")+" before anybody has done anything. It is not a punishment meter; it is a difficulty dial that you turn yourself.")
     +p("<b>Laying low</b> spends a week for "+m("−15")+" heat and "+m("−6")+" off the detective's file, and costs one point of ranking. A name unused is a name forgotten.")),
@@ -654,13 +704,20 @@ ch("rival","The competition","Somebody else is working the board",[
     p("The competition has a name from the day it appears; yours is asked for from <b>week 4</b>. Type one, or take one off the shelf with <b>↻ Random</b> — a list in the game's voice, plus names built from your file: your surname the way the rival's outfit is built, a city the crew has worked, your first name. "
       +"<b>Later</b> puts the question off three weeks. The Crew tab's <b>✎ Rename</b> opens the same card whenever you like; the log keeps what it was.")
     +p("The name heads the Crew tab, sits on the Dashboard beside your alias, on the job reports and on the saved-game line, and is what the rival's standing is measured against. It goes on nothing the police can read.")),
-  S("who","The other outfit",
+  S("rivalwho","The other outfit",
     p("Once you reach ranking 20, somebody else appears on the same board with their own boss, their own name and their own standing. They are not an event — they are a second player.")
     +ul([
       "Most weeks they take a posting off the board, and it is the <b>best one left</b>.",
       "Every posting they take raises their standing.",
       "When their standing is ahead of yours they take more often, and they start buying your crew drinks.",
-    ])),
+    ])
+    +p("<b>And past a ranking of "+m(D.RIVAL?D.RIVAL.secondRep:120)+", there can be two of them.</b> One rival is a duel, and the "
+      +"whole first act is meant to be one — you learn what a rival is by having exactly one. A second arrives only when the "
+      +"name is big enough to be worth two people's trouble, and then the board is eaten from both ends: each of them rolls "
+      +"for the best posting left, one after the other, most weeks.")
+    +p("They are separate people with separate chapters. Each has its own card on the Dashboard, its own standing, its own "
+      +"price to buy out, its own yard on the board, and its own run of weeks you have held clear of them. You finish them "
+      +"<b>one at a time</b>, and finishing one does nothing at all to the other.")),
   S("poach","Being poached",
     p("While another crew is buying drinks, your least loyal member who is not paid up has a real chance of walking every week. Loyalty below 60 is the danger zone. "
       +"A bonus makes somebody deaf to it for "+m(D.PAID_WEEKS)+" weeks — which is the cheapest counter in the game.")),
@@ -678,7 +735,10 @@ ch("rival","The competition","Somebody else is working the board",[
       "<b>Give them to the law</b> — costs no money and no heat, and finishes them at once. It also puts you in a room with the detective: <b>34 points</b> onto the file on <i>your</i> alias, and the file is what decides how early the raid comes. The price is real and it arrives later.",
       "<b>Take them apart</b> — a posting on the board like any other, against their yard. Your crew, a night that can go wrong, and somebody can get hurt. Run it well and there is no competition. Run it badly and they know exactly whose people those were: their standing climbs, and the yard is watched for weeks.",
     ])
-    +note("Beating one does not end the competition. Somebody else works the board within six to twelve weeks, and they start from where the last one got to — so the fourth is a problem where the first was an irritation.")),
+    +note("Every one of these names the outfit it closes, and with two on the board that matters: the buttons are on that "
+      +"outfit's card, the yard on the board says whose it is, and the six weeks clear are counted against that one's "
+      +"standing alone. Beating one does not end the competition — somebody else works the board within six to twelve "
+      +"weeks, and they start from where the last one got to, so the fourth is a problem where the first was an irritation.")),
 ]);
 
 /* ---------------- 14 -------------------------------- */

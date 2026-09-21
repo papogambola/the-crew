@@ -211,6 +211,19 @@
   .c-warn{color:var(--warn);border-color:var(--warn)}
   .c-bad{color:var(--bad);border-color:var(--bad)}
   .c-ink{color:var(--ink);border-color:var(--ink)}
+  /* The number on a requirement chip. Quieter ink than the label, because the label is the
+     thing being looked for and the number is the answer to "and so?" — and tabular, so a
+     column of chips down a board lines its digits up instead of shimmering. */
+  .tag .w{font-variant-numeric:tabular-nums;opacity:.72;margin-left:1px}
+  /* The verdict. It used to be a 10px chip at the end of a row of eight others, which is to
+     say it was the conclusion set in the same type as its own footnotes. Displayed type, a
+     double rule, and first on the line: on a board of twelve postings the question is which
+     three are worth opening, and this is the only thing on the row that answers it. */
+  .fit{display:inline-block;font-family:var(--f-disp);font-size:12.5px;letter-spacing:.07em;
+       text-transform:uppercase;border:2px solid;padding:0 7px;vertical-align:2px;white-space:nowrap}
+  .fit.f-good{color:var(--good);border-color:var(--good)}
+  .fit.f-warn{color:var(--warn);border-color:var(--warn)}
+  .fit.f-bad{color:var(--stamp);border-color:var(--stamp)}
 
   .rosterbar{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
   .field{display:flex;flex-direction:column;gap:3px}
@@ -264,6 +277,7 @@
   .jobrow:last-child,.streetrow:last-child{border-bottom:0}
   .jobrow .code,.streetrow .code{font-family:var(--f-mono);font-size:11px;color:var(--muted);width:52px}
   .jobrow .t,.streetrow .t{font-family:var(--f-disp);font-size:17px;letter-spacing:.02em}
+  .jobrow .fitline{margin-bottom:4px;line-height:1}
   .jobrow .loc,.streetrow .loc{font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-top:2px}
   .jobrow .pay,.streetrow .pay{font-family:var(--f-mono);font-size:15px;text-align:right;font-weight:500}
   .jobrow .meta,.streetrow .meta{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
@@ -700,6 +714,15 @@
 // eighteen weeks. The world now answers the name — the bigger the crew, the better defended
 // the rooms it is given, and a country worked lately is watching for it.
 const TECH_BONUS=14, TECH_BONUS_2=8;   // the trade you are, and the trade you learned
+/* What every requirement on a posting is worth, in the points the reckoning is counted in.
+   These used to be literals inside assessJob, and the chips beside them said only ✓ or ✗ —
+   so the board could tell you that you were missing a Forger without ever telling you what a
+   Forger was worth, and "Long odds" arrived as an opinion with no sum behind it. The chips
+   now print these, which means the two have to be the same number: one name each, read by
+   the reckoning that applies it and by the chip that explains it. */
+const TRADE_COVER=4;                   // flat, per wanted trade the field covers
+const KNOW_BONUS=5, KNOW_SCHOOLED=10, KNOW_MISSING=-6;
+const LANG_BONUS=6, LANG_MISS=-8, LANG_MISS_TALK=-14;
 const BAL={
   // --- the job ---
   // The spread between tiers widens rather than the floor rising: a tier-1 errand stays a way
@@ -1681,7 +1704,122 @@ function bondWord(b){return b>=3?"would go anywhere with":b===2?"works well with
 // Who goes on this job. Everyone eligible goes unless you bench them on the job file:
 // a benched member takes no cut, learns nothing, and cannot be hurt — and the crew that does go is smaller.
 function benchSet(job){return (job&&S.benchJob===job.id&&Array.isArray(S.bench))?S.bench:[];}
-function jobPool(job){const b=benchSet(job);return crewAll().filter(c=>b.indexOf(c.id)<0);}
+function jobPool(job){
+  const b=benchSet(job);
+  const p=crewAll().filter(c=>b.indexOf(c.id)<0);
+  const h=hiredFor(job);
+  return h?p.concat([h]):p;
+}
+
+/* ------------------- SOMEBODY FOR THE ONE NIGHT ---------------------
+   The third answer to the thing that made a crew a roster. Teaching a second trade is slow and
+   permanent; capping what a posting asks for lowers the demand; this is the one for the week a
+   posting wants a Safecracker, nobody is one, and the board does not wait. You bring somebody
+   in for that night alone.
+
+   What it is NOT is a cheap crew member. It takes no place, draws no wages and builds nothing —
+   and it costs a cut four or five times a crew member's, because a stranger with no stake sells
+   one night at a time. They are paid out of the score like everybody else, which is the part
+   that matters: a botched night pays them nothing, and somebody who came, took the risk and
+   went home empty is the one who talks. That is the whole mechanism. The cost is not the cut,
+   the cost is that you now have a person outside your crew who knows what you did.
+
+   Against the rest of the game they are a stranger: −7 on the reckoning, because the crew has
+   never worked with them, and no bonds, because what a crew has between them is made of many
+   nights and a payroll. They do gain from the night — a night's work is a night's work — so
+   the same Forger brought in three times is a Forger worth hiring. */
+const HIRED={
+  cutBase:0.15, cutPerRank:0.028, cutMin:0.17, cutMax:0.30,
+  stranger:-7,            // per stranger on the reckoning
+  talkBase:0.10,          // a professional, paid, after a night that came off
+  talkUnpaid:0.26,        // the night paid nothing, so they were paid nothing
+  talkTaken:0.30,         // picked up at the scene, in a cell, knowing your business
+  talkHeat:11, talkFile:9,
+  offers:3
+};
+function hiredCut(c){return clamp(HIRED.cutBase+(c.exp||1)*HIRED.cutPerRank,HIRED.cutMin,HIRED.cutMax);}
+/* Who is contracted for this job, if anybody. Read from S rather than carried on the person,
+   so it cannot outlive the job it was agreed for — and read by entry(), assessJob() and the
+   split alike, which is why it has to survive until finishJob has paid them. */
+function hiredFor(job){
+  if(!job||!S.hiredId||S.hiredJob!==job.id)return null;
+  const c=byId(S.hiredId);
+  return (c&&c.status==="available")?c:null;
+}
+// A stranger is anybody in the field who is not on anybody's crew. Asked of the person rather
+// than looked up, so it still answers correctly in finishJob, after the contract is torn up.
+function strangersIn(team){return team.filter(c=>!c.isPlayer&&c.status!=="crew");}
+function hiredGaps(job,team){return job.techs.filter(t=>!team.some(c=>hasTech(c,t)));}
+function bringInWhy(c,job,forger){
+  if(!c||c.status!=="available")return "not on the roster";
+  if(c.talked)return "talked to the police after "+c.talked.city;
+  if(c.coolUntil&&S.week<c.coolUntil)return "turned you down — not before week "+c.coolUntil;
+  const e=entry(c,job,forger,true);
+  return e.ok?"":e.why;
+}
+/* Who would come. Only ever offered for a trade the field is missing — a hired hand is an answer
+   to a gap, not a way to buy a better crew by the night, and the moment it fills bodies rather
+   than trades it is a way around the borders and the limits.
+
+   A SPREAD, not the best three. The share scales with rank and so does the nerve to keep quiet,
+   so the top three by rank are three Legends at 29% who all talk about 2% of the time — one
+   option printed three times. Offering the best, the middle and the cheapest makes it the
+   decision it is: pay for somebody who will not talk, or save nine points of the score and
+   find out. */
+function hiredOffers(job,a){
+  const gaps=hiredGaps(job,a.team);
+  if(!gaps.length)return [];
+  const forger=a.team.some(c=>hasTech(c,"forger"));
+  const all=S.roster.filter(c=>c.status==="available"&&gaps.some(t=>hasTech(c,t))&&!bringInWhy(c,job,forger))
+    .sort((x,y)=>(y.exp-x.exp)||(memberEff(y,job)-memberEff(x,job)));
+  if(all.length<=HIRED.offers)return all;
+  // Weighted towards the good end. Spreading evenly across the whole list put the worst
+  // smuggler alive in the third row at −3 on the reckoning, which is a row nobody will ever
+  // press: the choice worth showing is best / good / cheaper, not best / middling / hopeless.
+  const n=all.length,at=[0,0.25,0.55],out=[];
+  for(let i=0;i<HIRED.offers;i++){
+    const c=all[Math.min(n-1,Math.floor((at[i]==null?1:at[i])*n))];
+    if(out.indexOf(c)<0)out.push(c);
+  }
+  return out;
+}
+/* What the reckoning would say with this one in the room. Asked by making it true for the
+   length of the question, because entry() refuses anybody who is not on the crew unless they
+   are contracted — so simply appending them to the pool and assessing gave every candidate
+   "+0 on the reckoning", which is the one number the row exists to show. */
+function assessWith(job,c){
+  const j0=S.hiredJob,i0=S.hiredId;
+  S.hiredJob=job.id;S.hiredId=c.id;
+  const a=assessJob(job,jobPool(job));
+  S.hiredJob=j0;S.hiredId=i0;
+  return a;
+}
+function bringIn(job,id){
+  if(!job)return;
+  const c=byId(id);if(!c)return;
+  const a=assessJob(job,jobPool(job));
+  const why=bringInWhy(c,job,a.team.some(x=>hasTech(x,"forger")));
+  if(why){note(c.first+": "+why+".");return;}
+  S.hiredJob=job.id;S.hiredId=id;
+  sfx("coin");
+  logMsg("Brought "+c.n+" in for the "+job.city+" job — "+TECH_BY_K[c.tech].l.toLowerCase()
+    +", "+Math.round(hiredCut(c)*100)+"% of the score, one night, nothing after it.","");
+  save();
+}
+function bringInOff(){S.hiredJob=null;S.hiredId=null;save();}
+/* What they do afterwards. The odds are the night they had: paid for a clean one and quiet,
+   paid nothing for a botched one and angry, and worst of all picked up at the scene. Nerve and
+   the years on the street pull it down — a professional stays a professional on a bad night.
+   Everything this rolls is a consequence of something the player chose or something that
+   happened where the player was watching. */
+function hiredTalkOdds(c,tier,taken){
+  let p=HIRED.talkBase;
+  if(tier<=1)p+=HIRED.talkUnpaid;
+  if(taken)p+=HIRED.talkTaken;
+  p-=(c.attrs.nerve-50)/500;
+  p-=(c.streets||0)/300;
+  return clamp(p,0.02,0.78);
+}
 function toggleBench(job,id){
   if(!job)return;
   if(S.benchJob!==job.id){S.benchJob=job.id;S.bench=[];}
@@ -1706,9 +1844,12 @@ function makeRival(rng){
   /* Each one starts from what the last one reached, plus a step — so the ladder climbs with
      the player instead of resetting to "a bit behind you" every time. The first starts just
      behind; the fourth starts as a problem. */
-  const n_=(S.beat||[]).length+1;
+  // Counts the ones still standing as well as the ones beaten — with two on the board at once,
+  // "how many have there been" is not the same question as "how many are finished".
+  const n_=(S.beat||[]).length+rivals().length+1;
   const floor=Math.max(6,(S.rivalHigh||0)+(n_>1?RIVAL.stepUp:0));
-  return {boss:n.first+" "+n.last,last:n.last,gender:g,name:"the "+n.last+" "+pick(rng,OUTFIT),
+  S.rivalSeq=(S.rivalSeq||0)+1;
+  return {id:"RV"+S.rivalSeq,boss:n.first+" "+n.last,last:n.last,gender:g,name:"the "+n.last+" "+pick(rng,OUTFIT),
     standing:Math.max(floor,S.rep-ri(rng,0,8)),took:0,since:S.week,n:n_,lead:0};
 }
 function makeDetective(rng){
@@ -1716,7 +1857,14 @@ function makeDetective(rng){
   const n=randomName(rng,g);
   return {name:"Detective "+n.last,full:n.first+" "+n.last,gender:g,file:0,since:S.week};
 }
-function rival(){return S.rival||null;}
+/* The one the game means by "the rival" when it does not name one: the biggest of them. A
+   weekly event about the other outfit is about the one that matters, and so is the line on the
+   dashboard. Everything with a verb in it — buy out, burn, take apart — names an id instead. */
+function rival(){
+  const r=rivals();
+  if(!r.length)return null;
+  return r.reduce((a,b)=>b.standing>a.standing?b:a);
+}
 function detective(){return S.det||null;}
 function detFile(){return S.det?Math.round(S.det.file):0;}
 // A thick file brings the raid forward.
@@ -1727,12 +1875,18 @@ function rivalAhead(){return !!(rival()&&rival().standing>S.rep);}
    short, and being one short here is the difference between "go and fetch a Forger" and watching
    the job go off the board with the Forger still on a plane. */
 function jobLeft(j){return j.final?99:Math.max(0,j.expires-S.week+1);}
-// The rival takes a posting off the board — the best one still there.
+/* Each rival takes a posting off the board — the best one still there. Rolled one at a time,
+   biggest first, and each looks at what is left after the other has been: two outfits working
+   one board is the pressure the second one is FOR, and the floor of five open postings holds
+   for both of them, so a thin week is never stripped to nothing. */
 function rivalWorks(rng){
-  const rv=rival();if(!rv)return;
+  rivals().slice().sort((a,b)=>b.standing-a.standing).forEach(rv=>rivalWorksOne(rng,rv));
+}
+function rivalWorksOne(rng,rv){
+  if(!rv)return;
   const open=S.jobs.filter(j=>!j.final&&!j.big&&!j.rival);   // they do not take the job against themselves
   if(open.length<5)return;
-  if(!chance(rng,rivalAhead()?0.5:0.38))return;
+  if(!chance(rng,rv.standing>S.rep?0.5:0.38))return;
   const j=open.slice().sort((a,b)=>b.tier-a.tier||b.payout-a.payout)[0];
   const a=assessJob(j),cased=casedWeeks(j);          // read it while the posting is still there
   S.jobs=S.jobs.filter(x=>x.id!==j.id);
@@ -1787,8 +1941,22 @@ const RIVAL={
   burnFile:34,         // what feeding the detective adds to the file on YOU
   backMin:6, backMax:12, // weeks before the next one turns up
   stepUp:8,            // and how much higher the next one starts
+  /* And there can be two of them. One rival is a duel and the whole first act should be one —
+     you learn what a rival is by having exactly one. A second arrives only once the name is big
+     enough to be worth two people's trouble, which is the cause; the consequence is a board
+     eaten from both ends, and the result is that the four ways out have to be aimed. */
+  maxAt:2, secondRep:120,
 };
-function rivalBuyoutCost(){const rv=rival();return rv?Math.max(RIVAL.buyoutMin,rv.standing*RIVAL.buyoutPer):0;}
+/* ONE RIVAL, OR TWO. S.rivals is the truth and rival() is the one the game means when it says
+   "the rival" without naming one — the biggest of them, because that is who a weekly event is
+   about and whose name goes on a summary line. Everything that ACTS on a rival takes an id,
+   because an ending that does not know which one it is closing is not an ending. */
+function rivals(){return S.rivals||[];}
+function rivalById(id){return rivals().find(r=>r.id===id)||null;}
+function rivalBuyoutCost(id){
+  const rv=id?rivalById(id):rival();
+  return rv?Math.max(RIVAL.buyoutMin,rv.standing*RIVAL.buyoutPer):0;
+}
 // Their people, loose on the roster. Beating a crew is how you meet the specialists on it.
 function rivalScatter(rng,n){
   const out=[];
@@ -1801,38 +1969,43 @@ function rivalScatter(rng,n){
 }
 /* The one place a rival ends, whichever way it was done — so the succession, the record and the
    scattering cannot drift apart from each other. */
-function rivalEnd(how,text,tone){
-  const rv=rival();if(!rv)return;
+function rivalEnd(id,how,text,tone){
+  const rv=rivalById(id);if(!rv)return;
   const rng=freshRng();
   S.beat=(S.beat||[]).concat([{name:rv.name,boss:rv.boss,how:how,week:S.week,standing:rv.standing,n:rv.n||1}]);
   const loose=rivalScatter(rng,how==="bought"?ri(rng,2,3):ri(rng,1,2));
   const names=loose.map(c=>c.first+" the "+TECH_BY_K[c.tech].l.toLowerCase());
   S.rivalHigh=Math.max(S.rivalHigh||0,rv.standing);
-  S.rival=null;
+  S.rivals=rivals().filter(r=>r.id!==rv.id);
+  // Their posting goes with them. A yard belonging to an outfit that no longer exists is not
+  // a job, and with two of them on the board the other one's posting has to survive this.
+  S.jobs=(S.jobs||[]).filter(j=>!(j.rival&&j.rivalId===rv.id));
   S.rivalNext=S.week+ri(rng,RIVAL.backMin,RIVAL.backMax);
+  const others=rivals().length;
   logMsg(cap(rv.name)+" is finished. "+text,tone||"good",true);
   S.notices=(S.notices||[]).concat([{k:"The competition · week "+S.week,h:cap(rv.name)+" is finished",
     text:text+(names.length?" Their people are looking for work: "+listAnd(names)+" are on the roster, already vetted."
                            :" Their people have scattered and none of them came to you.")
-      +" Somebody else will work this board soon enough; they always do.",
+      +(others?" "+cap(rival().name)+" is still out there, and the board is still not yours alone."
+              :" Somebody else will work this board soon enough; they always do."),
     go:"roster",goText:"Who is loose →"}]);
   save();
 }
-function rivalBuyout(){
-  const rv=rival();if(!rv)return;
-  const cost=rivalBuyoutCost();
+function rivalBuyout(id){
+  const rv=rivalById(id)||rival();if(!rv)return;
+  const cost=rivalBuyoutCost(rv.id);
   if(S.money<cost){note("Buying out "+rv.name+" costs "+money(cost)+".");return;}
   S.money-=cost;
-  rivalEnd("bought",rv.boss+" took "+money(cost)+" and the name off the door. No noise, no heat, "
+  rivalEnd(rv.id,"bought",rv.boss+" took "+money(cost)+" and the name off the door. No noise, no heat, "
     +"and a receipt nobody will ever see.","good");
   render();
 }
-function rivalBurn(){
-  const rv=rival(),dt=detective();
+function rivalBurn(id){
+  const rv=rivalById(id)||rival(),dt=detective();
   if(!rv)return;
   if(!dt){note("There is nobody to tell yet.");return;}
   dt.file=clamp(dt.file+RIVAL.burnFile,0,100);
-  rivalEnd("burned",rv.boss+" was arrested on a Tuesday on the strength of something nobody can "
+  rivalEnd(rv.id,"burned",rv.boss+" was arrested on a Tuesday on the strength of something nobody can "
     +"trace to you. It worked. It also put you in a room with "+dt.name+", and "+dt.name
     +"'s file on your alias is "+detFile()+" now — a raid comes at heat "+raidAt()+".","warn");
   render();
@@ -1840,42 +2013,62 @@ function rivalBurn(){
 /* Six weeks clear of them and the clients stop calling. Counted at the turn of the week, and
    the streak breaks the moment they close the gap — this is the slow one, and it should feel
    like holding something rather than reaching it once. */
+/* Counted for each of them separately, because being clear of one is not being clear of the
+   other — and with two on the board this is the way out that can finish them one at a time
+   without you doing anything but keep working. */
 function rivalLeadTick(){
-  const rv=rival();if(!rv)return;
-  const clear=S.rep-rv.standing;
-  if(clear>=RIVAL.leadGap){
-    rv.lead=(rv.lead||0)+1;
-    if(rv.lead>=RIVAL.leadWeeks){
-      rivalEnd("outworked",rv.boss+" has not taken a posting worth having in "+RIVAL.leadWeeks
-        +" weeks. The clients ring the name at the top of the chart, and that has been yours all "
-        +"quarter. They are not in prison and nobody paid them off — they simply stopped being "
-        +"the other option.","good");
-      return;
+  rivals().slice().forEach(rv=>{
+    const clear=S.rep-rv.standing;
+    if(clear>=RIVAL.leadGap){
+      rv.lead=(rv.lead||0)+1;
+      if(rv.lead>=RIVAL.leadWeeks){
+        rivalEnd(rv.id,"outworked",rv.boss+" has not taken a posting worth having in "+RIVAL.leadWeeks
+          +" weeks. The clients ring the name at the top of the chart, and that has been yours all "
+          +"quarter. They are not in prison and nobody paid them off — they simply stopped being "
+          +"the other option.","good");
+        return;
+      }
+      if(rv.lead===RIVAL.leadWeeks-2)
+        logMsg("Two more weeks clear of "+rv.name+" and the clients stop calling them altogether.","good",true);
+    } else if(rv.lead){
+      if(rv.lead>=3)logMsg(cap(rv.name)+" closed the gap. The run of weeks clear of them is back to nothing.","warn");
+      rv.lead=0;
     }
-    if(rv.lead===RIVAL.leadWeeks-2)
-      logMsg("Two more weeks clear of "+rv.name+" and the clients stop calling them altogether.","good",true);
-  } else if(rv.lead){
-    if(rv.lead>=3)logMsg(cap(rv.name)+" closed the gap. The run of weeks clear of them is back to nothing.","warn");
-    rv.lead=0;
-  }
+  });
 }
 /* The fourth way is a posting, because everything good in this game is a posting: a crew you
    chose, a night that goes wrong in the middle, and a report that says who did what. It stands
    on the board like any other and expires like any other, and it only appears once you are
    close enough to them for it to be worth the heat. */
-function rivalJobReady(){
-  const rv=rival();
+function rivalJobReady(rv){
+  rv=rv||rival();
   return !!(rv&&!S.over&&S.rep>=rv.standing-20&&(rv.since||0)+4<=S.week);
 }
+/* One yard per outfit, and the yard names its outfit. With two of them the board can carry two
+   of these at once, which is the week the whole chapter is for: both of them are reachable and
+   you have one crew and one week. */
 function maybeUnlockRivalJob(){
-  const rv=rival();
-  if(!rv||!rivalJobReady()){S.jobs=(S.jobs||[]).filter(j=>!j.rival);return;}
-  if((S.jobs||[]).some(j=>j.rival))return;
-  if(S.rivalJobBack&&S.week<S.rivalJobBack)return;
+  // First, sweep any posting whose outfit is gone or no longer reachable.
+  S.jobs=(S.jobs||[]).filter(j=>{
+    if(!j.rival)return true;
+    const rv=rivalById(j.rivalId);
+    return !!(rv&&rivalJobReady(rv));
+  });
+  rivals().forEach(rv=>{
+    if(!rivalJobReady(rv))return;
+    // A night at their yard that went wrong is THEIR yard being watched, not the other
+    // outfit's. It was one flag on the game, so a botched raid on one of them quietly hid
+    // the other one's posting for six weeks as well.
+    if(rv.jobBack&&S.week<rv.jobBack)return;
+    if((S.jobs||[]).some(j=>j.rival&&j.rivalId===rv.id))return;
+    unlockRivalJob(rv);
+  });
+}
+function unlockRivalJob(rv){
   const rng=freshRng();
   const co=pick(rng,COUNTRIES.filter(c=>c.cats.indexOf("sabotage")>=0))||COUNTRIES[0];
   S.jobs.unshift({
-    id:"JRIV"+S.week, rival:true, cat:"sabotage", tier:4,
+    id:"JRIV"+rv.id+"-"+S.week, rival:true, rivalId:rv.id, cat:"sabotage", tier:4,
     country:co.name, city:pick(rng,co.cities)+", and a yard they think nobody knows about",
     need:4, diff:Math.max(60,Math.round(rv.standing*1.5+40)), payout:Math.round(rv.standing*4200)+90000,
     heat:30, techs:["enforcer","hacker","lookout"], know:["Logistics","Weapons"], tags:["night"],
@@ -1888,16 +2081,17 @@ function maybeUnlockRivalJob(){
       +"and there is no competition on this board. Do it badly and they will know exactly who it was."});
   logMsg("There is a way to finish "+rv.name+" on the board this week — their yard, one night.","big",true);
 }
-function rivalPressure(){
-  const rv=rival();if(!rv)return;
-  const cost=Math.max(40000,rv.standing*3000);
+function rivalPressureCost(rv){return Math.max(40000,(rv?rv.standing:0)*3000);}
+function rivalPressure(id){
+  const rv=rivalById(id)||rival();if(!rv)return;
+  const cost=rivalPressureCost(rv);
   if(S.money<cost){note("Buying somebody inside "+rv.name+" costs "+money(cost)+".");return;}
   S.money-=cost;rv.standing=clamp(rv.standing-ri(freshRng(),8,14),0,999);
   logMsg("Bought a name inside "+rv.name+" for "+money(cost)+". Their standing "+rv.standing+".","good");
   save();render();
 }
-function rivalEnforce(){
-  const rv=rival();if(!rv)return;
+function rivalEnforce(id){
+  const rv=rivalById(id)||rival();if(!rv)return;
   if(!payroll().some(c=>c.status==="crew"&&hasTech(c,"enforcer"))){note("That needs an Enforcer on the books.");return;}
   const rng=freshRng();
   if(chance(rng,0.65)){rv.standing=clamp(rv.standing-ri(rng,12,20),0,999);S.heat=clamp(S.heat+6,0,120);
@@ -2339,7 +2533,18 @@ function makeJob(rng,tierBias){
   const payout=Math.round(payBase*(0.7+rng()*0.8)*rk.pay/1000)*1000;
   const heat=Math.round(cat.heat*(0.8+tier*0.12)*(co.auth?1.2:1));
   const techs=[];const pool=cat.techs.slice();
-  const nt=clamp(1+Math.floor(tier/2),1,3);
+  /* Two, at most, on an ordinary posting. Three used to arrive at tier 4 and it is the wrong
+     place for three: three trades named by one client is the signature of an operation, which
+     asks seven people and three to five of them, and having the top of the weekly board ask
+     the same question blurred the one screen that is supposed to be a different kind of night.
+     Tier 4 is still the hardest posting on the board — the difficulty, the five in the field
+     and the second kind of knowledge all still arrive with it.
+
+     Measured, on one crew held still over 200 weeks of boards with the seed pinned so both
+     runs saw the same world: tier-4 postings where the crew held NONE of the wanted trades
+     went from 55.2% to 68.5%, which is the honest cost of the change — three names are three
+     chances to match one. That is what the one-night hand is now for. */
+  const nt=clamp(1+Math.floor(tier/2),1,2);
   for(let i=0;i<nt&&pool.length;i++)techs.push(pool.splice(Math.floor(rng()*pool.length),1)[0]);
   const know=[pick(rng,cat.know)];
   if(tier>=3&&cat.know.length>1){const k=pick(rng,cat.know);if(!know.includes(k))know.push(k);}
@@ -2639,7 +2844,7 @@ function maybeUnlockFinal(){
 
 /* --------------------------- JOB RESOLUTION --------------------------- */
 // Can this member work this job? Returns {ok, why}.
-function entry(c,job,forgerAboard){
+function entry(c,job,forgerAboard,asHired){
   const co=COUNTRY_BY_NAME[job.country];
   const nat=natOf(c);
   for(const k of c.limits){
@@ -2647,7 +2852,12 @@ function entry(c,job,forgerAboard){
     if(l.country&&l.country(co))return {ok:false,why:l.l};
     if(l.tag&&job.tags.includes(l.tag))return {ok:false,why:l.l+" — job is "+TAG_LABEL[l.tag]};
   }
-  if(c.status!=="crew")return {ok:false,why:c.status==="injured"?"injured, back week "+c.out
+  // Somebody brought in for the night is not on the crew and never will be, so the one check
+  // that asks whether they are is asked of the contract instead. Everything below it — the
+  // border, the passport, the years inside — they answer exactly like anybody else, because
+  // a hired hand still has to get into the country.
+  const contracted=asHired||(c.status==="available"&&!!(hiredFor(job)&&hiredFor(job).id===c.id));
+  if(c.status!=="crew"&&!contracted)return {ok:false,why:c.status==="injured"?"injured, back week "+c.out
     :c.status==="learning"?"learning "+(c.tutor?c.tutor.to:(c.learn&&TECH_BY_K[c.learn.to]?TECH_BY_K[c.learn.to].l.toLowerCase():"a trade"))+", back week "+c.out
     :c.status==="benched"?"sitting this out, back week "+c.out
     :"not available"};
@@ -2721,14 +2931,14 @@ function assessJob(job,members,leadId){
   // first one on the list regardless, so a crew getting by in Arabic was credited with Hebrew.
   const spoke=co.langs.filter(l=>team.some(c=>c.langs.includes(l)));
   const speaks=spoke.length>0;
-  if(speaks)add("Language",6,spoke.join(", ")+" spoken");
-  else add("No "+co.langs[0],cat.lang?-14:-8,"nobody speaks it"+(cat.lang?" — this job is all talk":""));
+  if(speaks)add("Language",LANG_BONUS,spoke.join(", ")+" spoken");
+  else add("No "+co.langs[0],cat.lang?LANG_MISS_TALK:LANG_MISS,"nobody speaks it"+(cat.lang?" — this job is all talk":""));
   if(team.some(c=>natOf(c).name===co.name))add("Local national",8,"knows the ground");
   const covered=job.know.filter(k=>team.some(c=>c.know.includes(k)));
-  covered.forEach(k=>{const schooled=team.some(c=>c.know.includes(k)&&c.edu>=3);add("Knows "+k,schooled?10:5,schooled?"and studied it":"street knowledge");});
-  job.know.filter(k=>!covered.includes(k)).forEach(k=>add("Nobody knows "+k,-6,"wanted for this job"));
+  covered.forEach(k=>{const schooled=team.some(c=>c.know.includes(k)&&c.edu>=3);add("Knows "+k,schooled?KNOW_SCHOOLED:KNOW_BONUS,schooled?"and studied it":"street knowledge");});
+  job.know.filter(k=>!covered.includes(k)).forEach(k=>add("Nobody knows "+k,KNOW_MISSING,"wanted for this job"));
   const hits=job.techs.filter(t=>team.some(c=>hasTech(c,t))).length;
-  if(hits)add("Trades",hits*4,hits+" of "+job.techs.length+" wanted");
+  if(hits)add("Trades",hits*TRADE_COVER,hits+" of "+job.techs.length+" wanted");
   const paid=team.filter(c=>paidUp(c));
   if(paid.length)add("Paid up",Math.min(6,2*paid.length),paid.map(c=>c.first).join(", ")+(paid.length>1?" are":" is")+" working for it");
   const tb=traitBonus(team);
@@ -2743,6 +2953,12 @@ function assessJob(job,members,leadId){
              :"What happened between them. A pair loses a point for every botched or blown night they were both on, and gains one back for every job that comes off.")
       +"\n\n"+bondBackground(ids,3));
   }
+  // Somebody brought in for the night has never been in a room with these people, and it shows
+  // on the night. It is the price of the answer, and it is charged whether the night goes well
+  // or badly, because it is about the room and not about the outcome.
+  const strangers=strangersIn(team);
+  if(strangers.length)add("Brought in for the night",HIRED.stranger*strangers.length,
+    strangers.map(c=>c.first).join(", ")+(strangers.length>1?" have":" has")+" never worked with these people");
   const grum=team.filter(c=>restless(c));
   if(grum.length)add("Restless",-2*grum.length,grum.map(c=>c.first).join(", ")+" grumbling about the money");
   const streets=team.reduce((m,c)=>Math.max(m,c.streets),0);
@@ -2760,6 +2976,87 @@ function assessJob(job,members,leadId){
     pClean:Math.round(pGood*100),pOk:Math.round((pFailish-pGood)*100),pFail:Math.round((pDis-pFailish)*100),pDis:Math.round((1-pDis)*100),
     pSuccess:Math.round((pWin-pGood)*100),pMessy:Math.round((pFailish-pWin)*100)};
 }
+/* What one requirement on a posting is worth to THIS crew on THIS job — the number the chip
+   beside it prints. It is not a second opinion: every term is the constant the reckoning above
+   just applied, read back out.
+
+   A trade pays TRADE_COVER flat for being covered at all, plus the holder's own bonus — and
+   because the reckoning averages member effect over everybody in the field, one man's +14 is
+   +14/n to the crew. That is why a wanted trade is worth more in a team of three than in a
+   team of seven, and it is a real thing about the game rather than an artefact: a specialist
+   in a small room is most of the room.
+
+   A trade nobody holds is quoted at what a proper one would be worth, because that is the size
+   of the decision in front of the player — hire, wait a week, or go without. A learned second
+   trade is quoted lower, which is the only place the price of one is visible on the board.
+
+   Missing knowledge and a language nobody speaks are not forgone bonuses, they are charged, so
+   those come back negative and the chip prints the sign. Telling a player that a missing trade
+   and a missing language are the same kind of red was the old chips' worst lie: one of them
+   costs you nothing you had. */
+function tradeWorth(pool,n,k){
+  /* Two safecrackers on a safecracking job are worth two bonuses, because memberEff pays each
+     of them — so the chip counts every holder, not the first one it finds. Quoting one was
+     wrong by four points on a crew that had doubled up, and doubling up is a thing a player
+     can decide to do; a number that ignores a decision cannot be used to make it. */
+  const prim=pool.filter(c=>c.tech===k).length;
+  const sec=pool.filter(c=>c.tech!==k&&c.tech2===k).length;
+  const held=prim+sec>0;
+  const bonus=held?prim*TECH_BONUS+sec*TECH_BONUS_2:TECH_BONUS;
+  return {held,holders:prim+sec,second:!prim&&sec>0,
+    v:Math.round(TRADE_COVER+bonus/Math.max(1,n))};
+}
+/* The one sentence each screen says about a requirement, written once. The board and the job
+   file ask slightly different questions — "is it on the crew" against "is it going" — but they
+   must not describe the same posting in different words, which is what happens the second time
+   somebody edits one of two copies. */
+function tradeWorthLine(w,n,going){
+  const who=going?"going":"on your crew";
+  if(!w.held)return "Nobody "+who+" has it. Somebody who did would be worth "+signed(w.v)
+    +" here — and missing it is not charged against you, it is a bonus you are not collecting.";
+  if(w.holders>1)return w.holders+" of them hold it and the reckoning pays each one: "+signed(w.v)
+    +" between them, spread over the "+n+" in the field.";
+  return (w.second?"Held, but as a learned second trade — ":"Held — ")+signed(w.v)
+    +" to the reckoning, spread over the "+n+" in the field.";
+}
+function knowWorthLine(w,going){
+  if(!w.held)return "Nobody "+(going?"going":"on your crew")+" knows it, and unlike a missing trade that is charged: "+signed(w.v)+".";
+  return (w.studied?"Known, and studied — ":"Known — ")+signed(w.v)+" to the reckoning.";
+}
+function knowWorth(pool,k){
+  const who=pool.filter(c=>c.know.includes(k));
+  return {held:who.length>0,studied:who.some(c=>c.edu>=3),
+    v:who.length?(who.some(c=>c.edu>=3)?KNOW_SCHOOLED:KNOW_BONUS):KNOW_MISSING};
+}
+function langWorth(pool,co,cat){
+  const spoke=co.langs.filter(l=>pool.some(c=>c.langs.includes(l)));
+  return {held:spoke.length>0,spoke,v:spoke.length?LANG_BONUS:(cat.lang?LANG_MISS_TALK:LANG_MISS)};
+}
+function signed(v){return (v>=0?"+":"−")+Math.abs(v);}
+/* Bare, or in brackets. A bare number is being applied to the reckoning right now; a bracketed
+   one is what it would be worth if you had it. That distinction is the whole difference between
+   a missing trade, which costs nothing you had, and missing knowledge, which is charged — and
+   the old chips, both plain red crosses, said they were the same thing. */
+function worthSpan(w){
+  const s=signed(w.v);
+  return '<span class="w">'+(w.held||w.v<0?s:"("+s+")")+'</span>';
+}
+/* One verdict, one place. This was written out three times with the thresholds copied by hand,
+   which is two chances for the board and the job file to disagree about the same posting. And
+   it now carries its own cause: a verdict this game prints without the sum behind it is the one
+   kind of sentence it is not supposed to print. */
+function fitChip(a,j){
+  if(!a.canRun)return '<span class="fit f-bad tip" tabindex="0" data-tip="'+esc(
+      j.news&&j.news.closed?"Shut this week — see the paper."
+      :a.team.length+" of "+j.need+" can go. A job runs with the crew it asks for, or it does not run.")
+    +'">'+a.team.length+' of '+j.need+' can go</span>';
+  const w=a.margin>=10?["f-good","Good fit"]:a.margin>=-4?["f-warn","Risky"]:["f-bad","Long odds"];
+  return '<span class="fit '+w[0]+' tip" tabindex="0" data-tip="'+esc(
+      "Crew "+a.eff+" against difficulty "+j.diff+" — "+(a.margin>=0?a.margin+" clear":Math.abs(a.margin)+" short")+"."
+      +"\nThe night rolls ±"+BAL.roll+" on top of that, so nothing here is safe and nothing is hopeless."
+      +"\nClean ~"+a.pClean+"% · messy ~"+a.pOk+"% · blown ~"+(a.pFail+a.pDis)+"%.")
+    +'">'+w[1]+'</span>';
+}
 // What the fee turns into. Everybody who goes takes their percentage off the top; the commander
 // keeps whatever is left, which is what actually reaches the money in the top bar.
 //
@@ -2767,9 +3064,17 @@ function assessJob(job,members,leadId){
 // fee for a clean night, the fee for a success, 0.6× for a messy one and nothing at all for a
 // botch — so the split is quoted on the fee and the multiplier is stated beside it, rather than
 // showing one number that is only true a third of the time.
+/* What a member takes off this job. A crew member takes the share they signed for; somebody
+   brought in for the night takes the contractor's share, which is four or five times it — and
+   the same function answers both, so the split, the reckoning of what you keep and the money
+   that actually changes hands in finishJob cannot quote three different numbers. */
+function cutOf(job,c){
+  if(c.isPlayer)return 0;
+  return c.status!=="crew"?hiredCut(c):c.cut;
+}
 function jobSplit(job,team){
-  const rows=(team||[]).filter(c=>!c.isPlayer&&c.cut>0)
-    .map(c=>({c,pct:c.cut,amt:Math.round(job.payout*c.cut)}))
+  const rows=(team||[]).filter(c=>!c.isPlayer&&cutOf(job,c)>0)
+    .map(c=>({c,pct:cutOf(job,c),amt:Math.round(job.payout*cutOf(job,c)),hired:c.status!=="crew"}))
     .sort((a,b)=>b.amt-a.amt);
   const crew=rows.reduce((n,r)=>n+r.amt,0);
   const crewPct=rows.reduce((n,r)=>n+r.pct,0);
@@ -3509,7 +3814,8 @@ function startJob(job,opts){
   const twists=canTwist?makeTwists(job,team,rng,twistCount(job,a,team,rng),pre.clock.h):[];
   const twist=twists[0]||null;
   const P={jobId:job.id,job:Object.assign({},job),roll,leaked,teamIds:team.map(c=>c.id),pre:pre.lines,clock:pre.clock,stood:pre.stood,prep:casedWeeks(job),postSeed:ri(rng,1,2000000000),twists,answers:[],bridges:[],week:S.week,
-    crewId:cr?cr.id:null,crewName:cr?cr.name:null,leadId:cr?cr.leadId||null:null,memberIds:members?members.map(c=>c.id):null};
+    crewId:cr?cr.id:null,crewName:cr?cr.name:null,leadId:cr?cr.leadId||null:null,memberIds:members?members.map(c=>c.id):null,
+    hiredId:(hiredFor(job)||{}).id||null};
   S.pendingJob=P;
   const d={id:job.id+"-w"+S.week+(cr?"-c"+cr.id:""),week:S.week,job:P.job,crew:P.crewName,narrative:pre.lines.slice(),revealed:0,done:false,twist:twist?{h:twist.h,s:twist.s,opts:twist.opts.map(o=>o.t)}:null,twistNo:twists.length?1:0,twistOf:twists.length,awaiting:false,resolved:false,teamIds:P.teamIds,events:[],growth:[],rk:[],marks:{}};
   // The twist block runs on the same clock as the story around it, and the times are recorded on
@@ -3566,7 +3872,7 @@ function finishJob(P,choiceIdx,d){
   else{loyD=-13;heatMul=1.9;}
   if(twLose>0)take=Math.round(take*(1-twLose));
   let cuts=0;
-  team.forEach(c=>{if(!c.isPlayer)cuts+=Math.round(take*c.cut);});
+  team.forEach(c=>{if(!c.isPlayer)cuts+=Math.round(take*cutOf(job,c));});
   const net=Math.max(0,take-cuts);
   S.money+=net;
   const rk0=rankInfo(S.rep);
@@ -3683,7 +3989,38 @@ function finishJob(P,choiceIdx,d){
     growth.push(g);
   });
   // the crew becomes something by working together, or by losing together
-  bondUpdate(team,tier,job);
+  /* Bonds are between people who keep turning up for each other. A night bought for a
+     percentage is not that, whichever way it went — so the hired hand is left out, BY ID.
+     Filtering on status here instead cost the crew their bonds for the night: the fallout has
+     already run by this line, so anybody who was hurt or arrested on the job is no longer
+     status "crew" either, and the people who went through the worst of it together were the
+     ones it dropped. smoke33 caught it; it is exactly the sort of thing that would have gone
+     out looking like the bond system quietly not working. */
+  bondUpdate(team.filter(c=>c.id!==P.hiredId),tier,job);
+  /* And what the hired hand does with what they now know. Paid for a clean night, they are a
+     professional who was paid. Paid nothing because the night paid nothing, or sitting in a
+     cell because they were the one the police reached first — that is the bill for the answer,
+     and it arrives after the answer worked. */
+  const hired=(P.hiredId?byId(P.hiredId):null);
+  if(hired&&team.some(c=>c.id===hired.id)){
+    const paid=Math.round(take*hiredCut(hired));
+    const taken=hired.status==="jailed";
+    const odds=hiredTalkOdds(hired,tier,taken);
+    hired._touched=true;
+    if(chance(rng,odds)){
+      hired.talked={week:S.week,city:job.city,job:job.title};
+      S.heat=clamp(S.heat+HIRED.talkHeat,0,120);
+      if(detective())detective().file=clamp(detective().file+HIRED.talkFile,0,100);
+      fallout.push(hired.first+" talks. "+(taken?"Picked up at the scene and out again inside a week — that is what the week bought."
+        :paid>0?"Paid "+money(paid)+" and talks anyway; some people do."
+        :"Came for a percentage of nothing, and sold the only thing left to sell.")
+        +" Heat +"+HIRED.talkHeat+(detective()?", and "+detective().name+"'s file is thicker for it":"")+".");
+    } else {
+      fallout.push(hired.first+" takes "+(paid>0?money(paid):"nothing")+" and is not heard from again"
+        +(paid>0?".":" — which, on a night that paid nothing, is more than you were owed."));
+    }
+  }
+  S.hiredJob=null;S.hiredId=null;
   const post=narrate(job,a,tier,rng,{leaked:P.leaked,fallout,betrayals,heatGain,take,cuts,net},"post",P.clock);
   const narrative=P.pre.slice();
   // Rebuilt in the order it was played: each cue, what that call turned out to be, and the beat
@@ -3711,17 +4048,19 @@ function finishJob(P,choiceIdx,d){
       logMsg("The stage went wrong. The Committee will have moved things by morning — it will be weeks before that door is worth trying again.","bad",true);
     }
   }
-  if(job.rival&&rival()){
+  // The yard belongs to ONE of them, by id. With two on the board, breaking the wrong one is
+  // the sort of thing a player would never see and would never forgive.
+  if(job.rival&&rivalById(job.rivalId)){
+    const rv=rivalById(job.rivalId);
     if(tier>=3){
-      rivalEnd("broken","The yard burned down at four in the morning and the vans were already gone. "
+      rivalEnd(rv.id,"broken","The yard burned down at four in the morning and the vans were already gone. "
         +"By the weekend the clients had all been told the same thing by somebody they trusted: "
         +"do not ring that number.","good");
     } else {
       // They know. The next one starts hostile, and this one is harder to get at again.
-      const rv=rival();
       rv.standing=clamp(rv.standing+ri(rng,6,12),0,999);
       rv.hostile=true;
-      S.rivalJobBack=S.week+ri(rng,5,9);
+      rv.jobBack=S.week+ri(rng,5,9);
       logMsg("The night at the yard went wrong, and "+rv.boss+" knows exactly whose people those were. "
         +"Their standing "+rv.standing+", and the yard will be watched for weeks.","bad",true);
     }
@@ -3957,11 +4296,23 @@ function weekTick(rng){
   S.idle=(S.idle||0)+1;
   if(S.idle>=BAL.idleEvery){S.idle=0;if(S.rep>0)S.rep=Math.max(0,S.rep-BAL.idleDecay);}
   // somebody else is working the board, and somebody is keeping a file
-  // The first arrives on the name; every one after arrives on the clock, once the last is done.
-  if(!S.rival&&S.rep>=20&&(!S.rivalNext||S.week>=S.rivalNext)){S.rival=makeRival(rng);
-    S.notices=(S.notices||[]).concat([{k:"The competition · week "+S.week,h:cap(S.rival.name),
-      text:S.rival.boss+" runs "+S.rival.name+" out of the same online board as you. They take a posting most weeks — the best one left — and their standing rises when they do. When they are ahead of you, they start buying your crew drinks. The Log says where they stand.",go:"log",goText:"The record →"}]);
-    logMsg(cap(S.rival.name)+" is working the same board. "+S.rival.boss+" runs it.","warn",true);}
+  /* The first arrives on the name; every one after arrives on the clock, once the last is done.
+     The SECOND at the same time arrives on the name again, and a much bigger one: one rival is
+     a duel, and the whole first act is meant to be one, so you learn what a rival is by having
+     exactly one of them. A board eaten from both ends is a later problem, and it is a problem
+     you were promoted into. */
+  const nRiv=rivals().length;
+  const gate=nRiv===0?20:RIVAL.secondRep;
+  if(nRiv<RIVAL.maxAt&&S.rep>=gate&&(!S.rivalNext||S.week>=S.rivalNext)){
+    const nw=makeRival(rng);
+    S.rivals=rivals().concat([nw]);
+    S.rivalNext=0;
+    S.notices=(S.notices||[]).concat([{k:"The competition · week "+S.week,h:cap(nw.name),
+      text:nw.boss+" runs "+nw.name+" out of the same online board as you. They take a posting most weeks — the best one left — and their standing rises when they do. When they are ahead of you, they start buying your crew drinks. The Log says where they stand."
+        +(nRiv?" That is two outfits on this board now, and between them they will take the best of it most weeks. Neither of them has to be there forever; the Log says how each one ends.":""),
+      go:"log",goText:"The record →"}]);
+    logMsg(cap(nw.name)+" is working the same board. "+nw.boss+" runs it."
+      +(nRiv?" That makes two of them.":""),"warn",true);}
   if(!S.det&&(S.heat>=30||S.rep>=40)){S.det=makeDetective(rng);
     logMsg(S.det.name+" has your alias in a folder.","warn",true);}
   rivalWorks(rng);rivalLeadTick();maybeUnlockRivalJob();detWatch(rng);looseTick(rng);grudgeTick(rng);
@@ -4015,6 +4366,7 @@ function packState(){
   S.roster.forEach(c=>{if(c.status!=="available"||c.vetted||c._touched){ov[c.id]={status:c.status,out:c.out,loyalty:c.loyalty,vetted:c.vetted,vetFlag:c.vetFlag,jail:c.jail,exp:c.exp,xp:c.xp||0,attrs:c.attrs,cut:c.cut,paidUntil:c.paidUntil==null?null:c.paidUntil,lowRun:c.lowRun||0,traits:c.traits,coolUntil:c.coolUntil||0,ranWith:c.ranWith||0,talks:c.talks||0,
     tech:c.tech,tech2:c.tech2||null,know:c.know,langs:c.langs,
     learn:c.learn||null,tutor:c.tutor||null,learnAskedUntil:c.learnAskedUntil||0,
+    talked:c.talked||null,
     goneAs:c.goneAs||null,goneWeek:c.goneWeek||0,funeralPaid:!!c.funeralPaid};}});
   // S carries the rival chapter now — who has been beaten, how high they got, when the next
   // one is due — and all of it rides along in S, which is copied wholesale below.
@@ -4031,6 +4383,18 @@ function load(){
     roster.forEach(c=>{const o=ov[c.id];if(o)Object.assign(c,o);});
     delete d.ov;d.roster=roster;d.modal=null;d.player.isPlayer=true;d.player.status="crew";d.player.role="commander";if(!d.player.cmd)d.player.cmd=5;
     migrateReports(d);
+    /* A file saved when there could only be one rival carries S.rival; there can be two now,
+       and the list is the truth. Done before S is assigned so nothing ever reads the old
+       shape — a save opening with its rival quietly gone would look like the rival having
+       been beaten, which is a thing this game is careful to only say when it is true. */
+    if(!d.rivals){d.rivals=d.rival?[d.rival]:[];delete d.rival;}
+    d.rivalSeq=d.rivalSeq||0;
+    d.rivals.forEach(r=>{if(!r.id){d.rivalSeq++;r.id="RV"+d.rivalSeq;}});
+    // And a rival posting from that file names no outfit; give it the one that is there.
+    (d.jobs||[]).forEach(j=>{if(j.rival&&!j.rivalId)j.rivalId=(d.rivals[0]||{}).id||null;});
+    // The watched-yard clock used to be one flag on the game; it belongs to the outfit.
+    if(d.rivalJobBack&&d.rivals[0]&&!d.rivals[0].jobBack)d.rivals[0].jobBack=d.rivalJobBack;
+    delete d.rivalJobBack;
     S=d;
     // a file opened before temperament and the face builder existed gets both, from its own seed
     if(S.player&&!S.player.traits){
@@ -4411,11 +4775,12 @@ const ATTR_NAME={muscle:"Muscle",brains:"Brains",tech:"Tech",charm:"Charm",nerve
 const ATTR_DESC={muscle:"force, doors, the night guard",brains:"planning, locks, paperwork",tech:"networks, cameras, charges",charm:"talk, lies, doors that open for a smile",nerve:"composure, driving, borders"};
 function techBrief(k){
   const t=TECH_BY_K[k];const wants=CATS_ALL.filter(c=>c.techs.includes(k)).map(c=>c.l);
-  return t.l.toUpperCase()+" — leans on "+ATTR_NAME[t.a]+"\n"+t.d+"\nComes with "+t.know+". Wanted by: "+(wants.join(", ")||"no job in particular")+". A wanted trade on the crew is +14 to that member on the job.";
+  return t.l.toUpperCase()+" — leans on "+ATTR_NAME[t.a]+"\n"+t.d+"\nComes with "+t.know+". Wanted by: "+(wants.join(", ")||"no job in particular")
+    +". A wanted trade is +"+TECH_BONUS+" to the one who is it, +"+TECH_BONUS_2+" to one who learned it as a second, and +"+TRADE_COVER+" to the crew for covering it at all.";
 }
 function knowBrief(k){
   const wants=CATS_ALL.filter(c=>c.know.includes(k)).map(c=>c.l);
-  return k.toUpperCase()+" — "+KNOW_BEAT[k]+"\nWanted by: "+wants.join(", ")+". +5 on a job that wants it; +10 if the one who knows it went to university.";
+  return k.toUpperCase()+" — "+KNOW_BEAT[k]+"\nWanted by: "+wants.join(", ")+". +"+KNOW_BONUS+" on a job that wants it, +"+KNOW_SCHOOLED+" if the one who knows it went to university, and "+signed(KNOW_MISSING)+" if nobody going knows it at all.";
 }
 function attrBrief(a){
   const leads=CATS_ALL.filter(c=>Object.keys(c.w).sort((p,q)=>c.w[q]-c.w[p])[0]===a).map(c=>c.l);
@@ -4505,7 +4870,13 @@ function profLine(c){
     +(tt?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px">'+tt+'</div>':'')
     +(lim?'<br>'+lim:'')+bondLine(c)+'</div>';
 }
-function vetStamp(c){if(!c.vetted)return "";return c.vetFlag?'<span class="stampmark">Informant</span>':'<span class="stampmark ink">Vetted</span>';}
+// Somebody who talked after a night you paid them for is the loudest thing on their file, and
+// it outranks a clean vetting — vetting asks what they were before, this says what they did.
+function vetStamp(c){
+  if(c.talked)return '<span class="stampmark">Talked</span>';
+  if(!c.vetted)return "";
+  return c.vetFlag?'<span class="stampmark">Informant</span>':'<span class="stampmark ink">Vetted</span>';
+}
 function roleChip(c){return c.role==="commander"?'<span class="chip c-ink">Commander</span>':'<span class="chip" style="border-color:var(--line-2);color:var(--muted)">Soldier</span>';}
 function idCardTop(c,extra){
   const nat=natOf(c);
@@ -4899,7 +5270,12 @@ function jobsList(){
   // The strip goes under the postings on a quiet week as well: a board with nothing on it is the
   // likeliest week of all to want a few hundred this afternoon, and it used to disappear here.
   if(!jobs.length)return '<div class="panel">'+head+filt+'<div class="empty">'+(S.jobCountry?'No postings in '+esc(S.jobCountry)+' this week.':'The board is quiet. Lay low a week and check again.')+'</div></div>'+streetStrip();
-  const items=jobs.map(j=>({j,a:assessJob(j)}));
+  /* Assessed against jobPool rather than the whole crew, so the board and the job file agree
+     about the one posting being planned. For every other posting jobPool IS the whole crew —
+     benching and a night's contract are both agreed for one job — so this changes exactly the
+     row it should. Before it, bringing somebody in turned Long odds into Good fit on the job
+     file while the board went on saying Long odds, which reads as the contract not taking. */
+  const items=jobs.map(j=>({j,a:assessJob(j,jobPool(j))}));
   const cmp={
     fit:(x,y)=>(y.j.final?1:0)-(x.j.final?1:0)||(y.a.canRun?1:0)-(x.a.canRun?1:0)||y.a.margin-x.a.margin,
     need:(x,y)=>x.j.need-y.j.need||y.a.margin-x.a.margin,
@@ -4913,14 +5289,31 @@ function jobsList(){
   items.sort(cmp);
   const rows=items.map(({j,a})=>{
     const co=COUNTRY_BY_NAME[j.country];
-    const fit=a.canRun?(a.margin>=10?'<span class="chip c-good">Good fit</span>':a.margin>=-4?'<span class="chip c-warn">Risky</span>':'<span class="chip c-bad">Long odds</span>'):'<span class="chip c-bad">'+a.team.length+' of '+j.need+' can go</span>';
-    const techs=j.techs.map(t=>'<span class="tag spec tip '+(has(t)?"ok":"no")+'" tabindex="0" data-tip="'+esc(techBrief(t)+roll(c=>hasTech(c,t),"has it","Nobody on your crew has it."))+'">'+(has(t)?"✓ ":"✗ ")+TECH_BY_K[t].l+'</span>').join(" ");
-    const kn=j.know.map(x=>'<span class="tag tip '+(knows(x)?"ok":"no")+'" tabindex="0" data-tip="'+esc(knowBrief(x)+roll(c=>c.know.includes(x),"knows it","Nobody on your crew knows it."))+'">'+(knows(x)?"✓ ":"✗ ")+'knows '+x+'</span>').join(" ");
+    const fit=fitChip(a,j);
+    // The field this job would actually go with, which is what the reckoning divides a member's
+    // trade bonus over. A board with nobody able to go still has to quote a number, so it quotes
+    // the one the posting asks for.
+    const nf=a.team.length||j.need;
+    const techs=j.techs.map(t=>{const w=tradeWorth(inField,nf,t);
+      return '<span class="tag spec tip '+(has(t)?"ok":"no")+'" tabindex="0" data-tip="'+esc(
+          techBrief(t)+"\n\nOn this job: "+tradeWorthLine(w,nf,false)
+          +roll(c=>hasTech(c,t),"has it","Nobody on your crew has it."))+'">'
+        +(has(t)?"✓ ":"✗ ")+TECH_BY_K[t].l+' '+worthSpan(w)+'</span>';}).join(" ");
+    const kn=j.know.map(x=>{const w=knowWorth(inField,x);
+      return '<span class="tag tip '+(knows(x)?"ok":"no")+'" tabindex="0" data-tip="'+esc(
+          knowBrief(x)+"\n\nOn this job: "+knowWorthLine(w,false)
+          +roll(c=>c.know.includes(x),"knows it","Nobody on your crew knows it."))+'">'
+        +(knows(x)?"✓ ":"✗ ")+'knows '+x+' '+worthSpan(w)+'</span>';}).join(" ");
     return '<div class="jobrow" data-act="open-job" data-id="'+j.id+'" data-country="'+esc(j.country)+'" role="button" tabindex="0">'
       +'<div class="code">'+(j.final?"—":j.big?esc(j.id.slice(0,2)+"-"+j.id.slice(2)):"№"+j.id.slice(1).padStart(3,"0"))+'<br>'+diffbar(j.diff,j.heat>22)+'</div>'
-      +'<div><div class="t">'+(j.final?'<span class="chip c-bad">Final score</span> ':j.big?'<span class="chip c-ink">Operation</span> ':'')+esc(j.title)+'</div>'
+      // The verdict sits above the title rather than in front of it: inline, it ate a third of
+      // the line and pushed every long title onto a second one, so the fix for a conclusion set
+      // too quietly became a board of broken headlines.
+      +'<div><div class="fitline">'+fit+(j.final?' <span class="chip c-bad">Final score</span>':j.big?' <span class="chip c-ink">Operation</span>':'')
+        +(hiredFor(j)?' <span class="chip c-warn">'+esc(hiredFor(j).first)+' is in for the night</span>':'')+'</div>'
+      +'<div class="t">'+esc(j.title)+'</div>'
         +'<div class="loc">'+flagSvg(co)+' '+esc(j.city)+', '+esc(j.country)+' · crew of '+j.need+' · <span dir="ltr">'+(j.final?BAL.finalWeeks:(j.weeks||1))+' wk</span> · '+esc(co.langs[0])+' · from '+esc(j.client)+(j.final?'':' · expires wk '+j.expires)+(casedWeeks(j)?' · <span style="color:var(--good)">cased '+casedWeeks(j)+'</span>':'')+'</div>'
-        +'<div class="meta"><span class="tag">'+CAT_BY_K[j.cat].l+'</span>'+techs+' '+kn+' '+fit+(j.news?' <span class="chip '+(j.news.closed?"c-bad":"c-warn")+' tip" tabindex="0" data-tip="'+esc(j.news.hits.join("\n"))+'">In the news · '+esc(newsWord(j.news))+'</span>':'')+'</div></div>'
+        +'<div class="meta"><span class="tag">'+CAT_BY_K[j.cat].l+'</span>'+techs+' '+kn+(j.news?' <span class="chip '+(j.news.closed?"c-bad":"c-warn")+' tip" tabindex="0" data-tip="'+esc(j.news.hits.join("\n"))+'">In the news · '+esc(newsWord(j.news))+'</span>':'')+'</div></div>'
       +'<div class="pay num">'+money(j.payout)+'<div class="loc" style="text-align:right">+'+j.heat+' heat</div></div></div>';
   }).join("");
   return '<div class="panel">'+head+banLine+filt+rows+'</div>'+streetStrip();
@@ -4952,21 +5345,32 @@ function jobPanel(j){
   const speaks=spoken.length>0;
   const anyLang=co.langs.length>1?"any of them":co.langs[0];
   const blockedBy=tag=>crewAll().filter(c=>c.status==="crew"&&c.limits.some(k=>LIMIT_BY_K[k].tag===tag)).map(c=>c.first);
-  const chip=(ok,text,title)=>'<span class="tag tip '+(ok?"ok":"no")+'" tabindex="0" data-tip="'+esc(title||"")+'">'+(ok?"✓ ":"✗ ")+text+'</span>';
+  /* Every chip now carries what it is worth on this job, in the points the reckoning below is
+     counted in — so the row of chips and the list of factors are the same argument told twice,
+     once before the decision and once after it. The fourth argument is that number; a chip
+     without one is a yes/no with nothing to add (a limit, a border). */
+  const chip=(ok,text,title,w)=>'<span class="tag tip '+(ok?"ok":"no")+'" tabindex="0" data-tip="'+esc(title||"")+'">'
+    +(ok?"✓ ":"✗ ")+text+(w?' '+worthSpan(w):'')+'</span>';
+  const nf=a.team.length||j.need;
+  const lw=langWorth(a.team,co,cat);
   const chips='<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"><span class="tag">'+cat.l+'</span>'
     +chip(a.team.length>=j.need,'crew of '+j.need,a.team.length+' of '+j.need+' can go.'
       +'\nGoing: '+(a.team.map(c=>nameOf(c)).join(", ")||"nobody")+'.')
-    +j.techs.map(t=>chip(has(t),'wants '+TECH_BY_K[t].l,
-      techBrief(t)+whoLine(whoFor(j,a,c=>hasTech(c,t)),'has it','Nobody on your crew has it.'))).join("")
-    +j.know.map(k=>chip(knows(k),'knows '+k,
+    +j.techs.map(t=>{const w=tradeWorth(a.team,nf,t);
+      return chip(has(t),TECH_BY_K[t].l,
+        techBrief(t)+"\n\nOn this job: "+tradeWorthLine(w,nf,true)
+        +whoLine(whoFor(j,a,c=>hasTech(c,t)),'has it','Nobody on your crew has it.'),w);}).join("")
+    +j.know.map(k=>{const w=knowWorth(a.team,k);
+      return chip(knows(k),'knows '+k,
       // Who studied it is worth the four words: knowBrief just said it is +10 instead of +5.
-      knowBrief(k)+whoLine(whoFor(j,a,c=>c.know.includes(k),c=>c.edu>=3?" (studied it)":""),
-        'knows it','Nobody on your crew knows it.'))).join("")
+        knowBrief(k)+"\n\nOn this job: "+knowWorthLine(w,true)
+        +whoLine(whoFor(j,a,c=>c.know.includes(k),c=>c.edu>=3?" (studied it)":""),
+          'knows it','Nobody on your crew knows it.'),w);}).join("")
     +chip(speaks,'speaks '+(spoken[0]||co.langs[0]),
       'The work is done in '+orList(co.langs)+'.'
       +whoLine(whoFor(j,a,c=>spokenBy(c).length>0,c=>" — "+spokenBy(c).join(", ")),
         'speaks '+anyLang,'Nobody on your crew speaks '+anyLang+'.')
-      +(speaks?'':'\nThat is −'+(cat.lang?14:8)+' on the night'+(cat.lang?', and this job is all talk.':'.')))
+      +(speaks?'\nThat is '+signed(lw.v)+' on the night.':'\nThat is '+signed(lw.v)+' on the night'+(cat.lang?', and this job is all talk.':'.')),lw)
     +j.tags.map(t=>{const b=blockedBy(t);return chip(!b.length,TAG_LABEL[t],b.length?b.join(", ")+' won\'t — sits this one out':'nobody on the crew minds');}).join("")
     // The warning, without the number. That this kind of job keeps going wrong is worth knowing
     // before you commit to it — it decides who you bring. How many times is not: that is the part
@@ -4975,32 +5379,82 @@ function jobPanel(j){
     +(function(){const small=a.team.filter(c=>smallMoney(c,j));return chip(!small.length,'the money',small.length?small.map(c=>c.first+" ("+money(Math.round(j.payout*c.cut))+")").join(", ")+" call this small money — a cut under two weeks of their own upkeep. Three in a row and they grumble; five and they may walk.":"every cut on this one is worth the trip");})()+'</div>';
   // who can go — and, for those who can, whether you send them
   const benchCuts=bench.map(byId).filter(Boolean).reduce((s,c)=>s+Math.round(j.payout*c.cut),0);
-  const allChecks=crewAll().map(c=>{const x=a.checks.find(y=>y.c.id===c.id);
+  // Somebody brought in for the night is in the field and belongs in the list of who is in the
+  // field. They are not on the crew, so they are appended rather than found there — and the one
+  // control they get is the way out of the contract, not a bench.
+  const hiredNow=hiredFor(j);
+  const allChecks=crewAll().concat(hiredNow?[hiredNow]:[]).map(c=>{const x=a.checks.find(y=>y.c.id===c.id);
     if(x)return Object.assign({},x,{sat:false});
     return Object.assign({sat:true,c},entry(c,j,a.team.some(y=>hasTech(y,"forger"))));});
   const checks=allChecks.map(x=>{const c=x.c,sat=x.sat&&x.ok;
+    const forNight=!!(hiredNow&&c.id===hiredNow.id);
     return '<div class="check'+(x.ok?"":" out")+(sat?" sat":"")+'"><div class="av">'+avatar(c.avseed,c.gender,c.face)+'</div>'
-      +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12.5px">'+(c.isPlayer?"You":esc(c.n))+' '+flagSvg(natOf(c))+' <span class="mono" style="color:var(--muted);font-size:10.5px">'+techLabel(c)+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</span></div>'
-      +'<div class="why">'+(sat?'sitting this one out'+(c.isPlayer?' — a commander-type runs it':'')+(c.cut?' · keeps '+money(Math.round(j.payout*c.cut))+' in the split':''):esc(x.why))+'</div></div>'
+      +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12.5px">'+(c.isPlayer?"You":esc(c.n))+' '+flagSvg(natOf(c))+' <span class="mono" style="color:var(--muted);font-size:10.5px">'+techLabel(c)+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</span>'
+        +(forNight?' <span class="chip c-warn">for the night</span>':'')+'</div>'
+      +'<div class="why">'+(forNight?'brought in for this one · '+Math.round(hiredCut(c)*100)+'% of the score, no place, no wages'
+        :sat?'sitting this one out'+(c.isPlayer?' — a commander-type runs it':'')+(c.cut?' · keeps '+money(Math.round(j.payout*c.cut))+' in the split':''):esc(x.why))+'</div></div>'
       // The whole file, from here. This list is where you decide who goes, and that decision is
       // made out of what is on their file — the trade, the attributes, what they will not do —
       // so it is the one screen where having to go somewhere else to read it is most obviously
       // wrong. It opens over the job, and closing it puts the job back exactly as it was.
       +'<span style="display:flex;gap:6px;flex:none;align-items:center">'
       +'<button class="btn ghost sm" data-act="open-recruit" data-id="'+c.id+'" title="'+esc(c.isPlayer?"Your own file":c.first+"'s file — everything the decision is made out of")+'">File</button>'
-      +(x.ok?'<button class="btn ghost sm" data-act="bench" data-id="'+c.id+'" title="'+(sat?"Send "+(c.isPlayer?"yourself":c.first)+" on this job":(c.isPlayer?"Stay behind":"Leave "+c.first+" behind")+" — no cut, no experience, and no way to get hurt")+'">'+(sat?"Send":"Bench")+'</button>':'<div class="mark">✗</div>')
+      +(forNight?'<button class="btn ghost sm" data-act="hire-night-off" title="Tear up the contract — '+esc(c.first)+' never hears what the job was">Send home</button>'
+        :x.ok?'<button class="btn ghost sm" data-act="bench" data-id="'+c.id+'" title="'+(sat?"Send "+(c.isPlayer?"yourself":c.first)+" on this job":(c.isPlayer?"Stay behind":"Leave "+c.first+" behind")+" — no cut, no experience, and no way to get hurt")+'">'+(sat?"Send":"Bench")+'</button>':'<div class="mark">✗</div>')
       +'</span></div>';}).join("");
   const onCrew=crewAll().length, benched=bench.length;
-  const barred=Math.max(0,onCrew-benched-a.team.length);
+  const ownGoing=a.team.filter(c=>c.isPlayer||c.status==="crew").length;
+  const barred=Math.max(0,onCrew-benched-ownGoing);
   const enough=a.team.length>=j.need;
   const goLine='<b style="font-family:var(--f-disp);font-size:13px;letter-spacing:.02em">This job needs '+j.need+' in the field'
-    +(enough?'. '+(a.team.length===onCrew?'All '+onCrew+' of your crew can go.':a.team.length+' of your '+onCrew+' can go.')
-            :' — only '+a.team.length+' of your '+onCrew+' can go.')+'</b> '
+    +(enough?'. '+(ownGoing===onCrew?'All '+onCrew+' of your crew can go.':ownGoing+' of your '+onCrew+' can go.')
+            :' — only '+ownGoing+' of your '+onCrew+' can go.')+'</b> '
+    +(hiredNow?'<b>'+esc(hiredNow.first)+' is in for the night, which makes '+a.team.length+'.</b> ':'')
     +(barred?barred+(barred>1?' are':' is')+' kept out by the border, the job or their own limits. ':'')
     +(benched?benched+(benched>1?' are':' is')+' benched, by you. ':'')
     +'Bench anyone you would rather keep out of it.';
   const benchBar='<div class="sel-help" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>'+goLine+'</span>'
     +(bench.length?'<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="tag">'+bench.length+' benched · '+money(benchCuts)+' stays in the split</span><button class="btn ghost sm" data-act="bench-clear">Send everyone</button></span>':'')+'</div>';
+  /* Somebody for the one night. Offered only against a trade the crew is actually missing —
+     it is an answer to a gap, and the moment it can be used to buy a stronger crew by the week
+     it is a way round the borders, the limits and the whole point of having a crew. */
+  const crewGoing=a.team.filter(c=>c.isPlayer||c.status==="crew");
+  const gaps=hiredGaps(j,crewGoing);
+  /* Not on an operation and not on the final score. Those are the screens that ask whether the
+     crew you built is broad, and buying the answer for one night is not answering it. They come
+     by name because you have seven places; the seven places are the question. */
+  const canBring=!j.final&&!j.big;
+  const offers=(hiredNow||!canBring)?[]:hiredOffers(j,{team:crewGoing});
+  const hiredBlock=(canBring&&(hiredNow||gaps.length))?('<hr class="rule"><div class="kicker">Somebody for the one night</div>'
+    +(hiredNow
+      ? '<div class="sel-help"><b>'+esc(hiredNow.n)+'</b> is in for this one — '+techLabel(hiredNow)+', '+EXP[hiredNow.exp-1]+'. '
+        +'<b>'+Math.round(hiredCut(hiredNow)*100)+'% of the score</b> ('+moneyExact(Math.round(j.payout*hiredCut(hiredNow)))+' on a plain success), '
+        +'no place on the crew, no wages, nothing after tonight, and no bonds either way. '
+        +signed(HIRED.stranger)+' on the reckoning, because nobody in that room has worked with them. '
+        +'They are paid out of the score like everybody else — so a night that pays nothing pays them nothing, '
+        +'and somebody who came, took the risk and went home with nothing is the one who talks. '
+        +'On a night that comes off the odds of that are about '+Math.round(hiredTalkOdds(hiredNow,3,false)*100)
+        +'%; on a botched one, about '+Math.round(hiredTalkOdds(hiredNow,1,false)*100)+'%.</div>'
+      : '<div class="sel-help">This posting wants '+listAnd(gaps.map(t=>TECH_BY_K[t].l))+' and nobody going is one. '
+        +'A trip to fetch somebody properly is a week and a place on the crew; this is the other answer — '
+        +'somebody in for this night alone, at a contractor\'s share of the score, four or five times what a crew member takes. '
+        +'No place, no wages, no bonds, and '+signed(HIRED.stranger)+' on the reckoning for being a stranger in the room. '
+        +'What they do afterwards with what they know depends on how the night goes, and on them.</div>'
+        +(offers.length?offers.map(c=>{
+            const d=assessWith(j,c).margin-a.margin;
+            const cut=hiredCut(c);
+            return '<div class="jobrow" style="cursor:default"><div class="code">P'+natOf(c).tier+'</div>'
+              +'<div><div class="t" style="font-size:15px">'+esc(c.n)+' '+flagSvg(natOf(c))+' <span class="tag spec">'+techLabel(c)+'</span> <span class="tag">'+EXP[c.exp-1]+'</span></div>'
+              +'<div class="loc">'+ATTRS.map(x=>ATTR_ABBR[x]+' '+c.attrs[x]).join(' · ')+' · knows '+c.know.join(", ")
+                +'<br><span style="color:'+(d>=0?"var(--good)":"var(--stamp)")+'">'+signed(d)+' on the reckoning</span>'
+                +' · talks ~'+Math.round(hiredTalkOdds(c,3,false)*100)+'% after a good night, ~'+Math.round(hiredTalkOdds(c,1,false)*100)+'% after a bad one'
+                +(c.limits.length?' · <span style="color:var(--stamp)">'+c.limits.map(k=>LIMIT_BY_K[k].l).join(", ")+'</span>':'')+'</div></div>'
+              +'<div style="text-align:right"><div class="mono" style="font-size:13px">'+Math.round(cut*100)+'%<br>'+money(Math.round(j.payout*cut))+'</div>'
+              +'<button class="btn sm" data-act="hire-night" data-id="'+c.id+'" style="margin-top:4px">Bring in →</button></div></div>';
+          }).join("")
+         :'<div class="empty">Nobody on the roster is '+listAnd(gaps.map(t=>TECH_BY_K[t].l.toLowerCase()))
+           +' and able to get into '+esc(j.country)+'. Recruit properly, or run it without.</div>')
+     )):'';
   // The split, and what benching does to it. Two numbers move in opposite directions when
   // somebody sits out — your share of the fee goes up, the crew's reckoning goes down — so both
   // are shown, and then the one line that resolves them: what you actually come away with.
@@ -5010,7 +5464,7 @@ function jobPanel(j){
     +'<span class="p num" dir="ltr">'+(pct==null?'':(Math.round(pct*1000)/10)+'%')+'</span>'
     +'<span class="m num">'+moneyExact(amt)+'</span></div>';
   const benchedPeople=bench.map(byId).filter(Boolean);
-  const splitRows=sp.rows.map(r=>spRow(esc(r.c.first),TECH_BY_K[r.c.tech].l,r.pct,r.amt)).join("")
+  const splitRows=sp.rows.map(r=>spRow(esc(r.c.first),r.hired?'for the night — '+TECH_BY_K[r.c.tech].l:TECH_BY_K[r.c.tech].l,r.pct,r.amt)).join("")
     +(sp.rows.length?spRow('Crew of '+sp.rows.length,'take off the top',sp.crewPct,sp.crew,"sum"):spRow('Nobody takes a cut','',0,0,"sum"))
     +spRow('You keep of the fee','',sp.youPct,sp.you,"keep")
     +spRow('Wages','the '+up.weeks+' week'+(up.weeks>1?'s':'')+' on the ground, everyone on the books',null,-up.total,"cost")
@@ -5073,12 +5527,16 @@ function jobPanel(j){
     +'</div>'
     +(localHeat>=20?'<div class="mono" style="font-size:11.5px;color:var(--stamp);margin-top:6px">'+esc(j.country)+' is watching for you — '+localHeat+' points of local heat, and every room here is harder for it. It cools a point a week.</div>':'')
     :'';
+  // The verdict belongs at the top of the file as well as on the board. The reckoning that
+  // produces it is at the bottom of a long screen, and the question "is this one for us" is
+  // asked on the way in, not on the way out.
   const h='<div class="panel-h" style="align-items:center"><div><div class="kicker">'+esc(co.name)+' · '+cat.l
     +(j.final?' · Final score':j.big?' · Operation '+j.op+' of '+BAL.bigCount:'')+'</div>'
-    +'<h2 style="font-size:20px;margin-top:4px;text-transform:none;letter-spacing:.02em">'+esc(j.title)+'</h2></div></div>';
+    +'<h2 style="font-size:20px;margin-top:4px;text-transform:none;letter-spacing:.02em">'+esc(j.title)+'</h2></div>'
+    +'<div>'+fitChip(a,j)+'</div></div>';
   // a crew you founded can take it instead of you — its own reckoning, its own report
   const others=crews().map(cr=>{const ac=assessJob(j,crewMembers(cr),cr.leadId||null);const busy=cr.jobWeek===S.week;const lead=crewLeader(cr);
-    const fit=ac.canRun?(ac.margin>=10?'<span class="chip c-good">Good fit</span>':ac.margin>=-4?'<span class="chip c-warn">Risky</span>':'<span class="chip c-bad">Long odds</span>'):'<span class="chip c-bad">'+ac.team.length+' of '+j.need+' can go</span>';
+    const fit=fitChip(ac,j);
     return '<div class="jobrow" style="cursor:default"><div class="code">'+(lead?esc(lead.first):'—')+'</div><div><div class="t">'+esc(cr.name)+' '+fit+'</div>'
       +'<div class="loc">'+ac.team.length+' of '+crewMembers(cr).length+' can go · crew '+ac.eff+' vs difficulty '+j.diff+' · '+(lead?'led by '+esc(lead.first):'<span style="color:var(--stamp)">leaderless (−10)</span>')+(busy?' · <span style="color:var(--stamp)">worked this week</span>':'')+(j.final?' · the final score is yours alone':'')+'</div></div>'
       +'<div><button class="btn sm" data-act="execute-crew" data-id="'+j.id+'" data-crew="'+cr.id+'" '+(ac.canRun&&!busy&&!j.final?"":"disabled")+'>Send →</button></div></div>';}).join("");
@@ -5087,7 +5545,7 @@ function jobPanel(j){
     +'These are not on the ordinary board and nobody else can take one: they arrive by name because you have seven places. '
     +bigRun()+' of '+BAL.bigCount+' run so far. Each one is spent when it is finished, whichever way it finishes.</div>':'';
   const b='<div class="panel-b">'+bigNote+theJob+brief+'<div class="mono" style="font-size:12px;color:var(--muted)">The plan leans on '+wtxt+'.</div>'+chips+reqs+timeNote
-    +'<hr class="rule"><div class="kicker">Who goes</div>'+benchBar+checks+splitBlock+caseBlock
+    +'<hr class="rule"><div class="kicker">Who goes</div>'+benchBar+checks+hiredBlock+splitBlock+caseBlock
     +'<hr class="rule"><div class="kicker">The reckoning</div>'+factors+'<div style="margin-top:10px">'+odds+'</div>'+othersBlock
     +'<hr class="rule"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" data-act="close-job">Walk away</button>'
     +'<button class="btn stamp" data-act="execute" data-id="'+j.id+'" '+(a.canRun?"":"disabled")+'>'+(a.canRun?"Take the job →":j.news&&j.news.closed?"Shut this week — see the paper":"Needs "+j.need+" in the field")+'</button></div></div>';
@@ -5096,7 +5554,7 @@ function jobPanel(j){
 // Your crew, compact, above the postings — so a job can be judged without leaving the board.
 function crewStrip(){
   const hidden=!!S.stripHidden;
-  const head='<div class="strip-h"><span class="kicker">Your crew · '+field().length+' ready · green tags below are trades and knowledge you have, red are missing</span>'
+  const head='<div class="strip-h"><span class="kicker">Your crew · '+field().length+' ready · green on a posting is held, red is missing, and the number beside it is what it is worth there</span>'
     +'<span style="display:flex;gap:6px"><button class="btn ghost sm" data-act="tab" data-k="crew">Open crew</button><button class="btn ghost sm" data-act="strip-toggle">'+(hidden?"Show crew":"Hide")+'</button></span></div>';
   if(hidden)return '<div class="strip">'+head+'</div>';
   const cards=crewAll().map(c=>{
@@ -5253,27 +5711,38 @@ function tabLog(){
     +'</div></div>';
   // who else is out there
   const rv=rival(),dt=detective();
-  const watch=(rv||dt)?'<div class="panel" style="margin-top:14px"><div class="panel-h"><h2>The competition and the law</h2><span class="kicker">'+(rv?cap(rv.name):"")+(rv&&dt?" · ":"")+(dt?dt.name:"")+'</span></div><div class="panel-b">'
-    +(rv?'<div class="mono" style="font-size:12.5px;line-height:1.7"><b>'+esc(cap(rv.name))+'</b> — '+esc(rv.boss)+' runs it, working the same board since week '+rv.since+'. They have taken <b>'+rv.took+'</b> posting'+(rv.took===1?'':'s')+' off it.</div>'
-      +'<div class="loy'+(rivalAhead()?" low":"")+'" style="height:9px;margin-top:6px"><i style="width:'+clamp(rv.standing,0,100)+'%"></i></div>'
-      +'<div class="mono" style="font-size:11.5px;margin-top:5px">Their standing <b>'+rv.standing+'</b> against '+(S.crewName?esc(crewTitle())+"'s":"your")+' <b>'+S.rep+'</b> — '+(rivalAhead()?'<span style="color:var(--stamp)">they are ahead, and they take the best posting most weeks and buy your crew drinks</span>':rv.standing===S.rep?'you are level with them':'you are ahead of them')+'.</div>'
+  const rvs=rivals().slice().sort((a,b)=>b.standing-a.standing);
+  /* One card per outfit. This was written out once, inline, for the one rival there could be —
+     and every button on it acted on "the rival" rather than on a named one, which is fine until
+     there are two and the buy-out button buys out whichever the code happened to pick. Every
+     control now carries the id of the outfit whose card it is on. */
+  const rivalCard=rv=>{
+    const ahead=rv.standing>S.rep;
+    const press=rivalPressureCost(rv), out=rivalBuyoutCost(rv.id);
+    return '<div class="mono" style="font-size:12.5px;line-height:1.7"><b>'+esc(cap(rv.name))+'</b> — '+esc(rv.boss)+' runs it, working the same board since week '+rv.since+'. They have taken <b>'+rv.took+'</b> posting'+(rv.took===1?'':'s')+' off it.</div>'
+      +'<div class="loy'+(ahead?" low":"")+'" style="height:9px;margin-top:6px"><i style="width:'+clamp(rv.standing,0,100)+'%"></i></div>'
+      +'<div class="mono" style="font-size:11.5px;margin-top:5px">Their standing <b>'+rv.standing+'</b> against '+(S.crewName?esc(crewTitle())+"'s":"your")+' <b>'+S.rep+'</b> — '+(ahead?'<span style="color:var(--stamp)">they are ahead, and they take the best posting most weeks and buy your crew drinks</span>':rv.standing===S.rep?'you are level with them':'you are ahead of them')+'.</div>'
       +'<div class="mono" style="font-size:11.5px;margin-top:8px;color:var(--ink-2)">'
         +(rv.lead?'Clear of them <b>'+rv.lead+'</b> week'+(rv.lead>1?'s':'')+' running — '+RIVAL.leadWeeks+' and the clients stop calling them.'
                  :'Hold a standing '+RIVAL.leadGap+' clear of theirs for '+RIVAL.leadWeeks+' straight weeks and they are finished on their own.')
         +(rv.hostile?' <span style="color:var(--stamp)">They know you moved on them once.</span>':'')+'</div>'
       +'<div class="loy" style="height:5px;margin-top:4px"><i style="width:'+Math.round(100*clamp(rv.lead||0,0,RIVAL.leadWeeks)/RIVAL.leadWeeks)+'%"></i></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
-        +'<button class="btn ghost sm" data-act="rival-buy" '+(S.money>=Math.max(40000,rv.standing*3000)?"":"disabled")+'>Buy a name inside · '+money(Math.max(40000,rv.standing*3000))+'</button>'
-        +'<button class="btn ghost sm" data-act="rival-enforce" '+(payroll().some(c=>c.status==="crew"&&hasTech(c,"enforcer"))?"":'disabled title="Needs an Enforcer"')+'>Send the enforcer</button>'
+        +'<button class="btn ghost sm" data-act="rival-buy" data-id="'+rv.id+'" '+(S.money>=press?"":"disabled")+'>Buy a name inside · '+money(press)+'</button>'
+        +'<button class="btn ghost sm" data-act="rival-enforce" data-id="'+rv.id+'" '+(payroll().some(c=>c.status==="crew"&&hasTech(c,"enforcer"))?"":'disabled title="Needs an Enforcer"')+'>Send the enforcer</button>'
       +'</div>'
-      +'<hr class="rule"><div class="kicker" style="color:var(--stamp)">Finish them</div>'
-      +'<div class="sel-help">Four ways out of this, and three of them are on this screen. The fourth is a posting: it stands on the board when you are close enough to them to be worth the heat.</div>'
+      +'<div class="kicker" style="color:var(--stamp);margin-top:12px">Finish '+esc(cap(rv.name))+'</div>'
+      +'<div class="sel-help">Four ways out of this one, and three of them are on this screen. The fourth is a posting: their yard stands on the board when you are close enough to them to be worth the heat.</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">'
-        +'<button class="btn sm" data-act="rival-buyout" '+(S.money>=rivalBuyoutCost()?"":'disabled title="'+money(rivalBuyoutCost())+' — you do not have it"')+'>Buy them out · '+money(rivalBuyoutCost())+'</button>'
-        +'<button class="btn ghost sm" data-act="rival-burn" '+(dt?"":'disabled title="Nobody to tell yet"')+' title="'+(dt?'Adds '+RIVAL.burnFile+' to '+esc(dt.name)+"'s file on YOU":"")+'">Give them to the law</button>'
-        +((S.jobs||[]).some(j=>j.rival)?'<span class="tag ok" style="align-self:center">their yard is on the board</span>':'')
-      +'</div>':'')
-    +(rv&&dt?'<hr class="rule">':'')
+        +'<button class="btn sm" data-act="rival-buyout" data-id="'+rv.id+'" '+(S.money>=out?"":'disabled title="'+money(out)+' — you do not have it"')+'>Buy them out · '+money(out)+'</button>'
+        +'<button class="btn ghost sm" data-act="rival-burn" data-id="'+rv.id+'" '+(dt?"":'disabled title="Nobody to tell yet"')+' title="'+(dt?'Adds '+RIVAL.burnFile+' to '+esc(dt.name)+"'s file on YOU":"")+'">Give them to the law</button>'
+        +((S.jobs||[]).some(j=>j.rival&&j.rivalId===rv.id)?'<span class="tag ok" style="align-self:center">their yard is on the board</span>':'')
+      +'</div>';
+  };
+  const watch=(rvs.length||dt)?'<div class="panel" style="margin-top:14px"><div class="panel-h"><h2>The competition and the law</h2><span class="kicker">'+rvs.map(r=>cap(r.name)).join(" · ")+(rvs.length&&dt?" · ":"")+(dt?dt.name:"")+'</span></div><div class="panel-b">'
+    +(rvs.length>1?'<div class="warnbox" style="margin-bottom:12px"><b>Two outfits are working this board.</b> Between them they take the best of it most weeks. Neither has to be there forever, and they end one at a time — each card below is its own chapter with its own four ways out.</div>':'')
+    +rvs.map(rivalCard).join('<hr class="rule">')
+    +(rvs.length&&dt?'<hr class="rule">':'')
     +(dt?'<div class="mono" style="font-size:12.5px;line-height:1.7"><b>'+esc(dt.name)+'</b> ('+esc(dt.full)+') has been on your alias since week '+dt.since+'.</div>'
       +'<div class="loy'+(detFile()>=50?" low":"")+'" style="height:9px;margin-top:6px"><i style="width:'+clamp(detFile(),0,100)+'%"></i></div>'
       +'<div class="mono" style="font-size:11.5px;margin-top:5px">The file is <b>'+detFile()+' / 100</b>. It thickens while the heat is up and thins while it is down. '+(detFile()>=50?'<span style="color:var(--stamp)">A raid comes at heat '+raidAt()+' now, not 100.</span>':'A raid comes at heat '+raidAt()+'.')+' Paying a desk, laying low and a raid itself all thin it.</div>':'')
@@ -5303,9 +5772,9 @@ function tabLog(){
     +' · '+money(upkeep)+'/wk';
   const sRec=st.jobs+' job'+(st.jobs===1?'':'s')+' · '+nDone+' of '+GOALS.length+' marks · ranking '+S.rep;
   const sWatch=(function(){
-    if(!rv&&!dt)return '<span class="ok">nobody on you yet</span>';
+    if(!rvs.length&&!dt)return '<span class="ok">nobody on you yet</span>';
     const a=[];
-    if(rv)a.push(esc(cap(rv.name))+' at '+rv.standing+(rv.standing>S.rep?' — <span class="bad">ahead of you</span>':' — behind you'));
+    rvs.forEach(r=>a.push(esc(cap(r.name))+' at '+r.standing+(r.standing>S.rep?' — <span class="bad">ahead of you</span>':' — behind you')));
     if(dt)a.push(esc(dt.name)+' · file '+dt.file+(dt.file>=50?' <span class="bad">(they come sooner)</span>':''));
     return a.join(' · ');
   })();
@@ -5368,6 +5837,14 @@ function modalRecruit(id){
   const nat=natOf(c);
   const t=TECH_BY_K[c.tech];
   const canHire=recruits().length<crewSeats()&&c.status==="available"&&S.money>=c.fee&&canSign(c);
+  // What they did after the last night you bought from them. It goes above the vetting, because
+  // vetting is a guess about what somebody was and this is a fact about what they did.
+  const talkedLine=(!c.isPlayer&&c.talked)
+    ?'<div class="warnbox"><b>Talked.</b> After the '+esc(c.talked.city)+' job in week '+c.talked.week
+      +' — "'+esc(c.talked.job)+'" — this one went to the police with it. '
+      +'They will not be brought in for a night again. Hiring them properly is still yours to decide, '
+      +'and it is a different question: a place on the crew, wages, and a stake in the next one.</div>'
+    :'';
   const vetLine=c.isPlayer?"":c.vetted
     ?(c.vetFlag?'<div class="warnbox">Vetting flagged ties to an informant network. Hire this one and the heat walks in with the luggage.</div>'
                :'<div class="mono" style="font-size:12px;color:var(--good)">✓ Vetted clean. No known ties — as far as money can tell.</div>')
@@ -5399,7 +5876,8 @@ function modalRecruit(id){
         +'<span class="k">Upkeep</span><span class="num">'+money(c.upkeep)+' a week</span>')+'</div>'
       +'<div class="attrs" style="padding:10px 0 0;grid-template-columns:1fr 1fr">'+attrRow(c)+'</div>'
     +'</div></div>'
-    +(vetLine?'<hr class="rule">'+vetLine:'')
+    +(talkedLine?'<hr class="rule">'+talkedLine:'')
+    +(vetLine?(talkedLine?'':'<hr class="rule">')+vetLine:'')
     +(c.status==="available"&&!canSign(c)?'<div class="warnbox" style="margin-top:12px">'+esc(signWhy(c))+'</div>':'')
     +'<hr class="rule"><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">'
       +'<button class="btn ghost" data-act="scrim">Close</button>'
@@ -8088,8 +8566,8 @@ const TUT_STEPS=[
   {tab:"crew",sel:"[data-act=found-open]",h:"Other crews, later",t:cap(yearsIn(EXTRA_CREW_WEEKS[0]))+" in, Feared, with seven on your crew, you can found a second crew out of your own people — a commander and four soldiers, named after its commander — that takes a job of its own each week without you. A third at three years, a fourth at four, no more. The game announces each milestone in a box when you reach it."},
   {tab:"roster",sel:".rosterbar",h:"Everybody for hire",t:"Search by name, country, language or knowledge. Filter by trade, role and nationality. Sort by fee, experience or raw skill."},
   {tab:"roster",sel:".cards .id",h:"A file",t:"Flag and passport tier (P1 strong, P4 weak), trade and rank, the five attributes, then education, jail, streets, knowledge, languages — and in red, what this one will not do. Hover the trade, or MUS, BRN, TCH, CHM, NRV, for a brief. File opens the whole thing and lets you vet for informants. Hire pays the fee — if the file will sign with a crew of your name: Veterans want a Known crew, Legends a Respected one."},
-  {tab:"jobs",sel:".jobrow",h:"Jobs",t:"Clients post jobs by country; the map beside them lights every country with a posting. Each row: category, the trades and knowledge it wants — green if your crew has it, red if not — city, crew needed, fee, heat, when it expires, and a chip saying how your crew fits. Open one."},
-  {tab:"jobs",openJob:true,sel:".check",h:"Who can go",t:"Every crew member, ✓ or ✗, with the reason: the border and their passport, a conviction, a limit the job trips, an injury. A forger on the crew gets weak passports through. Above, every requirement carries a tick or a cross — including the money: who calls this job small money."},
+  {tab:"jobs",sel:".jobrow",h:"Jobs",t:"Clients post jobs by country; the map beside them lights every country with a posting. The verdict is first on the row — Good fit, Risky, Long odds, or how many of your crew can even go. Under it, the trades and knowledge it wants, green if you hold it and red if not, each with what it is worth on this job: a bare +9 is being counted for you now, a bracketed (+9) is what somebody who had it would be worth, and a −6 is being charged. Then the city, the crew it needs, the fee, the heat and when it expires. Open one."},
+  {tab:"jobs",openJob:true,sel:".check",h:"Who can go",t:"Every crew member, ✓ or ✗, with the reason: the border and their passport, a conviction, a limit the job trips, an injury. A forger on the crew gets weak passports through. Above, every requirement carries a tick or a cross and what it is worth on this job — including the money: who calls this job small money."},
   {tab:"jobs",openJob:true,sel:".factors",h:"The reckoning",t:"Every factor with its number — crew size, who commands, language, a local national, knowledge, trades, heat — then the odds. Take the job and the report plays minute by minute; a week passes. On some jobs the report stops on a twist: six options, and one sets the crew free — the one the crew you brought can actually do. Choose badly and it costs blood, a place, heat and ranking."},
   {tab:"log",sel:".log",h:"The case log",t:"Everything that happened, week by week; the Week dropdown goes back to any past week, and every job you have run is on file above as a recap. Every few weeks something happens between jobs — a death, a disappearance, a resignation, a rival crew buying drinks, an old face, a detective — and asks for a decision with a price. The panel on the right says what your ranking buys and what the next name costs. Lay low a week here or on the Jobs board: −15 heat, ranking −1, upkeep still due."},
   {tab:"log",sel:".burger",h:"The office",t:"Esc, or this button, on any screen: pause, sound, music, brightness, the controls book, the player's handbook, your file, and the door out. The handbook is every rule and number in the game with a search bar over it. The i button beside it explains whatever is on screen, and can run this tutorial again."},
@@ -8097,7 +8575,7 @@ const TUT_STEPS=[
 const TUT_REMIND=[
   {tab:"crew",sel:".topbar",h:"Welcome back",t:"A short reminder, then the game is yours. Balance, week, ranking, heat. The ranking is your name, and the name decides what clients post, what they pay, who will sign, how many places you have and whether the crew stays. Heat at 100 is a raid; a week laid low cools it by 15 and costs a point of ranking."},
   {tab:"crew",sel:".cards",h:"The crew",t:"Loyalty on every card. A bonus buys +14 loyalty and three weeks paid up. Small jobs in a row make a member grumble, then walk — the job file says who calls a posting small money. Cut loose frees a place. A Respected name opens places six and seven; from the second year a full crew can found another crew that works without you."},
-  {tab:"jobs",sel:".jobrow",h:"The board",t:"Green tags you have, red you don't; the chip says how you fit; the map lights the countries. Open a posting for who can go and the reckoning. Mid-report, a twist can stop everything for your call — one of six options sets the crew free, the one your crew can actually do."},
+  {tab:"jobs",sel:".jobrow",h:"The board",t:"The verdict leads each row; green tags you hold, red you don't, and the number on each is what it is worth here — bracketed means you would have to go and get it. The map lights the countries. Open a posting for who can go and the reckoning. Mid-report, a twist can stop everything for your call — one of six options sets the crew free, the one your crew can actually do."},
   {tab:"log",sel:".log",h:"The log",t:"Recaps of every job, the case log by week, and on the right what the name buys and what the next one costs. Between jobs, something can happen that asks for a decision with a price."},
   {tab:"log",sel:".burger",h:"Help is one key away",t:"Esc opens the office; i explains whatever is on screen, and the full tutorial can be run again from there. Good luck."},
 ];
@@ -8214,7 +8692,10 @@ const INFO={
     "<b>When a meeting goes wrong it is not about money.</b> They don't show; the number moves; they bring somebody; a car sits outside for forty minutes; they want to know what happened to the last person in the job; three men and a shut door. What answers it is what you brought — an <b>enforcer</b> in the room, a <b>face</b> to do the talking, a <b>forger</b> for papers, a <b>fixer</b> to find out who moved them, the <b>language</b>, your own <b>Charm</b> or <b>Nerve</b>, and the record of what your crew has actually done. Walking out is always on the list. Somebody who turns you down will not take another meeting for a couple of months.",
     "About one file in fourteen is a <b>police informant</b>: they leak jobs and leak heat. <b>Vet</b> a file for $6K — a dull crew misses one in three, so a clean stamp is a guess with money behind it."]},
   jobs:{h:"Jobs",t:[
-    "Postings from clients, by country. Each row: category, the trades and knowledge it wants — <b>green</b> if someone on your crew has it, <b>red</b> if nobody does — city, country and language, crew needed, fee, heat, when it expires, and a chip: <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go.",
+    "Postings from clients, by country. The verdict comes first on the row — <b>Good fit</b>, <b>Risky</b>, <b>Long odds</b>, or how many of your crew can even go — and hovering it gives the sum behind it: your reckoning against the job's difficulty, the roll on top, and the odds of each ending. Then the category, the trades and knowledge it wants, the city, country and language, the crew needed, the fee, the heat and the week it expires.",
+    "<b>Every requirement says what it is worth</b>, in the same points the reckoning is counted in, so the board and the job file are the same argument. A bare <b>+9</b> in green is being counted for you right now. A bracketed <b>(+9)</b> in red is what somebody who held it would be worth — you are not being charged for missing it, you are declining a bonus. A bare <b>−6</b> in red <i>is</i> a charge. That distinction is the point: a trade nobody has costs you nothing you had, while knowledge nobody has, and a language nobody speaks, come off the reckoning.",
+    "A trade is worth <b>+"+TRADE_COVER+"</b> to the crew for being covered at all, plus <b>+"+TECH_BONUS+"</b> to the one who <i>is</i> it or <b>+"+TECH_BONUS_2+"</b> to one who learned it as a second — and because the reckoning averages the field, that bonus is divided by how many go. A specialist in a room of three is most of the room; the same person in a room of seven is a seventh of it. This is why the number on a chip changes when you bench somebody, and it is not a bug.",
+    "An ordinary posting names <b>at most two trades</b> — one at tier 1, two from tier 2 up. Three or more from one client is the signature of an <b>operation</b>, which is a different kind of night. Tier 4 is still the hardest thing on the board; it is the difficulty, the five in the field and the second kind of knowledge that make it so.",
     "<b>The board does not wait.</b> Every posting carries the week it expires, on the row and again on its own screen with the weeks left counted off. It matters because a trip to fetch somebody is a week: a posting wanting a trade nobody has, with three weeks on it, is a job you can still go and fit. With one week on it, it is a job you run with the crew you have or not at all — and the screen says which of the two you are looking at.",
     "<b>You are not the only crew reading it.</b> A rival takes the best posting still standing, some weeks, and you are told which one, what it paid, and whether you could have run it — or, worse, how many weeks you had already spent watching it.",
     "<b>Clients remember.</b> Botch a job badly enough and the client may stop posting to you for twenty or thirty weeks, take one or two other clients with them, and pull the postings they already had. The board says who will not deal with you and until when — and whether one of them is not finished with you.",
@@ -8224,12 +8705,15 @@ const INFO={
     "<b>Lay low a week</b>: −15 heat, upkeep still due, postings refresh, ranking −1. Clients post to a name: a Nobody or Small time crew sees tier 1–2 postings, a Known crew tier 3, Respected and up tier 4 — and the fee is scaled to the name, from −20% to +50%. A job is <b>weeks</b>, not a week: a tier-1 errand is gone by Friday, a tier-4 room holds the crew for three. Before you take one you can <b>case</b> it — a week and a fee, for a real gain on the reckoning and the risk that the posting is gone when you look up.",
     "On some jobs the live report stops mid-way: something has gone wrong and six options wait for your call. One sets the crew free — the one the crew you brought can actually do — so read the file before you take the job.",
     "<b>Quick Money - High Risk</b>, under the postings: two or three small pieces a week — <b>one soldier, no crew</b>, no casing, no week spent — for a few hundred to a few thousand dollars, for the week the float is short of the person you need. A trade counts for nothing out here. What counts is the attributes the work leans on, what they will not do, and their nerve for something with nobody behind them, and every name carries its own percentage before you choose. The worse the fit, the worse the wrong ending: hurt for a fortnight, or held for up to five weeks. Heat lands whether it comes off or not. <b>One a week</b>, however big the crew — it is the gap, not an income.",
-    "Once you have founded other crews, every job file lists them under <b>Other crews</b> with their own reckoning and a <b>Send</b> button: a crew's job does not spend your week, one job per crew per week, and their reports are filed on the Log like yours."]},
+    "Once you have founded other crews, every job file lists them under <b>Other crews</b> with their own reckoning and a <b>Send</b> button: a crew's job does not spend your week, one job per crew per week, and their reports are filed on the Log like yours.",
+    "<b>Somebody for the one night.</b> When a posting wants a trade nobody going has, the job file offers people who are — three of them, from the best down to the cheapest. A hired hand takes <b>no place on the crew</b>, draws <b>no wages</b>, builds <b>no bonds</b>, and is <b>"+signed(HIRED.stranger)+"</b> on the reckoning because nobody in that room has worked with them. What they take is a contractor's share of the score: "+Math.round(HIRED.cutMin*100)+"% to "+Math.round(HIRED.cutMax*100)+"%, by rank, four or five times what a crew member takes.",
+    "They are paid out of the score like everybody else, and that is the whole of it: <b>a night that pays nothing pays them nothing</b>. Somebody who came, took the risk and went home empty is the one who talks — and so is somebody the police picked up at the scene. Nerve and years on the street pull the odds back down; the job file prints both numbers before you sign, for a night that comes off and for one that doesn't. When one does talk it is +"+HIRED.talkHeat+" heat, a thicker file on the detective's desk, and a <b>Talked</b> stamp on theirs. They are never brought in again; hiring them properly is a different question, and still yours.",
+    "The contract is for one posting. Open another and it is torn up — the same as benching. And it is never offered on an <a href=\"#book-ops\">operation</a> or on the final score: those ask whether the crew you built is broad, and buying the answer for one night is not answering it."]},
   log:{h:"The Log",t:[
     "<b>Job recaps</b>: every job you have run stays on file. Open one for the full report — the minute-by-minute, the verdict, the split, why the ranking moved, what they learned, who came back.",
     "<b>The case log</b>, week by week — every hire, job, injury, arrest, leak and betrayal. The <b>Week</b> dropdown narrows both the recaps and the log to one week; \"All weeks\" shows everything.",
     "The operation panel counts places, who is ready, who is hurt or held, weekly upkeep and open postings. Lay low from here too.",
-    "<b>The competition and the law</b> name the two things that used to be numbers. Once you are Small time, a rival outfit appears, run by somebody with a name: they work the same board, take the best posting left most weeks, and their standing climbs when they do. When their standing passes your ranking they start buying your crew drinks. You can buy a name inside their operation, or send your enforcer — which works about two times in three, and is loud when it doesn't. A <b>detective</b> opens a file once the heat has been up or your name has grown; the file thickens with heat and thins when you lie low, pay a desk, or get raided — and past 50 the raid comes at heat 90 instead of 100, past 75 at 80.",
+    "<b>The competition and the law</b> name the two things that used to be numbers. Once you are Small time, a rival outfit appears, run by somebody with a name: they work the same board, take the best posting left most weeks, and their standing climbs when they do. Past a ranking of "+RIVAL.secondRep+" a <b>second</b> one can arrive, and then there are two outfits taking the best of the board between them — each with its own card, its own price and its own four ways out, closed one at a time. When their standing passes your ranking they start buying your crew drinks. You can buy a name inside their operation, or send your enforcer — which works about two times in three, and is loud when it doesn't. A <b>detective</b> opens a file once the heat has been up or your name has grown; the file thickens with heat and thins when you lie low, pay a desk, or get raided — and past 50 the raid comes at heat 90 instead of 100, past 75 at 80.",
     "<b>The record</b> counts everything the crew has done — jobs, verdicts, money earned and paid out, the biggest score, countries worked, twists called right, who was hurt, taken or lost, and the current run of jobs without a scratch. Under it, <b>Next</b> shows the three nearest marks on the wall: eighteen career goals from the first job to the final score, each paying ranking, money or both when it lands, and announced in a box when it does.",
     "<b>Standing arrangements</b> is where money goes. Three people on a weekly retainer — a <b>lawyer</b> (anyone taken is held half as long), a <b>doctor</b> (a wound is one week, not two), a <b>fixer</b> (two more postings a week, and one written for the crew you actually have) — paid out of the same payroll as the crew, so a missed week loses them. A <b>safe house</b> is bought outright, in three moves: heat falls 7, then 9, then 11 a week, and the best one keeps most of the float through a raid. And a <b>desk</b> can be paid to lose a file: heat −20, priced by how hot you are.",
     rankLadderText()]},
@@ -8839,7 +9323,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 99 · September 2026";
+const BUILD="build 100 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
@@ -9002,16 +9486,20 @@ document.addEventListener("click",e=>{
     // were standing. Without this, reading the seventh person on a job's "who can go" list threw
     // the page back to the top, and you had to scroll down to them again to read the eighth.
     case "open-recruit": UI.scrollBack=window.scrollY||0; S.modal={type:"recruit",id}; render(); break;
-    case "open-job": S.tab="jobs"; S.jobOpen=id; S.modal=null; UI.scrollBack=null; if(S.benchJob!==id){S.benchJob=null;S.bench=[];} render(); window.scrollTo(0,0); break;
+    // Who sits out and who was brought in are both agreed for ONE posting. Opening a different
+    // one tears up both, the same way, rather than carrying a contract to a job nobody signed for.
+    case "open-job": S.tab="jobs"; S.jobOpen=id; S.modal=null; UI.scrollBack=null; if(S.benchJob!==id){S.benchJob=null;S.bench=[];} if(S.hiredJob!==id){S.hiredJob=null;S.hiredId=null;} render(); window.scrollTo(0,0); break;
     case "bench": { const j=S.jobs.find(x=>x.id===S.jobOpen); if(j)toggleBench(j,id); render(); break; }
     case "bench-clear": { const j=S.jobs.find(x=>x.id===S.jobOpen); if(j)benchClear(j); render(); break; }
+    case "hire-night": { const j=S.jobs.find(x=>x.id===S.jobOpen); if(j)bringIn(j,id); render(); break; }
+    case "hire-night-off": bringInOff(); render(); break;
     case "retainer": toggleRetainer(k); break;
     case "safehouse": buySafehouse(); break;
     case "bribe": bribe(); break;
-    case "rival-buy": rivalPressure(); break;
-    case "rival-enforce": rivalEnforce(); break;
-    case "rival-buyout": rivalBuyout(); break;
-    case "rival-burn": rivalBurn(); break;
+    case "rival-buy": rivalPressure(id); break;
+    case "rival-enforce": rivalEnforce(id); break;
+    case "rival-buyout": rivalBuyout(id); break;
+    case "rival-burn": rivalBurn(id); break;
     case "close-job": S.jobOpen=null; render(); window.scrollTo(0,0); syncScrolled(); break;
     case "to-top": try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){window.scrollTo(0,0);} syncScrolled(); break;
     case "map-country": S.jobOpen=null; S.jobCountry=(S.jobCountry===t.getAttribute("data-cn"))?null:t.getAttribute("data-cn"); render(); break;
