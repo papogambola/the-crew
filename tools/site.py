@@ -20,7 +20,7 @@ Each value is marked in the page with an HTML comment and replaced up to the nex
     <!-- site.py:build -->build 91 · 19 September 2026</b>
                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this
 """
-import os, re, sys, zipfile
+import glob, hashlib, os, re, sys, zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PAGE = os.path.join(ROOT, "index.html")
@@ -81,6 +81,27 @@ for key, value in WANT.items():
     if m.group(2) != value:
         stale.append("%-7s %r -> %r" % (key, m.group(2), value))
     out = pat.sub(lambda _m: _m.group(1) + value.replace("\\", "\\\\"), out, count=1)
+
+# The screenshots keep their filenames for ever, which is how a corrected one fails to arrive:
+# the four went out with the masthead in a fallback grotesque, were re-taken in Anton the same
+# day, and the fixed files were served to anybody who had not looked before — everybody else got
+# the broken ones out of their own cache, with nothing to tell them or us. So the src carries a
+# short hash of what the four actually contain. Re-shoot and the URL changes; leave them alone
+# and it does not, so nothing is re-downloaded for nothing.
+shots = sorted(glob.glob(os.path.join(ROOT, "shots", "*.png")))
+if not shots:
+    raise SystemExit("no shots/*.png — has the screenshot folder moved?")
+h = hashlib.sha256()
+for s in shots:
+    h.update(os.path.basename(s).encode())
+    h.update(open(s, "rb").read())
+shotv = h.hexdigest()[:8]
+
+pat = re.compile(r'(shots/[A-Za-z0-9_-]+\.png)(\?v=[0-9a-f]+)?')
+seen = set(m.group(2) or "" for m in pat.finditer(out))
+if seen != {"?v=" + shotv}:
+    stale.append("shots    %s -> ?v=%s" % (", ".join(sorted(x or "(none)" for x in seen)), shotv))
+out = pat.sub(lambda _m: _m.group(1) + "?v=" + shotv, out)
 
 pat = re.compile(r'(<!-- site\.py:favicon -->)<link rel="icon" href="[^"]*">')
 m = pat.search(out)

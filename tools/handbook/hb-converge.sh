@@ -9,7 +9,21 @@
 # index promised.
 set -e
 cd "$(dirname "$0")"
+# FIRST, and it was not here: dump.js reads the game's own script and writes gamedata.json, which
+# is every number and table the book quotes. It is a build artifact and untracked, so a stale one
+# leaves no trace in git status and no diff to notice — the book simply goes on quoting the game
+# it was last told about. The title page shipped reading "build 86" out of a tree on 91 that way,
+# and then "build 97" out of a tree on 98. Both were found by eye, in the zip, after the fact.
+# Regenerating costs two seconds and removes the whole class.
+node dump.js > /dev/null
 node hb-build.js
 node hb-pdf.js
 python3 hb-pages.py
-echo "built, printed, read back — hb-drive.js checks the index against it"
+# And publish it. hb-build.js writes its output next to itself, but the handbook players open —
+# the one the site serves and the one desktop/tools/build.py reads on its way into the zip — is
+# ../../handbook.html at the top of the tree, and nothing connected the two. It was a copy
+# somebody remembered to make, so the published book sat a build behind the built one and the
+# title page went out reading 97 from a tree on 98. Three copies of a file is fine; three copies
+# and a manual step is not.
+cp handbook.html ../../handbook.html
+echo "built, printed, read back, published to ../../handbook.html"

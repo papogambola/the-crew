@@ -9,8 +9,8 @@
    job in Piraeus. A screenshot that changes every time it is taken cannot be compared with the
    last one, and "is this still what the game looks like" is the only question anybody asks of
    one. The single thing the seed does not fix is the commander: rollDraftProfile() runs before
-   there is a game to seed it from, correctly, so Paz comes out a different person every run.
-   Everybody standing behind Paz is the same.
+   there is a game to seed it from, correctly, so the player's own attributes come out different
+   every run. Everybody standing behind them is the same.
 
    Taken at deviceScaleFactor 2 and then quantised to a 128-colour palette, which is a third of
    the bytes for no visible loss — the game is black ink on three shades of paper with a red
@@ -70,6 +70,7 @@ const GAME=process.argv[2]||path.join(ROOT,"play.html");
 const OUT=path.join(ROOT,"shots");
 const CHROME="/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
 const SEED=20260920;
+const PLAYER="Sasha Varga";   // the commander on the shop window. Invented, and a full name.
 const W=1280,H=820;
 
 fs.mkdirSync(OUT,{recursive:true});
@@ -105,17 +106,30 @@ async function putDownPaper(page){
   await page.reload();
 
   await page.click('[data-act="begin"]');
-  await page.fill("#pname","Paz");
+  /* A full invented name, and invented is the point twice over. It was "Paz", which put the
+     author on the shop window of his own game; and it was one word, so the player's card was
+     the only one on the crew screen without a surname and read as a bug in the game rather
+     than as what somebody had typed. Everybody behind this name is generated from SEED. */
+  await page.fill("#pname",PLAYER);
   await page.click('[data-act="confirm-create"]');
   await page.waitForSelector(".topbar");
   await putDownPaper(page);
   if(await page.$('[data-act="tut-skip"]'))await page.click('[data-act="tut-skip"]');
 
-  // Milestone boxes and the two-of-a-trade argument both block everything behind them.
-  const drain=async()=>{let n=0;while(await page.$(".modal.notice")||await page.$('[data-act="loose"]')){
-    if(await page.$(".modal.notice"))await page.click('[data-act="notice-close"].btn');
-    else await page.click('[data-act="loose"][data-i="0"]');
-    await page.waitForTimeout(60);if(++n>30)break;}};
+  /* Milestone boxes, the two-of-a-trade argument, and — since build 96 — the crew asking for a
+     name all block everything behind them. The name prompt was not in this list and it arrives
+     at week 20, well before the week 58 these are taken at, so this hung for thirty seconds and
+     then threw. Take the name it offers rather than skipping: a crew with a name is what the
+     game looks like by then, and the shop window should show that.
+
+     Anything that appears and is not one of these stops the loop rather than spinning on it. */
+  const drain=async()=>{let n=0;for(;;){
+    if(await page.$('[data-act="crewname-ok"]:not([disabled])'))await page.click('[data-act="crewname-ok"]');
+    else if(await page.$('[data-act="crewname-later"]'))await page.click('[data-act="crewname-later"]');
+    else if(await page.$('[data-act="notice-close"].btn'))await page.click('[data-act="notice-close"].btn');
+    else if(await page.$('[data-act="loose"]'))await page.click('[data-act="loose"][data-i="0"]');
+    else break;
+    await page.waitForTimeout(60);if(++n>40)break;}};
   await drain();
 
   // One seed for the whole set, and a crew a year and a bit in: enough money to look like

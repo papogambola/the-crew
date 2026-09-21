@@ -87,3 +87,30 @@ point. A test copy is `desktop/resources/` served over http, which is exactly wh
 The exe is unsigned: SmartScreen shows "Windows protected your PC" the first time, and "More info →
 Run anyway" gets past it. Signing needs a code-signing certificate, which is a purchase and an
 identity check, not a build step.
+
+## The port is pinned, and it has to be
+
+`"port": 39447` in `neutralino.config.json`. It was `0`, which means "pick any free port", and
+that one word threw away every player's game.
+
+Neutralino serves the app over http on localhost, so the game runs at an *origin* —
+`http://localhost:39447/`. localStorage is partitioned by origin, and an origin includes the
+port. With `port: 0` every launch got a different one, so every launch was a different origin
+with a different, empty localStorage. The save was never deleted; it was stranded at an address
+the app would never visit again. `hasSave()` came back false and the title screen offered New
+Game and nothing else, on a machine with the save still sitting on disk.
+
+Nothing said so, either. `STORAGE_OK` probes localStorage and it passes — writing works fine, it
+is just a fresh cupboard every time — so the game had no reason to warn anybody. It looked
+exactly like a clean install, which is why this survived to a week-20 game.
+
+39447 is deliberately below 49152, where Windows starts handing out ephemeral ports: a fixed
+port up there can be taken by any outgoing socket that happens to grab it first. Down here only
+an application that deliberately wants that number can collide, and if one ever does the app
+will fail to start rather than lose anything. Two copies of the game cannot run at once.
+
+If the port ever has to change again, it takes everybody's save with it. The way out of that
+trap for good is `Neutralino.storage`, which writes beside the app instead of inside the
+browser's origin store — it needs `enableNativeAPI: true` and `nativeAllowList: ["storage.*"]`,
+and the save/load path becomes async. Not done: pinning the port fixes what is broken today, and
+the allowlist is empty on purpose.
