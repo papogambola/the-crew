@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cut the establishing card's three seconds of sound, and put them inside the game.
+"""Cut the establishing card's sound to the length of the card, and put it inside the game.
 
     python3 tools/city-cue.py --from <recording.mp3>   # re-cut music/city-cue.mp3, then embed it
     python3 tools/city-cue.py                          # embed music/city-cue.mp3 as it stands
@@ -12,10 +12,10 @@ other number in this project is read: a second copy is the one that goes stale, 
 here means a cue that outlives its card or dies before it.
 
 It is embedded as a data: URI rather than served, which is the one exception to all music living in
-object storage. Two reasons, both about three seconds: it has to be sounding in the frame the card
+object storage. Two reasons, both about how short it is: it has to be sounding in the frame the card
 appears and a cold fetch would not make it, and inside the exe it then plays with no connection,
 which none of the streamed music does. The bandwidth argument that moved the rest out — 54MB
-against a 1.5MB download — does not reach 25KB.
+against a 1.5MB download — does not reach 55KB.
 
 The mp3 stays in the repository beside the data URI so the cue can be re-encoded without going to
 look for the original recording again, and --check is what stops the two drifting apart.
@@ -51,24 +51,46 @@ if not m:
 ms = int(m.group(1))
 secs = ms / 1000.0
 
-# The shape of the cut, and why each number is what it is:
-#   volume    the recordings that get handed over are quiet; the game's own tracks sit at about
-#             -14 dB mean, so the cue is lifted to meet them rather than left to sound like a
-#             different game. Check the mean after re-cutting a new source: +12 suited this one.
-#   fade in   0.12s, because an mp3 that starts on a waveform mid-cycle clicks.
-#   fade out  the last fifth of the card, reaching silence exactly as it ends.
-#   mono 72k  a three-second bed under a card. Stereo would double the bytes carried in every
-#             copy of the game for width nobody is listening for.
-GAIN = "12dB"
+# The shape of the cut:
+#   the lift   the recordings that get handed over are quiet; the game's own tracks sit at about
+#              -14 dB mean, so the cue is lifted to meet them rather than left to sound like it
+#              came from a different game. The lift is MEASURED, not typed — the segment is run
+#              through volumedetect first and the gain is whatever brings its mean to -14 without
+#              pushing its loudest sample past -2 dBFS, whichever of the two binds. A number typed
+#              here was right for a three-second cut and clipped a seven-second one, because a
+#              longer cut reaches further into the recording and finds a louder passage. A limiter
+#              is the wrong answer to that: ffmpeg's alimiter auto-levels to its own ceiling by
+#              default, so it made the clipping worse while hiding the cause.
+#   fade in    0.12s, because an mp3 that starts on a waveform mid-cycle clicks.
+#   fade out   the last fifth of the card, reaching silence exactly as it ends.
+#   mono 72k   a bed under a card. Stereo would double the bytes carried in every copy of the game
+#              for width nobody is listening for.
+MEAN_TARGET, PEAK_CEILING = -14.0, -2.0
+
+def measure(source):
+    """mean and peak dBFS of the first `secs` of a recording, as ffmpeg hears it."""
+    out = subprocess.run([ffmpeg(), "-i", source, "-vn", "-t", "%.3f" % secs,
+                          "-af", "volumedetect", "-f", "null", os.devnull],
+                         capture_output=True, text=True).stderr
+    mean = re.search(r"mean_volume: (-?[\d.]+) dB", out)
+    peak = re.search(r"max_volume: (-?[\d.]+) dB", out)
+    if not mean or not peak:
+        raise SystemExit("could not measure %s" % source)
+    return float(mean.group(1)), float(peak.group(1))
+
 def cut(source):
+    mean, peak = measure(source)
+    gain = min(MEAN_TARGET - mean, PEAK_CEILING - peak)
     fade_out = max(0.2, secs * 0.2)
-    af = "volume=%s,afade=t=in:st=0:d=0.12,afade=t=out:st=%.3f:d=%.3f" % (GAIN, secs - fade_out, fade_out)
+    af = "volume=%.2fdB,afade=t=in:st=0:d=0.12,afade=t=out:st=%.3f:d=%.3f" % (
+        gain, secs - fade_out, fade_out)
     os.makedirs(os.path.dirname(CUE), exist_ok=True)
     subprocess.run([ffmpeg(), "-v", "error", "-i", source, "-vn", "-t", "%.3f" % secs,
                     "-af", af, "-ac", "1", "-ar", "44100",
                     "-c:a", "libmp3lame", "-b:a", "72k", CUE, "-y"], check=True)
-    print("cut %s -> %s (%.2fs, %d bytes)" % (os.path.basename(source), os.path.relpath(CUE, ROOT),
-                                              secs, os.path.getsize(CUE)))
+    print("cut %s -> %s (%.2fs, %d bytes) — it read %.1f dB mean, %.1f dB peak, lifted %.1f dB"
+          % (os.path.basename(source), os.path.relpath(CUE, ROOT), secs, os.path.getsize(CUE),
+             mean, peak, gain))
 
 if src:
     if check:
