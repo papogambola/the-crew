@@ -721,6 +721,39 @@
   @keyframes pulse{0%,100%{opacity:.12;transform:scale(1)}50%{opacity:.32;transform:scale(1.4)}}
   .mk-n{font-family:var(--f-mono);font-size:9px;fill:var(--stamp);font-weight:500}
   .mk.hov .mk-lit,.mk:hover .mk-lit,.mk.focus .mk-lit{fill:var(--ink)}
+  /* ---- where you are known: the same world, read the other way round ---- */
+  .map-svg.known{border:1px solid var(--line-2)}
+  .kn-r{fill:none;stroke:var(--ink);stroke-width:1.6;vector-effect:non-scaling-stroke}
+  .kn-hot{fill:none;stroke:var(--stamp);stroke-width:1.2;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
+  .kn.hot .kn-r{stroke:var(--stamp)}
+  .kn-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:2px 16px;margin-top:10px}
+  .kn-row{display:flex;align-items:center;gap:7px;font-family:var(--f-mono);font-size:11.5px;
+    padding:3px 0;border-bottom:1px dotted var(--line)}
+  .kn-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kn-j{color:var(--ink-2);white-space:nowrap}
+  .kn-h{color:var(--muted);white-space:nowrap;font-size:10.5px;min-width:112px;text-align:right}
+  .kn-row.hot .kn-h{color:var(--stamp)}
+  /* ---- your own file ---- */
+  .yf-top{display:grid;grid-template-columns:minmax(0,1fr) 168px;gap:18px;align-items:start}
+  .yf-big{font-family:var(--f-disp);font-size:30px;line-height:1.05;margin:2px 0 6px}
+  .yf-ladder{border-left:1px solid var(--line-2);padding-left:12px}
+  .yf-rung{display:flex;align-items:center;gap:7px;font-family:var(--f-mono);font-size:10.5px;
+    color:var(--muted);padding:1.5px 0}
+  .yf-dot{width:6px;height:6px;border:1px solid var(--line-2);flex:none;border-radius:50%}
+  .yf-rung.past{color:var(--ink-2)}
+  .yf-rung.past .yf-dot{background:var(--ink-2);border-color:var(--ink-2)}
+  .yf-rung.here{color:var(--stamp);font-weight:500}
+  .yf-rung.here .yf-dot{background:var(--stamp);border-color:var(--stamp);box-shadow:0 0 0 3px rgba(154,43,30,.18)}
+  .yf-rn{flex:1;min-width:0}
+  .yf-rm{opacity:.7}
+  .yf-bar{display:flex;height:9px;margin-top:12px;border:1px solid var(--ink);overflow:hidden}
+  .yf-bar>i{display:block}
+  .yf-bar .v-clean{background:var(--good)}
+  .yf-bar .v-success{background:color-mix(in srgb,var(--good) 55%,var(--card))}
+  .yf-bar .v-messy{background:var(--line-2)}
+  .yf-bar .v-botched{background:color-mix(in srgb,var(--stamp) 55%,var(--card))}
+  .yf-bar .v-disaster{background:var(--stamp)}
+  @media(max-width:620px){.yf-top{grid-template-columns:1fr}.yf-ladder{border-left:0;padding-left:0}}
   .mk.hov .mk-halo,.mk:hover .mk-halo{opacity:.4}
   #mapg{transform-box:view-box;transform-origin:0 0;transition:transform .75s cubic-bezier(.2,.7,.2,1)}
   .map-dim{fill:var(--paper);opacity:.78}
@@ -1537,7 +1570,7 @@ function newGame(player){
     // How many draws this game has made. With the seed it is the whole of its luck, which is why
     // it is saved with everything else rather than kept in a variable that dies with the tab.
     rngN:0,
-    crewIds:[],money:BAL.startMoney,heat:0,week:1,rep:0,jobSeq:0,
+    crewIds:[],money:BAL.startMoney,heat:0,week:1,rep:0,jobSeq:0,rankSeen:rankName(0),
     tab:"crew",modal:null,filter:{q:"",tech:"",role:"",nat:"",sort:"fee"},shown:30,
     jobs:[],log:[],finalDone:false,over:null,seenFinal:false,
   };
@@ -2238,6 +2271,38 @@ const GOALS=[
   {k:"final",l:"The one that ends it",d:"Take the final score and walk away from it.",rep:0,money:0,t:()=>!!S.finalDone},
 ];
 function goalsDone(){S.goals=S.goals||{};return S.goals;}
+/* -------------------------- CROSSING A RUNG ---------------------------
+   The ladder is the biggest thing that happens to you and it used to arrive as a grey line in
+   the log. Everything else of that size — a mark on the wall, the sixth seat, a second crew —
+   gets a card in the middle of the screen, so a rung that changes what clients pay, who will
+   sit down with you, how many seats you run and how hard the police look got less than the
+   things it makes possible.
+
+   Watched here rather than at the places rep moves, because rep moves in six of them: a job's
+   verdict, a career mark's payout, laying low, a name going unused, the rival, the last score.
+   One watcher against a remembered name catches all of them and cannot be forgotten by the
+   seventh. `S.rankSeen` is the name the player was last told about, not the name they have. */
+function checkRank(){
+  if(!S||S.over)return;
+  if(!S.rankSeen){S.rankSeen=rankName(S.rep);return;}   // an old save joins where it stands, silently
+  const now=rankName(S.rep);
+  if(now===S.rankSeen)return;
+  const was=S.rankSeen, up=RANKS.findIndex(r=>r[1]===now)<RANKS.findIndex(r=>r[1]===was);   // RANKS runs high to low
+  S.rankSeen=now;
+  const info=rankInfo(S.rep), nx=rankNext(S.rep);
+  S.notices=S.notices||[];
+  S.notices.push(up
+    ? {k:"The name · week "+S.week,h:cap(now),
+       text:"You were "+was+". You are "+now+" now, at "+S.rep+". "+info.note
+         +(nx?"  Next: "+nx.name+" at "+nx.min+".":"  There is nothing above this."),
+       go:"log",goText:"The record →"}
+    : {k:"The name · week "+S.week,h:"Down to "+now,
+       text:"You were "+was+". The name is "+now+" now, at "+S.rep+". "+info.note
+         +"  A name unused is a name forgotten, and so is one that keeps losing people. Clean work is what buys it back.",
+       go:"log",goText:"The record →"});
+  logMsg(up?"The name is "+now+" now.":"The name has slipped to "+now+".",up?"good":"bad",true);
+}
+
 function checkGoals(){
   if(!S||S.over)return;
   const done=goalsDone();S.notices=S.notices||[];
@@ -4701,7 +4766,7 @@ let draft=null;
 function render(){
   if(!S){musicRoute();root.innerHTML=screenTitle()+chrome();bind();fitTitle();fitQRH();return;}
   // a milestone reached is announced first; something that happened between jobs waits for a decision next
-  checkMilestones();checkGoals();
+  checkMilestones();checkGoals();checkRank();   // rank last: a mark that pays a rung announces the mark, then the rung
   // Two of a trade on one crew is the consequence of the thing you just did, so it is looked
   // for wherever somebody joins — hired, recalled, rehired, or loaded out of an old save —
   // rather than at each of those places separately, where the fifth one would be forgotten.
@@ -5259,6 +5324,69 @@ function mapSVG(){
     +'<rect x="0" y="20" width="1000" height="400" fill="var(--card)"/>'
     +'<g id="mapg" style="transform:'+start+'">'+grid+land+water+marks+'</g>'+focus+'</svg>';
 }
+/* ------------------------ WHERE YOU ARE KNOWN -------------------------
+   The same world, read the other way round. The board's map answers "where is there work";
+   this one answers "where have I been, and where can I not go back to".
+
+   Not territory. A crew of five is not a cartel and this game is about crossing borders rather
+   than holding them, so nothing here is claimed or owned. What a country remembers of you is
+   two numbers the game already keeps: how many jobs you have run there, and how hot it still
+   is. A ring that grows with the work and a mark when the place is watching — reputation and
+   its cost on one map, which is the honest version of "how big am I". */
+const KNOWN_HOT=35;      // the heat at which a country is worth not going back to for a while
+function knownCountries(){
+  const st=stats(), out=[];
+  Object.keys(st.countries||{}).forEach(name=>{
+    if(!GEO[name])return;
+    out.push({name,n:st.countries[name],heat:Math.round(countryHeat(name))});
+  });
+  return out.sort((a,b)=>b.n-a.n||a.name.localeCompare(b.name));
+}
+function knownMapSVG(){
+  const worked={};knownCountries().forEach(c=>{worked[c.name]=c;});
+  const pts=poly=>poly.map(p=>{const q=proj(p[1],p[0]);return q[0].toFixed(1)+","+q[1].toFixed(1);}).join(" ");
+  const land=LAND.map(p=>'<polygon class="map-land" points="'+pts(p)+'"/>').join("");
+  const water=WATER.map(p=>'<polygon class="map-water" points="'+pts(p)+'"/>').join("");
+  let grid="";
+  for(let lon=-150;lon<=150;lon+=30){const x=(lon+180)/360*1000;grid+='<line class="map-grid" x1="'+x+'" y1="20" x2="'+x+'" y2="420"/>';}
+  for(let lat=-60;lat<=60;lat+=30){const y=(90-lat)/180*500;grid+='<line class="map-grid" x1="0" y1="'+y+'" x2="1000" y2="'+y+'"/>';}
+  const most=Math.max(1,...Object.keys(worked).map(k=>worked[k].n));
+  let marks="";
+  Object.keys(GEO).forEach(name=>{
+    const g=GEO[name],p=proj(g[0],g[1]),w=worked[name];
+    if(!w){marks+='<circle class="mk-dot" cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="1.6"/>';return;}
+    // the ring grows with the work, on a square root so a country with twelve jobs does not
+    // swallow the ones with one — this is a dossier map, not a bubble chart
+    const r=(3.4+Math.sqrt(w.n/most)*6.4).toFixed(1), hot=w.heat>=KNOWN_HOT;
+    marks+='<g class="kn'+(hot?" hot":"")+'" transform="translate('+p[0].toFixed(1)+','+p[1].toFixed(1)+')">'
+      +'<title>'+esc(name)+' · '+w.n+' job'+(w.n>1?'s':'')+(hot?' · still watching you (heat '+w.heat+')':w.heat?' · heat '+w.heat:'')+'</title>'
+      +'<circle class="kn-r" r="'+r+'"/>'+(hot?'<circle class="kn-hot" r="'+(+r+3.4).toFixed(1)+'"/>':'')
+      +(w.n>1?'<text class="mk-n" x="'+(+r+2.4).toFixed(1)+'" y="-'+(+r-0.6).toFixed(1)+'">'+w.n+'</text>':'')+'</g>';
+  });
+  return '<svg class="map-svg known" viewBox="0 20 1000 400" role="img" aria-label="Where you are known. '
+    +(Object.keys(worked).length||"No")+' countries worked.">'
+    +'<rect x="0" y="20" width="1000" height="400" fill="var(--card)"/>'
+    +'<g>'+grid+land+water+marks+'</g></svg>';
+}
+// The panel under the map: every country by how much work, and what it still remembers.
+function knownPanel(){
+  const K=knownCountries(), st=stats();
+  if(!K.length)return '<div class="sel-help">Nowhere yet. Every country you work is marked here afterwards — how much you have done there, and how long it keeps watching.</div>';
+  const hot=K.filter(c=>c.heat>=KNOWN_HOT);
+  return knownMapSVG()
+    +'<div class="kn-list">'+K.map(c=>{
+      const co=COUNTRY_BY_NAME[c.name];
+      return '<div class="kn-row'+(c.heat>=KNOWN_HOT?' hot':'')+'">'+(co?flagSvg(co):'')
+        +'<span class="kn-n">'+esc(c.name)+'</span>'
+        +'<span class="kn-j">'+c.n+' job'+(c.n>1?'s':'')+'</span>'
+        +'<span class="kn-h">'+(c.heat>=KNOWN_HOT?'still watching · '+c.heat:c.heat?'quiet · '+c.heat:'forgotten you')+'</span></div>';
+    }).join("")+'</div>'
+    +'<div class="sel-help" style="margin-top:8px">The ring is the work. '+(hot.length
+      ? '<span class="bad">'+hot.length+' of them '+(hot.length===1?'is':'are')+' still watching</span> — a job there now runs hotter, and the heat there cools on its own about '+BAL.countryHeatDecay+' a week.'
+      : 'None of them is watching closely any more; country heat cools about '+BAL.countryHeatDecay+' a week.')
+    +' Countries worked: <b>'+K.length+'</b> of '+COUNTRIES.length+'.</div>';
+}
+
 // Animate the map from where it was to where it should be, once the new page is in place.
 function mapArm(){
   const g=document.getElementById("mapg");
@@ -5745,7 +5873,7 @@ function tabLog(){
       +'<div class="factors">'+finalGate().map(g=>'<span class="k">'+esc(g.k)+'</span><span class="'+(g.ok?"plus":"minus")+' num" dir="ltr">'+(g.ok?"✓ ":"")+esc(g.fmt(g.have))+(g.ok?"":" / "+esc(g.fmt(g.want)))+'</span>').join("")+'</div>'
       +(S.finalBack&&S.week<S.finalBack?'<div class="mono" style="font-size:11px;color:var(--stamp);margin-top:6px">The Committee has moved things. That door is worth trying again in week '+S.finalBack+'.</div>':''))
     +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">Clean and successful work raises it; messy work, leaks, arrests and walkouts lower it; a week laid low costs a point.'+(S.poach?' <span style="color:var(--stamp)">'+esc(S.poach.name)+' is buying your crew drinks — '+S.poach.weeks+' more week'+(S.poach.weeks===1?'':'s')+'.</span>':'')+'</div>'
-    +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="tab" data-k="jobs">Jobs →</button><button class="btn ghost" data-act="laylow">Lay low a week</button></div>'
+    +'<hr class="rule"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="tab" data-k="jobs">Jobs →</button><button class="btn ghost" data-act="file-open">Your career →</button><button class="btn ghost" data-act="laylow">Lay low a week</button></div>'
     +'</div></div>';
   // the record: what the crew has done, and what is worth doing next
   const st=stats(),done=goalsDone(),nDone=GOALS.filter(g=>done[g.k]).length;
@@ -5856,7 +5984,13 @@ function tabLog(){
   // missed back under the fold on a 760-tall screen, which is the whole complaint — and six
   // summaries in four hundred pixels IS the dashboard: the screen is an index of itself, and
   // whatever anybody opens is remembered, so the habit only has to be formed once.
+  const K=knownCountries(), kHot=K.filter(c=>c.heat>=KNOWN_HOT).length;
+  const sKnown=K.length
+    ? K.length+' countr'+(K.length===1?'y':'ies')+' · '+K.reduce((s,c)=>s+c.n,0)+' jobs'
+      +(kHot?' · <span class="bad">'+kHot+' still watching</span>':' · <span class="ok">none watching</span>')
+    : 'nowhere yet';
   return fold("op","The operation",sOp,right,false)
+    +fold("known","Where you are known",sKnown,knownPanel(),false)
     +fold("law","The competition and the law",sWatch,watch||'<div class="sel-help">Nobody is working against you by name yet. A rival appears once you are Small time; a detective opens a file once the heat has been up.</div>',false)
     +fold("arrange","Standing arrangements",sArr,arrange,false)
     +fold("record","The record",sRec,record,false)
@@ -5883,6 +6017,7 @@ function renderModal(){
   if(m.type==="notice")return modalNotice();
   if(m.type==="news")return modalNews();
   if(m.type==="crewname")return modalCrewName();
+  if(m.type==="file")return modalYourFile();
   if(m.type==="paywall")return modalTill("wall");
   if(m.type==="loose")return modalLoose();
   if(m.type==="revenge")return modalRevenge();
@@ -9416,6 +9551,76 @@ function modalTill(mode){
     +'<div class="modal-b"><p style="margin:0 0 14px;font-size:15px;line-height:1.6">'+text+'</p>'
     +(buy?'<div style="display:flex;gap:8px;flex-wrap:wrap">'+buy+'</div>':'')+entry+foot+'</div></div></div>';
 }
+/* --------------------------- YOUR OWN FILE ----------------------------
+   One sheet that answers "how big am I", in the only voice this game has: the file. Not a
+   trophy shelf — a trophy is a thing a game hands you for having played it, and everything on
+   this page is a thing you did. The police keeping a folder on you is the game's own measure of
+   notoriety and it was buried in a fold on the dashboard, so it is the last block here: the
+   size of your name, and what it costs, on the same sheet.
+
+   Every figure is read off the record rather than stored twice. */
+function modalYourFile(){
+  const st=stats(), you=S.player, co=COUNTRY_BY_NAME[you.nat];
+  const rk=rankInfo(S.rep), nx=rankNext(S.rep), dt=detective();
+  const K=knownCountries(), kHot=K.filter(c=>c.heat>=KNOWN_HOT).length;
+  const done=goalsDone(), marks=GOALS.filter(g=>done[g.k]);
+  const verdicts=[["clean","Clean"],["success","Success"],["messy","Messy"],["botched","Botched"],["disaster","Disaster"]];
+  const row=(a,b)=>'<span class="k">'+a+'</span><span>'+b+'</span>';
+  // the ladder, with where you stand on it — the rungs above are what there is left to be
+  const ladder=RANKS.slice().reverse().map(r=>{
+    const here=r[1]===rk.name, past=S.rep>=r[0];
+    return '<div class="yf-rung'+(here?' here':past?' past':'')+'"><span class="yf-dot"></span>'
+      +'<span class="yf-rn">'+esc(r[1])+'</span><span class="yf-rm">'+r[0]+'</span></div>';
+  }).join("");
+  const h='<div class="modal-h"><div><div class="kicker">Your career · week '+S.week+'</div>'
+    +'<h2 style="font-size:24px;margin-top:4px">'+esc(you.n)+'</h2>'
+    +'<div class="mono" style="font-size:11.5px;color:var(--muted);margin-top:3px">'+flagSvg(co)+' '+esc(you.nat)
+    +(S.crewName?' · '+esc(crewTitle()):'')+' · '+esc(TECH_BY_K[you.tech].l)+'</div></div>'
+    +'<button class="x" data-act="file-close" aria-label="Close">✕</button></div>';
+  const b='<div class="modal-b">'
+    +'<div class="yf-top"><div class="yf-rank"><div class="kicker">The name</div>'
+      +'<div class="yf-big">'+esc(rk.name)+'</div>'
+      +'<div class="mono" style="font-size:12px;color:var(--ink-2);line-height:1.6">'+esc(rk.note)+'</div>'
+      +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">'
+      +(nx?'Ranking <b>'+S.rep+'</b> · '+nx.name+' at '+nx.min+', '+(nx.min-S.rep)+' away':'Ranking <b>'+S.rep+'</b> · the top of the board')+'</div></div>'
+      +'<div class="yf-ladder">'+ladder+'</div></div>'
+    +'<hr class="rule"><div class="kicker">What you have done</div>'
+    +'<div class="num-grid" style="margin-top:8px">'
+      +'<div class="b"><div class="k">Weeks run</div><div class="v num">'+S.week+'</div></div>'
+      +'<div class="b"><div class="k">Jobs</div><div class="v num">'+st.jobs+'</div></div>'
+      +'<div class="b"><div class="k">Countries</div><div class="v num">'+K.length+'</div></div>'
+      +'<div class="b"><div class="k">Biggest score</div><div class="v num">'+money(st.biggest)+'</div></div>'
+      +'<div class="b"><div class="k">Earned</div><div class="v num">'+money(st.earned)+'</div></div>'
+      +'<div class="b"><div class="k">Best run</div><div class="v num">'+(st.bestStreak||0)+'</div></div>'
+    +'</div>'
+    +(st.jobs?'<div class="yf-bar">'+verdicts.map(v=>{
+        const n=st[v[0]]||0;if(!n)return "";
+        return '<i class="v-'+v[0]+'" style="flex:'+n+'" title="'+v[1]+' × '+n+'"></i>';
+      }).join("")+'</div>'
+      +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px">'
+      +verdicts.filter(v=>st[v[0]]).map(v=>v[1]+' '+st[v[0]]).join(' · ')+'</div>':'')
+    +'<hr class="rule"><div class="kicker">The crew</div>'
+    +'<div class="kv" style="font-size:12.5px;margin-top:6px">'
+      +row("On the books",(1+recruits().length)+" of "+(1+crewSeats())+(crews().length?" · "+crews().length+" other crew"+(crews().length>1?"s":""):""))
+      +row("Signed",st.hired+" over the years")
+      +row("Hurt · held · lost",st.hurt+" · "+st.taken+" · "+st.lost)
+    +'</div>'
+    +'<hr class="rule"><div class="kicker">What the police have</div>'
+    +'<div class="kv" style="font-size:12.5px;margin-top:6px">'
+      +row("Heat",Math.round(S.heat)+" / 100"+(S.heat>=raidAt()?' <span class="bad">— a raid is due</span>':''))
+      +row("The file",dt?esc(dt.name)+" has "+detFile()+" / 100 on you since week "+dt.since:"Nobody has opened one yet")
+      +row("Countries watching",kHot?kHot+" of "+K.length:"none of the "+K.length+" you have worked")
+    +'</div>'
+    +'<hr class="rule"><div class="kicker">Marks on the wall · '+marks.length+' of '+GOALS.length+'</div>'
+    +(marks.length?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
+      +marks.map(g=>'<span class="tag ok" title="week '+done[g.k]+'">✓ '+esc(g.l)+'</span>').join("")+'</div>'
+      :'<div class="sel-help">None yet. The Dashboard keeps the list of what is still out there.</div>')
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px">'
+      +'<button class="btn ghost" data-act="file-go-log">The record →</button>'
+      +'<button class="btn" data-act="file-close">Close</button></div></div>';
+  return '<div class="scrim" data-act="file-close"><div class="modal" role="dialog" aria-modal="true" style="max-width:720px">'+h+b+'</div></div>';
+}
+
 // The title screen's line about it: paid for, or how long the house is buying, with the way in.
 function tillLine(){
   if(!shopOpen())return "";
@@ -9948,6 +10153,11 @@ const INFO={
     "<b>Bonus</b> (three weeks' upkeep, $4K at least) buys +14 loyalty and three weeks <b>paid up</b>: +2 on every reckoning that member goes on, deaf to another crew's drinks, never the one who skims the split, and not the one trouble picks on. One at a time; the card says until when. It also settles any grumbling about small jobs.",
     "<b>Small money.</b> Every member has a price: a cut under two weeks of their own upkeep is a job done for you, not for them. The job file says who calls a posting small money before you take it. Three small jobs in a row and they <b>grumble</b> (−5 loyalty a job, −2 on the reckoning, a chip on the card); five, and they may walk out at the split — back on the roster, wanting more. A proper score, or a bonus, resets the count.",
     "<b>Places.</b> Four to start. A <b>Respected</b> name opens places six and seven. <b>Other crews.</b> From week "+EXTRA_CREW_WEEKS[0]+" ("+yearsIn(EXTRA_CREW_WEEKS[0])+"), Feared, with seven on your crew, you can found a second crew — a commander-type and four soldiers out of your seven, named after its commander — that takes a job of its own each week without you, from the same board, with its own reckoning and report; its take, heat and ranking are yours, and so is its payroll. A third crew at three years, a fourth at four, no more. Send and recall people between crews from their cards; dissolve a crew and its people come back as far as your places allow."]},
+  file:{h:"Your career",t:[
+    "One sheet for how far you have come. <b>The name</b> and what it buys, with the whole ladder beside it: the rungs behind you, the one you are on, and what is left above.",
+    "<b>What you have done</b> — weeks, jobs, countries, the biggest single score, everything earned, and the longest run without a failure. The bar under it is every verdict you have ever been given, in proportion.",
+    "<b>What the police have</b> — the heat, how thick the detective's folder is and since when, and how many of the countries you have worked are still watching for you. <b>Marks on the wall</b> is every career mark earned, out of "+GOALS.length+".",
+    "Nothing here is stored twice: every figure is read off the record. The Dashboard's <b>Where you are known</b> is the same countries on a map."]},
   crewname:{h:"The crew's name",t:[
     "The competition has a name from the day it appears; yours is asked for from week "+CREW_NAME_ASK_WEEK+". Type one, or <b>↻ Random</b> takes one off the shelf — a list in the game's voice, and names built from your file: your surname the way the rival's outfit is built, a city the crew has worked, your first name.",
     "<b>Later</b> puts it off "+CREW_NAME_AGAIN+" weeks. <b>✎ Rename</b> on the Crew tab opens the same card whenever you like; the log keeps what it was. The name heads the Crew tab, sits on the Dashboard, the reports and the saved-game line, and the rival's standing is measured against it."]},
@@ -10627,7 +10837,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 105 · September 2026";
+const BUILD="build 106 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
@@ -10876,6 +11086,9 @@ document.addEventListener("click",e=>{
     }
     case "crewname-ok": { const cn=document.getElementById("cname"); if(crewNameSet(cn?cn.value:UI.cname))render(); break; }
     case "crewname-later": crewNameLater(); render(); break;
+    case "file-open": if(S&&!S.modal){S.modal={type:"file"};sfx("open");render();} break;
+    case "file-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){S.modal=null;render();} break;
+    case "file-go-log": S.modal=null; S.tab="log"; render(); window.scrollTo(0,0); break;
     case "till-open": e.preventDefault(); UI.till=true; UI.tillMsg=""; render(); { const el=document.getElementById("lkey"); if(el)el.focus(); } break;
     case "till-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){UI.till=false;UI.tillMsg="";render();} break;
     case "till-unlock": { const el=document.getElementById("lkey"); tillUnlock(el?el.value:UI.tillKey); break; }
@@ -10928,6 +11141,7 @@ document.addEventListener("keydown",e=>{
       else if(S.modal.type==="news"){newsClose();save();render();}
       else if(S.modal.type==="crewname"){if(S.modal.edit){S.modal=null;UI.cname=null;}else crewNameLater();render();}
       else if(S.modal.type==="paywall"){UI.office=true;UI.panel=null;render();}   // the wall does not close; the office opens over it
+      else if(S.modal.type==="file"){S.modal=null;render();}
       else if(S.modal.type==="loose"||S.modal.type==="revenge"){}
       else if(isFeed(S.modal.type)&&S.modal.data.awaiting){}
       else if(isFeed(S.modal.type)&&!S.modal.data.done)tickerFinish();

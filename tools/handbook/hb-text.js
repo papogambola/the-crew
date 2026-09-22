@@ -824,6 +824,11 @@ ch("between","Between jobs","The week that passes on its own",[
 
 /* ---------------- 15 -------------------------------- */
 ch("rank","Ranking","The name, and what it buys",[
+  S("card","Crossing a rung",
+    p("The ladder is the biggest thing that happens to you, so it is announced like one: a card in the middle of the screen naming the rung you have left, "
+      +"the rung you are on, what it buys and what is next. It comes the other way too — a name that slips tells you what it has cost.")
+    +note("It is watched in one place rather than at each of the six things that move a ranking, so a rung crossed by a career mark's payout or by a week "
+      +"of nobody hearing your name lands the same way as one crossed by a job.")),
   S("ladder","The ladder",
     p("Eight names across "+m(D.BAL.finalRep)+" points. The last two rungs are most of the game.")
     +G.ranks()),
@@ -839,6 +844,18 @@ ch("rank","Ranking","The name, and what it buys",[
 
 /* ---------------- 16 -------------------------------- */
 ch("record","The record","What you have done",[
+  S("career","Your career",
+    p("One sheet for how far you have come, from <b>Your career</b> in the Dashboard's operation panel. The name and what it buys, with the whole ladder "
+      +"beside it — the rungs behind you, the one you are on, and what is left above. Then weeks, jobs, countries, the biggest single score, everything "
+      +"earned, the longest run without a failure, and a bar of every verdict you have ever been given in proportion.")
+    +p("Under that, what it has cost: the heat, how thick the detective's folder is and since when, and how many of the countries you have worked are "
+      +"still watching for you. Then every career mark earned. Nothing on it is stored twice — every figure is read off the record.")),
+  S("known","Where you are known",
+    p("The same world as the board's map, read the other way round. The board answers <i>where is there work</i>; this answers <i>where have I been, and "
+      +"where can I not go back to</i>. A ring on every country you have worked, growing with the work, and a broken red ring on the ones still watching "
+      +"for you — a job there runs hotter until that cools, about "+m(D.BAL.countryHeatDecay)+" a week.")
+    +note("It is not territory. A crew of five is not a cartel and this game is about crossing borders rather than holding them, so nothing here is owned. "
+      +"What a country remembers of you is the whole of it.")),
   S("stats","The count",
     p("Every job, every verdict, every country, everything earned and everything paid out in cuts, the biggest single score, people hurt, taken and lost, "
       +"and how often a twist was called right. All of it under <b>The record</b> on the Dashboard.")),
