@@ -628,22 +628,27 @@ ch("reckon","The reckoning","Exactly how a job is decided",[
 /* ---------------- 10 -------------------------------- */
 ch("night","The night itself","The live report",[
   S("estab","It opens on the city",
-    p("Three seconds of skyline before the first line of the night: where you are, what kind of job it is, and what it is called. "
+    p("Seven seconds of skyline before the first line of the night: where you are, what kind of job it is, and what it is called. "
       +"The crew has just landed somewhere, and the report reads differently once you have been told where you are standing. "
       +"Click it, or press any key, to go straight on.")
+    +p("It has its own sound — soft music and a sea, cut to the length of the card so it fades out exactly as the card goes. "
+      +"The report's own track is held under it and comes in with the first line of the night, so the seven seconds belong to "
+      +"the city. Going straight on cuts it short. It answers to the music switch in the office like everything else.")
     +p("Every one of the "+m(D.CITY_COUNT||129)+" cities has its own, and the skyline behind it is <b>generated</b> rather than "
       +"collected — from a hash of the city's own name, so it is the same place every time on every machine, and from the "
       +"country's ground, so a mountain town has a ridge behind it, a port has water and a gantry crane under it, a delta has a "
       +"bridge, and a jungle coast has palms at the edge. It is drawn in outline: black line on white paper, the far things "
       +"thinner and fainter than the near ones, which is the whole of why it reads at that size.")
-    +p("<b>"+m(D.LANDMARK_COUNT||87)+" of those cities have the real landmark standing in front of it</b>, drawn by hand — the "
-      +"Eiffel Tower, the CN Tower, the Opera House with the Harbour Bridge behind it, the Statue of Liberty, Fuji behind Tokyo "
-      +"Tower. Where a city has one, its generated skyline is held down to about two thirds of its usual height, so the thing you "
-      +"came to see is the tallest thing on the card rather than one more rectangle in the row.")
+    +p("<b>Every one of them has the real landmark standing in front of it</b>, drawn by hand — the Eiffel Tower, the CN Tower, "
+      +"the Opera House with the Harbour Bridge behind it, the Statue of Liberty, Fuji behind Tokyo Tower. The generated skyline "
+      +"is held down to about two thirds of its usual height behind it, so the thing you came to see is the tallest thing on the "
+      +"card rather than one more rectangle in the row.")
     +(D.LANDMARKS&&D.LANDMARKS.length?p("The whole list, in the order the game keeps it, which runs by region:")+G.landmarks():"")
-    +note("The other "+m((D.CITY_COUNT||129)-(D.LANDMARK_COUNT||87))+" cities get the skyline and nothing else, and that is the "
-      +"answer rather than the unfinished part of it. Accra has its gate and Kumasi does not. A made-up landmark would be the one "
-      +"thing on the card that was a lie, and a player who knows the city would catch it inside the three seconds it is up.")),
+    +note("Forty-two of them had only a skyline to begin with, on the argument that a made-up landmark is worse than none. They "
+      +"were drawn rather than invented: where the famous thing about a city is not a building it is drawn as what it actually is "
+      +"— Mount Apo over Davao the way Fuji stands over Tokyo, the sea stacks at Raouché, the cable cars over the hillside at "
+      +"Medellín. A made-up one would be the one thing on the card that was a lie, and a player who knows the city would catch it "
+      +"inside the seconds it is up.")),
   S("live","Reading the report",
     p("A job does not resolve into a number. It plays out: a clock in the top left, a line at a time, with the crew named and what each of them is doing named with them. "
       +"You can run it at five speeds, hold it where it is with Pause, or press through it as fast as you can read.")),
@@ -855,6 +860,11 @@ ch("between","Between jobs","The week that passes on its own",[
 
 /* ---------------- 15 -------------------------------- */
 ch("rank","Ranking","The name, and what it buys",[
+  S("card","Crossing a rung",
+    p("The ladder is the biggest thing that happens to you, so it is announced like one: a card in the middle of the screen naming the rung you have left, "
+      +"the rung you are on, what it buys and what is next. It comes the other way too — a name that slips tells you what it has cost.")
+    +note("It is watched in one place rather than at each of the six things that move a ranking, so a rung crossed by a career mark's payout or by a week "
+      +"of nobody hearing your name lands the same way as one crossed by a job.")),
   S("ladder","The ladder",
     p("Eight names across "+m(D.BAL.finalRep)+" points. The last two rungs are most of the game.")
     +G.ranks()),
@@ -870,6 +880,18 @@ ch("rank","Ranking","The name, and what it buys",[
 
 /* ---------------- 16 -------------------------------- */
 ch("record","The record","What you have done",[
+  S("career","Your career",
+    p("One sheet for how far you have come, from <b>Your career</b> in the Dashboard's operation panel. The name and what it buys, with the whole ladder "
+      +"beside it — the rungs behind you, the one you are on, and what is left above. Then weeks, jobs, countries, the biggest single score, everything "
+      +"earned, the longest run without a failure, and a bar of every verdict you have ever been given in proportion.")
+    +p("Under that, what it has cost: the heat, how thick the detective's folder is and since when, and how many of the countries you have worked are "
+      +"still watching for you. Then every career mark earned. Nothing on it is stored twice — every figure is read off the record.")),
+  S("known","Where you are known",
+    p("The same world as the board's map, read the other way round. The board answers <i>where is there work</i>; this answers <i>where have I been, and "
+      +"where can I not go back to</i>. A ring on every country you have worked, growing with the work, and a broken red ring on the ones still watching "
+      +"for you — a job there runs hotter until that cools, about "+m(D.BAL.countryHeatDecay)+" a week.")
+    +note("It is not territory. A crew of five is not a cartel and this game is about crossing borders rather than holding them, so nothing here is owned. "
+      +"What a country remembers of you is the whole of it.")),
   S("stats","The count",
     p("Every job, every verdict, every country, everything earned and everything paid out in cuts, the biggest single score, people hurt, taken and lost, "
       +"and how often a twist was called right. All of it under <b>The record</b> on the Dashboard.")),

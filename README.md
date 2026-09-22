@@ -37,7 +37,7 @@ Inside the exe the game is `index.html` again, because Neutralino opens the reso
 | | |
 |---|---|
 | `index.html` | the download page — `tools/site.py` stamps its build and sizes, `tools/site-drive.js` drives it |
-| `music/` | **the tunes are not here any more.** 54MB of mp3 was ninety-seven per cent of this site's bandwidth against a 1.4MB download, so they live in Cloudflare R2; `MUSIC_HOME` in the game is the one line that says where, and `tools/music-check.py` asks whether all 18 are still there and still the right size. What is left is `sizes.json`, which is what it checks against, and the split manifest |
+| `music/` | **the tunes are not here any more.** 54MB of mp3 was ninety-seven per cent of this site's bandwidth against a 1.4MB download, so they live in Cloudflare R2; `MUSIC_HOME` in the game is the one line that says where, and `tools/music-check.py` asks whether all 18 are still there and still the right size. What is left is `sizes.json`, which is what it checks against, the split manifest, and `city-cue.mp3` — the one piece of audio that is *not* streamed. It is the seven seconds under the establishing card, and it is carried inside `play.html` as a data URI by `tools/city-cue.py`, because a cue that has to sound in the frame the card appears cannot wait for a cold fetch, and because inside the exe it then plays with no connection at all. 55KB against 54MB is not what the bandwidth argument was about. The mp3 stays here so it can be re-encoded; `--check` fails if it and the embedded copy have drifted |
 | `play.html` | the game, one file. Served, but not offered on the download page — the page is for the Windows build, and a free browser copy beside the button is an argument against pressing it. The handbook still links back to it |
 | `handbook.html` | the handbook, built by `tools/handbook/`. Served, but not offered on the download page either — the game reaches it on key 5, and a copy ships inside the exe |
 | `shots/*.png` | the four screenshots on the page, taken from the running game by `tools/shots.js` |
@@ -582,6 +582,22 @@ told you whether the night had anything in it before you had read a line of it. 
   empty the till is shut and nobody is stopped. A key that activates is kept in the browser and
   asked about weekly; only an explicit "not valid" locks the door again. There is no server, so
   clearing the browser's storage restarts the count — the accepted price of not having one.
+- **Crossing a rung is announced.** The ranking ladder is the biggest thing that happens to you and
+  it used to arrive as a grey line in the log. A rung crossed now brings a card in the middle of the
+  screen: the rung left behind, the one reached, what it buys and what is next. It comes the other
+  way too. Watched in one place (`checkRank`, against `S.rankSeen`) rather than at each of the six
+  things that move a ranking, so a rung crossed by a career mark's payout lands like one crossed by
+  a job.
+- **Where you are known.** A Dashboard fold: the same world as the board's map, read the other way
+  round. A ring on every country worked, growing with the work, and a broken red ring on the ones
+  whose heat is still up. Not territory — a crew of five is not a cartel and this game is about
+  crossing borders rather than holding them, so nothing is claimed. What a country remembers of you
+  is the whole of it.
+- **Your career.** One sheet, from the Dashboard's operation panel: the name and what it buys with
+  the whole ladder beside it, then weeks, jobs, countries, biggest score, everything earned, the
+  longest clean run, and a bar of every verdict in proportion. Under it what the police have — the
+  heat, the detective's folder, how many countries are still watching — and every career mark
+  earned. Every figure is read off the record rather than stored twice.
 - **The crew's name.** From week 4 the game asks what the crew is called — typed, or taken off
   the shelf with ↻ Random, which draws from a list in the game's voice and from the file itself
   (the commander's surname the way the rival's outfit is built, a city the crew has worked, the
