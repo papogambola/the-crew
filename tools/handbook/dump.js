@@ -63,6 +63,10 @@ const out={
   LANG_MISS_TALK:(typeof LANG_MISS_TALK!=="undefined"?LANG_MISS_TALK:null),
   HIRED:(typeof HIRED!=="undefined"?HIRED:null),
   RIVAL:(typeof RIVAL!=="undefined"?RIVAL:null),
+  ELIM:(typeof ELIM!=="undefined"?ELIM:null),
+  // The count, not the table: a hundred openings is a mechanic the book describes, not a list a
+  // reader wants printed — and printing them would hand over every surprise in the chapter.
+  ELIM_OPENINGS:(typeof ELIM_OPENINGS!=="undefined"?ELIM_OPENINGS.length:null),
   CITY_COUNT:(typeof CITY_COUNT!=="undefined"?CITY_COUNT:null),
   LANDMARK_COUNT:(typeof LANDMARK_COUNT!=="undefined"?LANDMARK_COUNT:null),
   // City and the name of the thing, in the table's own order, which runs by region rather than

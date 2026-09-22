@@ -63,6 +63,40 @@
      the card has rendered at full feed width with the skyline adrift in the middle of it: once
      at one class, once at two. `.modal.feed.estab-wrap` beats it on specificity rather than on
      where it happens to sit in the file. */
+  /* THE OUTFIT, STRUCK OUT. Five mugshots in a row, the outfit's name boxed above them, and the
+     word across every face. It is the game's own ink and the game's own faces — the only new
+     thing on it is the stamp, which is the one red thing on a page of black. */
+  .gone-card{margin:0 0 18px}
+  .gone-name{display:inline-block;border:2px solid var(--ink);padding:7px 18px;margin:0 auto 14px;
+    font-family:var(--f-disp);font-weight:700;font-size:15px;letter-spacing:.16em;text-transform:uppercase}
+  .gone-card{text-align:center}
+  .gone-row{display:flex;gap:13px;justify-content:center;flex-wrap:nowrap;align-items:flex-start}
+  .gone-m{flex:1 1 0;min-width:0;margin:0;border:2px solid var(--ink);background:var(--card)}
+  .gone-face{position:relative;padding:6px 6px 0}
+  /* height:auto on the bust. avatar() writes height="100%" on its svg, which inside a flex item
+     with no height of its own resolves to the whole column — the faces drew at a sensible size
+     and then ran their own names down over the paragraph underneath. */
+  .gone-face svg{display:block;width:100%;height:auto}
+  .gone-m figcaption{border-top:2px solid var(--ink);margin-top:5px;padding:5px 2px;
+    font-family:var(--f-disp);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Across the eyes, which is where a stamp like this always lands, and rotated, because a stamp
+     square to the page was put there by a printer rather than by a hand.
+
+     It stays INSIDE its own card. The first version overhung by a tenth each side, which at this
+     size closed the gaps and welded all five into one continuous red band across the row — five
+     people struck out one at a time reads as five people; one stripe reads as a redaction. */
+  .gone-stamp{position:absolute;left:1px;right:1px;top:46%;transform:translateY(-50%) rotate(-7deg);
+    border:3px solid var(--stamp);color:var(--stamp);background:rgba(252,250,245,.72);
+    font-family:var(--f-disp);font-weight:700;font-size:clamp(7px,1.55vw,12px);letter-spacing:.04em;
+    text-transform:uppercase;padding:3px 0;line-height:1.15;opacity:.94;
+    box-shadow:0 0 0 1px rgba(154,43,30,.25)}
+  @media(max-width:560px){
+    .gone-row{gap:6px}
+    .gone-m figcaption{font-size:9px;letter-spacing:.02em;padding:4px 1px}
+    .gone-stamp{border-width:2px;padding:2px 0}
+  }
+  .modal.notice.gone-wrap{max-width:760px}
   .modal.feed.estab-wrap{max-width:560px;cursor:pointer}
   .estab{padding:30px 30px 26px;text-align:center;user-select:none}
   .estab:focus-visible{outline:2px solid var(--stamp);outline-offset:-4px}
@@ -1911,7 +1945,10 @@ function rival(){
   return r.reduce((a,b)=>b.standing>a.standing?b:a);
 }
 function detective(){return S.det||null;}
-function detFile(){return S.det?Math.round(S.det.file):0;}
+/* The file, and the floor under it. Paying a desk, laying low and a raid itself all thin the file
+   — but a killing puts something in it that does not thin. S.fileFloor is set once, by an
+   elimination, and after that nothing can read the file below it. */
+function detFile(){return S.det?Math.max(Math.round(S.det.file),S.fileFloor||0):0;}
 // A thick file brings the raid forward.
 function raidAt(){const f=detFile();return 100-(f>=50?10:0)-(f>=75?10:0);}
 function rivalAhead(){return !!(rival()&&rival().standing>S.rep);}
@@ -1962,7 +1999,7 @@ function detWatch(rng){
    away. It had a cause and a consequence and no RESULT — a permanent tax with no verb attached,
    and the two buttons on it only ever moved a number a few points and let it climb back.
 
-   A rival is a chapter now, with four ways to close it, each of them a thing the game already
+   A rival is a chapter now, with five ways to close it, each of them a thing the game already
    knows how to do:
 
      BUY THEM OUT   money, and a lot of it. Clean, no heat, and two or three of their people
@@ -1974,6 +2011,10 @@ function detWatch(rng){
                     comes sooner. The cost is real and it arrives later, which is the point.
      MOVE ON THEM   a posting on the board like any other: your crew, their people, twists,
                     heat, and somebody can get hurt. Run it well and they are finished.
+     KILL THEM      the fifth, and the only one that ends a chapter by ending a person. Heavy
+                    in every currency at once and efficient in a way none of the others are:
+                    it does not care how far ahead of you they are, does not need six quiet
+                    weeks, and cannot be outbid. See THE FIFTH WAY, further down.
 
    Then the next one is worse. Each arrives with a standing set from what the last one reached,
    so the ladder climbs with the player instead of resetting. There is always an end in sight
@@ -2028,8 +2069,21 @@ function rivalEnd(id,how,text,tone){
   S.rivalNext=S.week+ri(rng,RIVAL.backMin,RIVAL.backMax);
   const others=rivals().length;
   logMsg(cap(rv.name)+" is finished. "+text,tone||"good",true);
+  /* A killing gets the outfit's five faces struck out, and the shot with them. The snapshot is
+     taken HERE, on the way past, because the outfit has already been lifted out of S.rivals four
+     lines up — a card that went looking for it later would find nothing, which is precisely the
+     thing it exists to announce. It is stored on the notice, so it survives a save and a reload
+     and is still there when the player finally closes the report and reads what happened. */
+  const card=how==="killed"
+    ? {name:rv.name,word:"Eliminated",crew:rivalCrew(rv).map(p=>({first:p.first,gender:p.gender,seed:p.seed,face:p.face}))}
+    : null;
   S.notices=(S.notices||[]).concat([{k:"The competition · week "+S.week,h:cap(rv.name)+" is finished",
-    text:text+(names.length?" Their people are looking for work: "+listAnd(names)+" are on the roster, already vetted."
+    card:card,shot:!!card,
+    // "Hana the grifter are on the roster" — the scatter is one or two people and the sentence
+    // was written for two. It is one often enough to be worth the word.
+    text:text+(names.length?(names.length===1
+                              ?" One of their people is looking for work: "+names[0]+" is on the roster, already vetted."
+                              :" Their people are looking for work: "+listAnd(names)+" are on the roster, already vetted.")
                            :" Their people have scattered and none of them came to you.")
       +(others?" "+cap(rival().name)+" is still out there, and the board is still not yours alone."
               :" Somebody else will work this board soon enough; they always do."),
@@ -2038,6 +2092,9 @@ function rivalEnd(id,how,text,tone){
 }
 function rivalBuyout(id){
   const rv=rivalById(id)||rival();if(!rv)return;
+  // Nobody sells to the crew that shoots the competition. This is the cost of the fifth way that
+  // lands on the OTHER outfit, and it lands whether or not you ever use it on them.
+  if(rv.noBuy){note(rv.boss+" will not take your money. They know what happened to the last one.");return;}
   const cost=rivalBuyoutCost(rv.id);
   if(S.money<cost){note("Buying out "+rv.name+" costs "+money(cost)+".");return;}
   S.money-=cost;
@@ -2144,6 +2201,404 @@ function rivalEnforce(id){
   else{S.heat=clamp(S.heat+16,0,120);rv.standing=clamp(rv.standing+4,0,999);
     logMsg("Your enforcer's word with "+rv.name+" went loud, in a street with windows. Heat +16, and they are not frightened.","bad",true);}
   save();render();
+}
+
+/* ===================== THE FIFTH WAY: AN ELIMINATION =====================
+
+   The other four ways out are money, the law, patience, and a night at their yard — and the
+   yard job says out loud that nobody has to die. This one is the exception, and it is the only
+   thing in the game that ends a chapter by ending a person.
+
+   So it is the most expensive thing in the game, and it is expensive in every currency at once:
+   cash before it runs, a permanent thickening of the file on you, the other outfit left on the
+   board harder than you found it and no longer for sale, and — this is the one that matters —
+   somebody of yours who may not come home. A price you can pay out of the till is not a price.
+   It is also the most EFFICIENT: it does not care how far ahead of you they are, it does not
+   need six quiet weeks, and it cannot be outbid. That is the trade.
+
+   "WHEN AND WHERE THEY LEAST EXPECT IT" is not flavour, it is the mechanic. There are a hundred
+   openings and exactly ONE is on the table in any given week, drawn from the outfit and the week
+   so it is the same opening for the same save and a different one next Monday. You see it before
+   you commit — where, when, how, what it will cost and how exposed it leaves your people — and
+   you are allowed to look at it and wait. A christening on the steps is not the customs hall,
+   and the difference between them is worth a week of anybody's time.
+
+   Three have to go, all three named: somebody who can do it (the enforcer), somebody who can see
+   it coming (the overwatch), somebody who can leave (the wheelman). Two out of three is not a
+   hit, it is a witness. */
+const ELIM={
+  techs:["enforcer","overwatch","wheelman"],
+  costMin:120000, costPer:4500,   // what it costs before it runs — guns, cars, papers, people who look away
+  heat:34,                        // on the night
+  file:26,                        // and permanently, on the file the detective keeps on YOU
+  // A death among your own, by how exposed the opening was. It is not certain and it is never
+  // nothing: the base alone is worse than any other job in the game can do to a person.
+  killBase:0.16, killPerX:0.10, killBadTier:0.18,
+  harden:14,                      // what the OTHER outfit gains when they hear
+  twists:2,                       // always exactly two, whatever the money says
+  tier:2,                         // the verdict it takes to get it done
+  backMin:3, backMax:5,           // weeks before another opening, if this one failed
+};
+/* A hundred openings: where, when, how — and three things that are mechanics rather than prose.
+     k  whose night it is. The trade the opening turns on: its holder's attributes carry the
+        reckoning, and the twists come looking for them.
+     d  what the moment is worth against the base difficulty. A man alone on an allotment is not
+        a man on the courthouse steps with the press there.
+     x  how exposed your people are, 0 to 2. This is the one that decides whether somebody of
+        yours comes back, so it is shown on the card in words before anybody commits.
+   They are deliberately uneven. Some weeks the opening is a gift and some weeks it is a way to
+   lose your enforcer for nothing, and telling those apart is the whole of the decision. */
+const ELIM_OPENINGS=[
+  // ---- roads, cars, the places anybody is between two other places ----
+  {w:"the gate of {his} own house",t:"03:10, coming home",h:"two doors and eleven seconds",k:"enforcer",d:-2,x:0},
+  {w:"the ramp of the underground car park",t:"07:40, on the way to the office",h:"the barrier comes down behind {him}",k:"wheelman",d:0,x:0},
+  {w:"a level crossing outside the city",t:"06:15, the barrier down",h:"ninety seconds with nowhere to go",k:"wheelman",d:-1,x:0},
+  {w:"the tunnel under the river",t:"22:30, the late run home",h:"no signal, no cameras, one lane",k:"wheelman",d:1,x:0},
+  {w:"the car wash on the ring road",t:"16:00, Friday",h:"three minutes blind with the brushes down",k:"wheelman",d:-2,x:0},
+  {w:"the valet lane of the hotel",t:"20:15, arriving for dinner",h:"{his} own driver hands over the keys",k:"wheelman",d:0,x:1},
+  {w:"the petrol station at the edge of town",t:"05:50, before the shift",h:"a pump, a card, and somebody looking at their phone",k:"enforcer",d:-1,x:0},
+  {w:"the toll plaza",t:"13:20, the middle lane",h:"stopped, and boxed on both sides",k:"wheelman",d:1,x:1},
+  {w:"the ferry ramp",t:"08:00, the first sailing",h:"cars nose to tail on wet steel",k:"wheelman",d:0,x:1},
+  {w:"the service road behind the depot",t:"04:30, the empty run",h:"a truck across it and no room to reverse",k:"wheelman",d:-1,x:0},
+  {w:"{his} mother's street",t:"11:00, Sunday",h:"{he} parks in the same place every week of {his} life",k:"enforcer",d:-2,x:1},
+  {w:"the armoured car on the bridge",t:"18:40, the traffic solid",h:"it is armoured, and it is not moving",k:"overwatch",d:3,x:1},
+  {w:"the taxi rank outside the terminal",t:"23:55, the last flight in",h:"{he} takes the third car; {he} always takes the third car",k:"wheelman",d:0,x:1},
+  {w:"the hairpin above the coast road",t:"15:00, the drive up to the villa",h:"one bend, one wall, one drop",k:"wheelman",d:1,x:0},
+  {w:"a hire car in long-stay parking",t:"06:00, before the airport run",h:"{he} checks the boot before {he} checks the car",k:"wheelman",d:0,x:0},
+  {w:"the school gate",t:"08:25, the run with {his} daughter",h:"{he} is never armed on a Tuesday morning",k:"overwatch",d:-2,x:2},
+  {w:"the roadworks on the southbound",t:"02:00, contraflow",h:"cones, one lane, and a figure in a hi-vis who is not",k:"enforcer",d:-1,x:0},
+  {w:"the motorway services",t:"01:30, the long drive",h:"{he} sleeps forty minutes in the car park, every time",k:"wheelman",d:-2,x:0},
+  {w:"the border queue",t:"09:00, the morning crossing",h:"papers in one hand and the window down",k:"overwatch",d:1,x:1},
+  {w:"the scrapyard weighbridge",t:"12:00, the load in",h:"the crane is already over the car",k:"wheelman",d:0,x:0},
+  // ---- the hours anybody keeps without thinking about them ----
+  {w:"the gym car park",t:"06:00, before anybody",h:"{he} trains alone and leaves with wet hair",k:"enforcer",d:-2,x:0},
+  {w:"the barber's chair",t:"10:30, the standing Thursday",h:"a hot towel over the face for four minutes",k:"enforcer",d:-1,x:1},
+  {w:"the pool at the members' club",t:"07:15, thirty lengths",h:"no phone, no shoes, and nobody else in the water",k:"enforcer",d:-1,x:0},
+  {w:"the dentist's waiting room",t:"14:00, an appointment {he} has never once moved",h:"a magazine, and a receptionist who is new",k:"overwatch",d:0,x:1},
+  {w:"the dog, on the towpath",t:"21:00, the last walk",h:"a mile of water down one side",k:"overwatch",d:-2,x:0},
+  {w:"the balcony of the flat {he} keeps",t:"23:30, the cigarette",h:"four floors up and lit from behind",k:"overwatch",d:-1,x:0},
+  {w:"{his} own kitchen",t:"05:40, the coffee",h:"the back door has been unlocked since the builders left",k:"enforcer",d:-1,x:0},
+  {w:"the allotment",t:"17:00, the evening hour",h:"nobody else in the city knows {he} goes there",k:"enforcer",d:-2,x:0},
+  {w:"the pharmacy counter",t:"09:10, the repeat prescription",h:"the same one, the same week, for eleven years",k:"enforcer",d:-1,x:1},
+  {w:"the lift of {his} own building",t:"19:00, home from the yard",h:"forty seconds, and one camera that faces the wrong way",k:"enforcer",d:0,x:0},
+  {w:"the church steps",t:"11:45, after the mass {he} never misses",h:"hat in one hand and both hands full",k:"overwatch",d:-1,x:2},
+  {w:"the sauna at the hotel spa",t:"16:30, the Wednesday hour",h:"nowhere to carry anything — for either of you",k:"enforcer",d:1,x:0},
+  {w:"the tailor's fitting room",t:"15:20, the second fitting",h:"pins, a mirror, and a curtain",k:"overwatch",d:0,x:1},
+  {w:"the hospital corridor",t:"02:40, {his} brother's ward",h:"one visitor at a time, and {he} comes alone",k:"enforcer",d:1,x:1},
+  {w:"the stable yard",t:"07:00, the horse before the office",h:"boots, gravel, and a girl who leaves at seven",k:"overwatch",d:-1,x:0},
+  // ---- the days they could not move if they wanted to ----
+  {w:"{his} daughter's christening",t:"11:40, on the steps afterwards",h:"three hundred people, and {he} is holding the child",k:"overwatch",d:-2,x:2},
+  {w:"{his} own man's funeral",t:"13:00, at the graveside",h:"everybody is looking at the hole",k:"enforcer",d:-1,x:2},
+  {w:"the wedding, at the top table",t:"22:00, during the speeches",h:"the room is dark and the band is loud",k:"enforcer",d:0,x:2},
+  {w:"a birthday in the back room",t:"01:00, when it thins out",h:"the door staff go home at midnight",k:"enforcer",d:-1,x:1},
+  {w:"the boxing, ringside",t:"21:30, between the fourth and the fifth",h:"twelve thousand people stand up at once",k:"overwatch",d:1,x:2},
+  {w:"the football, in the directors' box",t:"16:50, the second half",h:"{he} stands when they score; {he} always stands",k:"overwatch",d:2,x:2},
+  {w:"the opera, the second interval",t:"20:45, in the bar",h:"a bell, a crowd, and nobody looking at a phone",k:"enforcer",d:0,x:2},
+  {w:"the card game above the restaurant",t:"02:30, while {he} is winning",h:"{he} never leaves while {he} is winning",k:"enforcer",d:0,x:0},
+  {w:"the car park at {his} own party",t:"14:00, out for the cigarette",h:"the only quiet place at a party of {his} own making",k:"wheelman",d:-2,x:1},
+  {w:"the charity dinner",t:"21:00, during the auction",h:"a room of people who will all say they saw nothing",k:"overwatch",d:1,x:2},
+  {w:"the first communion",t:"10:30, the photographs",h:"the photographer moves everybody exactly where you want them",k:"overwatch",d:-1,x:2},
+  {w:"the memorial, a year on",t:"12:00, at the stone",h:"same hour, same flowers, same person",k:"overwatch",d:-2,x:1},
+  {w:"the Christmas market",t:"18:00, with the grandchildren",h:"lights, noise, and a hundred prams",k:"enforcer",d:1,x:2},
+  {w:"the fight at the leisure centre",t:"22:10, the walk to the car",h:"{his} own crowd, thinning out",k:"wheelman",d:0,x:1},
+  {w:"the restaurant's back table",t:"21:40, the second bottle",h:"{his} back to the wall and {his} people on the door",k:"enforcer",d:2,x:1},
+  // ---- the places the money lives ----
+  {w:"the yard, at the weighbridge",t:"05:00, the first load",h:"everything {he} owns crosses this scale",k:"wheelman",d:0,x:0},
+  {w:"the counting room",t:"23:00, Friday night",h:"the money is out and the door is bolted from the inside",k:"enforcer",d:2,x:0},
+  {w:"the lock-up {he} checks alone",t:"20:00, the Sunday round",h:"{he} does not trust anybody with this one",k:"enforcer",d:-2,x:0},
+  {w:"the warehouse handover",t:"03:30, the meet",h:"two crews, one light, and everybody watching everybody",k:"enforcer",d:2,x:1},
+  {w:"the port office",t:"06:30, the paperwork",h:"a Portakabin with one window, over the water",k:"overwatch",d:0,x:0},
+  {w:"the building site {he} owns",t:"12:30, the walk-round",h:"a hard hat, no free hands, and mud on everything",k:"enforcer",d:-1,x:1},
+  {w:"the cold store",t:"04:00, the stock check",h:"minus twenty, one door, and it locks from the outside",k:"enforcer",d:-1,x:0},
+  {w:"the haulage depot",t:"02:00, the night shift change",h:"forty men, and not one of them looking",k:"wheelman",d:0,x:1},
+  {w:"the office above the shop",t:"18:30, cashing up",h:"one stair, one door, and no other way down",k:"enforcer",d:1,x:0},
+  {w:"the boat at the marina",t:"07:30, the Sunday run out",h:"the engine covers the sound of everything",k:"wheelman",d:-1,x:0},
+  {w:"the auction house on viewing day",t:"11:00, the lots {he} came for",h:"catalogue in hand and {his} back to the room",k:"overwatch",d:0,x:1},
+  {w:"the scrap crusher",t:"16:00, the last load",h:"nothing that goes into it comes out with a name",k:"wheelman",d:-1,x:0},
+  {w:"the bank run",t:"09:30, the money on its way to the counter",h:"a bag, a driver, and two hundred metres of pavement",k:"wheelman",d:1,x:2},
+  {w:"the industrial unit {he} rents under another name",t:"21:00, the alone hour",h:"nobody knows {he} has it — except you, now",k:"enforcer",d:-2,x:0},
+  {w:"the fish market",t:"04:30, the auction",h:"a wet floor, no phones, and everybody shouting",k:"wheelman",d:0,x:2},
+  // ---- moving between countries, which is when anybody is thinnest ----
+  {w:"the private terminal",t:"07:00, the flight out",h:"no queue, no scanner, and no witnesses but staff",k:"overwatch",d:1,x:0},
+  {w:"the hotel corridor",t:"01:15, back from dinner",h:"a key card and eight metres of carpet",k:"enforcer",d:-1,x:0},
+  {w:"the room-service trolley",t:"20:30, the tray {he} orders every night",h:"the same club sandwich for fifteen years",k:"enforcer",d:-1,x:0},
+  {w:"the sleeper carriage",t:"23:40, after the last stop",h:"a locked door and six hours of nowhere",k:"enforcer",d:0,x:0},
+  {w:"the airport long-stay shuttle",t:"05:30, the first bus",h:"four passengers and a driver who will not look up",k:"wheelman",d:-1,x:1},
+  {w:"the platform, at the far end",t:"18:20, the commute {he} still makes",h:"{he} stands where the front carriage stops",k:"overwatch",d:0,x:2},
+  {w:"the marina pontoon",t:"22:00, walking back to the boat",h:"one plank wide, with water on both sides",k:"overwatch",d:-1,x:0},
+  {w:"the hire-car return",t:"10:00, the drop-off",h:"keys into a box, then a walk to the terminal",k:"wheelman",d:0,x:1},
+  {w:"the hotel lift",t:"23:50, going up alone",h:"seventeen floors, and a camera {he} thinks is {his}",k:"enforcer",d:0,x:0},
+  {w:"the drive down from the lodge",t:"16:30, the last run",h:"snow takes the sound and gives nothing back",k:"overwatch",d:-1,x:0},
+  {w:"the customs hall",t:"08:45, the red channel",h:"{he} has never once been stopped, which is exactly the point",k:"overwatch",d:2,x:2},
+  {w:"the coach park",t:"23:00, after the away game",h:"two hundred men in the same colours",k:"enforcer",d:1,x:2},
+  {w:"the seaplane dock",t:"06:45, the run out to the island",h:"one way on and one way off",k:"wheelman",d:0,x:0},
+  // ---- in front of everybody, which is the last place they look ----
+  {w:"the market, at {his} usual stall",t:"09:00, Saturday",h:"{he} buys the same fish from the same stall",k:"overwatch",d:-1,x:2},
+  {w:"the cash machine on the corner",t:"22:30, the walk home",h:"thirty seconds with {his} face to a wall",k:"overwatch",d:-1,x:1},
+  {w:"the bank lobby",t:"11:30, the safe-deposit visit",h:"cameras, a guard, and somebody who feels safe",k:"overwatch",d:2,x:2},
+  {w:"the courthouse steps",t:"09:50, {his} nephew's hearing",h:"press, police, and a suit {he} is not used to",k:"overwatch",d:3,x:2},
+  {w:"the police station forecourt",t:"14:00, signing on",h:"the last place on earth {he} expects it",k:"overwatch",d:3,x:2},
+  {w:"the school sports day",t:"15:00, the parents' race",h:"{he} runs it every year, and {he} is not fast",k:"overwatch",d:0,x:2},
+  {w:"the pedestrian crossing",t:"08:50, the same light as always",h:"{he} waits for green — {he} always waits for green",k:"wheelman",d:-1,x:2},
+  {w:"the hotel bar",t:"19:30, the standing drink",h:"a mirror behind the bottles that shows {him} the door",k:"overwatch",d:1,x:1},
+  {w:"the tram stop",t:"17:40, going home",h:"{he} stands in the same doorway, out of the wind",k:"overwatch",d:-1,x:2},
+  {w:"the swimming baths, the shallow end",t:"10:00, with the grandchild",h:"no shoes and no pockets — for anybody",k:"enforcer",d:1,x:2},
+  // ---- from a distance, or from nowhere at all ----
+  {w:"the roof across the square",t:"12:00, the lunch {he} takes outside",h:"four hundred metres and a light wind",k:"overwatch",d:1,x:0},
+  {w:"the hillside above the villa",t:"07:20, the coffee on the terrace",h:"nine hundred metres, and one shot",k:"overwatch",d:3,x:0},
+  {w:"the flat opposite {his} office",t:"15:00, at the desk {he} never moves from",h:"a window, a rifle, and a tripod stood on books",k:"overwatch",d:1,x:0},
+  {w:"the crane over {his} own yard",t:"05:30, the first load of the day",h:"eighty feet up, looking down on everything {he} built",k:"overwatch",d:2,x:0},
+  {w:"the brakes, on the mountain road",t:"17:00, the drive {he} makes every Friday",h:"nothing to find afterwards but a car",k:"wheelman",d:1,x:0},
+  {w:"the gas, in the lock-up",t:"23:00, the last cigarette of the night",h:"a leak, a spark, and somebody who smoked",k:"overwatch",d:0,x:0},
+  {w:"the car park roof",t:"20:00, where {he} goes to make {his} calls",h:"eight floors, and no railing worth the name",k:"enforcer",d:1,x:1},
+  {w:"the fire, in the office over the shop",t:"03:00, asleep on the couch again",h:"an old building, and a chip pan downstairs",k:"overwatch",d:0,x:0},
+  {w:"a robbery that goes wrong",t:"21:00, closing the restaurant",h:"two strangers, a till, and somebody who should not have argued",k:"enforcer",d:-1,x:1},
+  {w:"{his} own driver's seat",t:"08:00, the morning run",h:"the driver of nine years takes an envelope",k:"wheelman",d:2,x:0},
+  {w:"a phone call {he} has to take",t:"01:00, the number only four people have",h:"it brings {him} out alone, which is the whole of it",k:"wheelman",d:-2,x:0},
+  {w:"the boat's fuel line",t:"09:00, the Sunday run out",h:"six miles offshore, and the coastguard an hour away",k:"wheelman",d:1,x:0},
+];
+const ELIM_X_WORD=["nobody sees it","there are witnesses","it happens in front of a crowd"];
+/* An outfit is as often run by a woman as by a man — makeRival tosses a coin for it — so the
+   openings carry tokens rather than pronouns, and the boss's own gender fills them. Without this
+   the card cheerfully offered "Samira Bishara himself", which is the kind of detail that tells a
+   player the game is not really looking at them. Fill BEFORE capitalising: "{his} own kitchen"
+   capitalised first is still "{his} own kitchen", and then reads "his own kitchen" mid-sentence
+   with a lower-case h at the start of the line. */
+/* THE OUTFIT, AS FIVE FACES.
+
+   An outfit has never had faces — it is a name, a boss and a standing, and its people only exist
+   at the moment it ends, when one or two of them scatter onto the roster looking for work. That
+   is fine while it is alive and useless the week it is finished, because "the Ravn outfit is
+   finished" is a sentence, and five people with their eyes struck out is a thing that happened.
+
+   So the five are built here, off the outfit's own id: the same five every time you look, drawn
+   by the game's own face builder rather than a picture of one, with the boss first because the
+   boss is the one the night was about. Nothing else in the game reads them — they exist to be
+   looked at once, on the card, at the end of a chapter. */
+function rivalCrew(rv){
+  if(!rv)return [];
+  const r=mulberry32(fmHash("crew|"+rv.id));
+  const bossFirst=String(rv.boss||"").split(" ")[0]||rv.last||"—";
+  const out=[{first:bossFirst,gender:rv.gender||"M",seed:fmHash("f|"+rv.id+"|0"),boss:true}];
+  const used={};used[bossFirst.toLowerCase()]=1;
+  for(let i=1;i<5;i++){
+    const g=r()<0.5?"M":"F";
+    let n=randomName(r,g), guard=0;
+    while(used[n.first.toLowerCase()]&&guard++<12)n=randomName(r,g);
+    used[n.first.toLowerCase()]=1;
+    out.push({first:n.first,gender:g,seed:fmHash("f|"+rv.id+"|"+i),boss:false});
+  }
+  out.forEach(p=>{p.face=randomFace(mulberry32(p.seed),p.gender);});
+  return out;
+}
+function elimFill(s,rv){
+  const f=rv&&rv.gender==="F";
+  return fill2(String(s),{he:f?"she":"he",He:f?"She":"He",his:f?"her":"his",him:f?"her":"him"});
+}
+function elimSay(s,rv){const t=elimFill(s,rv);return t.charAt(0).toUpperCase()+t.slice(1);}
+function elimSelf(rv){return rv&&rv.gender==="F"?"herself":"himself";}
+/* The card: the outfit's name over its five people, every one of them struck out. Built from a
+   snapshot rather than from the outfit, because by the time anybody sees this the outfit is gone
+   from S.rivals — that is what the card is announcing. */
+function goneCard(snap){
+  if(!snap||!snap.crew||!snap.crew.length)return "";
+  return '<div class="gone-card">'
+    +'<div class="gone-name">'+esc(cap(snap.name))+'</div>'
+    +'<div class="gone-row">'
+    /* Each stamp sits at its own angle and its own height, off that person's own seed — five
+       identical stamps at one angle is a printed form, and this is meant to be five separate
+       occasions of somebody pressing a stamp onto a photograph. Same seed, same card, forever. */
+    +snap.crew.map(p=>{
+      const r=mulberry32((p.seed>>>0)^0x5A11),
+            // across the eyes: the bust puts them just under 40% of the box, and a stamp that
+            // drifts onto the mouth reads as a misprint rather than as somebody striking a face out
+            deg=(-11+r()*8).toFixed(1), top=(40+r()*5).toFixed(0);
+      return '<figure class="gone-m">'
+        +'<div class="gone-face">'+avatar(p.seed,p.gender,p.face)
+          +'<span class="gone-stamp" aria-hidden="true" style="top:'+top+'%;transform:translateY(-50%) rotate('+deg+'deg)">'
+          +esc(snap.word||"Eliminated")+'</span></div>'
+        +'<figcaption>'+esc(p.first)+'</figcaption></figure>';
+    }).join("")
+    +'</div></div>';
+}
+/* The opening on the table this week. Off the outfit and the week, never off the live stream, so
+   looking at the card twice shows the same opening and next Monday shows a different one. */
+function elimOpening(rv){
+  if(!rv)return null;
+  const i=fmHash("elim|"+rv.id+"|"+S.week)%ELIM_OPENINGS.length;
+  return Object.assign({i},ELIM_OPENINGS[i]);
+}
+function elimCost(rv){return rv?Math.max(ELIM.costMin,Math.round(rv.standing*ELIM.costPer)):0;}
+// The three who go. All three named trades, on the crew, and able to go — a trade sitting in a
+// cell is not on this job, and three people who cannot all travel is not a crew, it is a plan.
+/* Who fills the three seats on THIS night — which is not the same question as who is on the crew.
+   A posting has a country, and a country can refuse somebody: an overwatch with a limited
+   passport and no forger aboard is not on this job, whatever their file says they do.
+
+   Getting that wrong is not cosmetic. The game's own canRun is satisfied by any three bodies, so
+   without this the night would happily run with the linguist standing in for the overwatch — the
+   one trade the whole opening was built around — and the report would never mention it. */
+function elimTeam(job){
+  const going=job?assessJob(job,jobPool(job)).team:crewAll().filter(c=>c.status==="crew");
+  /* One person cannot be two of the three. Somebody who is both an enforcer and a wheelman fills
+     whichever seat is harder to fill, so a crew that HAS all three trades is never told it does
+     not because the same name was counted twice: assign the scarcest trade first. */
+  const taken={},team={};
+  ELIM.techs.slice().sort((a,b)=>
+    going.filter(c=>hasTech(c,a)).length-going.filter(c=>hasTech(c,b)).length
+  ).forEach(t=>{
+    const c=going.find(x=>hasTech(x,t)&&!taken[x.id]);
+    if(c){taken[c.id]=1;team[t]=c;}
+  });
+  return team;
+}
+function elimMissing(job){const t=elimTeam(job);return ELIM.techs.filter(k=>!t[k]);}
+// Somebody who has the trade but cannot go — the difference between "you need an overwatch" and
+// "your overwatch cannot get into Kenya", which are different problems with different answers.
+function elimBarred(job){
+  if(!job)return [];
+  const going=assessJob(job,jobPool(job)).team;
+  return crewAll().filter(c=>c.status==="crew"&&ELIM.techs.some(t=>hasTech(c,t))
+    &&!going.some(g=>g.id===c.id));
+}
+// It is on the table once you are in the same room as them at all — the same bar as their yard
+// posting, because both are "close enough to be worth the heat".
+function elimReady(rv){return !!(rv&&!S.over&&(rv.elimBack||0)<=S.week);}
+/* The night itself is a posting like any other, because everything that matters in this game is
+   a posting: a crew, a clock, a report that names who did what, and two things that go wrong in
+   the middle of it. It is built here rather than dealt onto the board because nobody advertises
+   this one — you commission it, and it runs the same week. */
+function elimJob(rv,op){
+  /* An outfit has no home country on it — it is a name and a standing. So where the man lives is
+     derived from the outfit's id, once: the same rival is always found in the same city, however
+     many weeks you watch him, and the establishing card opens on that city every time. */
+  const r=mulberry32(fmHash("elimwhere|"+rv.id));
+  const co=pick(r,COUNTRIES), city=pick(r,co.cities);
+  return {
+    id:"JELM"+rv.id+"-"+S.week, elim:true, rivalId:rv.id, opening:op.i,
+    cat:"interception",            // nerve, then muscle — the reckoning this night is actually about
+    tier:4, country:co.name, city:city,
+    need:3, techs:ELIM.techs.slice(), know:["Weapons"], tags:["night","violence"],
+    diff:Math.max(55,Math.round(rv.standing*1.4+46+op.d*7)),
+    payout:0,                       // there is no take on this one. You are paying.
+    heat:ELIM.heat, weeks:1, expires:S.week,
+    client:"nobody — this one is yours",
+    kicker:"The competition",
+    title:"Finish "+cap(rv.boss),
+    brief:"Not the yard and not the business: the person who runs it. "+elimSay(op.w,rv)
+      +", "+elimFill(op.t,rv)+" — "+elimFill(op.h,rv)+". "+cap(ELIM_X_WORD[op.x])+". Three are needed and all three are named: "
+      +"the enforcer does it, the overwatch sees it coming, the wheelman gets everybody out. "
+      +"There is no fee. It is already paid for.",
+  };
+}
+/* Pay, then go. Everything that can refuse this refuses it here and says why, because finding out
+   that your wheelman is in a cell AFTER the money has gone is not a game mechanic, it is a bug. */
+function elimLaunch(id){
+  const rv=rivalById(id)||rival();if(!rv)return;
+  if(!elimReady(rv)){note("There is no opening on "+rv.boss+" this week.");return;}
+  if(S.pendingJob||S.pendingTrip){note("Finish what is running first.");return;}
+  const cost=elimCost(rv);
+  if(S.money<cost){note("It costs "+money(cost)+" before anybody moves.");return;}
+  /* Build it and ASK IT first, against the country it is actually in. Holding the three trades is
+     not the same as being able to run the night — a limited passport, a border, a file that says
+     they will not do violence. Charging for a job that then refuses to start is the exact bug the
+     comment above is about, so every no happens here, before the money. */
+  const op=elimOpening(rv);
+  const job=elimJob(rv,op);
+  const miss=elimMissing(job), barred=elimBarred(job);
+  if(miss.length){
+    const stuck=barred.filter(c=>miss.some(t=>hasTech(c,t)));
+    note(stuck.length
+      ? listAnd(stuck.map(c=>c.first+" ("+TECH_BY_K[c.tech].l.toLowerCase()+")"))
+        +" cannot get into "+job.country+" this week, so there is no "+listAnd(miss.map(t=>TECH_BY_K[t].l.toLowerCase()))
+        +" on this one. A forger aboard answers a passport; a border does not move."
+      : "That needs "+listAnd(miss.map(t=>TECH_BY_K[t].l))+" on the crew, free this week and able to travel.");
+    return;
+  }
+  if(!assessJob(job,jobPool(job)).canRun){note("Not enough of the crew can travel to "+job.country+" this week.");return;}
+  S.money-=cost;
+  S.jobs.unshift(job);
+  logMsg("Paid "+money(cost)+" for a night on "+rv.boss+" — "+elimFill(op.w,rv)+", "+elimFill(op.t,rv)+".","big",true);
+  doExecute(job.id);
+  /* And prove it went. doExecute has its own reasons to refuse and they are checked above, so
+     this cannot fire today — but the money is already gone by this line, and a refactor that
+     adds one more early return to doExecute would take six figures off a player and open nothing.
+     A posting nobody can see, with no fee on it, is not something they could even sell back. */
+  if(!(S.modal&&S.modal.type==="result"&&S.modal.data&&S.modal.data.job&&S.modal.data.job.elim)){
+    S.jobs=(S.jobs||[]).filter(j=>j.id!==job.id);
+    S.money+=cost;
+    logMsg("The night did not start. The "+money(cost)+" is back.","warn",true);
+    save();render();
+  }
+}
+/* What the night did. Called from finishJob, which is the only place that knows how it went, and
+   the only place that can charge for it. Everything here is a consequence of the verdict:
+
+     it came off  — he is dead, the outfit is finished, and the file on you never quite closes
+     it did not   — he is alive, he knows, and you have paid for all of it anyway
+
+   and either way somebody of yours may not have come back. */
+function elimAftermath(job,tier,team,rng,fallout){
+  const rv=rivalById(job.rivalId);
+  const op=ELIM_OPENINGS[job.opening]||ELIM_OPENINGS[0];
+  const done=tier>=ELIM.tier;
+  // ---- the one of yours who does not come home ----
+  const p=ELIM.killBase+op.x*ELIM.killPerX+(done?0:ELIM.killBadTier);
+  const pool=team.filter(c=>!c.isPlayer&&c.status==="crew");
+  if(pool.length&&chance(rng,p)){
+    const c=pool[Math.floor(rng()*pool.length)];
+    /* Dead, and dead for certain. Not "gone" — the blackmail that walks an old face back out of
+       the sea is for somebody who drowned where nobody was looking. This one went down in front
+       of the two people standing next to him, so goneAs says so and nothing can ever tell the
+       other story about him. */
+    c.status="dead";c.goneAs="killed";c.goneWeek=S.week;c.goneWho=rv?rv.boss:"the competition";c._touched=true;
+    leaveCrew(c);
+    stats().lost=(stats().lost||0)+1;
+    S.elimDead=(S.elimDead||[]).concat([{id:c.id,name:c.first,week:S.week,who:rv?rv.boss:"them"}]);
+    fallout.push(c.first+" does not come back. Not hurt and not held — "+c.first+" is dead, and the "
+      +"other two carried it to the car. There is no week to wait out and no lawyer to call.");
+  }
+  // ---- heat, and a file that never quite closes again ----
+  S.heat=clamp(S.heat+ELIM.heat,0,120);
+  /* The floor goes down whether or not anybody is looking yet. It is a fact about what you did,
+     not about who has been assigned to it — and an elimination in week six, before the first
+     detective exists, is exactly when a player would otherwise get this cost for free and learn
+     the wrong lesson from it. When a detective does turn up, the floor is already under them. */
+  S.fileFloor=Math.max(S.fileFloor||0,ELIM.file*2);
+  const dt=detective();
+  if(dt){
+    dt.file=clamp(dt.file+ELIM.file,0,100);
+    fallout.push(dt.name+" has a body now. The file is "+detFile()+" and it will not go below "
+      +S.fileFloor+" again — a raid comes at heat "+raidAt()+".");
+  } else {
+    fallout.push("There is nobody on your alias yet. There will be, and whoever it is starts from "
+      +"a file of "+S.fileFloor+" — a body does not go quiet just because nobody has opened it.");
+  }
+  if(!done){
+    // He lives, and now he knows.
+    if(rv){
+      rv.hostile=true;rv.noBuy=true;
+      rv.standing=clamp(rv.standing+ri(rng,6,10),0,999);
+      rv.elimBack=S.week+ri(rng,ELIM.backMin,ELIM.backMax);
+    }
+    return {done:false,rv:rv};
+  }
+  // ---- it came off ----
+  // The OTHER outfit hears about it before the police do, and prices themselves accordingly.
+  const others=rivals().filter(r=>r.id!==job.rivalId);
+  others.forEach(o=>{
+    o.standing=clamp(o.standing+ELIM.harden,0,999);
+    o.hostile=true;o.noBuy=true;
+  });
+  const otherLine=others.length
+    ? " "+cap(others[0].name)+" heard before the police did. Their standing is "+others[0].standing
+      +" and there is no price on them any more — you do not buy out somebody who has seen what you do to the competition."
+    : "";
+  rivalEnd(job.rivalId,"killed",
+    (rv?rv.boss:"They")+" was killed at "+elimFill(op.w,rv)+", "+elimFill(op.t,rv)+". "+elimSay(op.h,rv)+". It is not a rumour and it is "
+    +"not deniable: the clients know inside a day, and so does everybody who was thinking of working "
+    +"this board."+otherLine,"warn");
+  return {done:true,rv:rv,others:others.length};
 }
 
 /* ------------------------------ THE CREW'S NAME ----------------------- */
@@ -2322,7 +2777,9 @@ function paidUp(c){return !c.isPlayer&&c.paidUntil!=null&&c.paidUntil>=S.week;}
 // A cut worth less than a week of what they cost you is a job they did for you, not for
 // themselves. Tied to a week rather than two, because the cuts themselves were halved — the
 // test has to move with them or every job on the board reads as an insult.
-function smallMoney(c,job){return !c.isPlayer&&job.payout*c.cut<c.upkeep*(job.weeks||1);}
+// Nobody grumbles about the split on an elimination. There is no split; they knew that walking in,
+// and a crew that quits over the money on a night like that is the game misreading its own story.
+function smallMoney(c,job){return !c.isPlayer&&!job.elim&&job.payout*c.cut<c.upkeep*(job.weeks||1);}
 function restless(c){return !c.isPlayer&&(c.lowRun||0)>=3;}
 function foundingRules(){
   const n=crews().length;
@@ -3730,6 +4187,9 @@ function makeTwist(job,team,rng,used,hour){
    always — that is what the money is for. Under it, the old odds: usually none, more often on a job
    the crew is comfortably over, and more often again with a Jinx in the field. */
 function twistCount(job,a,team,rng){
+  // An elimination pays nothing, so the money cannot say how bad the night is. Two, always, and
+  // never a third: this one is not "is your crew broad", it is "does it hold twice".
+  if(job.elim)return ELIM.twists;
   if(job.payout>BIG_MONEY)return chance(rng,BIG_THIRD)?3:2;
   const p=(a.margin>=10?0.25:0.08)+(team.some(c=>hasTrait(c,"jinx"))?0.12:0);
   return chance(rng,p)?1:0;
@@ -3955,6 +4415,10 @@ function finishJob(P,choiceIdx,d){
   for(let i=0;i<nHurt&&pi<hitPool.length;i++,pi++){const c=hitPool[pi];c.status="injured";
     c.out=S.week+(hasRetainer("doctor")?1:2);
     fallout.push(c.first+" is hurt — out for "+(hasRetainer("doctor")?"a week; the doctor came to the flat.":"two weeks."));}
+  /* An elimination settles here, in the fallout, because that is what it is: the man is dead or
+     he is not, and either way somebody of yours may be. It runs AFTER the ordinary hurt-and-held
+     pass so that the person it takes is taken from whoever is still standing. */
+  const elim=job.elim?elimAftermath(job,tier,team,rng,fallout):null;
   if(net>60000){
     team.forEach(c=>{
       if(c.isPlayer||c.status!=="crew"||paidUp(c))return;   // a member paid up this month does not skim
@@ -4452,6 +4916,12 @@ function load(){
     // The watched-yard clock used to be one flag on the game; it belongs to the outfit.
     if(d.rivalJobBack&&d.rivals[0]&&!d.rivals[0].jobBack)d.rivals[0].jobBack=d.rivalJobBack;
     delete d.rivalJobBack;
+    /* The fifth way arrived in build 103. A save from before it has no floor under the file and
+       no outfit that has refused money, which is exactly right — none of those things happened.
+       The one thing that has to be said out loud is the floor, because detFile() reads it on
+       every render and undefined would read as a file of NaN on the oldest saves. */
+    d.fileFloor=d.fileFloor||0;
+    d.elimDead=d.elimDead||[];
     S=d;
     // a file opened before temperament and the face builder existed gets both, from its own seed
     if(S.player&&!S.player.traits){
@@ -4707,7 +5177,14 @@ function render(){
     if(paywallDue()&&!(S.modal&&isFeed(S.modal.type))&&!(S.modal&&S.modal.type==="paywall")){S.modal={type:"paywall"};UI.tillMsg="";sfx("stamp");}
     if(S.notices&&S.notices.length&&S.notices[0].siren&&!S.modal&&!S.over){S.modal={type:"notice"};if(!S.notices[0].sirened){S.notices[0].sirened=true;sirenFx();}}
     if(S.news&&S.newsRead!==S.week&&!S.modal&&!S.over){S.modal={type:"news"};sfx("open");}
-    if(S.notices&&S.notices.length&&!S.modal&&!S.over){S.modal={type:"notice"};sfx("stamp");}
+    // A notice that carries a card of five struck-out faces gets the shot instead of the stamp,
+    // and gets it once — the flag is on the notice so a re-render cannot fire it twice.
+    if(S.notices&&S.notices.length&&!S.modal&&!S.over){
+      const n0=S.notices[0];
+      S.modal={type:"notice"};
+      if(n0.shot){if(!n0.shotDone){n0.shotDone=true;sfx("shot");}}
+      else sfx("stamp");
+    }
     if(S.clash&&!S.modal&&!S.over){S.modal={type:"clash"};sfx("stamp");}
     if(S.apply&&!S.modal&&!S.over){S.modal={type:"apply"};sfx("stamp");}
     if(S.loose&&S.loose.length&&!S.modal&&!S.event&&!S.over){S.modal={type:"loose"};sfx("bad");}
@@ -5790,13 +6267,65 @@ function tabLog(){
         +'<button class="btn ghost sm" data-act="rival-enforce" data-id="'+rv.id+'" '+(payroll().some(c=>c.status==="crew"&&hasTech(c,"enforcer"))?"":'disabled title="Needs an Enforcer"')+'>Send the enforcer</button>'
       +'</div>'
       +'<div class="kicker" style="color:var(--stamp);margin-top:12px">Finish '+esc(cap(rv.name))+'</div>'
-      +'<div class="sel-help">Four ways out of this one, and three of them are on this screen. The fourth is a posting: their yard stands on the board when you are close enough to them to be worth the heat.</div>'
+      +'<div class="sel-help">Five ways out of this one. Three are on this screen, the fourth is a posting — their yard stands on the board when you are close enough to them to be worth the heat — and the fifth is underneath.</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">'
-        +'<button class="btn sm" data-act="rival-buyout" data-id="'+rv.id+'" '+(S.money>=out?"":'disabled title="'+money(out)+' — you do not have it"')+'>Buy them out · '+money(out)+'</button>'
+        +'<button class="btn sm" data-act="rival-buyout" data-id="'+rv.id+'" '+(rv.noBuy?'disabled title="They will not take your money now"':(S.money>=out?"":'disabled title="'+money(out)+' — you do not have it"'))+'>Buy them out · '+(rv.noBuy?'not for sale':money(out))+'</button>'
         +'<button class="btn ghost sm" data-act="rival-burn" data-id="'+rv.id+'" '+(dt?"":'disabled title="Nobody to tell yet"')+' title="'+(dt?'Adds '+RIVAL.burnFile+' to '+esc(dt.name)+"'s file on YOU":"")+'">Give them to the law</button>'
         +((S.jobs||[]).some(j=>j.rival&&j.rivalId===rv.id)?'<span class="tag ok" style="align-self:center">their yard is on the board</span>':'')
-      +'</div>';
+      +'</div>'
+      +elimBlock(rv);
   };
+  /* THE FIFTH WAY, on the card, with the week's opening spelled out before anybody commits.
+     Showing it is the mechanic: you are meant to read "the courthouse steps, press and police,
+     it happens in front of a crowd" and decide to wait for a better Monday. */
+  function elimBlock(rv){
+    if(!elimReady(rv)){
+      return '<hr class="rule" style="margin:14px 0 10px">'
+        +'<div class="kicker" style="color:var(--stamp)">The fifth way</div>'
+        +'<div class="sel-help">They are careful for a few weeks yet — there is no opening on '+esc(rv.boss)
+        +' until week '+(rv.elimBack||S.week)+'.</div>';
+    }
+    const op=elimOpening(rv), cost=elimCost(rv);
+    const job=elimJob(rv,op);
+    const team=elimTeam(job), miss=elimMissing(job), barred=elimBarred(job);
+    const lead=TECH_BY_K[op.k];
+    const who=ELIM.techs.map(t=>{
+      if(team[t])return '<span class="tag ok">'+esc(TECH_BY_K[t].l)+' · '+esc(team[t].first)+'</span>';
+      const stuck=barred.find(c=>hasTech(c,t));
+      return '<span class="tag bad">'+esc(TECH_BY_K[t].l)+' · '
+        +(stuck?esc(stuck.first)+' cannot travel':'nobody')+'</span>';
+    }).join(" ");
+    const ok=!miss.length&&S.money>=cost&&!S.pendingJob&&!S.pendingTrip;
+    return '<hr class="rule" style="margin:14px 0 10px">'
+      +'<div class="kicker" style="color:var(--stamp)">The fifth way — '+esc(cap(rv.boss))+' '+elimSelf(rv)+'</div>'
+      +'<div class="warnbox" style="margin-top:8px">'
+        +'<div class="mono" style="font-size:11.5px;color:var(--muted);margin-bottom:5px">'
+        +esc(cityName(job.city))+', '+esc(job.country)+'</div>'
+        +'<div class="mono" style="font-size:12.5px;line-height:1.75">'
+        +'<b>'+esc(elimSay(op.w,rv))+'</b> — '+esc(elimFill(op.t,rv))+'.<br>'
+        +esc(elimSay(op.h,rv))+', and <b>'+esc(ELIM_X_WORD[op.x])+'</b>.<br>'
+        +'<span style="color:var(--ink-2)">It is the '+esc(lead?lead.l.toLowerCase():op.k)+"'s night"
+        +(team[op.k]?', and that is '+esc(team[op.k].first):'')+'. '
+        +(op.d<=-1?'An easier moment than most.'
+          :op.d>=2?esc(elimSay('a hard one. {He} is guarded, or watched, or both.',rv))
+          :'An ordinary moment, which is the best most weeks offer.')
+        +'</span></div>'
+        +'<div style="margin-top:9px">'+who+'</div>'
+        +'<div class="mono" style="font-size:11.5px;margin-top:9px;color:var(--ink-2)">'
+        +money(cost)+' before anybody moves · one week · two things will go wrong · heat +'+ELIM.heat
+        +(dt?' · '+esc(dt.name)+"'s file +"+ELIM.file+', permanently':'')
+        +'<br>It does not care how far ahead of them you are and it cannot be outbid. It is the only '
+        +'way out of this that can cost you one of the three who go.</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center">'
+        +'<button class="btn sm" data-act="elim-go" data-id="'+rv.id+'" '+(ok?"":'disabled')+'>Take the opening · '+money(cost)+'</button>'
+        +'<span class="mono" style="font-size:11.5px;color:var(--muted)">'
+        +(miss.length?'No '+esc(listAnd(miss.map(t=>TECH_BY_K[t].l.toLowerCase())))+' can be on this one.'
+          :S.money<cost?'You are '+money(cost-S.money)+' short.'
+          :(S.pendingJob||S.pendingTrip)?'Finish what is running first.'
+          :'The opening changes next week.')+'</span>'
+      +'</div>';
+  }
   const watch=(rvs.length||dt)?'<div class="panel" style="margin-top:14px"><div class="panel-h"><h2>The competition and the law</h2><span class="kicker">'+rvs.map(r=>cap(r.name)).join(" · ")+(rvs.length&&dt?" · ":"")+(dt?dt.name:"")+'</span></div><div class="panel-b">'
     +(rvs.length>1?'<div class="warnbox" style="margin-bottom:12px"><b>Two outfits are working this board.</b> Between them they take the best of it most weeks. Neither has to be there forever, and they end one at a time — each card below is its own chapter with its own four ways out.</div>':'')
     +rvs.map(rivalCard).join('<hr class="rule">')
@@ -6817,7 +7346,9 @@ function citySkyline(city,country){
 const ESTAB_MS=3000;
 function estabCard(d){
   const city=cityName(d.job.city), co=COUNTRY_BY_NAME[d.job.country];
-  const cat=CAT_BY_K[d.job.cat];
+  // An elimination borrows interception's weights for the reckoning, but "WEEK 31 · INTERCEPTION"
+  // over a man's last morning is the card naming the wrong thing. It says what it is.
+  const cat=d.job.elim?{l:"Elimination"}:CAT_BY_K[d.job.cat];
   const lm=landmarkFor(city);
   /* role="button" stops a screen reader descending into the card, so everything on it has to be
      in this one string or it is not read at all: the skyline's own aria-label, the country, the
@@ -7695,9 +8226,10 @@ function modalStreetDone(){
 
 function modalNotice(){
   const n=S.notices&&S.notices[0];if(!n)return "";
-  return '<div class="scrim center" data-act="notice-close"><div class="modal notice" role="dialog" aria-modal="true">'
+  return '<div class="scrim center" data-act="notice-close"><div class="modal notice'+(n.card?" gone-wrap":"")+'" role="dialog" aria-modal="true">'
     +'<div class="modal-h"><div><div class="kicker" style="color:var(--stamp)">'+esc(n.k||"Milestone")+'</div><h2 style="font-size:28px;margin-top:4px">'+esc(n.h)+'</h2></div><button class="x" data-act="notice-close" aria-label="Close">✕</button></div>'
-    +'<div class="modal-b"><p style="margin:0 0 16px;font-size:15.5px;line-height:1.6">'+esc(n.text)+'</p>'
+    +'<div class="modal-b">'+(n.card?goneCard(n.card):"")
+    +'<p style="margin:0 0 16px;font-size:15.5px;line-height:1.6">'+esc(n.text)+'</p>'
     +'<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" data-act="notice-close">Later</button>'
     +(n.go?'<button class="btn" data-act="notice-go" data-k="'+esc(n.go)+'">'+esc(n.goText||"Go →")+'</button>':'')+'</div></div></div></div>';
 }
@@ -9148,10 +9680,40 @@ function tone(freq,dur,type,gain,when,slide){
   g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
   o.connect(g);g.connect(c.destination);o.start(t0);o.stop(t0+dur+0.05);
 }
+/* A burst of noise, which every oscillator in here cannot make. A gunshot is broadband — a crack
+   and then air — and an oscillator playing any note at all sounds like a doorbell instead. This
+   fills a short buffer with white noise, runs it through a filter and lets it fall away. */
+function noise(dur,gain,when,type,freq,q){
+  const c=ac();if(!c)return;
+  const t0=c.currentTime+(when||0);
+  const n=Math.max(1,Math.floor(c.sampleRate*dur));
+  const buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=Math.random()*2-1;
+  const src=c.createBufferSource();src.buffer=buf;
+  const f=c.createBiquadFilter();f.type=type||"lowpass";
+  f.frequency.setValueAtTime(freq||2000,t0);
+  if(q)f.Q.setValueAtTime(q,t0);
+  const g=c.createGain();
+  g.gain.setValueAtTime(Math.max(0.0002,gain*SET.volume),t0);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  src.connect(f);f.connect(g);g.connect(c.destination);
+  src.start(t0);src.stop(t0+dur+0.02);
+}
 function sfx(name){
   if(!SET.sound||SET.volume<=0)return;
   try{
     switch(name){
+      /* One shot, outdoors. Three parts, and it is only a gunshot because of all three: the
+         crack (broadband, gone in a tenth of a second), the thump underneath it that you feel
+         rather than hear, and a single slap back off whatever is across the street — without
+         that last one it is a hand clap in a cupboard. It is used once per run of a chapter,
+         so it is allowed to be the loudest thing in the game. */
+      case "shot":
+        noise(0.09,0.85,0,"highpass",1100);
+        noise(0.22,0.38,0,"lowpass",420);
+        tone(110,0.16,"sine",0.55,0,38);
+        noise(0.14,0.13,0.085,"bandpass",900,1.2);
+        break;
       case "click": tone(1200,0.03,"square",0.05,0); break;
       case "tick": tone(900,0.02,"square",0.018,0); break;
       case "open": tone(440,0.08,"triangle",0.08,0); tone(660,0.08,"triangle",0.06,0.06); break;
@@ -9656,7 +10218,8 @@ const INFO={
     "<b>Job recaps</b>: every job you have run stays on file. Open one for the full report — the minute-by-minute, the verdict, the split, why the ranking moved, what they learned, who came back.",
     "<b>The case log</b>, week by week — every hire, job, injury, arrest, leak and betrayal. The <b>Week</b> dropdown narrows both the recaps and the log to one week; \"All weeks\" shows everything.",
     "The operation panel counts places, who is ready, who is hurt or held, weekly upkeep and open postings. Lay low from here too.",
-    "<b>The competition and the law</b> name the two things that used to be numbers. Once you are Small time, a rival outfit appears, run by somebody with a name: they work the same board, take the best posting left most weeks, and their standing climbs when they do. Past a ranking of "+RIVAL.secondRep+" a <b>second</b> one can arrive, and then there are two outfits taking the best of the board between them — each with its own card, its own price and its own four ways out, closed one at a time. When their standing passes your ranking they start buying your crew drinks. You can buy a name inside their operation, or send your enforcer — which works about two times in three, and is loud when it doesn't. A <b>detective</b> opens a file once the heat has been up or your name has grown; the file thickens with heat and thins when you lie low, pay a desk, or get raided — and past 50 the raid comes at heat 90 instead of 100, past 75 at 80.",
+    "<b>The competition and the law</b> name the two things that used to be numbers. Once you are Small time, a rival outfit appears, run by somebody with a name: they work the same board, take the best posting left most weeks, and their standing climbs when they do. Past a ranking of "+RIVAL.secondRep+" a <b>second</b> one can arrive, and then there are two outfits taking the best of the board between them — each with its own card, its own price and its own five ways out, closed one at a time. When their standing passes your ranking they start buying your crew drinks. You can buy a name inside their operation, or send your enforcer — which works about two times in three, and is loud when it doesn't. A <b>detective</b> opens a file once the heat has been up or your name has grown; the file thickens with heat and thins when you lie low, pay a desk, or get raided — and past 50 the raid comes at heat 90 instead of 100, past 75 at 80.",
+    "<b>The fifth way out is a killing</b>, and it is the only thing in the game that closes a chapter by ending a person. Every week each outfit has <b>one opening</b> — a place, an hour and a method, drawn from that outfit and that week. It changes every Monday, so looking at a bad one and waiting is part of it. Taking it needs an <b>enforcer</b>, an <b>overwatch</b> and a <b>wheelman</b> who can all three actually go — a file that says no violence, or a border, and there is no night — plus a large sum paid before anybody moves, and a week. It runs as a live report like any other job, with <b>two</b> things going wrong in the middle of it rather than none. What it costs: heat on the night, a floor under the detective's file that nothing ever thins again, the other outfit hardened and no longer for sale — and it is the only way out of a chapter that can kill one of the three who go. What it buys: it does not care how far ahead of you they are, it does not need six quiet weeks, and it cannot be outbid. When it comes off, the outfit is brought up one last time — its name over its five people, every face stamped, and a shot. That card is for the killing alone: buying an outfit out is a receipt nobody will ever see, and it stays quiet.",
     "<b>The record</b> counts everything the crew has done — jobs, verdicts, money earned and paid out, the biggest score, countries worked, twists called right, who was hurt, taken or lost, and the current run of jobs without a scratch. Under it, <b>Next</b> shows the three nearest marks on the wall: eighteen career goals from the first job to the final score, each paying ranking, money or both when it lands, and announced in a box when it does.",
     "<b>Standing arrangements</b> is where money goes. Three people on a weekly retainer — a <b>lawyer</b> (anyone taken is held half as long), a <b>doctor</b> (a wound is one week, not two), a <b>fixer</b> (two more postings a week, and one written for the crew you actually have) — paid out of the same payroll as the crew, so a missed week loses them. A <b>safe house</b> is bought outright, in three moves: heat falls 7, then 9, then 11 a week, and the best one keeps most of the float through a raid. And a <b>desk</b> can be paid to lose a file: heat −20, priced by how hot you are.",
     rankLadderText()]},
@@ -10268,7 +10831,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 102 · September 2026";
+const BUILD="build 103 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
@@ -10449,6 +11012,7 @@ document.addEventListener("click",e=>{
     case "rival-buy": rivalPressure(id); break;
     case "rival-enforce": rivalEnforce(id); break;
     case "rival-buyout": rivalBuyout(id); break;
+    case "elim-go": elimLaunch(id); break;
     case "rival-burn": rivalBurn(id); break;
     case "close-job": S.jobOpen=null; render(); window.scrollTo(0,0); syncScrolled(); break;
     case "to-top": try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){window.scrollTo(0,0);} syncScrolled(); break;
@@ -10924,6 +11488,9 @@ function looseAdd(c,why){
 // twist, it is the game forgetting its own story — which is exactly what it used to do.
 function goneStory(c){
   if(!c)return "who used to be on this crew";
+  // Killed on a night you sent them on, in front of the two people standing next to them. There
+  // is no version of this one where they walk back out of the sea.
+  if(c.goneAs==="killed")return "who was killed on the night you went after "+(c.goneWho||"the competition");
   if(c.goneAs==="dead"){
     return c.funeralPaid
       ? "whose funeral you paid for, and whose family you paid"

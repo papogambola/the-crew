@@ -748,17 +748,53 @@ ch("rival","The competition","Somebody else is working the board",[
       "<b>Send the enforcer</b> — free, needs an Enforcer on the books. 65% it takes 12 to 20 points off them for "+m("+6")+" heat. 35% it goes loud in a street with windows: "+m("+16")+" heat and they are not frightened.",
     ])),
   S("finish","Finishing them",
-    p("A rival is a <b>chapter</b>, not a permanent tax. There are four ways to close one, and each of them costs something different — which is the whole of the choice.")
+    p("A rival is a <b>chapter</b>, not a permanent tax. There are five ways to close one, and each of them costs something different — which is the whole of the choice.")
     +ul([
       "<b>Buy them out</b> — at least "+money(250000)+", or their standing × "+money(9000)+". Clean: no heat, no night, no risk. Two or three of their people come looking for work and arrive on your roster already vetted, which is how you meet somebody else's Forger.",
       "<b>Take the board</b> — hold a standing <b>15 clear</b> of theirs for <b>6 straight weeks</b> and the clients stop calling them. Free, slow, and the only one that is pure skill. Let them close the gap and the run goes back to nothing.",
       "<b>Give them to the law</b> — costs no money and no heat, and finishes them at once. It also puts you in a room with the detective: <b>34 points</b> onto the file on <i>your</i> alias, and the file is what decides how early the raid comes. The price is real and it arrives later.",
       "<b>Take them apart</b> — a posting on the board like any other, against their yard. Your crew, a night that can go wrong, and somebody can get hurt. Run it well and there is no competition. Run it badly and they know exactly whose people those were: their standing climbs, and the yard is watched for weeks.",
+      "<b>Kill them</b> — the fifth, and the only one that closes a chapter by ending a person. See below.",
     ])
     +note("Every one of these names the outfit it closes, and with two on the board that matters: the buttons are on that "
       +"outfit's card, the yard on the board says whose it is, and the six weeks clear are counted against that one's "
       +"standing alone. Beating one does not end the competition — somebody else works the board within six to twelve "
       +"weeks, and they start from where the last one got to, so the fourth is a problem where the first was an irritation.")),
+  S("elim","The fifth way — the opening",
+    p("The other four are money, the law, patience and a night at their yard, and the yard job says out loud that nobody "
+      +"has to die. This one is the exception. It is the only thing in the game that closes a chapter by ending a person, "
+      +"and it is priced accordingly — in every currency at once.")
+    +p("<b>There is one opening a week, and only one.</b> A place, an hour and a method, drawn from the outfit and the week: "
+      +m(D.ELIM_OPENINGS||100)+" of them, from a christening on the steps to the customs hall to nine hundred metres of "
+      +"hillside above a terrace. The same outfit shows the same opening all week and a different one next Monday, so "
+      +"<b>looking at a bad one and waiting</b> is part of the mechanic rather than a way of avoiding it. The card tells you "
+      +"the place, the hour, the method, whose trade the night turns on, and — the one that matters — whether anybody sees it.")
+    +p("<b>Three have to go, and all three are named:</b> an <b>Enforcer</b> to do it, an <b>Overwatch</b> to see it coming, "
+      +"a <b>Wheelman</b> to leave. Not three bodies — those three trades, held by three different people who can each "
+      +"actually be there. A file that reads <i>No violence</i> is not on this job, and neither is somebody a border will "
+      +"not let in. The card names whoever is missing and why.")
+    +p("It runs as a live report like any other posting: the card of the city, the clock, the crew named, and <b>two</b> "
+      +"things going wrong in the middle of it — always two, never one and never three, because this one is not asking "
+      +"whether your crew is broad, it is asking whether it holds twice. It takes the week.")
+    +ul([
+      "<b>Money, before anybody moves</b> — at least "+money((D.ELIM&&D.ELIM.costMin)||120000)
+        +", or their standing × "+money((D.ELIM&&D.ELIM.costPer)||4500)+". Unlike a buy-out you can pay it and still fail.",
+      "<b>Heat on the night</b> — "+m("+"+((D.ELIM&&D.ELIM.heat)||34))+".",
+      "<b>A floor under the file</b> — "+m("+"+((D.ELIM&&D.ELIM.file)||26))+" onto the detective's file, and a floor of "
+        +m(((D.ELIM&&D.ELIM.file)||26)*2)+" that nothing thins again. Paying a desk and lying low work as they always did; "
+        +"they cannot work past a body. The floor goes down even if nobody has opened a file on you yet.",
+      "<b>The other outfit hardens</b> — if a second one is on the board it hears before the police do: "
+        +m("+"+((D.ELIM&&D.ELIM.harden)||14))+" standing, and no price on them ever again. You do not buy out somebody who "
+        +"has seen what you do to the competition.",
+      "<b>One of the three may not come back</b> — dead, not hurt and not held. There is no week to wait out and no lawyer "
+        +"to call, and how likely it is follows the one thing the card told you before you committed: how exposed the moment was.",
+    ])
+    +p("<b>When it comes off the outfit is brought up one last time</b> — its name over its five people, every face "
+      +"stamped, and a shot. That card belongs to the killing alone. Buying an outfit out is a receipt nobody will ever "
+      +"see, and it stays quiet.")
+    +note("What it buys, against all that: it does not care how far ahead of you they are, it does not need six quiet "
+      +"weeks, and it cannot be outbid. Every other way out of a chapter has a condition you might never meet. This one "
+      +"only has a price — and the price is the point.")),
 ]);
 
 /* ---------------- 14 -------------------------------- */
