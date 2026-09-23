@@ -107,6 +107,12 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   const N=await page.evaluate(()=>{
     S.money=5e7;S.modal=null;S.notices=[];
     crewAll().filter(c=>c.status==="crew"&&!c.isPlayer).forEach(c=>{c.status="available";leaveCrew(c);});
+    /* You are on your own crew, and emptying it does not empty you out of it. On a run where the
+       dossier had rolled you an enforcer, "with none of them on the crew" was false before the
+       first line of the test and it reported two missing instead of three — a test that hoped
+       rather than arranged, failing about one run in four for a reason that had nothing to do
+       with the elimination. You are given a trade outside the three, deliberately. */
+    S.player.tech="forger";S.player.tech2=null;
     const before=elimMissing().slice();
     // hand the crew exactly one of the three
     const e=S.roster.find(c=>c.status==="available"&&hasTech(c,"enforcer"));
@@ -369,6 +375,48 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   check(C.word==="Eliminated","stamped "+JSON.stringify(C.word));
   check(C.shot,"and it asks for the shot");
 
+  /* THE FACES AND THE SENTENCE UNDER THEM ARE THE SAME PEOPLE.
+
+     They were not. The card invented all five from a hash, and the paragraph beneath it named
+     whoever rivalScatter had just pushed onto the roster — real people, picked at random from
+     anybody available. So it struck out Viktor, Davi, Bohdan, Ingeborg and Lena and then said
+     "their people are looking for work: Kaisa the drone specialist and Kasper the demolitions",
+     two names on nobody's photograph. And it stamped ELIMINATED across all five while telling
+     you two of them were alive and available.
+
+     Both halves are asked here, over a run of outfits, because a single draw can agree by luck. */
+  const SAMENAMES=await page.evaluate(()=>{
+    const bad=[],stamped=[];let n=0,withLoose=0;
+    for(let k=0;k<25;k++){
+      S.notices=[];S.modal=null;
+      S.rivalSeq=(S.rivalSeq||0)+1;
+      const nw=makeRival(freshRng());nw.id="RVT"+S.rivalSeq;
+      S.rivals=[nw];
+      rivalEnd(nw.id,"killed","Killed at the gate.","warn");
+      const notice=S.notices[0];if(!notice||!notice.card)continue;
+      n++;
+      const crew=notice.card.crew;
+      const loose=crew.filter(p=>p.loose);
+      if(loose.length)withLoose++;
+      // every name the sentence offers as being on the roster must have a face on the card
+      const said=(notice.text.match(/looking for work: (.+?) (?:is|are) on the roster/)||[])[1]||"";
+      const saidNames=said.split(/,| and /).map(s=>s.trim().split(" ")[0]).filter(Boolean);
+      saidNames.forEach(nm=>{
+        if(!crew.some(p=>p.first===nm))bad.push(nm+" is named in the text and is on no photograph");
+      });
+      // and nobody the text says is alive may be struck out
+      loose.forEach(p=>{if(p.word)stamped.push(p.first+" walked away and is stamped "+p.word);});
+      // the ones who did not come out of it must each carry a word for what became of them
+      crew.filter(p=>!p.loose).forEach(p=>{if(!p.word)stamped.push(p.first+" is struck out with no word");});
+    }
+    return {n,withLoose,bad,stamped};
+  });
+  check(SAMENAMES.n>0,"ended "+SAMENAMES.n+" more outfits, "+SAMENAMES.withLoose+" of them with somebody who came out of it");
+  check(SAMENAMES.bad.length===0,"EVERY NAME THE SENTENCE OFFERS HAS A FACE ON THE CARD"
+    +(SAMENAMES.bad.length?" — but: "+SAMENAMES.bad.slice(0,3).join("; "):""));
+  check(SAMENAMES.stamped.length===0,"and the ones who walked away carry no stamp, while the ones who did not each carry their own word"
+    +(SAMENAMES.stamped.length?" — but: "+SAMENAMES.stamped.slice(0,3).join("; "):""));
+
   // it has to render, and the stamps must not weld into one band across the row
   const shown=await page.evaluate(()=>{
     S.modal=null;S.over=false;S.newsRead=S.week;render();
@@ -377,21 +425,37 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   });
   check(shown.card,"the card is on the screen"+(shown.card?"":"  (modal="+shown.modal+", queue="+shown.queue+")"));
   await page.waitForSelector(".gone-card",{timeout:4000});
+  /* Measured per FIGURE, not by walking two lists in step. Not every face carries a stamp now —
+     the ones who walked away are on the card precisely because they are alive — so pairing the
+     nth stamp with the nth frame compared Isabela's stamp against Sophie's box and reported that
+     the stamps had escaped their cards. The stamp belongs to a figure; ask the figure. */
   const LAY=await page.evaluate(()=>{
-    const st=[...document.querySelectorAll(".gone-stamp")].map(e=>e.getBoundingClientRect());
-    const fr=[...document.querySelectorAll(".gone-m")].map(e=>e.getBoundingClientRect());
+    const figs=[...document.querySelectorAll(".gone-m")].map(f=>({
+      live:f.classList.contains("gone-live"),
+      box:f.getBoundingClientRect(),
+      stamp:f.querySelector(".gone-stamp"),
+      style:(f.querySelector(".gone-stamp")||{}).getAttribute
+        ?f.querySelector(".gone-stamp").getAttribute("style"):null}));
+    const stamped=figs.filter(f=>f.stamp);
+    const rects=stamped.map(f=>f.stamp.getBoundingClientRect());
     const caps=[...document.querySelectorAll(".gone-m figcaption")].map(e=>e.getBoundingClientRect());
     const para=document.querySelector(".modal.notice .modal-b p").getBoundingClientRect();
     let touch=0;
-    for(let i=1;i<st.length;i++)if(st[i].left<st[i-1].right)touch++;
-    return {n:st.length,touch,
-      angles:new Set([...document.querySelectorAll(".gone-stamp")].map(e=>e.getAttribute("style"))).size,
+    for(let i=1;i<rects.length;i++)if(rects[i].left<rects[i-1].right)touch++;
+    return {figs:figs.length, stamped:stamped.length, live:figs.filter(f=>f.live).length,
+      liveStamped:figs.filter(f=>f.live&&f.stamp).length,
+      goneUnstamped:figs.filter(f=>!f.live&&!f.stamp).length,
+      touch, angles:new Set(stamped.map(f=>f.style)).size,
       overlapText:caps.some(c=>c.bottom>para.top+1),
-      inFrame:st.every((s,i)=>s.left>fr[i].left-14&&s.right<fr[i].right+14)};
+      inFrame:stamped.every(f=>{const s=f.stamp.getBoundingClientRect();
+        return s.left>f.box.left-14&&s.right<f.box.right+14;})};
   });
-  check(LAY.n===5,"five stamps on the screen");
-  check(LAY.touch===0,"and not one of them touches its neighbour — five people struck out, not one redaction");
-  check(LAY.angles===5,"each at its own angle");
+  check(LAY.figs===5,"five faces on the screen");
+  check(LAY.liveStamped===0&&LAY.goneUnstamped===0,
+    "a stamp on every one who did not come out of it and on none who did ("+LAY.stamped
+    +" struck out, "+LAY.live+" walked away)");
+  check(LAY.touch===0,"and not one stamp touches its neighbour — people struck out one at a time, not one redaction");
+  check(LAY.angles===LAY.stamped,"each at its own angle");
   check(LAY.inFrame,"each inside its own card");
   check(!LAY.overlapText,"and the names do not sit on top of the paragraph");
 

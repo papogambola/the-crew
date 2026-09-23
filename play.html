@@ -80,6 +80,14 @@
   .gone-m figcaption{border-top:2px solid var(--ink);margin-top:5px;padding:5px 2px;
     font-family:var(--f-disp);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* The ones who came out of it. No stamp, and their trade under the name, because the sentence
+     below this row calls them "Kaisa the drone specialist" and the card should be answering that
+     sentence rather than sitting next to it. */
+  .gone-m.gone-live{border-style:dashed}
+  .gone-note{display:block;font-family:var(--f-mono);font-weight:400;font-size:9px;
+    letter-spacing:.02em;text-transform:lowercase;color:var(--muted);margin-top:2px}
+  .gone-foot{margin-top:9px;font-family:var(--f-mono);font-size:11px;color:var(--muted);
+    letter-spacing:.01em;text-transform:none}
   /* Across the eyes, which is where a stamp like this always lands, and rotated, because a stamp
      square to the page was put there by a printer rather than by a hand.
 
@@ -2403,8 +2411,13 @@ function rivalEnd(id,how,text,tone){
      lines up — a card that went looking for it later would find nothing, which is precisely the
      thing it exists to announce. It is stored on the notice, so it survives a save and a reload
      and is still there when the player finally closes the report and reads what happened. */
+  /* Built from the people who actually scattered, so the faces on the card and the names in the
+     sentence under it are the same people. The snapshot carries each one's own word and whether
+     they came out of it, because by the time this card is read the outfit is gone from S and
+     nothing could be looked up again. */
   const card=how==="killed"
-    ? {name:rv.name,word:"Eliminated",crew:rivalCrew(rv).map(p=>({first:p.first,gender:p.gender,seed:p.seed,face:p.face}))}
+    ? {name:rv.name,word:"Eliminated",crew:rivalCrew(rv,loose).map(p=>
+        ({first:p.first,gender:p.gender,seed:p.seed,face:p.face,word:p.word||null,loose:!!p.loose,note:p.note||""}))}
     : null;
   S.notices=(S.notices||[]).concat([{k:"The competition · week "+S.week,h:cap(rv.name)+" is finished",
     card:card,shot:!!card,
@@ -2704,20 +2717,47 @@ const ELIM_X_WORD=["nobody sees it","there are witnesses","it happens in front o
    by the game's own face builder rather than a picture of one, with the boss first because the
    boss is the one the night was about. Nothing else in the game reads them — they exist to be
    looked at once, on the card, at the end of a chapter. */
-function rivalCrew(rv){
+/* THE OUTFIT, AS PEOPLE — and the ones on that card have to be the ones in the sentence under it.
+
+   This used to invent all five from a hash: a boss with the right name and four strangers who
+   existed nowhere else in the game. Meanwhile the paragraph beneath the card named the people
+   who actually scattered onto your roster, which rivalScatter picks from the real roster. So the
+   card struck out Viktor, Davi, Bohdan, Ingeborg and Lena, and the sentence under it said "their
+   people are looking for work: Kaisa the drone specialist and Kasper the demolitions" — two
+   names that were on nobody's photograph.
+
+   Two lies for the price of one, because it also stamped ELIMINATED across all five while
+   telling you that two of them were alive and available by Tuesday.
+
+   So the card is built out of who these people actually are:
+
+     the boss      killed, which is what the report says happened to him
+     the loose     the real roster members who came out of it — their own faces, their own
+                   names, NOT struck out, because they are on your roster this morning
+     the rest      invented, and they can be: they are the ones nobody ever hears from again,
+                   and "scattered" is what became of them
+
+   Each carries the word for what happened to that one, rather than one word across all five. */
+function rivalCrew(rv,loose){
   if(!rv)return [];
   const r=mulberry32(fmHash("crew|"+rv.id));
   const bossFirst=String(rv.boss||"").split(" ")[0]||rv.last||"—";
-  const out=[{first:bossFirst,gender:rv.gender||"M",seed:fmHash("f|"+rv.id+"|0"),boss:true}];
+  const out=[{first:bossFirst,gender:rv.gender||"M",seed:fmHash("f|"+rv.id+"|0"),boss:true,word:"Killed"}];
   const used={};used[bossFirst.toLowerCase()]=1;
-  for(let i=1;i<5;i++){
+  (loose||[]).forEach(c=>{
+    if(!c||out.length>=5||used[String(c.first).toLowerCase()])return;
+    used[String(c.first).toLowerCase()]=1;
+    out.push({first:c.first,gender:c.gender,seed:c.avseed,face:c.face||null,loose:true,
+      note:TECH_BY_K[c.tech]?TECH_BY_K[c.tech].l.toLowerCase():""});
+  });
+  for(let i=1;out.length<5;i++){
     const g=r()<0.5?"M":"F";
     let n=randomName(r,g), guard=0;
     while(used[n.first.toLowerCase()]&&guard++<12)n=randomName(r,g);
     used[n.first.toLowerCase()]=1;
-    out.push({first:n.first,gender:g,seed:fmHash("f|"+rv.id+"|"+i),boss:false});
+    out.push({first:n.first,gender:g,seed:fmHash("f|"+rv.id+"|"+i),boss:false,word:"Scattered"});
   }
-  out.forEach(p=>{p.face=randomFace(mulberry32(p.seed),p.gender);});
+  out.forEach(p=>{if(!p.face)p.face=randomFace(mulberry32(p.seed),p.gender);});
   return out;
 }
 function elimFill(s,rv){
@@ -2742,13 +2782,28 @@ function goneCard(snap){
             // across the eyes: the bust puts them just under 40% of the box, and a stamp that
             // drifts onto the mouth reads as a misprint rather than as somebody striking a face out
             deg=(-11+r()*8).toFixed(1), top=(40+r()*5).toFixed(0);
-      return '<figure class="gone-m">'
-        +'<div class="gone-face">'+avatar(p.seed,p.gender,p.face)
-          +'<span class="gone-stamp" aria-hidden="true" style="top:'+top+'%;transform:translateY(-50%) rotate('+deg+'deg)">'
-          +esc(snap.word||"Eliminated")+'</span></div>'
-        +'<figcaption>'+esc(p.first)+'</figcaption></figure>';
+      /* Not everybody on this card is struck out. The ones who came out of it are on your roster
+         by the morning, and the sentence under the card names them — so a stamp across their face
+         would be the card contradicting its own caption. They are here precisely because they
+         are alive. */
+      const stamp=p.loose?"":'<span class="gone-stamp" aria-hidden="true" style="top:'+top+'%;transform:translateY(-50%) rotate('+deg+'deg)">'
+          +esc(p.word||snap.word||"Eliminated")+'</span>';
+      return '<figure class="gone-m'+(p.loose?" gone-live":"")+'">'
+        +'<div class="gone-face">'+avatar(p.seed,p.gender,p.face)+stamp+'</div>'
+        +'<figcaption>'+esc(p.first)
+        +(p.note?'<span class="gone-note">'+esc(p.note)+'</span>':'')+'</figcaption></figure>';
     }).join("")
-    +'</div></div>';
+    +'</div>'
+    // Said once, under the row, rather than left for the reader to work out from which faces
+    // have ink on them. Only when there is somebody to say it about.
+    +(function(){
+      const n=snap.crew.filter(p=>p.loose).length;
+      if(!n)return "";
+      const w=["","one","two","three","four"][n]||String(n);
+      return '<div class="gone-foot">The '+w+' without a stamp walked away'
+        +(n>1?" — and are":" — and is")+' on your roster this morning.</div>';
+    })()
+    +'</div>';
 }
 /* The opening on the table this week. Off the outfit and the week, never off the live stream, so
    looking at the card twice shows the same opening and next Monday shows a different one. */
@@ -11843,7 +11898,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 110 · September 2026";
+const BUILD="build 111 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a

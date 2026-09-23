@@ -226,17 +226,22 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
       const cand=S.roster.find(c=>c.status==="available"&&!bringInWhy(c,jj,false));
       if(!cand)break;
       bringIn(jj,cand.id);
-      const who=(hiredFor(jj)||{}).first;
+      const hiredId=(hiredFor(jj)||{}).id, who=(hiredFor(jj)||{}).first;
       // loyalty on the floor and greed through the roof, so the skim fires as often as it can
       crewAll().forEach(c=>{if(!c.isPlayer){c.loyalty=1;c.greed=99;c.paidUntil=null;}});
       const rep=startJob(jj,{noTwist:true,pool:jobPool(jj)});
       nights++;
       (rep.events||[]).forEach(e=>{
-        const t=falloutText(e);
-        if(!/skims .* from the split/.test(t))return;
-        crewSkims++;
-        if(who&&t.indexOf(who)===0){hiredSkims++;sample=t;}
+        if(/skims .* from the split/.test(falloutText(e)))crewSkims++;
       });
+      /* By ID, not by first name. The skim line prints a first name and nothing else, and the
+         crew and the hired hand are drawn from the same roster — so two people called Bayani
+         made this read as a hired hand skimming when it was a crew member with the same name.
+         It reported a failure three runs out of a hundred and the claim it was making was one
+         I had already put in writing. Skimming is the only thing that leaves somebody "gone"
+         off a night, so the person is asked directly instead. */
+      const h=hiredId?byId(hiredId):null;
+      if(h&&h.status==="gone"){hiredSkims++;sample=who+" ("+hiredId+") came off the night gone";}
     }
     return {nights,crewSkims,hiredSkims,sample};
   });
