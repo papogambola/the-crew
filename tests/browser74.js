@@ -241,11 +241,15 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
       // A member skimming the split and vanishing is worth +6 of its own, and it happens on a
       // night that pays well. One run in five came out 6 over and the arithmetic looked wrong
       // when the only thing wrong was the list of things being subtracted.
-      betrayals:6*(d.events||[]).filter(e=>/skims .* and vanishes/.test(e)).length,
+      // A fallout entry is a string, or {x,tone} for the one kind that is not bad news —
+      // somebody brought in for the night finishing it and going home. falloutText answers
+      // both, and the raw entry answers neither: e.indexOf on an object is not a function,
+      // which is how this file died partway the day the tone was added.
+      betrayals:6*(d.events||[]).filter(e=>/skims .* and vanishes/.test(falloutText(e))).length,
       fileUp:detFile()-file0,
       contractCleared:!S.hiredId&&!S.hiredJob,
-      inEvents:(d.events||[]).some(e=>e.indexOf(c.first)>=0),
-      events:(d.events||[]).filter(e=>e.indexOf(c.first)>=0),
+      inEvents:(d.events||[]).some(e=>falloutText(e).indexOf(c.first)>=0),
+      events:(d.events||[]).map(falloutText).filter(e=>e.indexOf(c.first)>=0),
       talkHeat:HIRED.talkHeat,
       onCrewAfter:S.crewIds.indexOf(c.id)>=0};
   });
@@ -292,14 +296,23 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
     return {name:c.first,talked:!!byId(c.id).talked,
       heatUp:S.heat-heat0,
       youKeep:sp.you,youKeepWithout:spNoHand.you,
-      line:(d.events||[]).filter(e=>e.indexOf(c.first)>=0)[0]||"",
+      line:(d.events||[]).map(falloutText).filter(e=>e.indexOf(c.first)>=0)[0]||"",
+      /* Which of the fifty-two it is. There used to be ONE sentence a quiet hand could leave —
+         "takes $X and is not heard from again" — and this asked for that string, which stopped
+         being true the day there were fifty-two of them. Asked of the pool instead: strip the
+         money back out of the line and see whether any entry fills to exactly it. That stays
+         true however many get written. */
+      fromPool:(function(){
+        const L=(d.events||[]).map(falloutText).filter(e=>e.indexOf(c.first)>=0)[0]||"";
+        const m=(L.match(/\$[\d.,]+[KM]?/)||[""])[0];
+        return HIRED_GONE.concat(HIRED_GONE_NOPAY).some(t=>hiredFill(t,c,m)===L);})(),
       tier:d.tier};
   });
   if(!quiet)console.log("ok  (no candidate on the fresh board — skipped)");
   else{
     check(!quiet.talked,quiet.name+" kept it to themselves, and carries no mark");
-    check(/not heard from again/.test(quiet.line),
-      "the report says so: \""+quiet.line.slice(0,80)+"…\"");
+    check(quiet.fromPool,
+      "and the report says so, in one of the fifty-two: \""+quiet.line.slice(0,88)+"\"");
     check(quiet.youKeep<quiet.youKeepWithout,
       "and the share came out of yours either way: you keep "+quiet.youKeep
       +" of the fee instead of "+quiet.youKeepWithout);
