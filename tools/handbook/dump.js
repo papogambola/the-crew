@@ -62,6 +62,7 @@ const out={
   LANG_MISS:(typeof LANG_MISS!=="undefined"?LANG_MISS:null),
   LANG_MISS_TALK:(typeof LANG_MISS_TALK!=="undefined"?LANG_MISS_TALK:null),
   HIRED:(typeof HIRED!=="undefined"?HIRED:null),
+  LOCAL_HIRE:(typeof LOCAL_HIRE!=="undefined"?LOCAL_HIRE:null),
   RIVAL:(typeof RIVAL!=="undefined"?RIVAL:null),
   ELIM:(typeof ELIM!=="undefined"?ELIM:null),
   // The count, not the table: a hundred openings is a mechanic the book describes, not a list a

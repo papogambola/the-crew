@@ -1627,7 +1627,21 @@ function newGame(player){
   logMsg("Float: "+money(S.money)+". "+S.jobs.length+" postings online.","");
   save();
 }
-function byId(id){if(id==="YOU")return S.player;return S.roster.find(c=>c.id===id);}
+/* Anybody, by their id. The roster holds nearly everyone, you are not on it, and a local is not
+   on it either — they were never recruited and never will be, so there is nothing to find.
+
+   That last one has to be answered HERE rather than at the places that ask, because the places
+   that ask are not obvious. startJob writes down who went as a list of ids and finishJob turns
+   that list back into people through this function; a local who could not be found came back as
+   undefined, was filtered out as a blank, and the night was then resolved by a crew the player
+   had not sent — without the language they had just paid for, at a reckoning different from the
+   one on the screen they pressed the button on. Nothing errored. The number simply changed
+   between the decision and the outcome, which is the one thing this game must never do. */
+function byId(id){
+  if(id==="YOU")return S.player;
+  if(S.hiredLocal&&S.hiredLocal.id===id)return S.hiredLocal;
+  return S.roster.find(c=>c.id===id);
+}
 function recruits(){return S.crewIds.map(byId).filter(Boolean);}
 function crewAll(){return [S.player].concat(recruits());}
 function field(){return crewAll().filter(c=>c.status==="crew");}
@@ -1868,8 +1882,35 @@ function hiredCut(c){return clamp(HIRED.cutBase+(c.exp||1)*HIRED.cutPerRank,HIRE
    split alike, which is why it has to survive until finishJob has paid them. */
 function hiredFor(job){
   if(!job||!S.hiredId||S.hiredJob!==job.id)return null;
+  // One slot, two kinds. A local is not on the roster and never was. While one is contracted
+  // the person is held on S — kept rather than re-derived, because the posting can be gone
+  // (finishJob takes it off the board) while the night that needs them is still being written.
+  if(S.hiredKind==="local")return S.hiredLocal||localFor(job);
   const c=byId(S.hiredId);
   return (c&&c.status==="available")?c:null;
+}
+/* Tearing up the contract, either kind. The contractor agreed a share of a score that has not
+   happened, so letting them go costs nothing. The local was paid in cash — and the money comes
+   back, because nothing has happened yet and a button that quietly eats the fee is a trap
+   rather than a decision. It is spent for good the moment the job runs. */
+function hiredDrop(){
+  // The figure that was actually charged, not the one the job would quote now — and kept on S
+  // rather than recomputed, because the commonest reason a contract ends is that the posting
+  // went away, and a job that is gone cannot be asked what it cost.
+  if(S.hiredKind==="local"&&S.hiredFee)S.money+=S.hiredFee;
+  S.hiredJob=null;S.hiredId=null;S.hiredKind=null;S.hiredFee=0;S.hiredLocal=null;
+}
+/* A contract cannot outlive the posting it was agreed for. Postings come off the board four
+   different ways — they expire, a rival takes one out from under you, a client pulls theirs,
+   the final score closes — and each of them would otherwise leave a local paid for a night
+   that is never going to happen. Asked once at the end of the week, after all four have had
+   their turn, rather than remembered at all four. */
+function hiredSweep(){
+  if(S.hiredJob&&!(S.jobs||[]).some(j=>j.id===S.hiredJob)){
+    const back=(S.hiredKind==="local"&&S.hiredFee)||0;
+    hiredDrop();
+    if(back)logMsg("That posting is gone, and so is the arrangement with the local. "+money(back)+" back.","");
+  }
 }
 // A stranger is anybody in the field who is not on anybody's crew. Asked of the person rather
 // than looked up, so it still answers correctly in finishJob, after the contract is torn up.
@@ -1913,10 +1954,18 @@ function hiredOffers(job,a){
    are contracted — so simply appending them to the pool and assessing gave every candidate
    "+0 on the reckoning", which is the one number the row exists to show. */
 function assessWith(job,c){
-  const j0=S.hiredJob,i0=S.hiredId;
-  S.hiredJob=job.id;S.hiredId=c.id;
+  /* All four, saved and put back. The kind has to go with the id — leaving it behind meant
+     previewing a contractor while a local was in the slot asked hiredFor for the local and got
+     it, so every candidate's row showed the same number, which is the one number the row exists
+     to show. And the held person has to go with both: asking about a local sets the kind to
+     local, and hiredFor would then have handed back whoever was already being held rather than
+     the one being asked about. There is no screen today that can reach that second case — the
+     offers are only drawn when nothing is contracted — but it is one line, and a function that
+     lies about state it borrowed is a bad thing to leave lying around. */
+  const j0=S.hiredJob,i0=S.hiredId,k0=S.hiredKind,l0=S.hiredLocal;
+  S.hiredJob=job.id;S.hiredId=c.id;S.hiredKind=c.isLocal?"local":"trade";S.hiredLocal=c.isLocal?c:null;
   const a=assessJob(job,jobPool(job));
-  S.hiredJob=j0;S.hiredId=i0;
+  S.hiredJob=j0;S.hiredId=i0;S.hiredKind=k0;S.hiredLocal=l0;
   return a;
 }
 function bringIn(job,id){
@@ -1925,25 +1974,146 @@ function bringIn(job,id){
   const a=assessJob(job,jobPool(job));
   const why=bringInWhy(c,job,a.team.some(x=>hasTech(x,"forger")));
   if(why){note(c.first+": "+why+".");return;}
-  S.hiredJob=job.id;S.hiredId=id;
+  S.hiredJob=job.id;S.hiredId=id;S.hiredKind="trade";S.hiredLocal=null;
   sfx("coin");
   logMsg("Brought "+c.n+" in for the "+job.city+" job — "+TECH_BY_K[c.tech].l.toLowerCase()
     +", "+Math.round(hiredCut(c)*100)+"% of the score, one night, nothing after it.","");
   save();
 }
-function bringInOff(){S.hiredJob=null;S.hiredId=null;save();}
+function bringInOff(){hiredDrop();save();}
 /* What they do afterwards. The odds are the night they had: paid for a clean one and quiet,
    paid nothing for a botched one and angry, and worst of all picked up at the scene. Nerve and
    the years on the street pull it down — a professional stays a professional on a bad night.
    Everything this rolls is a consequence of something the player chose or something that
    happened where the player was watching. */
+/* What either kind does with what they know. The odds are the night they had — and the two
+   kinds had different nights, because they were paid differently.
+
+   A contractor is on a percentage: a botched night paid them nothing, and somebody who came,
+   took the risk and went home with nothing is the one who talks. That is talkUnpaid, and it is
+   the largest thing in here.
+
+   A local was paid in cash before anybody left, so that grievance does not exist for them. What
+   does is smaller and different: they are not a professional, the police asking the questions
+   are their neighbours, and they still have to live there tomorrow. So a bad night moves them
+   too, by less — talkBad instead of talkUnpaid — and they carry a few points more all the time.
+   Being picked up at the scene is the same for anybody. */
 function hiredTalkOdds(c,tier,taken){
-  let p=HIRED.talkBase;
-  if(tier<=1)p+=HIRED.talkUnpaid;
+  const loc=!!(c&&c.isLocal);
+  let p=HIRED.talkBase+(loc?LOCAL_HIRE.talkExtra:0);
+  if(tier<=1)p+=loc?LOCAL_HIRE.talkBad:HIRED.talkUnpaid;
   if(taken)p+=HIRED.talkTaken;
   p-=(c.attrs.nerve-50)/500;
   p-=(c.streets||0)/300;
   return clamp(p,0.02,0.78);
+}
+/* ------------------------------ THE LOCAL -----------------------------
+   The other hole, and the other answer to it.
+
+   A crew is built out of trades, so the contractor above answers a missing trade. But the
+   thing that most often goes wrong on this board is not a missing trade at all: it is that
+   six people fly into a country where none of them can ask a question. Nobody speaks it is
+   −8 on the reckoning, and −14 on a job that is all talk, and there is no way to fix it in
+   the week you have — a language is not something you send somebody away to learn.
+
+   So: somebody who lives there. A national of the country, speaking what is spoken in it,
+   who is worth the +6 for the language and the +8 for knowing the ground, and who is NOT a
+   criminal. That last part is the whole shape of the thing:
+
+     no trade.      Not a weak trade, not a trade you already have — none. They hold nothing
+                    the board ever asks for, so a local can never fill a wanted trade, and
+                    the door the contractor opens stays exactly as wide as it was.
+     cash, up front. The contractor takes a share of a score that may be nothing; the local
+                    is paid before anybody leaves, out of money that was going to be spent on
+                    something else. Those are different decisions, which is the point of
+                    having both.
+     an amateur.    Their attributes are a person's, not a professional's, and the reckoning
+                    averages what the people in the field can do — so the same body that buys
+                    you the language drags the mean down. The language is worth more than the
+                    drag, usually. Usually is the interesting word.
+
+   And one slot. There is one contract per job and either kind can be in it, so the question
+   the screen asks is the real one: is the hole in this job the trade or the language?
+
+   What they know afterwards is the same bill the contractor leaves, except that it is owed by
+   somebody who still lives there. If a local talks, that country is burnt for a while — word
+   goes round a city faster than it goes round a continent, and nobody there will take the
+   work. That is the consequence, and it is undoable, which is why it is a number of weeks and
+   not a door closing for good. */
+const LOCAL_HIRE={
+  feeBase:11000,          // flat, paid before anybody leaves
+  feePerGate:6000,        // a country that is hard to get into is a country where help costs
+  feePerDiff:260,         //   — and a hard job is a hard thing to be seen near
+  talkExtra:0.06,         // not a professional: a little likelier to say something
+  talkBad:0.12,           // a night that went wrong — but they were paid either way
+  burnWeeks:14,           // how long a city remembers a local who talked
+  offers:3
+};
+function localFee(job){
+  if(!job)return 0;
+  const co=COUNTRY_BY_NAME[job.country];
+  return Math.round((LOCAL_HIRE.feeBase+(co?co.gate:0)*LOCAL_HIRE.feePerGate+(job.diff||0)*LOCAL_HIRE.feePerDiff)/500)*500;
+}
+// How long this country stays shut, and why. Kept on S by country name rather than on the
+// person, because the person is gone and the country is what remembers.
+function localBurn(country){return (S.localBurn&&S.localBurn[country])||0;}
+function localShut(job){
+  if(!job)return "";
+  const u=localBurn(job.country);
+  return u>S.week?("Nobody in "+job.country+" will take it — the last local you used there talked. Week "+u+" at the earliest."):"";
+}
+/* The person, drawn from the job rather than stored on it. Every local is a consequence of one
+   posting and nothing else, so there is no reason to keep one: the same job offers the same
+   person every time it is looked at, and when the job is gone so are they. Same trick as the
+   rival's five faces, same reason. */
+function localFor(job){
+  if(!job)return null;
+  const co=COUNTRY_BY_NAME[job.country];
+  if(!co)return null;
+  const r=mulberry32(fmHash("local|"+job.id));
+  const gender=r()<0.5?"M":"F";
+  const n=nameFor(r,co.name,gender);
+  const attrs={};
+  // A person, not a professional. The roster rolls 12–98 and lands around sixty; this lands
+  // around forty and cannot reach the top of the range at all, because the moment a local can
+  // out-perform somebody you recruited, recruiting is the worse move and the crew is a roster
+  // again — which is the one thing this game is about not being.
+  ATTRS.forEach(a=>{attrs[a]=clamp(Math.round(28+r()*30),12,62);});
+  return {
+    id:"L"+job.id, n, first:n.split(" ")[0], gender, nat:co.name,
+    isLocal:true,
+    // NOT a trade. "local" is not in TECHS_ALL, so hasTech(them, anything the board wants) is
+    // false everywhere without a single special case at the places that ask.
+    tech:"local", tech2:null, role:"local",
+    exp:1, edu:ri(r,0,2), jail:0, streets:ri(r,1,4),
+    attrs, know:[], langs:co.langs.slice(0,2), limits:[], traits:[],
+    cmd:0, fee:0, cut:0, upkeep:0, loyalty:50, greed:ri(r,20,60), mole:false,
+    vetted:true, vetFlag:false, status:"available", out:0,
+    avseed:ri(r,1,1e9), face:randomFace(r,gender)
+  };
+}
+// Offered only against the hole it fills. A crew that already has somebody who speaks the
+// language does not need a translator, and offering one anyway would make the local a way to
+// buy eight points of local knowledge on every job on the board.
+function localGap(job,team){
+  const co=COUNTRY_BY_NAME[job.country];
+  if(!co)return false;
+  return !co.langs.some(l=>team.some(c=>c.langs.includes(l)));
+}
+function bringInLocal(job){
+  if(!job)return;
+  const shut=localShut(job);
+  if(shut){note(shut);return;}
+  const c=localFor(job);
+  if(!c)return;
+  const fee=localFee(job);
+  if(S.money<fee){note("A local in "+job.city+" wants "+money(fee)+" and you have "+money(S.money)+".");return;}
+  S.money-=fee;
+  S.hiredJob=job.id;S.hiredId=c.id;S.hiredKind="local";S.hiredFee=fee;S.hiredLocal=c;
+  sfx("coin");
+  logMsg(esc(c.n)+" is in for the "+job.city+" job — a local, no trade, "+money(fee)
+    +" paid up front, speaks "+listAnd(c.langs)+".","");
+  save();
 }
 function toggleBench(job,id){
   if(!job)return;
@@ -3472,6 +3642,10 @@ function entry(c,job,forgerAboard,asHired){
    taught Forger gets the crew through a border but is not listed as the reason. */
 function hasTech(c,k){return !!c&&(c.tech===k||c.tech2===k);}
 function techLabel(c){
+  // The one person on any screen who is not a trade. Said in words rather than left to fall
+  // through to the raw key, because "no trade" is the whole of what they are and the file
+  // should not make the player work it out from a blank.
+  if(c.isLocal)return "Local · no trade";
   const a=TECH_BY_K[c.tech]?TECH_BY_K[c.tech].l:c.tech;
   const b=c.tech2&&TECH_BY_K[c.tech2]?TECH_BY_K[c.tech2].l:null;
   return b?a+" · also "+b:a;
@@ -3662,6 +3836,10 @@ function fitChip(a,j){
    that actually changes hands in finishJob cannot quote three different numbers. */
 function cutOf(job,c){
   if(c.isPlayer)return 0;
+  // A local was paid in cash before anybody left and takes nothing out of the score — which is
+  // why they cost the same on a night that pays nothing as on one that pays everything. Asked
+  // here rather than at the three places that split the money, so all three agree.
+  if(c.isLocal)return 0;
   return c.status!=="crew"?hiredCut(c):c.cut;
 }
 function jobSplit(job,team){
@@ -4605,9 +4783,14 @@ function finishJob(P,choiceIdx,d){
      professional who was paid. Paid nothing because the night paid nothing, or sitting in a
      cell because they were the one the police reached first — that is the bill for the answer,
      and it arrives after the answer worked. */
-  const hired=(P.hiredId?byId(P.hiredId):null);
+  // Found in the team first: a local is not on the roster, so byId cannot reach them, and they
+  // are standing right here in the list of who went.
+  const hired=(P.hiredId?(team.find(c=>c.id===P.hiredId)||byId(P.hiredId)):null);
   if(hired&&team.some(c=>c.id===hired.id)){
-    const paid=Math.round(take*hiredCut(hired));
+    const loc=!!hired.isLocal;
+    // A local's money changed hands before anybody left, so what they were "paid" tonight is the
+    // fee, not a share — and it is the same figure whether the night paid everything or nothing.
+    const paid=loc?localFee(job):Math.round(take*hiredCut(hired));
     const taken=hired.status==="jailed";
     const odds=hiredTalkOdds(hired,tier,taken);
     hired._touched=true;
@@ -4615,16 +4798,35 @@ function finishJob(P,choiceIdx,d){
       hired.talked={week:S.week,city:job.city,job:job.title};
       S.heat=clamp(S.heat+HIRED.talkHeat,0,120);
       if(detective())detective().file=clamp(detective().file+HIRED.talkFile,0,100);
+      /* And a country that has heard it. A contractor who talks is a professional the whole
+         field hears about; a local who talks is a street, and the street is where the next one
+         would have come from. So the country shuts for a while — which is the cost of the
+         answer landing on the same ground the answer came from. */
+      if(loc){
+        S.localBurn=S.localBurn||{};
+        S.localBurn[job.country]=S.week+LOCAL_HIRE.burnWeeks;
+      }
       fallout.push(hired.first+" talks. "+(taken?"Picked up at the scene and out again inside a week — that is what the week bought."
+        :loc?"Paid "+money(paid)+" up front and still had to go home to that street afterwards."
         :paid>0?"Paid "+money(paid)+" and talks anyway; some people do."
         :"Came for a percentage of nothing, and sold the only thing left to sell.")
-        +" Heat +"+HIRED.talkHeat+(detective()?", and "+detective().name+"'s file is thicker for it":"")+".");
+        +" Heat +"+HIRED.talkHeat+(detective()?", and "+detective().name+"'s file is thicker for it":"")
+        +(loc?". Nobody in "+job.country+" will take the work until week "+(S.week+LOCAL_HIRE.burnWeeks):"")+".");
     } else {
-      fallout.push(hired.first+" takes "+(paid>0?money(paid):"nothing")+" and is not heard from again"
-        +(paid>0?".":" — which, on a night that paid nothing, is more than you were owed."));
+      fallout.push(hired.first+(loc
+        ?" goes back to whatever "+hired.first+" does the rest of the week, "+money(paid)+" better off, and says nothing to anybody."
+        :" takes "+(paid>0?money(paid):"nothing")+" and is not heard from again"
+          +(paid>0?".":" — which, on a night that paid nothing, is more than you were owed.")));
     }
   }
-  S.hiredJob=null;S.hiredId=null;
+  /* Only if the contract was for THIS posting. It used to clear whatever was in the slot, which
+     cost nothing while the only thing in it was a contractor on a percentage — but an
+     elimination is launched from the rival's card rather than from a job file, so it never
+     passes the screen that tears up a contract on the way in. Hire a local for Thursday's
+     posting, go and end a chapter instead, and the unconditional line here took the money and
+     the arrangement with it. The money is spent for good when the job it was paid for runs; it
+     is not spent by some other job running. */
+  if(S.hiredJob===job.id){S.hiredJob=null;S.hiredId=null;S.hiredKind=null;S.hiredFee=0;S.hiredLocal=null;}
   const post=narrate(job,a,tier,rng,{leaked:P.leaked,fallout,betrayals,heatGain,take,cuts,net},"post",P.clock);
   const narrative=P.pre.slice();
   // Rebuilt in the order it was played: each cue, what that call turned out to be, and the beat
@@ -4944,6 +5146,7 @@ function weekTick(rng){
     if(ev){S.event=ev;S.nextTwistWeek=S.week+ri(rng,3,7);}
     else S.nextTwistWeek=S.week+2;
   }
+  hiredSweep();
   checkOver();
 }
 
@@ -6073,8 +6276,14 @@ function jobPanel(j){
     const forNight=!!(hiredNow&&c.id===hiredNow.id);
     return '<div class="check'+(x.ok?"":" out")+(sat?" sat":"")+'"><div class="av">'+avatar(c.avseed,c.gender,c.face)+'</div>'
       +'<div style="flex:1;min-width:0"><div class="mono" style="font-size:12.5px">'+(c.isPlayer?"You":esc(c.n))+' '+flagSvg(natOf(c))+' <span class="mono" style="color:var(--muted);font-size:10.5px">'+techLabel(c)+(c.role==="commander"&&!c.isPlayer?' · cmdr':'')+'</span>'
-        +(forNight?' <span class="chip c-warn">for the night</span>':'')+'</div>'
-      +'<div class="why">'+(forNight?'brought in for this one · '+Math.round(hiredCut(c)*100)+'% of the score, no place, no wages'
+        // nowrap on this one only. A chip is a label and a label broken across two lines is a
+        // mess, but the longest chip in the game is a name plus a sentence and that one has to
+        // be free to wrap on a phone — so it is said here rather than on .chip. It started
+        // mattering when the label to its left grew from "Forger" to "Local · no trade".
+        +(forNight?' <span class="chip c-warn" style="white-space:nowrap">for the night</span>':'')+'</div>'
+      +'<div class="why">'+(forNight?(c.isLocal
+          ?'brought in for this one · '+money(S.hiredFee||localFee(j))+' paid up front, no cut of the score, no place, no wages'
+          :'brought in for this one · '+Math.round(hiredCut(c)*100)+'% of the score, no place, no wages')
         :sat?'sitting this one out'+(c.isPlayer?' — a commander-type runs it':'')+(c.cut?' · keeps '+money(Math.round(j.payout*c.cut))+' in the split':''):esc(x.why))+'</div></div>'
       // The whole file, from here. This list is where you decide who goes, and that decision is
       // made out of what is on their file — the trade, the attributes, what they will not do —
@@ -6082,7 +6291,9 @@ function jobPanel(j){
       // wrong. It opens over the job, and closing it puts the job back exactly as it was.
       +'<span style="display:flex;gap:6px;flex:none;align-items:center">'
       +'<button class="btn ghost sm" data-act="open-recruit" data-id="'+c.id+'" title="'+esc(c.isPlayer?"Your own file":c.first+"'s file — everything the decision is made out of")+'">File</button>'
-      +(forNight?'<button class="btn ghost sm" data-act="hire-night-off" title="Tear up the contract — '+esc(c.first)+' never hears what the job was">Send home</button>'
+      +(forNight?'<button class="btn ghost sm" data-act="hire-night-off" title="'+esc(c.isLocal
+          ?"Tear up the arrangement — "+c.first+" never hears what the job was, and the "+money(S.hiredFee||localFee(j))+" comes back"
+          :"Tear up the contract — "+c.first+" never hears what the job was")+'">Send home</button>'
         :x.ok?'<button class="btn ghost sm" data-act="bench" data-id="'+c.id+'" title="'+(sat?"Send "+(c.isPlayer?"yourself":c.first)+" on this job":(c.isPlayer?"Stay behind":"Leave "+c.first+" behind")+" — no cut, no experience, and no way to get hurt")+'">'+(sat?"Send":"Bench")+'</button>':'<div class="mark">✗</div>')
       +'</span></div>';}).join("");
   const onCrew=crewAll().length, benched=bench.length;
@@ -6107,37 +6318,83 @@ function jobPanel(j){
      crew you built is broad, and buying the answer for one night is not answering it. They come
      by name because you have seven places; the seven places are the question. */
   const canBring=!j.final&&!j.big;
+  /* Two kinds of one-night hire and ONE contract to put either of them in. The contractor
+     answers a missing trade; the local answers a language nobody in the field speaks. Both are
+     offered together, under one heading, because the decision is not "shall I hire somebody" —
+     it is "which hole in this job is the one worth paying to close". */
+  const langGap=localGap(j,crewGoing);
+  const shutWhy=localShut(j);
   const offers=(hiredNow||!canBring)?[]:hiredOffers(j,{team:crewGoing});
-  const hiredBlock=(canBring&&(hiredNow||gaps.length))?('<hr class="rule"><div class="kicker">Somebody for the one night</div>'
+  const theLocal=(!hiredNow&&canBring&&langGap&&!shutWhy)?localFor(j):null;
+  const localAsk=theLocal?localFee(j):0;
+  const hiredBlock=(canBring&&(hiredNow||gaps.length||langGap))?('<hr class="rule"><div class="kicker">Somebody for the one night</div>'
     +(hiredNow
-      ? '<div class="sel-help"><b>'+esc(hiredNow.n)+'</b> is in for this one — '+techLabel(hiredNow)+', '+EXP[hiredNow.exp-1]+'. '
-        +'<b>'+Math.round(hiredCut(hiredNow)*100)+'% of the score</b> ('+moneyExact(Math.round(j.payout*hiredCut(hiredNow)))+' on a plain success), '
-        +'no place on the crew, no wages, nothing after tonight, and no bonds either way. '
-        +signed(HIRED.stranger)+' on the reckoning, because nobody in that room has worked with them. '
-        +'They are paid out of the score like everybody else — so a night that pays nothing pays them nothing, '
-        +'and somebody who came, took the risk and went home with nothing is the one who talks. '
-        +'On a night that comes off the odds of that are about '+Math.round(hiredTalkOdds(hiredNow,3,false)*100)
-        +'%; on a botched one, about '+Math.round(hiredTalkOdds(hiredNow,1,false)*100)+'%.</div>'
-      : '<div class="sel-help">This posting wants '+listAnd(gaps.map(t=>TECH_BY_K[t].l))+' and nobody going is one. '
-        +'A trip to fetch somebody properly is a week and a place on the crew; this is the other answer — '
-        +'somebody in for this night alone, at a contractor\'s share of the score, four or five times what a crew member takes. '
-        +'No place, no wages, no bonds, and '+signed(HIRED.stranger)+' on the reckoning for being a stranger in the room. '
-        +'What they do afterwards with what they know depends on how the night goes, and on them.</div>'
-        +(offers.length?offers.map(c=>{
-            const d=assessWith(j,c).margin-a.margin;
-            const cut=hiredCut(c);
-            return '<div class="jobrow" style="cursor:default"><div class="code">P'+natOf(c).tier+'</div>'
-              +'<div><div class="t" style="font-size:15px">'+esc(c.n)+' '+flagSvg(natOf(c))+' <span class="tag spec">'+techLabel(c)+'</span> <span class="tag">'+EXP[c.exp-1]+'</span></div>'
-              +'<div class="loc">'+ATTRS.map(x=>ATTR_ABBR[x]+' '+c.attrs[x]).join(' · ')+' · knows '+c.know.join(", ")
-                +'<br><span style="color:'+(d>=0?"var(--good)":"var(--stamp)")+'">'+signed(d)+' on the reckoning</span>'
-                +' · talks ~'+Math.round(hiredTalkOdds(c,3,false)*100)+'% after a good night, ~'+Math.round(hiredTalkOdds(c,1,false)*100)+'% after a bad one'
-                +(c.limits.length?' · <span style="color:var(--stamp)">'+c.limits.map(k=>LIMIT_BY_K[k].l).join(", ")+'</span>':'')+'</div></div>'
-              +'<div style="text-align:right"><div class="mono" style="font-size:13px">'+Math.round(cut*100)+'%<br>'+money(Math.round(j.payout*cut))+'</div>'
-              +'<button class="btn sm" data-act="hire-night" data-id="'+c.id+'" style="margin-top:4px">Bring in →</button></div></div>';
-          }).join("")
-         :'<div class="empty">Nobody on the roster is '+listAnd(gaps.map(t=>TECH_BY_K[t].l.toLowerCase()))
-           +' and able to get into '+esc(j.country)+'. Recruit properly, or run it without.</div>')
-     )):'';
+      ? (hiredNow.isLocal
+        ? '<div class="sel-help"><b>'+esc(hiredNow.n)+'</b> is in for this one — a local, and no trade at all. '
+          +'Speaks '+listAnd(hiredNow.langs)+', which is worth '+signed(LANG_BONUS)+', and is a national of '+esc(j.country)+', which is worth +8. '
+          +'<b>'+money(S.hiredFee||localFee(j))+', paid.</b> Not a share — the money has already gone, and it has gone whether tonight pays everything or nothing. '
+          +signed(HIRED.stranger)+' on the reckoning, because nobody in that room has worked with them, and they are not a professional either: '
+          +ATTRS.map(x=>ATTR_ABBR[x]+' '+hiredNow.attrs[x]).join(' · ')+', which the field has to carry. '
+          +'On a night that comes off, the odds they say something afterwards are about '+Math.round(hiredTalkOdds(hiredNow,3,false)*100)
+          +'%; on a botched one, about '+Math.round(hiredTalkOdds(hiredNow,1,false)*100)+'% — and if they do, nobody in '+esc(j.country)
+          +' takes the work for '+LOCAL_HIRE.burnWeeks+' weeks. Send them home and the money comes back; run the job and it does not.</div>'
+        : '<div class="sel-help"><b>'+esc(hiredNow.n)+'</b> is in for this one — '+techLabel(hiredNow)+', '+EXP[hiredNow.exp-1]+'. '
+          +'<b>'+Math.round(hiredCut(hiredNow)*100)+'% of the score</b> ('+moneyExact(Math.round(j.payout*hiredCut(hiredNow)))+' on a plain success), '
+          +'no place on the crew, no wages, nothing after tonight, and no bonds either way. '
+          +signed(HIRED.stranger)+' on the reckoning, because nobody in that room has worked with them. '
+          +'They are paid out of the score like everybody else — so a night that pays nothing pays them nothing, '
+          +'and somebody who came, took the risk and went home with nothing is the one who talks. '
+          +'On a night that comes off the odds of that are about '+Math.round(hiredTalkOdds(hiredNow,3,false)*100)
+          +'%; on a botched one, about '+Math.round(hiredTalkOdds(hiredNow,1,false)*100)+'%.</div>')
+      : ((gaps.length&&langGap?'<div class="sel-help"><b>There is one contract, and two things wrong with this job.</b> '
+          +'Nobody going is '+listAnd(gaps.map(t=>TECH_BY_K[t].l.toLowerCase()))+', and nobody going can ask a question in '
+          +orList(COUNTRY_BY_NAME[j.country].langs)+'. You can close one of those tonight, not both — '
+          +'the trade is a share of whatever the night pays, the language is cash you have already spent.</div>':'')
+        +(gaps.length?'<div class="sel-help">This posting wants '+listAnd(gaps.map(t=>TECH_BY_K[t].l))+' and nobody going is one. '
+          +'A trip to fetch somebody properly is a week and a place on the crew; this is the other answer — '
+          +'somebody in for this night alone, at a contractor\'s share of the score, four or five times what a crew member takes. '
+          +'No place, no wages, no bonds, and '+signed(HIRED.stranger)+' on the reckoning for being a stranger in the room. '
+          +'What they do afterwards with what they know depends on how the night goes, and on them.</div>'
+          +(offers.length?offers.map(c=>{
+              const d=assessWith(j,c).margin-a.margin;
+              const cut=hiredCut(c);
+              return '<div class="jobrow" style="cursor:default"><div class="code">P'+natOf(c).tier+'</div>'
+                +'<div><div class="t" style="font-size:15px">'+esc(c.n)+' '+flagSvg(natOf(c))+' <span class="tag spec">'+techLabel(c)+'</span> <span class="tag">'+EXP[c.exp-1]+'</span></div>'
+                +'<div class="loc">'+ATTRS.map(x=>ATTR_ABBR[x]+' '+c.attrs[x]).join(' · ')+' · knows '+c.know.join(", ")
+                  +'<br><span style="color:'+(d>=0?"var(--good)":"var(--stamp)")+'">'+signed(d)+' on the reckoning</span>'
+                  +' · talks ~'+Math.round(hiredTalkOdds(c,3,false)*100)+'% after a good night, ~'+Math.round(hiredTalkOdds(c,1,false)*100)+'% after a bad one'
+                  +(c.limits.length?' · <span style="color:var(--stamp)">'+c.limits.map(k=>LIMIT_BY_K[k].l).join(", ")+'</span>':'')+'</div></div>'
+                +'<div style="text-align:right"><div class="mono" style="font-size:13px">'+Math.round(cut*100)+'%<br>'+money(Math.round(j.payout*cut))+'</div>'
+                +'<button class="btn sm" data-act="hire-night" data-id="'+c.id+'" style="margin-top:4px">Bring in →</button></div></div>';
+            }).join("")
+           :'<div class="empty">Nobody on the roster is '+listAnd(gaps.map(t=>TECH_BY_K[t].l.toLowerCase()))
+             +' and able to get into '+esc(j.country)+'. Recruit properly, or run it without.</div>'):'')
+        // The local. Only here at all when nobody going speaks the language, because a crew that
+        // can already ask a question does not need somebody to ask it for them.
+        +(langGap?'<div class="sel-help"><b>Nobody going speaks '+orList(COUNTRY_BY_NAME[j.country].langs)+'.</b> '
+            +'That is '+signed(cat.lang?LANG_MISS_TALK:LANG_MISS)+' on the reckoning'+(cat.lang?', because this job is all talk':'')+', '
+            +'and it is the one hole a week and a plane ticket cannot fix — nobody learns a language by Thursday. '
+            +'A local can: somebody who lives there, speaks it, and knows the ground. '
+            +'They hold <b>no trade</b>, so they close nothing else; they are paid <b>in cash, before anybody leaves</b>, '
+            +'so it costs the same whether the night pays or not; and they are not a professional, '
+            +'which the reckoning will show you below.</div>'
+          +(shutWhy?'<div class="empty">'+esc(shutWhy)+'</div>'
+            :theLocal?(function(){
+              const d=assessWith(j,theLocal).margin-a.margin;
+              const poor=S.money<localAsk;
+              return '<div class="jobrow" style="cursor:default"><div class="code">'+esc((COUNTRY_BY_NAME[j.country].langs[0]||"—").slice(0,3).toUpperCase())+'</div>'
+                +'<div><div class="t" style="font-size:15px">'+esc(theLocal.n)+' '+flagSvg(natOf(theLocal))
+                  +' <span class="tag spec">'+techLabel(theLocal)+'</span> <span class="tag">speaks '+esc(listAnd(theLocal.langs))+'</span></div>'
+                +'<div class="loc">'+ATTRS.map(x=>ATTR_ABBR[x]+' '+theLocal.attrs[x]).join(' · ')+' · knows nothing the board asks for'
+                  +'<br><span style="color:'+(d>=0?"var(--good)":"var(--stamp)")+'">'+signed(d)+' on the reckoning</span>'
+                  +' · talks ~'+Math.round(hiredTalkOdds(theLocal,3,false)*100)+'% after a good night, ~'+Math.round(hiredTalkOdds(theLocal,1,false)*100)+'% after a bad one'
+                  +' · <span style="color:var(--stamp)">if they talk, '+esc(j.country)+' is shut to you for '+LOCAL_HIRE.burnWeeks+' weeks</span></div></div>'
+                +'<div style="text-align:right"><div class="mono" style="font-size:13px">'+money(localAsk)+'<br><span style="color:var(--muted);font-size:10.5px">up front</span></div>'
+                +'<button class="btn sm'+(poor?' ghost':'')+'" data-act="hire-local" style="margin-top:4px"'
+                  +(poor?' disabled title="'+esc("You have "+money(S.money)+".")+'"':'')+'>Bring in →</button></div></div>';
+            })():'')
+          :'')
+     ))):'';
   // The split, and what benching does to it. Two numbers move in opposite directions when
   // somebody sits out — your share of the fee goes up, the crew's reckoning goes down — so both
   // are shown, and then the one line that resolves them: what you actually come away with.
@@ -10797,7 +11054,11 @@ const INFO={
     "Once you have founded other crews, every job file lists them under <b>Other crews</b> with their own reckoning and a <b>Send</b> button: a crew's job does not spend your week, one job per crew per week, and their reports are filed on the Log like yours.",
     "<b>Somebody for the one night.</b> When a posting wants a trade nobody going has, the job file offers people who are — three of them, from the best down to the cheapest. A hired hand takes <b>no place on the crew</b>, draws <b>no wages</b>, builds <b>no bonds</b>, and is <b>"+signed(HIRED.stranger)+"</b> on the reckoning because nobody in that room has worked with them. What they take is a contractor's share of the score: "+Math.round(HIRED.cutMin*100)+"% to "+Math.round(HIRED.cutMax*100)+"%, by rank, four or five times what a crew member takes.",
     "They are paid out of the score like everybody else, and that is the whole of it: <b>a night that pays nothing pays them nothing</b>. Somebody who came, took the risk and went home empty is the one who talks — and so is somebody the police picked up at the scene. Nerve and years on the street pull the odds back down; the job file prints both numbers before you sign, for a night that comes off and for one that doesn't. When one does talk it is +"+HIRED.talkHeat+" heat, a thicker file on the detective's desk, and a <b>Talked</b> stamp on theirs. They are never brought in again; hiring them properly is a different question, and still yours.",
-    "The contract is for one posting. Open another and it is torn up — the same as benching. And it is never offered on an <a href=\"#book-ops\">operation</a> or on the final score: those ask whether the crew you built is broad, and buying the answer for one night is not answering it."]},
+    "The contract is for one posting. Open another and it is torn up — the same as benching. And it is never offered on an <a href=\"#book-ops\">operation</a> or on the final score: those ask whether the crew you built is broad, and buying the answer for one night is not answering it.",
+    "<b>A local, when nobody can ask a question.</b> A missing trade is one hole in a job; the other is that six people have flown into a country where none of them speaks a word. That is <b>"+LANG_MISS+"</b> on the reckoning, <b>"+LANG_MISS_TALK+"</b> on a job that is all talk, and it is the one hole a week and a plane ticket cannot fix — nobody learns a language by Thursday. So when nobody going speaks it, the job file offers somebody who lives there: the language is worth <b>+"+LANG_BONUS+"</b> and being a national of the place is worth another <b>+8</b>.",
+    "A local holds <b>no trade at all</b> — not a weak one, not one you already have: none, so they close nothing else and the trades on the chips do not move. They are paid a <b>flat fee in cash, before anybody leaves</b>, which is the whole difference from a contractor: a contractor's share of a night that pays nothing is nothing, and a local's fee is the same money whether the night pays everything or nothing. And they are not a professional. Their attributes are a person's, and the reckoning averages the field, so the body that buys you the language is a body that drags the mean down. The row prints what they are actually worth on this posting before you press it, drag and all.",
+    "<b>There is one contract, and either kind can be in it.</b> Take the local and the contractor goes home; take the contractor and the local does. A job missing a trade <i>and</i> a language says so plainly and makes you choose which one is worth closing tonight. Sending either home before the night gives a local's fee back in full, and so does the posting expiring under you — the money is only spent for good once the job runs.",
+    "Afterwards they are the same risk as anybody brought in for a night, tilted: a little likelier to say something after a night that came off, because they are not a professional and the police asking are their neighbours — and rather <i>less</i> likely after a botched one, because the contractor's grievance is having been paid nothing and a local was paid before anybody left. If a local does talk, it is +"+HIRED.talkHeat+" heat and a thicker file like any other, and <b>that country is shut to you for "+LOCAL_HIRE.burnWeeks+" weeks</b>: word goes round a street faster than it goes round a continent, and the street is where the next one would have come from."]},
   log:{h:"The Log",t:[
     "<b>Job recaps</b>: every job you have run stays on file. Open one for the full report — the minute-by-minute, the verdict, the split, why the ranking moved, what they learned, who came back.",
     "<b>The case log</b>, week by week — every hire, job, injury, arrest, leak and betrayal. The <b>Week</b> dropdown narrows both the recaps and the log to one week; \"All weeks\" shows everything.",
@@ -11415,7 +11676,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 108 · September 2026";
+const BUILD="build 109 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
@@ -11585,10 +11846,11 @@ document.addEventListener("click",e=>{
     case "open-recruit": UI.scrollBack=window.scrollY||0; S.modal={type:"recruit",id}; render(); break;
     // Who sits out and who was brought in are both agreed for ONE posting. Opening a different
     // one tears up both, the same way, rather than carrying a contract to a job nobody signed for.
-    case "open-job": S.tab="jobs"; S.jobOpen=id; S.modal=null; UI.scrollBack=null; if(S.benchJob!==id){S.benchJob=null;S.bench=[];} if(S.hiredJob!==id){S.hiredJob=null;S.hiredId=null;} render(); window.scrollTo(0,0); break;
+    case "open-job": S.tab="jobs"; S.jobOpen=id; S.modal=null; UI.scrollBack=null; if(S.benchJob!==id){S.benchJob=null;S.bench=[];} if(S.hiredJob!==id){hiredDrop();} render(); window.scrollTo(0,0); break;
     case "bench": { const j=S.jobs.find(x=>x.id===S.jobOpen); if(j)toggleBench(j,id); render(); break; }
     case "bench-clear": { const j=S.jobs.find(x=>x.id===S.jobOpen); if(j)benchClear(j); render(); break; }
     case "hire-night": { const j=S.jobs.find(x=>x.id===S.jobOpen); if(j)bringIn(j,id); render(); break; }
+    case "hire-local": { const j=S.jobs.find(x=>x.id===S.jobOpen); if(j)bringInLocal(j); render(); break; }
     case "hire-night-off": bringInOff(); render(); break;
     case "retainer": toggleRetainer(k); break;
     case "safehouse": buySafehouse(); break;

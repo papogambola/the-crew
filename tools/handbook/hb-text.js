@@ -381,6 +381,33 @@ ch("crew","The crew","Places, who goes, and a second crew",[
     +note("The contract is for one posting. Open a different one and it is torn up, the same as benching. "
       +"The offer only ever appears against a trade the field is missing — it is an answer to a gap, not a way to buy a better crew by the week — "
       +"and it never appears on <a href=\"#ops\">an operation</a> or on the final score, which are the two screens that ask whether the crew you built is broad.")),
+  S("hire2","A local, when nobody can ask a question",
+    p("A missing trade is one hole in a job. The other is that six people have flown into a country where not one of them can ask a question. "
+      +"That is "+m(D.LANG_MISS)+" on the reckoning, "+m(D.LANG_MISS_TALK)+" on a job that is all talk — and it is the one hole a week and a plane "
+      +"ticket cannot fix, because nobody learns a language by Thursday.")
+    +p("So when nobody going speaks it, the job file offers somebody who lives there.")
+    +G.T(["What a local is","Value"],[
+      ["The language",m("+"+D.LANG_BONUS)+" — what is spoken there, spoken"],
+      ["The ground",m("+8")+" — a national of the country, which the reckoning already knew how to credit"],
+      ["Their trade","<b>none.</b> Not a weak one, not one you have: none. They close nothing else, and the trade chips do not move"],
+      ["What they cost","a flat fee in cash, <b>before anybody leaves</b> — "+m("$11k")+" and up, by how hard the country is to get into and how hard the job is"],
+      ["Their share of the score","nothing. They were already paid"],
+      ["On the reckoning",m(D.HIRED?(D.HIRED.stranger<0?"−"+Math.abs(D.HIRED.stranger):"+"+D.HIRED.stranger):"−7")+", a stranger in the room, the same as anybody brought in"],
+      ["What else they cost","they are not a professional — the field averages what its people can do, and one of them is now a civilian"],
+    ])
+    +p("<b>The fee is the difference.</b> A contractor takes a percentage, so a night that pays nothing pays them nothing; a local's money has already gone, "
+      +"and it has gone whether tonight pays everything or nothing. That is not a worse deal or a better one. It is a different bet, which is the reason "
+      +"both are offered.")
+    +p("<b>There is one contract, and either kind can be in it.</b> Bring in a local and the contractor goes home; bring in a contractor and the local does. "
+      +"A posting missing a trade <i>and</i> a language says so plainly and makes you pick which hole is worth closing tonight. The row prints what a local "
+      +"is actually worth on that posting — the language and the ground, with the amateur's drag already taken off — so it is a number you read, not a "
+      +"promise you take.")
+    +p("Afterwards they are the same risk as anybody brought in for one night, tilted both ways. A little likelier to say something after a night that came "
+      +"off, because they are not a professional and the police asking are their neighbours. Rather <i>less</i> likely after a botched one, because the "
+      +"contractor's grievance is having been paid nothing and a local was paid before anybody left.")
+    +note("Sending a local home before the night gives the fee back in full, and so does the posting expiring underneath you — the money is only spent for "
+      +"good once the job runs. But if a local talks, that country is <b>shut to you for "+(D.LOCAL_HIRE?D.LOCAL_HIRE.burnWeeks:14)+" weeks</b> on top of the "
+      +"heat and the file: word goes round a street faster than it goes round a continent, and the street is where the next one would have come from.")),
   S("hurt","Injured and held",
     p("A bad night puts people in hospital or in a cell. A doctor on retainer halves the weeks of an injury; a lawyer on retainer halves the weeks of a sentence. "
       +"Somebody who comes out of a cell is back on the roster rather than on your crew, a year older, with that year on their record — and a record is what borders read.")),
