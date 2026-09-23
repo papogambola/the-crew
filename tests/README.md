@@ -38,9 +38,27 @@ reading but do not block.
 
 ## Known red
 
-`browser16` fails wherever the music cannot be fetched — it checks that the loop is playing, and
-the tracks live on Cloudflare R2. In a sandbox with no route to it, that failure is the network,
-not the game.
+Nothing, now. `browser16` — which checks that the music loop is playing — was red for months
+under the note "no route to Cloudflare R2, so that failure is the network, not the game". **That
+explanation was wrong**, and being wrong it kept a permanently-red line in the run, which is
+where a real failure goes to hide.
+
+`curl` fetches the track from the same container perfectly well: HTTP 206, `audio/mpeg`. What
+actually fails is that outbound HTTPS is re-terminated at the sandbox's own proxy, whose CA the
+browser does not trust — the mp3 request dies on the certificate and the loop never starts. With
+the CA trusted the music plays, from `file://` and from the live site alike.
+
+So in a proxied container, pin trust to that proxy's CA by its public key and everything is
+green:
+
+    CHROME_ARGS="--ignore-certificate-errors-spki-list=<base64 sha256 of the CA's SPKI>" ./tests/suite.sh
+
+`CHROME_ARGS` is merged into every launch by `env.js` and does nothing when unset. **Pin it** —
+do not reach for `--ignore-certificate-errors`, which accepts any certificate from anybody and
+turns every test that touches the network into a test of nothing.
+
+On a machine with ordinary internet and no proxy, none of this applies and the suite is green
+with no variables set.
 
 ## Where things are
 

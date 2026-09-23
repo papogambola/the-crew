@@ -44,8 +44,21 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   await page.screenshot({path:OUT+"/02-crew-paid-up.png"});
   // founding: week 104, Feared, seven on the crew
   await page.evaluate(()=>{S.week=104;S.rep=80;const cm=S.roster.find(c=>c.status==="available"&&c.role==="commander"&&c.exp<=3&&c.nat!=="Israel");(function(){const _c=cm;if(_c&&recruits().length<crewSeats()&&canSign(_c)){S.money=Math.max(0,S.money-_c.fee);_c.status="crew";_c._touched=true;S.crewIds.push(_c.id);stats().hired++;}})();(function(){const _c=S.roster.find(c=>c.status==="available"&&c.exp<=3&&c.nat!=="Israel"&&c.role!=="commander");if(_c&&recruits().length<crewSeats()&&canSign(_c)){S.money=Math.max(0,S.money-_c.fee);_c.status="crew";_c._touched=true;S.crewIds.push(_c.id);stats().hired++;}})();S.tab="crew";render();});
-  // milestone boxes come first (the seats, then the second crew): read them, then Later
-  let boxes=0;while(await page.$(".modal.notice")){boxes++;const t=await page.$eval(".modal.notice h2",e=>e.innerText);console.log("    milestone box: "+t);await page.click('[data-act="notice-close"].btn');await page.waitForTimeout(150);}
+  /* Milestone boxes come first (the seats, then the second crew): read them, then Later.
+     Not every notice closes with notice-close. Winding the clock to week 104 with a grown crew
+     also brings up "What are you called?", which closes with crewname-later — and this loop used
+     to wait thirty seconds for a button that box does not have, and then die. That death was
+     bundled into the same red line as the music failure and went unlooked-at for months, which
+     is the argument against ever letting a test sit permanently red. It closes whichever button
+     the box actually carries now, and gives up loudly rather than hanging on a box it cannot. */
+  let boxes=0;
+  while(await page.$(".modal.notice")){
+    const t=await page.$eval(".modal.notice h2",e=>e.innerText);
+    const shut=await page.$('[data-act="notice-close"].btn')||await page.$('[data-act="crewname-later"]');
+    if(!shut){console.log("    milestone box with no way to close it: "+t);break;}
+    boxes++;console.log("    milestone box: "+t);
+    await shut.click();await page.waitForTimeout(150);
+  }
   check(boxes>=2,boxes+" milestone boxes announced, ending with the second crew");
   await page.waitForSelector('[data-act="found-open"]');
   check(await page.$eval('[data-act="found-open"]',b=>!b.disabled),"Found a crew is enabled");

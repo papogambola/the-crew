@@ -42,4 +42,31 @@ if(!fs.existsSync(CHROME)){
     console.error("note: no browser at "+CHROME+" — set CHROME_PATH if it is elsewhere");
 }
 
-module.exports={chromium:pw.chromium, pw, ROOT, GAME, CHROME, PW_DIR};
+/* EXTRA BROWSER FLAGS, IN ONE PLACE AND ONLY WHEN ASKED FOR.
+
+   Sixty files call chromium.launch({executablePath:CHROME}) and none of them should have to know
+   what machine they are on. So the launcher is wrapped rather than the sixty edited: anything in
+   CHROME_ARGS is merged into every launch, and with the variable unset nothing changes at all.
+
+   It exists because of browser16, which checks that the music loop is playing and was red here
+   for months under the explanation "no route to Cloudflare R2". That was wrong. curl fetches the
+   track from this container perfectly well (HTTP 206, audio/mpeg). What actually fails is that
+   outbound HTTPS is re-terminated at a sandbox proxy whose CA the browser does not trust, so the
+   mp3 request dies on the certificate and the loop never starts. With the CA trusted, the music
+   plays — from file:// and from the live site alike.
+
+   The flag that does it is per-container, not a fact about this project, so it is not written
+   down here. In a proxied sandbox, pin trust to that proxy's CA by its public key:
+
+     CHROME_ARGS="--ignore-certificate-errors-spki-list=<base64 sha256 of the CA's SPKI>" ./tests/suite.sh
+
+   Pin it. Do not reach for --ignore-certificate-errors, which accepts any certificate from
+   anybody and turns every test that touches the network into a test of nothing. */
+const ARGS=(process.env.CHROME_ARGS||"").split(/\s+/).filter(Boolean);
+const chromium=ARGS.length?Object.create(pw.chromium,{launch:{value:function(opts){
+  opts=Object.assign({},opts);
+  opts.args=(opts.args||[]).concat(ARGS);
+  return pw.chromium.launch(opts);
+}}}):pw.chromium;
+
+module.exports={chromium, pw, ROOT, GAME, CHROME, PW_DIR, ARGS};
