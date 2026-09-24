@@ -101,7 +101,13 @@ const html=eventWho({k:"quit",mId:anyone.id,h:QUIT.h,text:QUIT.text});
 assert(html.indexOf(">"+anyone.loyalty+" / 100")>=0,"the loyalty on it is their loyalty ("+anyone.loyalty+")");
 assert(html.indexOf(Math.round(anyone.cut*100)+"% of each score")>=0,"the cut on it is their cut");
 assert(html.indexOf(money(anyone.upkeep)+" a week")>=0,"and the upkeep is their upkeep");
-assert(html.indexOf(looseKnows(anyone)+" of your business")>=0,"and what they know is the same number the loose end would use ("+looseKnows(anyone)+")");
+/* Against the function rather than against a string format. This used to look for the literal
+   "<n> of your business", which tied the test to one wording — and the day the card started
+   saying it in words, because a bare number on an unseen 0-14 scale was being read as a count
+   of jobs, this failed while the card and the engine agreed perfectly. The claim is that they
+   agree; ask them both. */
+assert(html.indexOf(looseKnowsLine(anyone))>=0,
+  "and what they know is what the loose end would say: "+looseKnowsLine(anyone));
 assert(html.indexOf('class="id evwho"')>=0,"it is drawn as a crew card, so the portrait is the size a portrait is");
 
 console.log("ALL OK");

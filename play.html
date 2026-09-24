@@ -487,6 +487,11 @@
   .odds{height:12px;border:1px solid var(--ink);display:flex;overflow:hidden;font-size:0}
   .odds i{height:100%;display:block}
   .odds .o-good{background:var(--good)}
+  /* Four bands, not three. The middle one used to be a single stripe labelled "Messy" that was
+     actually SUCCESS AND MESSY ADDED TOGETHER — so a crew ten points clear of the difficulty,
+     with a fifty per cent chance of the job simply coming off, was told it faced 88% messy. The
+     assessment has always computed the two separately; only the bar collapsed them. */
+  .odds .o-ok{background:var(--good);opacity:.45}
   .odds .o-mid{background:var(--warn)}
   .odds .o-bad{background:var(--stamp)}
 
@@ -4011,7 +4016,7 @@ function fitChip(a,j){
   return '<span class="fit '+w[0]+' tip" tabindex="0" data-tip="'+esc(
       "Crew "+a.eff+" against difficulty "+j.diff+" — "+(a.margin>=0?a.margin+" clear":Math.abs(a.margin)+" short")+"."
       +"\nThe night rolls ±"+BAL.roll+" on top of that, so nothing here is safe and nothing is hopeless."
-      +"\nClean ~"+a.pClean+"% · messy ~"+a.pOk+"% · blown ~"+(a.pFail+a.pDis)+"%.")
+      +"\nClean ~"+a.pClean+"% · comes off ~"+a.pSuccess+"% · messy ~"+a.pMessy+"% · blown ~"+(a.pFail+a.pDis)+"%.")
     +'">'+w[1]+'</span>';
 }
 // What the fee turns into. Everybody who goes takes their percentage off the top; the commander
@@ -6672,8 +6677,12 @@ function jobPanel(j){
           +'</div>';
       })()):'';
   const factors='<div class="factors">'+a.factors.map(f=>'<span class="k'+(f.tip?" tip":"")+'"'+(f.tip?' tabindex="0" data-tip="'+esc(f.tip)+'" data-wide="1"':'')+'>'+esc(f.k)+'</span><span><span class="'+(f.v>=0?"plus":"minus")+' num">'+(f.v>=0?"+":"")+f.v+'</span> · '+esc(f.note)+'</span>').join("")+'</div>';
-  const odds=a.team.length?('<div class="odds" title="estimated outcome spread"><i class="o-good" style="width:'+a.pClean+'%"></i><i class="o-mid" style="width:'+a.pOk+'%"></i><i class="o-bad" style="width:'+(a.pFail+a.pDis)+'%"></i></div>'
-    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span style="color:var(--good)">Clean ~'+a.pClean+'%</span><span style="color:var(--warn)">Messy ~'+a.pOk+'%</span><span style="color:var(--stamp)">Blown ~'+(a.pFail+a.pDis)+'%</span></div>'
+  /* Four verdicts on the bar, because the game has four. pOk is success AND messy added up, and
+     drawing it as one amber stripe called "Messy" told a crew ten points clear of the difficulty
+     that it faced 88% messy — when half of that 88 was the job simply coming off. assessJob has
+     returned pSuccess and pMessy separately all along; nothing here used them. */
+  const odds=a.team.length?('<div class="odds" title="estimated outcome spread"><i class="o-good" style="width:'+a.pClean+'%"></i><i class="o-ok" style="width:'+a.pSuccess+'%"></i><i class="o-mid" style="width:'+a.pMessy+'%"></i><i class="o-bad" style="width:'+(a.pFail+a.pDis)+'%"></i></div>'
+    +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span style="color:var(--good)">Clean ~'+a.pClean+'%</span><span style="color:var(--good)">Comes off ~'+a.pSuccess+'%</span><span style="color:var(--warn)">Messy ~'+a.pMessy+'%</span><span style="color:var(--stamp)">Blown ~'+(a.pFail+a.pDis)+'%</span></div>'
     +'<div class="mono" style="font-size:11px;color:var(--muted);margin-top:6px">Crew '+a.eff+' vs difficulty '+j.diff+'</div>'):'';
   const wks=j.final?BAL.finalWeeks:(j.weeks||1);
   const reqs='<div class="req"><div class="b"><div class="k">Fee</div><div class="v num">'+money(j.payout)+'</div></div>'
@@ -9226,7 +9235,7 @@ function eventWho(ev){
       +'<span class="k">Loyalty</span><span class="num">'+c.loyalty+' / 100'+(c.loyalty<35?' — thin':'')+'</span>'
       +'<span class="k">Takes</span><span class="num">'+Math.round(c.cut*100)+'% of each score · '+money(c.upkeep)+' a week</span>'
       +'<span class="k">Jobs with you</span><span class="num">'+weeks+'</span>'
-      +'<span class="k">Knows</span><span>'+kn+' of your business — '+(kn<=3?"not much":kn<=7?"enough to be a problem":"most of it")+'</span>'
+      +'<span class="k">Knows</span><span>'+esc(looseKnowsLine(c))+'</span>'
     +'</div></div>';
 }
 
@@ -10471,7 +10480,7 @@ function modalApply(){
         +'<span class="k">Asking</span><span class="num">'+money(a.ask)+' · '+Math.round(a.cut*100)+'% · '+money(c.upkeep)+' a week</span>'
         +'<span class="k">Going to fetch them</span><span class="num">'+money(c.fee)+' and a week, and they could say no</span>'
         +'<span class="k">Vetted</span><span>'+(c.vetted?(c.vetFlag?'<span style="color:var(--stamp)">an informant</span>':'clean'):'not vetted — '+money(VET_COST)+' on the roster, and worth it')+'</span>'
-        +'<span class="k">Would know</span><span>'+kn+' of your business if it ended badly</span>'
+        +'<span class="k">Would know</span><span>'+esc(looseKnowsLine(c))+', if it ended badly</span>'
       +'</div></div>'
     +'</div></div></div>';
 }
@@ -11923,7 +11932,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 113 · September 2026";
+const BUILD="build 114 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
@@ -12526,7 +12535,33 @@ const LOOSE_WHY={
   dropped:{l:"was cut loose",risk:0.20,cold:0},
 };
 // How much of you they are carrying around.
-function looseKnows(c){return clamp(1+(c.ranWith||0)+((c.exp||1)>=4?1:0),1,14);}
+/* WHAT THEY ACTUALLY KNOW ABOUT YOU — which, for somebody hired on Tuesday who walked out on
+   Wednesday, is nothing.
+
+   This used to be 1 + jobs + (a point for being a Veteran), floored at 1. So a Veteran hired and
+   poached before a single night came out at 2, was described on the card as knowing 2 of your
+   business, was charged a hush price on that 2, and carried a leak risk for a business they had
+   never once been inside. Their rank is a CV. It says what they know about doing the work, not
+   what they know about you.
+
+   Now it is the nights they were actually on, and nothing else. It reaches nought, and nought is
+   the right answer often enough to be worth having.
+
+   I reached first for "and a point for having been on the books a while", which would want a
+   joined-week on every member and a field in the save to carry it. Not worth a new persisted
+   field: somebody benched every week has not been in a room where your business was done, and
+   the nights are the thing the game already counts honestly. */
+function looseKnows(c){return c?clamp(c.ranWith||0,0,14):0;}
+// In words, because the number is a scale nobody can see. "Knows 2 of your business" beside
+// "Jobs with you: 0" reads as a count of something concrete — it was read as two jobs, which is
+// exactly the claim it should not be making.
+function looseKnowsLine(c){
+  const k=looseKnows(c);
+  return k<=0?"nothing that would interest anybody — they were never on a job"
+    :k<=3?"a little — "+k+" night"+(k===1?"":"s")+"' worth"
+    :k<=7?"enough to be a problem"
+    :"most of it";
+}
 function looseRisk(c,why){
   const W=LOOSE_WHY[why]||LOOSE_WHY.dropped;
   let p=W.risk+looseKnows(c)*0.018+((c.jail||0)>=6?0.06:0)+(c.greed>70?0.06:0)+(c.mole?0.2:0);

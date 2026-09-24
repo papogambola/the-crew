@@ -55,7 +55,12 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   check(/LOYALTY/i.test(shown.t)&&shown.t.indexOf(String(A.loy))>=0,"their loyalty, as a number ("+A.loy+")");
   check(/TAKES/i.test(shown.t)&&shown.t.indexOf(Math.round(A.cut*100)+"%")>=0,"what they take of every score");
   check(/JOBS WITH YOU/i.test(shown.t),"how many jobs they have run with you");
-  check(/KNOWS/i.test(shown.t)&&/not much|enough to be a problem|most of it/.test(shown.t),"and how much of your business they know");
+  // The wordings live in looseKnowsLine and there are four of them now — "nothing that would
+  // interest anybody" was added for the case the old formula could not reach, somebody hired and
+  // gone before a single night. Listing them here is a second copy that goes stale; this checks
+  // the line is one the game would actually produce.
+  check(/KNOWS/i.test(shown.t)&&/nothing that would interest anybody|night.{0,3} worth|enough to be a problem|most of it/.test(shown.t),
+    "and how much of your business they know");
   await page.screenshot({path:OUT+"/01-question.png",fullPage:false});
 
   // ---- the forty-eight hours
