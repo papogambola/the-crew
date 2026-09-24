@@ -1,6 +1,9 @@
 # Putting the server on Railway — step by step
 
-**Do these in order.** Step 3 creates the database, and step 4 will not work without it.
+**Do these in order.** Step 3 creates the database, and nothing before it can go green: the
+`Procfile` runs `alembic upgrade head` before uvicorn, so with no `DATABASE_URL` the app fails its
+migration, restarts, fails it again, and sits in a crash loop that looks like a broken app rather
+than a missing variable.
 
 Where a step depends on Railway's own screens, the wording is what it usually says. Railway moves
 things around; if a button is not where this says, look along the top tabs of the service — the
@@ -25,6 +28,10 @@ names below are stable even when the layout is not.
 3. Type `server` and save.
 4. Leave Build Command and Start Command **empty**. The `Procfile` in `server/` says what to run;
    anything typed in those boxes overrides it and then the migration stops running on deploy.
+
+Nothing to set for the Python version: `server/.python-version` says `3.11`, which is what Costora
+runs. Unpinned, the builder picks whatever it defaults to that month, and a build that worked in
+September fails in November with a wheel that will not compile.
 
 *Worked when:* the next build log shows `pip install -r requirements.txt` and finishes green.
 
@@ -61,28 +68,43 @@ it rather than a plain value.
 *Worked when:* the deploy goes green and `https://<your service>.up.railway.app/health` returns
 `{"ok":true}`.
 
-### 5. Let the game talk to it
+### 5. Let the game talk to it — probably nothing to do
 
-1. Service → **Variables** → add `ALLOWED_ORIGINS` with the value:
+`ALLOWED_ORIGINS` already **defaults** to exactly the two production origins
+(`app/config.py`), so a plain production deploy needs no variable here. Skip this step unless one
+of the following is true:
 
-       https://playthecrew.com,https://www.playthecrew.com
+- the game is served from somewhere else as well (a staging copy, a preview URL) — then set
+  `ALLOWED_ORIGINS` to the **whole** comma-separated list, production included, because the
+  variable replaces the default rather than adding to it;
+- you are running the server for the test suite, where the game is on `http://127.0.0.1:8930`.
 
-   Without this the browser blocks every call from the game with a CORS error, and the game will
-   look broken while the server looks fine.
+The list is exact-match: scheme, host and port, no trailing slash. An origin not on it is refused
+by the browser, and the game says *the server did not answer* while the server's own log looks
+perfectly healthy. That is CORS working.
 
-*Worked when:* opening the health URL still works, and the deploy log shows no error.
+*Worked when:* nothing — there is nothing to check if you skipped it. If you did set it, the deploy
+goes green and the health URL still answers.
 
-### 6. Give it a name that is not Railway's
+### 6. Give it the name the game already calls
+
+**This one is load-bearing, not tidying.** The shipped game asks
+`https://api.playthecrew.com` and nothing else — `API_HOME` in `play.html`. Until that name
+resolves, every account screen in the live game says *the server did not answer*, however green
+the Railway service is.
 
 1. Service → **Settings** → **Networking** → **Custom Domain**.
 2. Enter `api.playthecrew.com`.
-3. Railway shows a CNAME target. Add that CNAME at whoever holds the playthecrew.com DNS.
+3. Railway shows a CNAME target. Add that CNAME wherever playthecrew.com's DNS is edited — the
+   same place the `www` record points at `papogambola.github.io`, which is what serves the site
+   today.
 4. Wait for Railway to say the domain is active — usually minutes, occasionally an hour.
 
-*Worked when:* `https://api.playthecrew.com/health` returns `{"ok":true}`.
+*Worked when:* `https://api.playthecrew.com/health` returns `{"ok":true}`, and the office's
+account screen in the live game gets past *the server did not answer*.
 
-Worth doing rather than skipping: the game will hard-code whichever address it is given, and
-`the-crew-production-a1b2.up.railway.app` is a name that changes if the service is ever recreated.
+A name of our own rather than Railway's, because the game hard-codes whichever address it is
+given and `the-crew-production-a1b2.up.railway.app` changes if the service is ever recreated.
 
 ---
 
@@ -99,8 +121,20 @@ Three more variables, and only when you are ready to take money:
 Without the first two the server accepts any key Lemon Squeezy says is valid, from any of your
 products. With them it accepts only keys for this game.
 
-## What is NOT done yet
+## What the game already does with this, and what it does not
 
-The game does not call any of this. It still keeps the count in `localStorage` and still checks
-its own licence key in the browser. Wiring the client to the server is the next slice — this one
-is the server existing, tested, and deployable.
+Since build 115 the game **does** call this server. The office has an account screen; signing in
+mints a token; each new game week is reported to `POST /run/week`, which is where the free run is
+counted; the save is mirrored to `PUT /saves` and can be pulled back on another machine.
+
+It is deliberately not yet a wall. With no server reachable, or nobody signed in, the game falls
+back to counting weeks in `localStorage` and plays exactly as it did before — so the day the
+domain goes live nobody mid-game is locked out, and the day it goes down nobody is locked out
+either.
+
+Still not done, and worth knowing before you invite anybody:
+
+- **No password reset and no email verification.** The first person who forgets a password is
+  locked out with nothing the app can do about it.
+- **The shop is shut.** `LEMON_STORE` / `LEMON_PRODUCT` are unset, so no key can be bought and
+  the free run ending has no door out of it yet.
