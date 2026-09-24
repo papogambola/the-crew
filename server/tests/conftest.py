@@ -1,13 +1,26 @@
-"""A real database for every test, thrown away after. SQLite in a temp file, built by the SAME
-migrations that build Postgres in production — so a migration that only works on Postgres fails
-here, which is the point of not using create_all()."""
+"""A real database for every test, thrown away after. SQLite in a temp file by default, built by
+the SAME migrations that build Postgres in production — so a migration that only works on Postgres
+fails here, which is the point of not using create_all().
+
+SQLite is not the whole story, though, and one difference bites: it returns **naive** datetimes
+whatever the column says, and Postgres returns aware ones. Two places compare a stored datetime to
+`now()` — `deps._minted_before_the_password_changed` and the expiry check in `routers/auth.py` —
+and comparing naive to aware raises TypeError. Both handle it, but on SQLite only the naive branch
+is ever taken, so the branch production actually uses was untested.
+
+So point the suite at a real Postgres when it matters:
+
+    TEST_DATABASE_URL=postgresql://user:pass@127.0.0.1:5432/crew python -m pytest -q
+
+Nothing else changes; the same migrations build it. Left as an option rather than a requirement
+because a suite that needs a database daemon running is a suite people stop running."""
 import os
 import tempfile
 
 import pytest
 
 TMP = tempfile.mkdtemp(prefix="thecrew-test-")
-os.environ["DATABASE_URL"] = "sqlite:///" + os.path.join(TMP, "test.db")
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL") or ("sqlite:///" + os.path.join(TMP, "test.db"))
 os.environ["JWT_SECRET"] = "test-secret-not-used-anywhere-real-and-long-enough-for-hs256"
 os.environ["ALLOWED_ORIGINS"] = "https://playthecrew.com"
 

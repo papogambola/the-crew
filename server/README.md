@@ -42,6 +42,15 @@ proof of anything yet.
 Tests run against SQLite in a temporary file; production is Postgres. Both are exercised by the
 same migrations, which is why the migrations avoid anything only one of them has.
 
+To run them against a **real Postgres** — worth doing before a deploy, and required if you touch
+anything comparing stored datetimes:
+
+    TEST_DATABASE_URL=postgresql://user:pass@127.0.0.1:5432/crew pytest -q
+
+SQLite hands back naive datetimes whatever the column says and Postgres hands back aware ones, so
+the two places that compare a stored time to `now()` take a different branch in each. On SQLite
+alone, the branch production actually uses never runs.
+
 ## No secrets in here, ever
 
 `JWT_SECRET`, `DATABASE_URL` and the Lemon Squeezy identifiers come from the environment and have
