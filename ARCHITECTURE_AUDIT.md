@@ -7,6 +7,37 @@ it stands, not estimated.
 
 ---
 
+## Decisions taken (build 112)
+
+Phase 1 ended with §19 waiting on three answers. Paz has given them, so they are written here
+rather than left in a chat log:
+
+| | |
+|---|---|
+| **How far** | **Full server-authoritative.** Not accounts-and-saves as a halfway house. The server owns the truth: every roll, every hidden fact, every consequence. §19 in full. |
+| **Where** | **Railway, beside Costora.** FastAPI + Postgres + Alembic, the stack already running and already paid for. The site stays on GitHub Pages and calls the API cross-origin. |
+| **Sign-in** | **Email and password**, as Costora does. Password hashes and a reset flow, with everything that implies. |
+
+What prompted it: the twelve free weeks can be reset by clearing browser data or opening another
+browser, and a save that lives in `localStorage` does not follow anybody to a second machine.
+Both are the same root cause, and both are §19's problem.
+
+**Step 0 is done.** The tests are committed as of build 108 — 92 files, 13,222 lines, and the
+suite runs from a fresh clone, 1,600-odd assertions with no regressions.
+
+And `tools/sim.js` is **not broken**. §17 below says it "still expects a single `d.twist` from
+before multiple twists landed, and crashes on the first job". That was true at build 91 and is
+not true now: it reads `pendingTwists()` and answers each in turn. Ten headless games run to a
+verdict and print the balance table. What looked like a crash when this was re-checked was sixty
+runs taking longer than the two minutes I gave them. Corrected here rather than left standing,
+because a plan carrying a blocker that has already cleared is a plan that gets read wrong.
+
+**The cost that was accepted with this.** §19's closing note stands: after this migration, a
+player with no connection has a window that cannot do anything. The desktop build loses offline
+play. That was read and taken.
+
+---
+
 ## The short version
 
 There is no backend. There is no database. There is no authentication. **100% of the game — every
@@ -291,8 +322,10 @@ None, because none exists. But two assets are worth more than they look:
 
 - **The engine already runs headless in Node.** `tools/sim.js` and the 27 node suites load the
   `<script>` block into a VM with a stubbed DOM and drive the engine directly. The technique is
-  proven. **Caveat: `tools/sim.js` is currently broken** — it still expects a single `d.twist`
-  from before multiple twists landed, and crashes on the first job.
+  proven, and it is the whole reason a Node or Python server can be made to produce the same
+  outcomes this engine does. ~~Caveat: `tools/sim.js` is currently broken~~ — **fixed since this
+  was written; see "Decisions taken".** It plays whole games and reports the balance, which makes
+  it the instrument for proving the server computes what the client used to.
 - **The determinism from build 88** means server-side replay is possible today.
 
 ## 18. Security vulnerabilities under a server-authoritative model

@@ -10483,7 +10483,9 @@ const SHOP={
   store:0,                     // the store id the key must come from — 0 accepts any store
   product:0,                   // the product id the key must be for — 0 accepts any product
   api:"https://api.lemonsqueezy.com/v1/licenses/",
-  freeWeeks:12,                // weeks of play on the house, counted across every game in this browser
+  freeWeeks:12,                // weeks ON THE GAME'S CALENDAR, not weeks of the player's life. Counted in
+                               // weekTick across every game this browser opens, and kept in SET rather than
+                               // in the save — so starting a new game at week 11 does not hand back the 11.
   freeRep:35,                  // or the name reaching this — Known — whichever comes first
   recheckDays:7,               // how often a kept key is asked about again
 };
@@ -10561,9 +10563,9 @@ function modalTill(mode){
     ?'<div class="kicker" style="color:var(--stamp)">The till · week '+S.week+'</div><h2 style="font-size:28px;margin-top:4px">That\'s the free run.</h2>'
     :'<div class="kicker" style="color:var(--stamp)">The till</div><h2 style="font-size:28px;margin-top:4px">'+(lic?"Paid for.":"Have a key?")+'</h2>';
   const text=wall
-    ?SHOP.freeWeeks+" weeks of play on the house in this browser, or a "+esc(freeRepName())+" name, whichever comes first — and that is where you are. The game stops here. Nothing is lost: the crew, the float and the file are saved where they stand, and they pick up the moment the door is paid for. <b>"+esc(SHOP.price)+", once.</b> Lifetime access — this build, every build after it, and any other machine you bring the key to."
+    ?SHOP.freeWeeks+" weeks on the game's calendar in this browser — the number in the top bar, not "+SHOP.freeWeeks+" weeks of your life — or a "+esc(freeRepName())+" name, whichever comes first. That is where you are. The game stops here. Nothing is lost: the crew, the float and the file are saved where they stand, and they pick up the moment the door is paid for. <b>"+esc(SHOP.price)+", once.</b> Lifetime access — this build, every build after it, and any other machine you bring the key to."
     :lic?"This browser is paid for"+(LIC.name?" — the key is in "+esc(LIC.name)+"'s name":"")+". Lifetime access: every build, and any other machine you bring the key to."
-    :"Lifetime access is <b>"+esc(SHOP.price)+", once</b>, and the key it comes with opens the game on any machine. The free run is "+SHOP.freeWeeks+" weeks of play in this browser, or a "+esc(freeRepName())+" name, whichever comes first. Bought already? Paste the key from the receipt or the email, and this browser is paid for too.";
+    :"Lifetime access is <b>"+esc(SHOP.price)+", once</b>, and the key it comes with opens the game on any machine. The free run is "+SHOP.freeWeeks+" weeks on the game's calendar in this browser — the number in the top bar, not "+SHOP.freeWeeks+" weeks of your life — or a "+esc(freeRepName())+" name, whichever comes first. Bought already? Paste the key from the receipt or the email, and this browser is paid for too.";
   const buy=lic?"":'<a class="btn stamp" href="'+esc(SHOP.checkout)+'" target="_blank" rel="noopener" data-act="till-buy">Buy lifetime access · '+esc(SHOP.price)+' →</a>';
   const entry=lic?"":'<hr class="rule"><div class="field" style="margin-bottom:10px"><label for="lkey">'+(wall?"Already paid? The key is on the receipt and in the email":"The key")+'</label>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="lkey" value="'+esc(key)+'" placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" autocomplete="off" spellcheck="false" style="flex:1;min-width:220px" '+(busy?"disabled":"")+'>'
@@ -10652,7 +10654,7 @@ function tillLine(){
   if(!shopOpen())return "";
   return '<div class="mono" style="font-size:12px;margin-bottom:10px;color:var(--ink-2)">'
     +(licensed()?'<span style="color:var(--good)">✓ Paid for — lifetime access.</span>'
-      :'On the house for '+SHOP.freeWeeks+' weeks of play, or a '+esc(freeRepName())+' name. Then '+esc(SHOP.price)+', once, for life. ')
+      :'On the house for '+SHOP.freeWeeks+' weeks on the calendar, or a '+esc(freeRepName())+' name. Then '+esc(SHOP.price)+', once, for life. ')
     +'<a href="#" data-act="till-open">'+(licensed()?'The key':'Have a key?')+'</a></div>';
 }
 function applySettings(){
@@ -11218,7 +11220,7 @@ const INFO={
     "The competition has a name from the day it appears; yours is asked for from week "+CREW_NAME_ASK_WEEK+". Type one, or <b>↻ Random</b> takes one off the shelf — a list in the game's voice, and names built from your file: your surname the way the rival's outfit is built, a city the crew has worked, your first name.",
     "<b>Later</b> puts it off "+CREW_NAME_AGAIN+" weeks. <b>✎ Rename</b> on the Crew tab opens the same card whenever you like; the log keeps what it was. The name heads the Crew tab, sits on the Dashboard, the reports and the saved-game line, and the rival's standing is measured against it."]},
   paywall:{h:"The till",t:[
-    "The free run is <b>"+SHOP.freeWeeks+" weeks of play in this browser, or a "+rankNameAt(SHOP.freeRep)+" name</b>, whichever comes first — across every game this browser opens, so a new dossier is not a new run. When it is up the game stops on this card, and the card does not close.",
+    "The free run is <b>"+SHOP.freeWeeks+" weeks on this game's calendar in this browser, or a "+rankNameAt(SHOP.freeRep)+" name</b>, whichever comes first — the week counter in the top bar, not "+SHOP.freeWeeks+" weeks of your life. It runs across every game this browser opens, so a new dossier is not a new run, and stopping at week 11 to start again does not hand the eleven back. When it is up the game stops on this card, and the card does not close.",
     "<b>"+SHOP.price+", once</b>, for lifetime access: this build, every build after it, and any other machine you bring the key to. The button opens the checkout in a new tab; the key is on the receipt and in the email. Paste it in the box and press <b>Unlock</b> — the game picks up exactly where it stopped. Nothing is lost while you decide.",
     "<b>Esc</b> opens the office over the wall — sound, brightness, the handbook, the door out. On the title screen, <b>Have a key?</b> is where a key bought on another machine goes in."]},
   notice:{h:"A milestone",t:[
@@ -11898,7 +11900,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 111 · September 2026";
+const BUILD="build 112 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
