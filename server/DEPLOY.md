@@ -35,6 +35,16 @@ September fails in November with a wheel that will not compile.
 
 *Worked when:* the next build log shows `pip install -r requirements.txt` and finishes green.
 
+**Check that, rather than checking the badge.** Skip step 2 and the deploy does not fail — it
+*succeeds*, because Railway looks at the repository root, finds a pile of HTML, and deploys it as
+a static website. The service card says **Online**, the deploy goes green, and what is being
+served is the game's front page. Nothing asks for `DATABASE_URL` or `JWT_SECRET`, because a file
+server needs neither, so steps 3 and 4 never look missing either.
+
+This cost an afternoon. The tell is `https://<the service>/health`: the real server answers
+`{"ok":true,...}`, and a static site answers an empty `200` with no content type, while `/`
+serves the game's landing page. If you see that, Root Directory is not set.
+
 ### 3. Add the database
 
 1. In the project, click **New** → **Database** → **Add PostgreSQL**.
