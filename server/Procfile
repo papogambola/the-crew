@@ -1,0 +1,3 @@
+# Same shape as Costora's: the migration runs on every deploy, before anything serves. A model
+# change without a migration therefore ships a broken app rather than a silently wrong one.
+web: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT

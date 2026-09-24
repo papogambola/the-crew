@@ -1,0 +1,16 @@
+# Pinned to what Costora runs, deliberately. Two services on one Railway account with two
+# different FastAPI versions is two sets of release notes to read every time something breaks.
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.10
+alembic==1.14.0
+pydantic==2.10.3
+# EmailStr will not validate without it, and FastAPI does not pull it in. Missing, the app
+# imports fine and then throws on the first sign-up — so it is pinned rather than hoped for.
+email-validator==2.2.0
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+bcrypt==5.0.0
+pyjwt==2.13.0
+httpx==0.28.1
