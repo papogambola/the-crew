@@ -60,6 +60,28 @@ turns every test that touches the network into a test of nothing.
 On a machine with ordinary internet and no proxy, none of this applies and the suite is green
 with no variables set.
 
+## The one that needs a server
+
+`browser80` drives the game against a **real** backend — a real FastAPI process, a real sign-up,
+a real cross-origin call — because what it tests is whether two pieces of software written
+separately actually speak to each other, and a stub would agree with whatever it was told.
+
+With no server it **skips and exits 0**. That is deliberate: a line that is always red is where a
+real failure goes to hide, and this repository has already lost fifteen assertions that way. Run
+it properly like this:
+
+    cd server
+    DATABASE_URL=sqlite:///./dev.db \
+    JWT_SECRET=$(python3 -c "import secrets;print(secrets.token_urlsafe(48))") \
+    ALLOWED_ORIGINS=http://127.0.0.1:8930 \
+      sh -c 'alembic upgrade head && uvicorn app.main:app --port 8931'
+
+    API=http://127.0.0.1:8931 node tests/browser80.js
+
+`ALLOWED_ORIGINS` matters: the test serves the game on 8930 and the server refuses any origin not
+on that list. If the sign-up says "the server did not answer", that is usually this — and it is
+CORS working, not CORS broken.
+
 ## Where things are
 
 Paths live in **`env.js`** and nowhere else. It works out the repository and the game from its own

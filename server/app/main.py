@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth, licence, run
+from app.routers import auth, licence, run, saves
 
 app = FastAPI(title="The Crew", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -18,7 +18,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.origins,
     allow_credentials=False,          # the token travels in a header, not a cookie
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT"],
     allow_headers=["Authorization", "Content-Type"],
     max_age=600,
 )
@@ -26,6 +26,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(run.router)
 app.include_router(licence.router)
+app.include_router(saves.router)
 
 
 @app.get("/health")
