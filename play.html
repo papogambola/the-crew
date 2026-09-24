@@ -146,7 +146,30 @@
   .stat{display:flex;flex-direction:column;line-height:1;gap:3px;min-width:72px}
   .stat .l{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
   .stat .v{font-family:var(--f-mono);font-size:15px;font-weight:500}
-  .heatwrap{min-width:132px;flex:1 1 132px;max-width:220px}
+  /* The ranking is the one number in this bar that decides things — what clients post, who will
+     sign, how many places you have — and it sat left-aligned under a label three times its own
+     width, which reads as a caption with a stray digit next to it. Centred under that label and
+     boxed, so the eye lands on the number rather than hunting along the row for it. */
+  .stat.rank{align-items:center;text-align:center}
+  .stat.rank .v{border:1.5px solid var(--ink);background:var(--card);padding:0 12px;min-width:46px;
+    text-align:center;line-height:1.5}
+  /* And the heat kept its distance from it. The two were a gap apart, so a long ranking label ran
+     straight into HEAT and the bar read as part of the same thing. It also grows now rather than
+     stopping at 220px: the room between it and the paper button was empty, and a gauge is easier
+     to read the longer it is. */
+  /* Pushed clear of the ranking, and given most of the room that was going spare. There was a
+     hand's width of nothing between the gauge and the paper button, and a gauge is easier to
+     read the longer it is — it is the one thing on this bar that is a quantity rather than a
+     fact. flex-grow:3 takes the spare room off the spacer that holds the button out right;
+     max-width stops it becoming a stripe.
+
+     No media query, and the basis stays at 132px. Both were reflexes worth resisting: body has
+     min-width:960px — "a PC game has one layout, below this the window scrolls; nothing
+     rearranges" — so there is no narrow layout to defend. What looked like the bar escaping
+     under the ⓘ and ≡ at a 600px window was the page being scrolled sideways, by design, with
+     the chrome fixed over it. Keying this off the viewport would have withheld the separation
+     from exactly the windows that scroll, where the two are still side by side. */
+  .heatwrap{min-width:132px;flex:1 1 132px;flex-grow:3;max-width:420px;margin-left:16px}
   /* three bands on the track — green to 60, amber to 80, red to 100 — and the fill in the colour of the band the heat is in */
   .heatbar{height:9px;border:1px solid var(--ink);position:relative;overflow:hidden;
     background:linear-gradient(90deg,color-mix(in srgb,var(--good) 26%,var(--paper-2)) 0 60%,color-mix(in srgb,var(--warn) 30%,var(--paper-2)) 60% 80%,color-mix(in srgb,var(--stamp) 28%,var(--paper-2)) 80% 100%)}
@@ -5787,7 +5810,7 @@ function topbar(){
     +'<div class="brand">THE CREW</div>'
     +'<div class="stat"><span class="l">Balance</span><span class="v num">'+money(S.money)+'</span></div>'
     +'<div class="stat"><span class="l">Week</span><span class="v num">'+String(S.week).padStart(2,"0")+'</span></div>'
-    +'<div class="stat" title="'+esc(rankInfo(S.rep).note)+'"><span class="l">Ranking · '+esc(rankName(S.rep))+'</span><span class="v num">'+S.rep+'</span></div>'
+    +'<div class="stat rank" title="'+esc(rankInfo(S.rep).note)+'"><span class="l">Ranking · '+esc(rankName(S.rep))+'</span><span class="v num">'+S.rep+'</span></div>'
     +'<div class="heatwrap"><div class="stat" style="min-width:0"><span class="l">Heat '+Math.round(S.heat)+(S.heat>=100?" ⚠":"")+'</span>'
       +'<div class="heatbar '+band+'" title="Green to 60, amber to 80, red above"><i style="width:'+clamp(S.heat,0,100)+'%"></i></div></div></div>'
     +'<div class="spacer"></div>'
@@ -11900,7 +11923,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 112 · September 2026";
+const BUILD="build 113 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a

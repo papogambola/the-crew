@@ -57,7 +57,14 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   await page.evaluate(()=>{S.tab="roster";render();window.scrollTo(0,1800);});
   await page.waitForTimeout(350);
   const sm=await measure("small window, scrolled");
-  check(sm.tbBottom===46,"a small window does not rearrange the board — the bar is one row ("+sm.v+")");
+  /* The claim is that the bar does not WRAP, so it is asked against the bar at full width rather
+     than against the number 46. That number was one row's height at the time, and the day the
+     ranking got a box round it the row grew nine pixels and this failed while the bar was still,
+     plainly, one row. A wrap would roughly double it; a restyle moves it a little. Compare, and
+     allow for the little. */
+  check(Math.abs(sm.tbBottom-top.tbBottom)<=2,
+    "a small window does not rearrange the board — the bar is the same one row it is at full width ("
+    +sm.tbBottom+"px vs "+top.tbBottom+"px, "+sm.v+")");
   check(Math.abs(sm.tabsTop-sm.tbBottom)<=2,"and the tabs are still flush under it");
   const wide=await page.evaluate(()=>({doc:document.documentElement.scrollWidth,vp:window.innerWidth}));
   check(wide.doc>=960,"the page holds its PC width and scrolls sideways instead ("+wide.doc+"px in a "+wide.vp+"px window)");
