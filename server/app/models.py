@@ -1,10 +1,10 @@
-"""The rows. Three of them, and each one exists because something in the game had nowhere
-authoritative to live.
+"""The rows. Each one exists because something in the game had nowhere authoritative to live.
 
-    Player       who they are. The thing a save can belong to and a licence can be bought by.
-    FreeRun      the twelve weeks, a row per game, summed — see the class and app/routers/run.py.
-    Save         the crew itself, so it stops living in one browser.
-    Licence      what they paid for, attached to the person rather than to a browser.
+    Player         who they are. The thing a save can belong to and a licence can be bought by.
+    PasswordReset  one way back in, good once — because otherwise forgetting is permanent.
+    FreeRun        the twelve weeks, a row per game, summed — see the class and routers/run.py.
+    Save           the crew itself, so it stops living in one browser.
+    Licence        what they paid for, attached to the person rather than to a browser.
 
 Kept apart rather than as columns on Player because they have different lifetimes: a player is
 forever, a free run is spent once, and a licence is a receipt. Also because the day the save
@@ -34,10 +34,42 @@ class Player(Base):
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Not a role system. One flag, for the one person who needs to look at a number.
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # When the password last changed, and therefore the moment before which no session is any
+    # good any more. A sign-in token here is a signed JWT with a 60-day life and no row behind
+    # it, so there is nothing to delete to end a session — without this column, resetting a
+    # password would leave whoever prompted the reset signed in for two months. deps.py compares
+    # a token's `iat` against it. Null on every account that has never reset, which lets every
+    # token predating this column carry on working.
+    pw_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     free_runs: Mapped[list["FreeRun"]] = relationship(back_populates="player")
     licences: Mapped[list["Licence"]] = relationship(back_populates="player")
     saves: Mapped[list["Save"]] = relationship(back_populates="player")
+    resets: Mapped[list["PasswordReset"]] = relationship(back_populates="player")
+
+
+class PasswordReset(Base):
+    """One way back in, good once, good for an hour.
+
+    **Only the hash is stored**, for the same reason the password is: the row is what a leaked
+    database hands over, and a table of live reset tokens is a table of accounts anybody can walk
+    into. SHA-256 rather than bcrypt because the token is 32 random bytes from `secrets` — there
+    is no dictionary to slow an attacker down against, so the work factor would buy nothing and
+    cost a fifth of a second on every attempt.
+
+    Used and expired rows are kept rather than deleted. They are small, and "that link was
+    already used" is a different sentence from "no such link" when somebody writes in."""
+    __tablename__ = "password_resets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    player_id: Mapped[int] = mapped_column(ForeignKey("players.id", ondelete="CASCADE"),
+                                           nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    player: Mapped[Player] = relationship(back_populates="resets")
 
 
 class FreeRun(Base):

@@ -60,27 +60,48 @@ turns every test that touches the network into a test of nothing.
 On a machine with ordinary internet and no proxy, none of this applies and the suite is green
 with no variables set.
 
-## The one that needs a server
+## The two that need a server
 
-`browser80` drives the game against a **real** backend — a real FastAPI process, a real sign-up,
-a real cross-origin call — because what it tests is whether two pieces of software written
-separately actually speak to each other, and a stub would agree with whatever it was told.
+`browser80` (the account) and `browser81` (the password reset) drive the game against a **real**
+backend — a real FastAPI process, a real sign-up, a real cross-origin call — because what they
+test is whether two pieces of software written separately actually speak to each other, and a
+stub would agree with whatever it was told.
 
-With no server it **skips and exits 0**. That is deliberate: a line that is always red is where a
+With no server they **skip and exit 0**. That is deliberate: a line that is always red is where a
 real failure goes to hide, and this repository has already lost fifteen assertions that way. Run
-it properly like this:
+them properly like this:
 
     cd server
     DATABASE_URL=sqlite:///./dev.db \
     JWT_SECRET=$(python3 -c "import secrets;print(secrets.token_urlsafe(48))") \
-    ALLOWED_ORIGINS=http://127.0.0.1:8930 \
+    ALLOWED_ORIGINS=http://127.0.0.1:8930,http://127.0.0.1:8933 \
+    RESET_RATE_LIMIT=1000 RESET_EMAIL_RATE_LIMIT=1000 \
       sh -c 'alembic upgrade head && uvicorn app.main:app --port 8931'
 
     API=http://127.0.0.1:8931 node tests/browser80.js
+    API=http://127.0.0.1:8931 DB=server/dev.db node tests/browser81.js
 
-`ALLOWED_ORIGINS` matters: the test serves the game on 8930 and the server refuses any origin not
-on that list. If the sign-up says "the server did not answer", that is usually this — and it is
-CORS working, not CORS broken.
+`ALLOWED_ORIGINS` matters: the tests serve the game on 8930 and 8933 and the server refuses any
+origin not on that list. If the sign-up says "the server did not answer", that is usually this —
+and it is CORS working, not CORS broken. Two ports rather than one because two files sharing a
+port collide the moment either leaves a socket behind, which looks like EADDRINUSE from a test
+that has nothing wrong with it.
+
+`browser81` also wants `DB`, and a **SQLite** server specifically, because the one thing it
+cannot do the way a person does is read the email: the raw reset token exists only in the message
+the server sent, since the database holds a SHA-256 of it and nothing else. So it overwrites the
+newest row's hash with the hash of a string it knows, and opens that link. Everything either side
+of that — the request, the page, the expiry, the one-shot mark, the session handed back, and
+whether `play.html` then finds it — is the real path.
+
+`RESET_RATE_LIMIT` matters for the same reason `ALLOWED_ORIGINS` does — because it is the second
+thing that looks like a broken test and is not. `/auth/forgot` sends mail to an address the caller
+chose, so it is capped at five an hour per caller, and that counter lives in the **server process**
+and outlives a test run. Run `browser81` twice against one server on the default limit and the
+second run trips it. Raised here rather than reset between runs, because the limit itself is
+tested where it belongs, in `server/tests/test_reset.py`, against a server built for the purpose.
+
+Its own suite is on the other side of the wire: `cd server && python -m pytest -q`.
 
 ## Where things are
 

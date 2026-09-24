@@ -9,7 +9,10 @@ is the survey and the plan; this is the first slice of it.
 It does: **an account, and a free run that cannot be reset.** Sign up, sign in, and the twelve
 free weeks are counted against the account rather than against `localStorage` in one browser. A
 new browser, a cleared cache, a second machine — the count is where it was. Payment attaches to
-the account too, so a licence bought once opens the game anywhere the player signs in.
+the account too, so a licence bought once opens the game anywhere the player signs in. Forgetting
+the password is recoverable: a link by email, good once and for an hour, which also ends every
+session that was open before it — see `routers/auth.py` and `deps.py`, and set the mail variables
+in `DEPLOY.md` or the link is composed, logged, and sent nowhere.
 
 It does not: **make cheating impossible.** The game still computes every roll on the client, so a
 player who wants to can still lie to their own copy. That is step 4 of the audit — the intent-only
@@ -18,6 +21,12 @@ money: the free run resetting itself, and a paid licence being stuck in one brow
 
 Said plainly because the difference matters: after this, the *entitlement* is authoritative. The
 *game* is not, yet.
+
+It also does not: **verify that an address belongs to the person who typed it.** Sign-up takes an
+email on trust. Someone can open an account on an address they do not hold, and the real owner
+can take it off them at any time by asking for a password reset — which is a nuisance rather than
+a hole, but it is the next thing to fix, and it is the reason a receipt should not be considered
+proof of anything yet.
 
 ## Running it
 

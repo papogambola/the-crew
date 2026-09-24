@@ -108,6 +108,42 @@ given and `the-crew-production-a1b2.up.railway.app` changes if the service is ev
 
 ---
 
+## Mail, so that forgetting a password is not permanent
+
+**Without this, `/auth/forgot` accepts the request, tells the player a link is on its way, and
+sends nothing.** That is by design — the endpoint answers identically whether or not the address
+has an account, so it cannot report a delivery failure without also reporting who has an account.
+It means a deploy with no mail set up has a reset flow that fails silently, and the only person
+who finds out is somebody already locked out.
+
+`https://api.playthecrew.com/health` says which it is:
+
+```json
+{"ok":true,"mail":{"configured":false,"transport":"none", ...}}
+```
+
+`"transport":"none"` is nothing configured. `"resend_api"` or `"smtp"` means it will try, and
+`last_error` there names the last failure if there was one.
+
+Resend over HTTPS is the one to prefer, because Railway blocks or silently drops outbound SMTP
+often enough that a timeout is the usual first symptom. Two variables:
+
+| Variable | What it is |
+|---|---|
+| `RESEND_API_KEY` | the key from Resend. Nothing else needs setting. |
+| `SMTP_FROM_EMAIL` | who it comes from, e.g. `no-reply@playthecrew.com`. **It must be a domain verified with the provider** — this is the usual thing that is wrong, and it comes back as a 403 that `/health` will show you. |
+
+For an ordinary SMTP provider instead: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
+`SMTP_PASSWORD`, `SMTP_FROM_EMAIL`. Port 465 switches to implicit TLS on its own; override with
+`SMTP_USE_SSL` only for something unusual.
+
+Two more, both optional:
+
+| Variable | Default | What it is |
+|---|---|---|
+| `SITE_URL` | `https://playthecrew.com` | where the reset link points. It has to be where `reset.html` is actually served, so a staging copy needs its own. |
+| `RESET_TTL_MINUTES` | `60` | how long a link is good for. |
+
 ## When the shop opens
 
 Three more variables, and only when you are ready to take money:

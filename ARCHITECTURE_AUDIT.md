@@ -36,6 +36,21 @@ because a plan carrying a blocker that has already cleared is a plan that gets r
 player with no connection has a window that cannot do anything. The desktop build loses offline
 play. That was read and taken.
 
+### Where the slices have got to
+
+| Slice | State |
+|---|---|
+| **1 — an account, and a free run that cannot be reset** | shipped, build 114. Finding 2 below (no authentication of any kind) is closed. |
+| **2 — the game signs in, and the save stops living in one browser** | shipped, build 115. Finding 3 is *mitigated*, not closed: the save is mirrored to the account, but it is still an unsigned blob the client writes, so it is still editable in the console. |
+| **2a — a way back in** | shipped, build 116. A password reset by email, good once and for an hour, which also ends every session opened before it. Nothing in §19 asked for it; it was missing from slice 1 and the first person to forget would have been locked out for good. |
+| **3 onwards — the intent-only API** | not started. Findings 1, 3, 4 and 5 all wait on it, and until it lands the entitlement is authoritative and the *game* is not. |
+
+**Still missing from the account, and worth knowing before inviting anybody:** an address is
+taken on trust at sign-up. Nobody proves they hold it, so an account can be opened on somebody
+else's address — and the owner can take it back at any time by asking for a reset, which makes it
+a nuisance rather than a hole, but also means a receipt attached to an account is not yet proof
+of anything. Email verification is the next small piece.
+
 ---
 
 ## The short version

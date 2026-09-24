@@ -4,6 +4,7 @@ bcrypt for the password, because it is what Costora uses and because a slow hash
 thing standing between a stolen table and every account on it. A signed token for the session,
 because the alternative is a session table read on every request for a game that will be making
 a lot of requests."""
+import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -50,6 +51,20 @@ def password_complaint(password: str) -> str | None:
     return None
 
 
+def new_reset_token() -> str:
+    """The thing that goes in the email. 32 bytes of randomness, URL-safe.
+
+    Long enough that guessing is not a strategy, and generated rather than derived so it says
+    nothing about the account it belongs to — a reset link ends up in somebody's inbox, their
+    browser history, and sometimes a screenshot in a support email."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_reset_token(token: str) -> str:
+    """What is stored. SHA-256, not bcrypt — see the model for why."""
+    return hashlib.sha256((token or "").encode("utf-8")).hexdigest()
+
+
 def mint_token(player_id: int) -> str:
     now = datetime.now(timezone.utc)
     payload = {
@@ -63,13 +78,16 @@ def mint_token(player_id: int) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
 
 
-def read_token(token: str) -> int | None:
-    """The player id inside a token, or None for anything wrong with it — expired, forged,
-    truncated, or signed with a secret that is not ours."""
+def read_token(token: str) -> dict | None:
+    """What is inside a token — `{"id": int, "iat": int}` — or None for anything wrong with it:
+    expired, forged, truncated, or signed with a secret that is not ours.
+
+    `iat` comes back as well as the id because a password reset has to be able to end sessions
+    that were minted before it, and there is no session row to delete. See deps.current_player."""
     if not token:
         return None
     try:
         data = jwt.decode(token, settings.jwt_secret, algorithms=[ALGORITHM])
-        return int(data["sub"])
+        return {"id": int(data["sub"]), "iat": int(data.get("iat") or 0)}
     except Exception:
         return None

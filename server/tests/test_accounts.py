@@ -76,7 +76,11 @@ def test_me_says_where_the_free_run_stands(client, signed_up):
 
 
 def test_health_is_open(client):
-    assert client.get("/health").json() == {"ok": True}
+    body = client.get("/health").json()
+    assert body["ok"] is True
+    # It also reports the mail transport now — see test_reset.py, and emailer.py for why the
+    # reset flow cannot report its own delivery failures.
+    assert "mail" in body
 
 
 def test_a_short_signing_secret_stops_the_server_booting():

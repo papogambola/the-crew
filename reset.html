@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Crew — Set a new password</title>
+<!-- A reset link in an address bar is a live key to an account. Keep it out of search engines
+     and out of the Referer header sent to anything this page ever links to. -->
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500&family=Oswald:wght@400;600&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --f-logo:"Anton","Impact","Oswald","Arial Narrow",sans-serif;
+    --f-disp:"Oswald","Arial Narrow",system-ui,sans-serif;
+    --f-body:"Spectral","Iowan Old Style",Georgia,serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+    --paper:#f6f4ee; --paper-2:#efece3; --card:#fffdf8;
+    --ink:#111010; --ink-2:#3a3734; --muted:#6f6a63;
+    --line:#d9d4c8; --line-2:#c3bdae;
+    --stamp:#a8231c; --good:#1f6b3a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink)}
+  body{font-family:var(--f-body);font-size:16px;line-height:1.6;
+    background-image:repeating-linear-gradient(0deg,transparent 0 27px,rgba(17,16,16,.028) 27px 28px)}
+  .wrap{max-width:620px;margin:0 auto;padding:0 20px}
+  h1{font-family:var(--f-logo);font-weight:400;font-size:clamp(30px,6vw,46px);letter-spacing:.02em;
+    text-transform:uppercase;line-height:1;margin:0}
+  .kicker{font-family:var(--f-mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+  header{padding-top:46px;padding-bottom:18px;border-bottom:2px solid var(--ink)}
+  section{padding-top:26px;padding-bottom:30px}
+  p{margin:0 0 14px;max-width:58ch}
+  label{display:block;font-family:var(--f-disp);text-transform:uppercase;letter-spacing:.1em;
+    font-size:12px;color:var(--ink-2);margin:0 0 5px}
+  input{width:100%;font-family:var(--f-body);font-size:16px;padding:9px 11px;
+    background:var(--card);color:var(--ink);border:1px solid var(--line-2);border-radius:0}
+  input:focus{outline:2px solid var(--ink);outline-offset:-2px}
+  .field{margin:0 0 14px}
+  .btn{display:inline-block;font-family:var(--f-disp);text-transform:uppercase;letter-spacing:.1em;
+    font-size:13px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);
+    padding:9px 18px;cursor:pointer}
+  .btn.ghost{background:var(--paper);color:var(--ink)}
+  .btn[disabled]{opacity:.5;cursor:default}
+  .note{border-left:3px solid var(--line-2);padding:2px 0 2px 14px;color:var(--ink-2);margin:0 0 14px}
+  .note.bad{border-left-color:var(--stamp)}
+  .note.good{border-left-color:var(--good)}
+  .hide{display:none}
+  .small{font-size:14px;color:var(--muted)}
+  footer{border-top:1px solid var(--line);padding:20px 0 50px;font-family:var(--f-mono);
+    font-size:12px;color:var(--muted)}
+  a{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">The Crew · your account</div>
+  <h1 id="head">Set a new password</h1>
+</header>
+
+<section>
+
+  <!-- Arrived with no link: ask for one. This page is reachable on its own, from the game's
+       account screen, so it has to work without a token in the address. -->
+  <div id="ask" class="hide">
+    <p>Give the address the account is on, and a link to set a new password goes to it. The link
+    works once, and it does not stay good for long.</p>
+    <div id="ask-msg"></div>
+    <div class="field">
+      <label for="mail">Email</label>
+      <input type="email" id="mail" autocomplete="username" spellcheck="false" autocapitalize="off">
+    </div>
+    <button class="btn" id="ask-go">Send the link →</button>
+    <p class="small" style="margin-top:18px">The answer is the same whether or not there is an
+    account on that address — otherwise this page would be a way for a stranger to find out who
+    has one.</p>
+  </div>
+
+  <!-- Arrived with a link. -->
+  <div id="set" class="hide">
+    <p>Choose a new one. <b>At least 10 characters.</b> Length is what makes a password hard to
+    guess; a short one with a symbol in it is still short.</p>
+    <div id="set-msg"></div>
+    <div class="field">
+      <label for="pw">New password</label>
+      <input type="password" id="pw" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label for="pw2">And again</label>
+      <input type="password" id="pw2" autocomplete="new-password">
+    </div>
+    <button class="btn" id="set-go">Set it →</button>
+    <p class="small" style="margin-top:18px">Setting a new password signs out every machine that
+    was already signed in to this account. If somebody else got in, this is what puts them out.</p>
+  </div>
+
+  <!-- Done. -->
+  <div id="done" class="hide">
+    <div class="note good"><b>Done.</b> The password is changed and you are signed in on this
+    machine. Every other machine that was signed in has been signed out.</div>
+    <p><a class="btn" href="/play.html">Back to the game →</a></p>
+  </div>
+
+</section>
+
+<footer>
+  The Crew · <a href="/">the front page</a>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  /* Same two lines as the game, and deliberately the same shape: one production address, and one
+     override the tests set before the page runs. See play.html's API_HOME. */
+  var API_HOME="https://api.playthecrew.com";
+  var API=(typeof window.THE_CREW_API==="string")?window.THE_CREW_API:API_HOME;
+  /* The game reads this key. This page is served from the same origin, so writing it here means
+     somebody who resets their password is already signed in when they get back to the game —
+     which is the point of /auth/reset handing a session back rather than a "now go and log in". */
+  var TOKEN_KEY="thecrew_token_v1";
+
+  var $=function(id){return document.getElementById(id);};
+  function show(id){["ask","set","done"].forEach(function(k){$(k).className=(k===id)?"":"hide";});}
+  function say(box,text,kind){
+    $(box).innerHTML=text?'<div class="note '+(kind||"bad")+'">'+esc(text)+'</div>':"";
+  }
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+
+  function post(path,body,then){
+    var x=new XMLHttpRequest();
+    x.open("POST",API+path,true);
+    x.setRequestHeader("Content-Type","application/json");
+    x.onreadystatechange=function(){
+      if(x.readyState!==4)return;
+      var data=null; try{data=JSON.parse(x.responseText);}catch(e){}
+      // status 0 is the server not answering at all — a different thing from it refusing, and
+      // worth a different sentence, because one of them is the player's problem to wait out.
+      then(x.status>=200&&x.status<300, data, x.status);
+    };
+    x.send(JSON.stringify(body));
+  }
+  function why(data,status,fallback){
+    if(status===0)return "The server did not answer. Try again in a minute.";
+    if(data&&typeof data.detail==="string")return data.detail;
+    return fallback;
+  }
+
+  var token=(function(){
+    var m=/[?&]t=([^&]+)/.exec(window.location.search||"");
+    return m?decodeURIComponent(m[1]):"";
+  })();
+
+  if(token){
+    show("set");
+    /* Take the token out of the address bar. It is a live key to the account for the next hour,
+       and an address bar is the one part of a browser people screenshot, read out and paste into
+       a support email. The copy held here in `token` is what gets used. */
+    if(window.history&&window.history.replaceState){
+      try{window.history.replaceState({}, "", window.location.pathname);}catch(e){}
+    }
+    $("pw").focus();
+  }else{
+    show("ask");
+    $("head").textContent="Forgotten your password";
+    $("mail").focus();
+  }
+
+  $("ask-go").onclick=function(){
+    var mail=($("mail").value||"").trim();
+    if(!mail){say("ask-msg","An address first.");return;}
+    $("ask-go").disabled=true; say("ask-msg","");
+    post("/auth/forgot",{email:mail},function(ok,data,status){
+      $("ask-go").disabled=false;
+      if(ok){
+        say("ask-msg",(data&&data.message)||"If there is an account on that address, a link is on its way.","good");
+      }else{
+        say("ask-msg",why(data,status,"That did not work."));
+      }
+    });
+  };
+
+  $("set-go").onclick=function(){
+    var a=$("pw").value||"", b=$("pw2").value||"";
+    // Checked here as well as on the server, because a round trip to be told you mistyped it is
+    // a round trip, and because the server refusing a short one must not also spend the link.
+    if(a.length<10){say("set-msg","At least 10 characters.");return;}
+    if(a!==b){say("set-msg","Those two are not the same.");return;}
+    $("set-go").disabled=true; say("set-msg","");
+    post("/auth/reset",{token:token,password:a},function(ok,data,status){
+      $("set-go").disabled=false;
+      if(!ok){
+        say("set-msg",why(data,status,"That link is no good any more. Ask for another one."));
+        // A dead link is a dead end on this screen, so offer the way out of it rather than
+        // leaving somebody looking at a form that cannot work.
+        if(status===400){
+          $("set-msg").innerHTML+='<p style="margin-top:12px"><button class="btn ghost" id="again">Ask for another link →</button></p>';
+          $("again").onclick=function(){show("ask");$("head").textContent="Forgotten your password";$("mail").focus();};
+        }
+        return;
+      }
+      try{ if(data&&data.token) localStorage.setItem(TOKEN_KEY,data.token); }catch(e){}
+      show("done");
+      $("head").textContent="New password set";
+    });
+  };
+
+  // Enter submits, on both forms. A password box people cannot press return in is a password box
+  // that gets typed twice.
+  ["mail"].forEach(function(id){$(id).onkeydown=function(e){if(e.key==="Enter")$("ask-go").click();};});
+  ["pw","pw2"].forEach(function(id){$(id).onkeydown=function(e){if(e.key==="Enter")$("set-go").click();};});
+})();
+</script>
+</body>
+</html>

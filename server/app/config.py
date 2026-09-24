@@ -47,6 +47,15 @@ class Settings:
     # Sunday and being signed out mid-job is worse than the risk it buys back.
     token_days: int = 60
 
+    # How long a password-reset link is good for. An hour: long enough to go and find the email,
+    # short enough that one sitting in an inbox somebody else later reads is not a way in.
+    reset_minutes: int = int(os.environ.get("RESET_TTL_MINUTES", "60"))
+
+    # Where the reset link points. The page is served beside the game, so this is the site rather
+    # than the API. Overridable because staging and a laptop are not playthecrew.com, and a reset
+    # link that always points at production is a reset flow nobody can test anywhere else.
+    site_url: str = os.environ.get("SITE_URL", "https://playthecrew.com").rstrip("/")
+
     # The free run, in the GAME'S weeks — the number in the top bar, not weeks of anybody's life.
     free_weeks: int = 12
 

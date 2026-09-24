@@ -84,10 +84,26 @@ for(let i=0;i<300;i++){
 }
 check(dupes===0,sets+" nights of three, and not one repeated itself");
 check(short===0,"and all of them found three to draw from");
-// the second one says so, because it is the second
-const pair=makeTwists(big,teamOf(big),freshRng(),2);
-check(TWIST_CUE.indexOf(pair[0].cue)>=0,"the first is announced as a thing going wrong: \""+pair[0].cue+"\"");
-check(TWIST_AGAIN.indexOf(pair[1].cue)>=0,"and the second as it happening again: \""+pair[1].cue+"\"");
+// The second one says so, because it is the second.
+//
+// Both lists have a _NIGHT variant that twistLines() swaps in for a job that happens after dark,
+// and this asked only about the daytime one — so a night job drew a perfectly correct
+// "Then the night finds something else." and was reported as a failure. It fired about one run
+// in five, which is worse than always: a line that is red at random is a line people learn to
+// scroll past, and this suite has already lost assertions that way. One draw is one draw, so it
+// is asked 200 times rather than once — the earlier version could also pass while being wrong.
+const cueOk=(c,day,night)=>day.indexOf(c)>=0||night.indexOf(c)>=0;
+let firstWrong=null,secondWrong=null;
+for(let i=0;i<200;i++){
+  const pair=makeTwists(big,teamOf(big),freshRng(),2);
+  if(pair.length<2)continue;
+  if(!firstWrong&&!cueOk(pair[0].cue,TWIST_CUE,TWIST_CUE_NIGHT))firstWrong=pair[0].cue;
+  if(!secondWrong&&!cueOk(pair[1].cue,TWIST_AGAIN,TWIST_AGAIN_NIGHT))secondWrong=pair[1].cue;
+}
+check(!firstWrong,"200 pairs, and the first is always announced as a thing going wrong"
+  +(firstWrong?": \""+firstWrong+"\"":""));
+check(!secondWrong,"and the second always as it happening again"
+  +(secondWrong?": \""+secondWrong+"\"":""));
 
 /* ================= every answer counts ================= */
 console.log("\n— every call counts, not only the first —");
