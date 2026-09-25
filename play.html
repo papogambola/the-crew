@@ -7270,7 +7270,6 @@ function renderModal(){
   if(m.type==="news")return modalNews();
   if(m.type==="crewname")return modalCrewName();
   if(m.type==="file")return modalYourFile();
-  if(m.type==="account")return modalAccount();
   if(m.type==="paywall")return modalTill("wall");
   if(m.type==="loose")return modalLoose();
   if(m.type==="revenge")return modalRevenge();
@@ -10809,7 +10808,7 @@ function modalAccount(){
   const err=ACC_ERR?'<div class="brief" style="border-left-color:var(--stamp)">'+esc(ACC_ERR)+'</div>':'';
   const mode=UI.accMode==="up"?"up":"in";
   if(!signedIn()){
-    return '<div class="scrim"><div class="modal" role="dialog" aria-modal="true">'
+    return '<div class="scrim" data-act="acc-scrim"><div class="modal" role="dialog" aria-modal="true">'
       +'<div class="modal-h"><div><div class="kicker">The office · your account</div>'
       +'<h2 style="font-size:26px;margin-top:4px">'+(mode==="up"?"Open an account":"Sign in")+'</h2></div>'
       +'<button class="x" data-act="modal-close" aria-label="Close">✕</button></div>'
@@ -10851,7 +10850,7 @@ function modalAccount(){
   const conf=SYNC.conflict?'<div class="brief" style="border-left-color:var(--stamp)">'
       +'There is a newer copy of this game on the account — week '+esc(String(SYNC.conflict.server_week||"?"))
       +', saved '+esc(String(SYNC.conflict.server_updated_at||"").slice(0,16).replace("T"," "))+'. '
-      +'This machine is on week '+S.week+'. Nothing has been overwritten either way. '
+      +(S?'This machine is on week '+S.week+'. ':'')+'Nothing has been overwritten either way. '
       +'<b>Fetch it</b> replaces what is on this machine; carrying on here will save over it on the next save.</div>':'';
   const rows=(games===null||games===undefined)
     ? '<div class="empty">Press Refresh to see what is on the account.</div>'
@@ -10863,7 +10862,7 @@ function modalAccount(){
         +'<div style="text-align:right"><button class="btn ghost sm" data-act="acc-pull" data-id="'+esc(g.game_id)+'">Fetch →</button></div>'
         +'</div>').join("")
       : '<div class="empty">Nothing on the account yet. It goes up on the next save.</div>');
-  return '<div class="scrim"><div class="modal" role="dialog" aria-modal="true">'
+  return '<div class="scrim" data-act="acc-scrim"><div class="modal" role="dialog" aria-modal="true">'
     +'<div class="modal-h"><div><div class="kicker">The office · your account</div>'
     +'<h2 style="font-size:24px;margin-top:4px">'+esc(a.email||"Signed in")+'</h2></div>'
     +'<button class="x" data-act="modal-close" aria-label="Close">✕</button></div>'
@@ -11865,6 +11864,12 @@ function chrome(){
     +'<button class="ibtn" data-act="info" aria-label="What is this screen? (i)" title="What is this screen? (i)">i</button>'
     +'<button class="burger" data-act="office" aria-label="The office — pause and settings (Esc)" title="The office (Esc)"><span></span><span></span><span></span></button>'
     +(UI.till?'<div class="above">'+modalTill("key")+'</div>':"")   // above the title's logotype, like the i card
+    /* The account lives here rather than in S.modal, and that is the whole point: S is null until
+       a game is opened, so hanging it off S.modal meant the one link to it — on the title screen,
+       where there is no game — threw on the click and did nothing at all. It was unreachable from
+       the moment it shipped. In `above` for the same reason the till is: it has to open over the
+       office, which is where you now get to it from mid-game. */
+    +(UI.account?'<div class="above">'+modalAccount()+'</div>':"")
     +(UI.office?officeHTML():"")
     +(UI.info?infoHTML():"")
     +(UI.qrh?qrhHTML():"")
@@ -12009,6 +12014,8 @@ function officeHTML(){
     +'<button class="btn ghost sm" data-act="off-handbook" title="Every rule and number in the game, with a search bar — opens in a new tab">Handbook</button>'
     +'<button class="btn ghost sm" data-act="off-tutor" title="The tutorial, any card, whenever you want">Tutorial</button>'
     +'<button class="btn ghost sm" data-act="off-cabinet" title="Carry the game to another browser, or keep a copy">Files</button>'
+    +'<button class="btn ghost sm" data-act="acc-open" title="'+(signedIn()?"Your account — the crew, the free run and the key it was bought with":"Sign in, or open an account: the crew stops living in one browser")+'">'
+      +(signedIn()?"Account ✓":"Account")+'</button>'
     +(S?'<button class="btn ghost sm" data-act="off-hat">Your file</button>':'')
     +'<button class="btn sm" data-act="off-close">'+(S?"Back to the game":"Back")+'</button>'
     +'<button class="btn ghost sm" data-act="off-exit">Exit door</button>'
@@ -12246,7 +12253,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 116 · September 2026";
+const BUILD="build 117 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
@@ -12503,8 +12510,12 @@ document.addEventListener("click",e=>{
     /* The account. Every one of these is a player pressing something — nothing on this screen
        happens on its own, and the only one that touches the local save is acc-pull, which is the
        one the copy under it warns about. */
-    case "acc-open": e.preventDefault(); ACC_ERR=""; UI.accSent=""; UI.accGames=null; S.modal={type:"account"}; render();
-      accRefresh().then(()=>{ if(S.modal&&S.modal.type==="account")render(); }); break;
+    case "acc-open": e.preventDefault(); ACC_ERR=""; UI.accSent=""; UI.accGames=null; UI.account=true; render();
+      accRefresh().then(()=>{ if(UI.account)render(); }); break;
+    // It could not be shut. The ✕ carried an act with no case behind it and the scrim carried no
+    // act at all, so the only ways out of the account screen were signing in or signing out.
+    case "modal-close": UI.account=false; UI.accSent=""; ACC_ERR=""; render(); break;
+    case "acc-scrim": if(e.target===t){UI.account=false;UI.accSent="";ACC_ERR="";render();} break;
     case "acc-mode": UI.accMode=(UI.accMode==="up")?"in":"up"; ACC_ERR=""; UI.accSent=""; render(); break;
     case "acc-forgot": {
       const em=document.getElementById("acmail");

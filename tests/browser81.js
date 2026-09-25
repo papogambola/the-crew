@@ -110,9 +110,48 @@ db.commit(); print("OK")
   const made=await page.evaluate(([m,p])=>window.accSignUp(m,p),[who,PASS]);
   check(made===true,"an account to forget the password of");
 
+  /* ---- 1b. The way IN. This is the part that was broken and nobody could see. ----------
+     The account link lives on the title screen, where S is null, and the handler did
+     S.modal={type:"account"} — which throws on null. So the one route to the account died on
+     the click, silently, from the day it shipped. Checked from a COLD page with no game, which
+     is the state every first-time player is in. */
+  await page.evaluate(()=>{try{localStorage.clear();}catch(e){}});
+  await page.goto("http://127.0.0.1:"+PORT+"/"+path.relative(ROOT,FILE),{waitUntil:"domcontentloaded"});
+  await page.waitForFunction(()=>typeof window.render==="function",{timeout:15000});
+  // Bare S, not window.S: the game declares it with `let` at the top level, which makes a
+  // binding in the global lexical scope and NOT a property of window. window.S is undefined
+  // whatever the game is doing, so asking that way is a test that passes for the wrong reason.
+  check(await page.evaluate(()=>S===null),"the title screen really has no game behind it");
+  const coldErrs=[];const onErr=e=>coldErrs.push(String(e));page.on("pageerror",onErr);
+  await page.click('[data-act="acc-open"]');
+  await page.waitForTimeout(400);
+  check(coldErrs.length===0,"clicking the account link with no game open throws nothing"
+    +(coldErrs.length?": "+coldErrs[0]:""));
+  check(await page.locator(".modal-b").count()>0,"and the account screen actually opens");
+  page.off("pageerror",onErr);
+
+  /* It can also be shut again. The ✕ carried an act with no case behind it. */
+  await page.click('[data-act="modal-close"]');
+  await page.waitForTimeout(300);
+  check(await page.locator(".modal-b").count()===0,"and the ✕ closes it again");
+
+  /* ---- 1c. And it is reachable from the office, mid-game ------------------------------- */
+  await newGame();
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+  check(await page.locator('.office [data-act="acc-open"]').count()===1,
+        "the office has a way to the account, so it is reachable once a game is running");
+  await page.click('.office [data-act="acc-open"]');
+  await page.waitForTimeout(400);
+  check(await page.locator(".modal-b").count()>0,"and it opens over the office rather than under it");
+  await page.click('[data-act="modal-close"]');
+  await page.waitForTimeout(300);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+
   /* ---- 2. "Forgotten it?" is on the sign-in side and only there ------------------------ */
   await page.evaluate(()=>{window.accSignOut();});
-  await page.evaluate(()=>{UI.accMode="in";S.modal={type:"account"};render();});
+  await page.evaluate(()=>{UI.accMode="in";UI.account=true;render();});
   check(await page.locator('[data-act="acc-forgot"]').count()===1,
         "the sign-in screen offers a way out for somebody who has forgotten");
   await page.evaluate(()=>{UI.accMode="up";render();});
