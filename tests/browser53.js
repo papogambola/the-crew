@@ -107,13 +107,20 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   check(mid.no===2,"the screen has moved to "+mid.no);
   check(mid.lines===linesBefore+3,"three lines were added: what that call was, a beat, and the next thing");
   check(mid.tail.length===3,"→ "+mid.tail.map(t=>'"'+t+'"').join("  "));
-  // The beat matters: without it the second question lands on top of the first answer.
-  const between=await page.evaluate(()=>TWIST_BETWEEN);
-  check(between.indexOf(mid.tail[1])>=0,"the middle one is the beat between them, not a twist line");
-  const again=await page.evaluate(()=>TWIST_AGAIN);
+  /* Both lists, day and night. Every one of these has a _NIGHT variant that twistLines() swaps in
+     for a job that happens after dark, and this asked only about the daytime one — so a night job
+     drew a perfectly correct "Then the night finds something else." and was reported as a failure,
+     about one run in five. A line that goes red at random is a line people learn to scroll past,
+     and this suite has already lost assertions that way. Same fix as smoke43, which had the same
+     bug and was found first; this file was not checked at the time, so it kept firing. */
+  const between=await page.evaluate(()=>TWIST_BETWEEN.concat(TWIST_BETWEEN_NIGHT));
+  check(between.indexOf(mid.tail[1])>=0,"the middle one is the beat between them, not a twist line"
+    +(between.indexOf(mid.tail[1])>=0?"":": \""+mid.tail[1]+"\""));
+  const again=await page.evaluate(()=>TWIST_AGAIN.concat(TWIST_AGAIN_NIGHT));
   check(again.indexOf(mid.tail[2])>=0,"and the last says it is happening AGAIN: \""+mid.tail[2]+"\"");
   // The prose is not allowed to count either. "And then the second one" numbers it; "the room has
-  // one more in it" and "the other shoe" both promise exactly one more and no further.
+  // one more in it" and "the other shoe" both promise exactly one more and no further. Checked
+  // across both lists, because a night line that counts is exactly as wrong as a day one.
   const counting=again.filter(l=>/\bsecond\b|\bthird\b|\bone more\b|\bother shoe\b|\blast\b/i.test(l));
   check(counting.length===0,"and not one of the "+again.length+" lines that announce another says which it is"
     +(counting.length?" — "+counting.join(" / "):""));
