@@ -37,7 +37,19 @@ MARK = "/* art.py:have */const ART_HAVE="
 
 # The tables the feed draws on that are being illustrated. Grown one chapter at a time, because a
 # style has to be judged on a set before six hundred of them are paid for.
-TABLES = ["ARRIVE", "PAPERS"]
+# Every table the live job report draws on. 442 lines across these, plus 368 in TWISTS, which is
+# 810 for a job end to end. Grown from ARRIVE and PAPERS alone once the style was settled.
+TABLES = [
+    "ARRIVE", "PAPERS", "WEATHER", "LOCAL", "SPEAKS", "NOSPEAK", "NOTECH", "FIXED",
+    "PLACES", "THINGS", "QUIET", "STREET", "MORNING", "SPLIT", "STANDIN", "LEADERLESS",
+    "NOPAY", "POLICE_COME", "YOU_INSIDE", "YOU_RUN", "GAP_WHEEL", "GAP_NONE",
+    "KNOW_HAS", "KNOW_NONE", "EXIT_OK", "EXIT_MINUS", "EXIT_NOWHEEL", "TEXTURE", "WHERE",
+]
+
+# TWISTS is not a list of sentences but a list of objects — {k, cats, h, s:[...], opts:[...]} —
+# and the drawable moment is the HEADLINE, "The engine won't turn". One drawing per twist, not
+# one per wording of it: the three s[] variants are the same moment told three ways.
+TWIST_TABLE = "TWISTS"
 
 # The look, held in one place so six hundred drawings are recognisably one hand. It is the game's
 # own look: black ink on white paper, no colour, no lettering — the sentence is already on the
@@ -99,6 +111,13 @@ def templates():
         for t in re.findall(r"\"((?:[^\"\\]|\\.)*)\"", rest):
             if len(t) > 20 and " " in t:
                 out.append((name, t))
+    # The twists, by headline.
+    m = re.search(r"^const " + TWIST_TABLE + r"=(\[.*?\]);$", game, re.M | re.S)
+    if m:
+        for h in re.findall(r"\bh:\"((?:[^\"\\\\]|\\\\.)*)\"", m.group(1)):
+            if len(h) > 8:
+                out.append((TWIST_TABLE, h))
+
     seen, uniq = set(), []
     for name, t in out:
         if t not in seen:
