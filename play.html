@@ -652,6 +652,12 @@
   .feed-cols{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start}
   .feed-side{position:sticky;top:0}
   .feed-side .feedmap{margin-top:0}
+  /* The drawing sits where the plan sat: same width, same ink, same border. A fixed 4:3 box so a
+     line with a picture and a line without do not shove the feed up and down as they alternate. */
+  .feedart{margin:0;border:1px solid var(--line-2);background:var(--card)}
+  .feedart img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--paper-2)}
+  .feedart figcaption{font-size:11px;letter-spacing:.06em;color:var(--muted);
+    padding:5px 8px;border-top:1px solid var(--line)}
   .feed-main .ticker{margin-top:0;max-height:min(66vh,640px)}
   /* When the trip settles, the sheet keeps the width it had while it was running and the file of
      whoever signed takes the place the map was in. Stacked under the story it was taller than the
@@ -4465,9 +4471,12 @@ function narrate(job,a,tier,rng,x,mode,clock){
      whole of why the aftermath rolls the day over: "By morning the police have a description"
      stamped 17:00 the same evening is the report contradicting itself in two adjacent columns. */
   let over=false;                                  // past midnight, into the morning after
-  const push=(t,tone,at,who,act)=>{m+=ri(rng,4,26);if(m>=60){m-=60;h=(h+1)%24;}
+  const push=(t,tone,at,who,act,tpl)=>{m+=ri(rng,4,26);if(m>=60){m-=60;h=(h+1)%24;}
     const L={t:(over?"NEXT ":"")+String(h).padStart(2,"0")+":"+String(m).padStart(2,"0"),x:t,tone:tone||""};
     if(at)L.at=at;if(who)L.who=who;if(act)L.act=act;
+    // The template, not the rendered sentence: the drawing is of "the keys are under the mat",
+    // and Jeddah or Oslo is the words' business, not the picture's.
+    if(tpl)L.art=artId(tpl);
     lines.push(L);};
   S.recent=S.recent||[];
   const key=p=>typeof p==="string"?p:p[0];
@@ -4483,7 +4492,13 @@ function narrate(job,a,tier,rng,x,mode,clock){
   // and two Brunos in the field want telling apart whoever else is at home. "Bruno read the
   // trade up" was a sentence about one of two men and no way to know which.
   const nm=c=>nameOf(c,team);
-  const say=(pool,c,vars,tone,at,act)=>push(fill2(pair(fresh(pool),c),Object.assign({X:c?nm(c):"",P:cap(police(co))},vars||{})),tone,at||(c?techSite(c.tech):null),c?c.id:null,act);
+  const say=(pool,c,vars,tone,at,act)=>{
+    // Drawn once and held, because fresh() has a side effect — it marks the line read — so calling
+    // it twice to get the text and then the id would burn two lines and print one.
+    const tpl=fresh(pool);
+    push(fill2(pair(tpl,c),Object.assign({X:c?nm(c):"",P:cap(police(co))},vars||{})),
+         tone,at||(c?techSite(c.tech):null),c?c.id:null,act,key(tpl));
+  };
   const someone=()=>team.length?pick(rng,team):null;
   // two missing trades are two people's weeks, not one person's — unless the crew is smaller
   // than the number of gaps, and then somebody covers two and still learns one thing.
@@ -4491,8 +4506,9 @@ function narrate(job,a,tier,rng,x,mode,clock){
   if(mode!=="post"){
     const kind=co.terrain.some(t=>["islands","coast","port","fjords","canal"].includes(t))&&chance(rng,0.5)?"water":co.terrain.includes("megacity")?"city":co.terrain.includes("mountains")?"mountain":"road";
     const how=fresh(HOW[kind]);
-    push(fill2(fresh(ARRIVE),{city:job.city,country:job.country,how,How:cap(how)}),"","road","*");
-    if(chance(rng,0.5))push(fresh(WEATHER),"","road");
+    const arr=fresh(ARRIVE);
+    push(fill2(arr,{city:job.city,country:job.country,how,How:cap(how)}),"","road","*",arr);
+    if(chance(rng,0.5)){const w=fresh(WEATHER);push(w,"","road",null,null,w);}
     a.checks.forEach(c=>{
       if(c.ok){
         if(c.why==="local national")say(LOCAL,c.c,null,"","road");
@@ -8579,6 +8595,48 @@ const SC_W=100,SC_H=84;
 const SC_CACHE={};
 const f1=v=>(+v).toFixed(1);
 function fmHash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+
+/* WHAT THE PICTURE IS OF.
+
+   The feed's lines are not free text — they are templates with the city, the country and a name
+   slotted in ("{city}. {How}. The keys are under the mat, as promised, which is a worry."), and
+   there are about 550 of them across the job report. That is a large number and a FINITE one,
+   which is the whole reason a drawing per line is affordable: one picture per template, made
+   once, rather than one per line per playthrough per player.
+
+   So a line carries the id of the template that wrote it, and the id is derived from the words
+   themselves rather than from a position in an array. Two consequences, both wanted:
+
+     — inserting a line into a table does not renumber anybody else's drawing;
+     — EDITING a line orphans its drawing, which is correct. The picture was of those words. Change
+       "the keys are under the mat" to "the keys are in the meter" and the drawing of a hand under
+       a doormat is no longer a picture of the sentence it sits beside.
+
+   The slug in front of the hash is for the person browsing a folder of six hundred files; the hash
+   is what actually identifies it. tools/art.py builds the list and finds both gaps and orphans. */
+function artSlug(t){
+  return String(t||"")
+    .replace(/\{[^}]*\}/g,"")                     // the placeholders are not part of the sentence
+    .toLowerCase().replace(/[^a-z0-9]+/g," ").trim()
+    .split(/\s+/).filter(w=>w.length>2).slice(0,4).join("-") || "line";
+}
+function artId(t){
+  if(!t)return "";
+  return artSlug(t)+"-"+("0000000"+fmHash(String(t)).toString(16)).slice(-8);
+}
+/* Where the drawings live. Beside the game for now, because forty-six files is nothing; the same
+   one-line move the music made to R2 is waiting here when the set is six hundred. Overridable so
+   the tests can serve their own. */
+const ART_HOME="art/";
+const ART_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_ART==="string")?window.THE_CREW_ART:ART_HOME;
+function artURL(id){return ART_BASE+id+".webp";}
+/* Which ids actually have a drawing. A list rather than a hopeful <img> and a 404 handler: the
+   panel has to know BEFORE it draws whether it is showing a picture or the plan, or every line
+   without art flashes a broken image on its way to the fallback. Written by tools/art.py --write,
+   and --check fails if it has drifted from what is in art/. */
+/* art.py:have */const ART_HAVE=[];
+const ART_SET=(typeof Set!=="undefined")?new Set(ART_HAVE):null;
+function artHas(id){return !!id&&(ART_SET?ART_SET.has(id):ART_HAVE.indexOf(id)>=0);}
 function scRot(a,cx,cy){const r=a*Math.PI/180,c=Math.cos(r),s=Math.sin(r);return (x,y)=>({x:cx+(x-cx)*c-(y-cy)*s,y:cy+(x-cx)*s+(y-cy)*c});}
 function scClamp(p,m){m=m||9;return {x:Math.min(SC_W-m,Math.max(m,p.x)),y:Math.min(SC_H-13,Math.max(m+3,p.y))};}
 const scRect=(x,y,w,h,cls,extra)=>'<rect class="'+cls+'" x="'+f1(x)+'" y="'+f1(y)+'" width="'+f1(w)+'" height="'+f1(h)+'"'+(extra||"")+'/>';
@@ -8911,6 +8969,49 @@ function fmSitePos(k,F){
   return {x:F.cx+off[0]*u,y:F.cy+off[1]*u};
 }
 const FM_OP_SCALE=0.74;
+/* THE PICTURE BESIDE THE LINE.
+
+   The plan showed five labelled dots and some figures shuffling between them, and it told you
+   nothing the sentence had not already said better — you watched YOU and Itai slide two
+   centimetres while reading that Itai's papers passed. So the panel shows a drawing of the moment
+   instead, and keeps the plan only where there is no drawing yet.
+
+   It follows the LAST REVEALED line that has one, not the last line: a run of three sentences
+   with no art should leave the previous picture up rather than blink back to the map and out
+   again. A panel that flickers is worse than a panel that lags.
+
+   The next drawing is fetched while the current line is still being read — a feed line is on
+   screen for between 0.8 and 4.5 seconds (SPEEDS), which is long enough to preload one image and
+   nowhere near long enough to generate one. That is the entire argument for these being drawn
+   ahead of time rather than on the night. */
+function feedArtLine(d){
+  const seen=(d.narrative||[]).slice(0,d.revealed||0);
+  for(let i=seen.length-1;i>=0;i--)if(seen[i].art&&artHas(seen[i].art))return seen[i];
+  return null;
+}
+function feedArt(d){
+  const L=feedArtLine(d);
+  if(!L)return "";
+  // The line's own words are the alt text. Nothing describes the picture better, and a reader has
+  // just been read that sentence, so the image is a restatement of it rather than new information.
+  return '<figure class="feedart"><img src="'+esc(artURL(L.art))+'" alt="'+esc(L.x)+'" decoding="async">'
+    +'<figcaption class="mono">'+esc(L.t)+'</figcaption></figure>';
+}
+/* The one after this one, so it is in the cache before it is wanted. */
+function feedArtPreload(d){
+  const all=d.narrative||[];
+  for(let i=(d.revealed||0);i<all.length;i++){
+    if(all[i].art&&artHas(all[i].art)){
+      try{const im=new Image();im.decoding="async";im.src=artURL(all[i].art);}catch(e){}
+      return;
+    }
+  }
+}
+function feedSide(d){
+  const art=feedArt(d);
+  if(art){feedArtPreload(d);return art;}
+  return feedMap(d);              // nothing read so far has a drawing: the plan, as before
+}
 function feedMap(d){
   // a job is the crew; a trip is you and whoever you flew out to meet
   const team=d.cid?[S.player,byId(d.cid)].filter(Boolean):(d.teamIds||[]).map(byId).filter(Boolean);
@@ -9245,7 +9346,7 @@ function modalResult(d){
         +'<button class="btn ghost sm" data-act="tick-hold" aria-pressed="'+(UI.hold?"true":"false")+'" title="Hold the feed where it is">'+(UI.hold?"▶ Resume":"❚❚ Pause")+'</button>'
         +'<button class="btn ghost sm" data-act="skip-ticker" title="Run the rest of it at once">Skip →</button></div>';
     }
-    return modalWrap(h+'<div class="modal-b"><div class="feed-cols"><div class="feed-main">'+ticker+below+'</div><div class="feed-side">'+feedMap(d)+'</div></div></div>',"feed");
+    return modalWrap(h+'<div class="modal-b"><div class="feed-cols"><div class="feed-main">'+ticker+below+'</div><div class="feed-side">'+feedSide(d)+'</div></div></div>',"feed");
   }
   const nums='<div class="num-grid">'
     +'<div class="b"><div class="k">Gross</div><div class="v num">'+money(d.take)+'</div></div>'
@@ -12376,7 +12477,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 118 · September 2026";
+const BUILD="build 119 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
