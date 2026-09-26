@@ -201,6 +201,49 @@ told you whether the night had anything in it before you had read a line of it. 
   feed too, so "Paused" on its door is true. The field
   roster marks who came back: **GONE** in red on anyone who walked with the money, **TAKEN** on
   anyone the police held, **HURT** on the injured.
+- **Nothing lands until you have read it.** The whole night is reckoned the moment you take the
+  job, because the report *is* that reckoning written out a line at a time — but none of it reaches
+  the top bar until you press **Continue**. The balance, the heat and the ranking all read exactly
+  what they read before the job for as long as any part of the report is on screen: the card of the
+  city, the feed, a decision, the finished sheet. So do the career marks, which pay ranking and
+  money of their own.
+
+  This was wrong for a long time and it was wrong in four places at once. The numbers went straight
+  into the state, the state is what the top bar reads, and the top bar is visible behind the modal —
+  so before a single line had been read you could glance up and know how the night had gone.
+  Measured on a job worth $128,000: on the card, money was already +$48,642, heat 0 → 23 and ranking
+  10 → 8. A seven-second establishing shot and a feed that plays at five speeds are both for nothing
+  if the answer is printed above them. `tests/browser83.js` drives a real job and reads the bar's own
+  text at every stage.
+
+  Held is not the same as not earned. The report itself is not saved — only the job behind it — so
+  closing the tab on a finished one leaves nothing to press Continue on; the held difference goes
+  into the save and lands when the file is opened again. That is the one way this could have cost
+  somebody real money, so it is checked as an actual reload rather than a simulated one.
+
+- **The card of the city has the country's anthem on it.** A few seconds of the opening phrase,
+  synthesised from eight note names rather than streamed — forty-nine mp3s would be megabytes on a
+  file that has to arrive before anybody can play, and a melody written as note names costs eighty
+  bytes. It is the card's sound, not a layer under it: a country with a tune plays the tune and
+  **not** the old cue, and a country without one keeps the cue rather than going silent.
+
+  It shipped inaudible. Both halves were wrong — the cue and the anthem played together with the
+  anthem deliberately mixed underneath, and "underneath" turned out to be 15 dB below the cue at the
+  peak and 23 dB below it in RMS, which is not a mix, it is silence. Nothing tested the sound of the
+  card, which is why it survived. `tests/browser84.js` renders both through an `OfflineAudioContext`
+  and compares them in decibels, which is the only form of that assertion that could have failed.
+
+  **12 of the 49 countries have a tune.** Six were written out by hand and checked by ear; the other
+  six were read off the LilyPond score published on the anthem's own Wikipedia article by
+  `tools/anthems.py` — LilyPond note names are absolute pitches, so there is nothing in that to
+  remember and nothing to interpret. `--check` runs the same reader over the six hand-written ones
+  and rebuilds Hatikvah interval for interval. Where a page disagrees with a tune somebody listened
+  to, the tune wins and the tool leaves it alone: O Canada's page carries a different arrangement,
+  and choosing between two arrangements is not a thing a script gets to do. The remaining 37 have no
+  score on their article and keep the cue until somebody with a piano fills them in. **A wrong
+  anthem is worse than none** — it is the game being wrong about something the player knows better
+  than it does, over a card with their own flag on it.
+
 - **The police arrive, and the room knows it.** When the feed reaches the line where the police
   show up — sirens two streets over, a patrol car at the door, the squad that was waiting because
   somebody talked, the two officers in the hotel lobby on a recruitment trip — the screen darkens,

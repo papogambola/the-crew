@@ -92,6 +92,11 @@ S.rep=0;
 S.rep=0;S.money=5e7;
 let cj=null;for(let r=0;r<60&&!cj;r++){cj=S.jobs.find(j=>!j.final&&caseMax(j)>0&&assessJob(j,jobPool(j)).team.length>0)||null;if(!cj){S.jobs=[];refreshJobs(true);}}
 assert(cj,"a posting worth casing");
+// Bank whatever the jobs above are still holding before measuring the board. Since build 122 a
+// night's heat, money and ranking are held while its report is on screen and land on the first
+// render after it goes — and caseJob() runs a weekTick and a render, so the held heat landed in
+// the middle of the measurement and its Heat factor cancelled the Cased one exactly.
+S.modal=null;render();settleJob();
 const m0=assessJob(cj,jobPool(cj)).margin,wk0=S.week,money0=S.money;
 S.tab="jobs";S.jobOpen=cj.id;render();
 assert(html().indexOf("Casing it")>=0&&html().indexOf('data-act="case"')>=0,"the job file offers it");

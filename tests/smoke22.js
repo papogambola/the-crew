@@ -43,7 +43,13 @@ assert(stats().hired===4,"hires counted");
 clear();
 // a job moves the counters
 const j=S.jobs.find(x=>!x.final&&assessJob(x).canRun);
-const r=executeJob(j);const rep0=S.rep;
+const r=executeJob(j);
+// Bank the night before taking the baseline. Since build 122 a job's ranking, money and heat are
+// held until its report leaves the screen, and executeJob puts no report up — so without this the
+// baseline is the ranking BEFORE the job and the render() below lands the job's own delta on top
+// of the mark's. On a night that cost ranking the two cancelled and the mark looked unpaid.
+settleJob();
+const rep0=S.rep;
 const st=stats();
 assert(st.jobs===1&&st.countries[j.country]===1&&st.earned===r.net,"one job: counted, country logged, net banked");
 assert(st[["disaster","botched","messy","success","clean"][r.tier]]===1,"the verdict is tallied ("+r.verdictName+")");

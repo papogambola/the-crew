@@ -619,9 +619,15 @@
   .tut-target{outline:3px solid var(--stamp);outline-offset:4px;box-shadow:0 0 0 8px rgba(154,43,30,.14)}
 
   /* ---- the live job report ---- */
-  /* the live screen: the feed on the left, the drawing on the right, pinned while the feed scrolls */
-  .modal.feed{max-width:1060px}
-  .feed-cols{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start}
+  /* the live screen: the feed on the left, the drawing on the right, pinned while the feed scrolls.
+     The drawing is the half of this screen that is worth looking at, and at 380px it was a thumbnail
+     beside a column of text with a foot of empty paper under it. It takes a real share of the sheet
+     now — the sheet is wider, and the wider half of it is the picture. The text loses about eighty
+     pixels, which is four characters a line, and reads the same.
+     min() rather than a flat number so it still fits a 1280-wide laptop with the window not
+     maximised: the column takes 42% of the sheet, and never more than 560. */
+  .modal.feed{max-width:1280px}
+  .feed-cols{display:grid;grid-template-columns:minmax(0,1fr) min(42%,560px);gap:16px;align-items:start}
   .feed-side{position:sticky;top:0}
   /* No drawing for anything read so far: the report takes the sheet. Better than an empty frame
      holding a space open for a picture that may never come. */
@@ -5013,6 +5019,9 @@ function finishJob(P,choiceIdx,d){
   const a=assessJob(job,P.memberIds?P.memberIds.map(byId).filter(Boolean):null,P.leadId||null);
   const team=a.team;
   const heatIn=S.heat;   // what they carried in, before this job adds its own
+  // What the three numbers on the top bar said before the night was reckoned. They are put back
+  // to this at the end and the difference is held until the report is closed — see jobHold().
+  const barWas={money:S.money,heat:S.heat,rep:S.rep};
   // Every one of them is answered and every answer counts. The score deltas and the blood add up;
   // what each one costs of the take compounds rather than adding, because two calls that each lose
   // half of it leave a quarter, not nothing.
@@ -5312,8 +5321,52 @@ function finishJob(P,choiceIdx,d){
   S.reports=S.reports||[];S.reports.push(Object.assign({},res));if(S.reports.length>80)S.reports.shift();
   S.pendingJob=null;
   if(d)Object.assign(d,res,{narrative,revealed:d.revealed,done:false,awaiting:false,resolved:true,twist:twRec,twists:twRecs});
+  jobHold(barWas);
   save();
   return res;
+}
+/* THE NIGHT IS NOT BANKED UNTIL IT HAS BEEN READ.
+
+   The whole night is reckoned the moment the job starts — the roll, the take, the heat, the
+   ranking — because the report IS that reckoning written out a line at a time. The numbers went
+   straight into S, which put them on the top bar, which is on screen behind the card of the city.
+   So before a single line had been read you could look up and see the balance move, the heat jump
+   and the ranking fall, and know how the night had gone. A seven-second establishing shot and a
+   feed that plays out at five speeds are both for nothing if the answer is printed above them.
+
+   Measured on a job worth $128,000: on the card, before the first line, money was already
+   +$48,642, heat 0 → 23 and ranking 10 → 8. Three separate tells, not one.
+
+   So the difference the night made to those three is taken back out of S and held here, and put
+   in when the player closes the report. Held as a DIFFERENCE rather than as the finished figure:
+   an absolute would overwrite anything else that moved the balance while the report was up, and
+   re-adding a delta cannot. Everything else finishJob does — who is hurt, who is held, what went
+   in the log — is left alone: none of it is on the top bar, and all of it is behind the report.
+
+   It is measured rather than recomputed. finishJob reads S.heat and S.rep while it works (the
+   rank damping, what the heat multiplies), so a second copy of the arithmetic here would be a
+   second place to keep in step. Subtracting what actually landed cannot drift from it. */
+function jobHold(was){
+  if(!was)return;
+  const held={money:S.money-was.money, heat:S.heat-was.heat, rep:S.rep-was.rep};
+  S.money=was.money; S.heat=was.heat; S.rep=was.rep;
+  // Added to rather than replaced: two nights can be held at once if a report is somehow left
+  // open while another is run, and the second must not swallow the first.
+  const h=S.settle||{money:0,heat:0,rep:0};
+  S.settle={money:h.money+held.money, heat:h.heat+held.heat, rep:h.rep+held.rep};
+}
+/* And the other end of it: put in what was held. Idempotent, because it is called from every way
+   a report can leave the screen — Continue, the scrim, Escape, and a reload that finds a
+   settlement with no report left to attach it to. Clamped on the way in exactly as finishJob
+   clamped it, so a held delta cannot push heat past 120 or a balance below zero. */
+function settleJob(){
+  const h=S&&S.settle;
+  if(!h)return false;
+  S.settle=null;
+  S.money=Math.max(0,S.money+(h.money||0));
+  S.heat=clamp(S.heat+(h.heat||0),0,120);
+  S.rep=clamp(S.rep+(h.rep||0),0,999);
+  return true;
 }
 // The old one-shot form, used where nobody is watching the report play.
 // The one-step form, used where a job is settled without a live feed. It has to honour the
@@ -5867,8 +5920,35 @@ const root=document.getElementById("root");
 let draft=null;
 function render(){
   if(!S){musicRoute();root.innerHTML=screenTitle()+chrome();bind();fitTitle();fitQRH();return;}
-  // a milestone reached is announced first; something that happened between jobs waits for a decision next
-  checkMilestones();checkGoals();checkRank();   // rank last: a mark that pays a rung announces the mark, then the rung
+  /* The night lands the moment its report is no longer the thing on the screen — see jobHold().
+     ONE rule in ONE place, rather than a settleJob() beside every way a report can be left: there
+     are thirty-two of those, and the two or three anybody thinks of are not the ones that break.
+     Continue and the scrim are the ways it is meant to happen; Escape, a tab, a notice arriving
+     over the top and a reload that cannot rebuild the report are the ways it happens anyway.
+     While ANY part of the report is up — the card of the city, the feed, a decision, the finished
+     sheet — the numbers are held. The frame after it goes, they are in. */
+  if(S.settle&&!(S.modal&&isFeed(S.modal.type))){settleJob();save();}
+  /* a milestone reached is announced first; something that happened between jobs waits for a
+     decision next. rank last: a mark that pays a rung announces the mark, then the rung.
+
+     A career mark pays RANKING AND MONEY, and these run on EVERY render — so the mark earned by
+     the job you are about to watch was awarded, and its ranking added to the top bar, while the
+     card of the city was still up. That was the second tell after the night's own numbers, and the
+     louder one, because a mark is only ever earned by a job that went well.
+
+     They are still WORKED OUT here, at the moment they are earned, so a mark is not evaluated
+     twice and its notice queues in the order it happened. What is held is only the two numbers,
+     into the same bucket the night's own go into — so everything one job caused lands together,
+     on Continue. Skipping the checks outright was tried first and was worse: a mark then floated
+     until some later render that happened not to have a report on it, which is a side effect with
+     no fixed moment, and two suites caught it by measuring the ranking in between. */
+  if(S.modal&&isFeed(S.modal.type)){
+    const was={money:S.money,heat:S.heat,rep:S.rep};
+    checkMilestones();checkGoals();checkRank();
+    jobHold(was);
+  } else {
+    checkMilestones();checkGoals();checkRank();
+  }
   // Two of a trade on one crew is the consequence of the thing you just did, so it is looked
   // for wherever somebody joins — hired, recalled, rehired, or loaded out of an old save —
   // rather than at each of those places separately, where the fifth one would be forgotten.
@@ -8480,10 +8560,18 @@ function estabArm(){
     setTimeout(()=>{if(S&&S.modal&&S.modal.data===d)render();},0);
     return;
   }
-  cityCueStart();
-  // The country comes off the job rather than a global: the card is the only place in the game
-  // that has said out loud where you are, and this is the same sentence in sound.
-  anthemStart(d.job&&d.job.country);
+  /* THE ANTHEM IS THE CARD'S SOUND, AND THE CUE IS WHAT PLAYS WHEN THERE IS NO ANTHEM.
+
+     Both used to play, with the anthem mixed deliberately UNDER the cue. That was the wrong way
+     round and it made the whole feature invisible: what you heard over a card with Germany's flag
+     on it was the same soft sea you heard over every other country, with a tune somewhere behind
+     it. "I still hear the old music" was exactly right, twice over — under the cue on the six
+     countries that had a tune, and alone on the forty-three that did not.
+
+     So it is one or the other. The country comes off the job rather than a global, because the
+     card is the only place in the game that says out loud where you are, and this is the same
+     sentence in sound. */
+  if(!anthemStart(d.job&&d.job.country))cityCueStart();
   ESTAB=setTimeout(()=>{ESTAB=null;
     if(!S||!S.modal||S.modal.type!=="result"||S.modal.data!==d)return;
     estabDrop(d);render();},ESTAB_MS);
@@ -10881,17 +10969,34 @@ const CITY_CUE={audio:null,on:false,fade:null};
    onto a file that is already 1.6MB and has to arrive before anybody can play. A melody written as
    eight note names costs about eighty bytes. The whole table is smaller than one bar of audio.
 
-   A COUNTRY WITH NO ENTRY HERE GETS NOTHING, and that is the point of the table being short. The
-   game already refuses to invent a verdict or a target; an anthem is the same kind of claim, and a
-   half-remembered one is not a near miss — it is the tool being wrong about something the player
-   knows better than it does, over a card with that country's flag on it. Silence is a card with no
-   tune. A wrong tune is a card that is lying. So the list below is only what can be defended, and
-   it grows when somebody checks the next one by ear, not when somebody feels like it.
+   A COUNTRY WITH NO ENTRY HERE GETS THE CUE INSTEAD, and that is the point of the table being
+   only what it is. The game already refuses to invent a verdict or a target; an anthem is the same
+   kind of claim, and a half-remembered one is not a near miss — it is the tool being wrong about
+   something the player knows better than it does, over a card with that country's flag on it. The
+   sea and the soft music are a card with no tune. A wrong tune is a card that is lying.
+
+   Six of these were written out by hand and checked by ear, which is why for a long time there
+   were six. The ones marked below came off the LilyPond score published on the anthem's own
+   Wikipedia article, read by `tools/anthems.py` — LilyPond note names are absolute pitches, so
+   there is nothing in that to interpret and nothing to remember. `--check` runs the same reader
+   over the six done by hand: it rebuilds Hatikvah's opening interval for interval. Where the page
+   disagrees with a tune somebody listened to, the tune somebody listened to wins and the tool
+   leaves it alone — O Canada's page carries a different arrangement, and picking between two
+   arrangements is not a thing a script gets to do.
+
+   The rest have no score on their article to read. They keep the cue until somebody with a piano
+   or a recording fills them in, one at a time, the way the first six were done.
 
    Notes are absolute so they can be read and corrected by anybody who can find a piano: a letter,
    an optional # or b, an octave, and beats after a colon (one beat if left off). "-" is a rest. */
 const ANTHEM_BEAT=430;                 // ms per beat: an anthem is walked, not run
-const ANTHEM_GAIN=0.075;               // under the cue, never over it
+/* Measured, not chosen. At 0.075 the anthem rendered 23 dB under the cue in RMS and 15 dB under
+   it in peak — which is not "mixed underneath", it is inaudible, and it is the other half of why
+   the feature read as missing. The cue peaks at 0.434 (it is an mp3 played at volume*0.5); 0.30
+   puts a triangle oscillator's peak at 0.297, three decibels under that, with headroom against
+   clipping. RMS stays about 11 dB under because this is eight struck notes with air between them
+   rather than a continuous track, which is what a melody in front of nothing should look like. */
+const ANTHEM_GAIN=0.30;
 const ANTHEM_STEP={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
 const ANTHEMS={
   // "Oh say can you see" — 5 3 1 3 5 8, the rising arpeggio everybody can finish.
@@ -10905,7 +11010,13 @@ const ANTHEMS={
   // "O Ca-na-da" — the triad, with the first syllable held.
   "Canada":"F4:1.5 A4:.5 C5:1 C5:2",
   // "Rossiya, svyashchennaya nasha derzhava" — the leap of a fourth off the tonic.
-  "Russia":"C4:1 F4:1.5 F4:.5 G4:1 A4:1 A4:2"
+  "Russia":"C4:1 F4:1.5 F4:.5 G4:1 A4:1 A4:2",
+  "Germany":"Eb4:1.5 F4:.5 G4 F4 Ab4 G4 F4:.5 D4:.5 Eb4",    // Deutschlandlied, by tools/anthems.py
+  "Sweden":"D5:.5 D5 Bb4:.5 Bb4:.5 Bb4 C5:.5 D5:.5 D5 C5:.5",    // Du gamla, Du fria, by tools/anthems.py
+  "Italy":"F4 F4:.75 G4:.25 F4 D5 D5:.75 Eb5:.25 D5 D5",    // Il Canto degli Italiani, by tools/anthems.py
+  "China":"G4:.75 B4:.25 D5:.5 D5:.5 E5 D5 B4:.75 G4:.25 D5:.5",    // March of the Volunteers, by tools/anthems.py
+  "Japan":"D4 C4 D4 E4 G4 E4 D4:2 E4",    // Kimigayo, by tools/anthems.py
+  "Indonesia":"B3:.75 C4:.25 D4 B4:1.75 B4:.25 A4:.75 A4:.25 G4 D4:1.5",    // Indonesia Raya, by tools/anthems.py
 };
 /* Every country the game can send you to, and whether it has a tune yet. Printed by the suite so
    the gap is a number somebody can see rather than something you find out by playing to Jakarta
@@ -11986,7 +12097,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 121 · September 2026";
+const BUILD="build 122 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a

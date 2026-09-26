@@ -192,8 +192,14 @@ assert(recruits()[0].loyalty>=Math.min(100,loy1+1)||recruits()[0].loyalty===100,
 // one point per week laid low, off whatever the ladder currently says — and the idle counter
 // is zeroed first so the every-third-week decay does not land in the middle of the measurement
 const smallAt=RANKS.find(r=>r[1]==="Small time")[0];
-S.rep=smallAt+1;S.idle=0;S.event=null;S.modal=null;layLow();
-assert(S.rep===smallAt,"lay low: ranking −1 (to "+S.rep+")");
+// Bank whatever the job at the top of this file is still holding before touching the ranking.
+// Since build 122 a night's ranking, money and heat — and any career mark it earned — are held
+// while its report is on screen and land on the first render after it goes, so a test that sets
+// S.rep by hand with one still pending is measuring layLow() plus somebody else's night.
+S.modal=null;render();settleJob();
+const smallAt2=RANKS.find(r=>r[1]==="Small time")[0];
+S.rep=smallAt2+1;S.idle=0;S.event=null;S.modal=null;layLow();
+assert(S.rep===smallAt2,"lay low: ranking −1 (to "+S.rep+")");
 S.idle=0;layLow();
 assert(rankName(S.rep)==="Nobody"&&S.log.some(l=>l.t.indexOf("Small time → Nobody")>=0),"dropping a rank is logged with the note");
 // ---- poaching drains the least loyal

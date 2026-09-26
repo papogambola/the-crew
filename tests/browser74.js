@@ -235,6 +235,11 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
     window.hiredTalkOdds=realOdds;window.heatDrop=realDrop;
     j.techs=was;
     const talkedMark=byId(c.id).talked;
+    // Bank the night before reading the heat off S. Since build 122 the heat, the money and the
+    // ranking are held while the report is on screen and land when it closes, so a test that
+    // reads them with the report still up is reading the world as it was BEFORE the job. There
+    // is no modal here — startJob was called directly — so settleJob() is the Continue press.
+    settleJob();
     return {id:c.id,name:c.first,
       talked:!!talkedMark,mark:talkedMark||null,
       heatUp:S.heat-heat0,jobHeat:d.heatGain,moleLeak:3*moles*weeks,

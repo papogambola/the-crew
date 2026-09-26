@@ -658,9 +658,15 @@ ch("night","The night itself","The live report",[
     p("Seven seconds of skyline before the first line of the night: where you are, what kind of job it is, and what it is called. "
       +"The crew has just landed somewhere, and the report reads differently once you have been told where you are standing. "
       +"Click it, or press any key, to go straight on.")
-    +p("It has its own sound — soft music and a sea, cut to the length of the card so it fades out exactly as the card goes. "
-      +"The report's own track is held under it and comes in with the first line of the night, so the seven seconds belong to "
-      +"the city. Going straight on cuts it short. It answers to the music switch in the office like everything else.")
+    +p("It has its own sound. Where the country's anthem is known, the card plays a few seconds of its opening phrase — the "
+      +"card is the only place in the game that says out loud where you are, and that is the same sentence in sound. Where it "
+      +"is not, the card keeps its other sound: soft music and a sea, cut to the length of the card so it fades out exactly as "
+      +"the card goes. One or the other, never both. The report\u2019s own track is held under either and comes in with the "
+      +"first line of the night, so the seven seconds belong to the city. Going straight on cuts it short, and the music switch "
+      +"in the office silences it like everything else.")
+    +note("Twelve of the forty-nine countries have a tune so far. A half-remembered anthem is not a near miss \u2014 it is the "
+      +"game being wrong about something you know better than it does, over a card with your own flag on it \u2014 so a country "
+      +"whose melody cannot be had from a published score keeps the sea until somebody with a piano writes it down.")
     +p("Every one of the "+m(D.CITY_COUNT||129)+" cities has its own, and the skyline behind it is <b>generated</b> rather than "
       +"collected — from a hash of the city's own name, so it is the same place every time on every machine, and from the "
       +"country's ground, so a mountain town has a ridge behind it, a port has water and a gantry crane under it, a delta has a "
@@ -678,7 +684,11 @@ ch("night","The night itself","The live report",[
       +"inside the seconds it is up.")),
   S("live","Reading the report",
     p("A job does not resolve into a number. It plays out: a clock beside every line, a line at a time, with the crew named and what each of them is doing named with them. "
-      +"You can run it at five speeds, hold it where it is with Pause, or press through it as fast as you can read.")),
+      +"You can run it at five speeds, hold it where it is with Pause, or press through it as fast as you can read.")
+    +p("<b>Nothing lands until you have read it.</b> The whole night is worked out the moment you take the job \u2014 the report is that reckoning written out \u2014 but the balance, "
+      +"the heat and the ranking on the top bar all go on reading exactly what they read before, for as long as any part of the report is on screen: the card of the city, the feed, "
+      +"a decision, the finished sheet. They move when you press Continue, and so does any career mark the job earned. A glance at the top bar is not allowed to tell you how the "
+      +"night went before the night has told you.")),
   S("art","The drawing",
     p("Beside the report is a drawing of the line you are reading — black ink on off-white paper, cross-hatched, the same hand as everything else in the game. Not a picture of the job: a picture of that sentence. It changes when the line does, and a run of lines with no drawing of their own leaves the last one up.")
     +p("Not every line has one yet. A line with no drawing shows nothing at all — the report simply takes the whole width of the sheet, which is what those lines want anyway.")

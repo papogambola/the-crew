@@ -473,6 +473,9 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
     // The fallout is in the report the player reads, so look there — not in the log, which is
     // the week's ledger and carries different sentences.
     const said=JSON.stringify([report,S.log,S.modal]);
+    // Bank it before reading the heat: held while the report is up since build 122, and this
+    // called startJob directly, so there is no report to close and settleJob() is the Continue.
+    settleJob();
     return {threw, name, country:j.country,
       burntUntil:(S.localBurn||{})[j.country]||0, week,
       expectedUntil:week+LOCAL_HIRE.burnWeeks,

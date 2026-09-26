@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+
+# Wikipedia pages fetched by tools/anthems.py. A cache, so a re-run costs no requests and
+# nobody is rate-limited off the API mid-build; regenerated on demand and never read by the game.
+tools/.anthem-cache/

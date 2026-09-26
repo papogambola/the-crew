@@ -238,13 +238,18 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
 
   const R=await page.evaluate(()=>{
     const d=S.modal&&S.modal.data;
-    return {done:!!(d&&d.done),tier:d?d.tier:null,verdict:d?d.verdictName:null,
+    const sheet={done:!!(d&&d.done),tier:d?d.tier:null,verdict:d?d.verdictName:null};
+    // Continue. Since build 122 the heat, the money and the ranking are held while the report is
+    // on screen and land the frame after it goes, so the world is read AFTER the sheet is read
+    // and put down — which is the order a player does it in.
+    S.modal=null;render();
+    return Object.assign(sheet,{
       week:S.week,rivals:rivals().length,beat:(S.beat||[]).length,
       heat:S.heat,file:detFile(),floor:S.fileFloor||0,
       dead:(S.elimDead||[]).length,lost:(stats().lost||0),
       onBoard:(S.jobs||[]).filter(j=>j.elim).length,
       hardened:rivals().filter(r=>r.noBuy).length,
-      fallout:(d&&d.events||[]).join(" | ")};
+      fallout:(d&&d.events||[]).join(" | ")});
   });
   check(R.done,"the report finishes: "+R.verdict);
   check(R.week===L.before.week+1,"and it took one week off the calendar ("+L.before.week+" → "+R.week+")");
