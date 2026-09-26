@@ -691,7 +691,7 @@ ch("night","The night itself","The live report",[
       +"night went before the night has told you.")),
   S("art","The drawing",
     p("Beside the report is a drawing of the line you are reading — black ink on off-white paper, cross-hatched, the same hand as everything else in the game. Not a picture of the job: a picture of that sentence. It changes when the line does, and a run of lines with no drawing of their own leaves the last one up.")
-    +p("<b>Every line of a job report has one.</b> A recruitment trip does not yet, and a line with no drawing shows nothing at all — the report simply takes the whole width of the sheet, which is what those lines want anyway.")
+    +p("<b>Nearly every line of a job report has one</b> — 400 of the 409 it can print. A recruitment trip does not yet, and a line with no drawing shows nothing at all — the report simply takes the whole width of the sheet, which is what those lines want anyway.")
     +p("Where somebody is when a line happens is still written into the line, and it follows from their trade:")
     +G.sites()
     +p("A recruitment trip has four places of its own instead: off the plane, the city, the table, and the answer.")

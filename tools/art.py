@@ -41,6 +41,10 @@ MARK = "/* art.py:have */const ART_HAVE="
 # 810 for a job end to end. Grown from ARRIVE and PAPERS alone once the style was settled.
 TABLES = [
     "ARRIVE", "PAPERS", "WEATHER", "LOCAL", "SPEAKS", "NOSPEAK", "NOTECH", "FIXED",
+    # OUT — somebody on the crew will not take this job, and why. Six pairs. It was missing
+    # from this list entirely, so six drawings the report asks for by name were never on
+    # anybody's list to draw; tests/smoke46.js is what noticed.
+    "OUT",
     "PLACES", "THINGS", "QUIET", "STREET", "MORNING", "SPLIT", "STANDIN", "LEADERLESS",
     "NOPAY", "POLICE_COME", "YOU_INSIDE", "YOU_RUN", "GAP_WHEEL", "GAP_NONE",
     "KNOW_HAS", "KNOW_NONE", "EXIT_OK", "EXIT_MINUS", "EXIT_NOWHEEL", "TEXTURE", "WHERE",
@@ -98,6 +102,29 @@ def art_id(t: str) -> str:
     return slug(t) + "-" + format(fnv1a(t), "08x")
 
 
+# WHICH STRINGS IN A TABLE ARE LINES.
+#
+# These arrays hold the prose the feed prints, and alongside it the tone words, category keys and
+# {slot} fillers that share the same literal. Telling them apart used to be `len(t) > 20`, which is
+# not a fact about sentences: "Heat like a wall." is seventeen characters, and the WEATHER table is
+# pushed straight to the feed WITH its template — so the game asked playthecrew.com for
+# heat-like-wall-3f90d647, got a 404, and --check said "456 drawn, 0 still to draw" in the same
+# minute, because the line had been dropped before anything could notice it was missing.
+#
+# A printed line has a space in it and either finishes — . ! ? … : ; — or carries a {placeholder}.
+# A filler does not: "an all-night bakery", "a shoe print", "two streets away", "with dogs" go into
+# {place}, {thing} and {where} inside other people's sentences and are nobody's moment.
+_ENDS = ".!?…:;’”\"'"
+
+
+def is_line(t: str) -> bool:
+    if " " not in t:
+        return False
+    if "{" in t:
+        return True
+    return t.rstrip().endswith(tuple(_ENDS))
+
+
 def _flat(name):
     """The prose lines out of a flat const array, pairs counted once."""
     m = re.search(r"^const " + name + r"=(\[.*?\]);$", game, re.M | re.S)
@@ -111,7 +138,7 @@ def _flat(name):
             out.append(first[0])
     rest = re.sub(r"\[[^\[\]]*\]", "", body)
     for t in re.findall(r"\"((?:[^\"\\\\]|\\\\.)*)\"", rest):
-        if len(t) > 20 and " " in t:
+        if is_line(t):
             out.append(t)
     return out
 
@@ -126,7 +153,7 @@ def trip_templates():
         if not m:
             continue
         for t in re.findall(r"\"((?:[^\"\\\\]|\\\\.)*)\"", m.group(1)):
-            if len(t) > 20 and " " in t:
+            if is_line(t):
                 out.append((name, t))
     for name in TRIP_HEADLINE_TABLES:
         m = re.search(r"^const " + name + r"=(\[.*?\]);$", game, re.M | re.S)
@@ -165,7 +192,7 @@ def templates():
                 out.append((name, first[0]))
         rest = re.sub(r"\[[^\[\]]*\]", "", body)
         for t in re.findall(r"\"((?:[^\"\\]|\\.)*)\"", rest):
-            if len(t) > 20 and " " in t:
+            if is_line(t):
                 out.append((name, t))
     # The twists, by headline.
     m = re.search(r"^const " + TWIST_TABLE + r"=(\[.*?\]);$", game, re.M | re.S)
@@ -213,6 +240,15 @@ def prompt_for(template: str) -> str:
     t = re.sub(r"\{How\}", "They arrive separately, a day apart", t)
     t = re.sub(r"\{how\}", "separately, a day apart", t)
     t = re.sub(r"\{X\}", "a member of the crew", t)
+    # {P}/{p} is whoever polices the place — "the Garda", "the Politie", "the police" — so it is
+    # filled with the generic rather than dropped. Dropped, "{P} arrive {where}." came out as
+    # "arrive .", which is not a sentence and is not a moment; a drawing made from it would be of
+    # nothing. {why} is a refusal — "Won't work nights", "Won't work under authoritarian rule" —
+    # and {where} is a place the police turn up. One plain filling each, enough to draw from.
+    t = re.sub(r"\{P\}", "The police", t)
+    t = re.sub(r"\{p\}", "the police", t)
+    t = re.sub(r"\{why\}", "they will not do this kind of work", t)
+    t = re.sub(r"\{where\}", "at the door", t)
     t = re.sub(r"\{[^}]*\}", "", t)
     t = re.sub(r"\s+", " ", t).strip().lstrip(".,; ").strip()
     return f"{t} — {STYLE}"
@@ -403,6 +439,18 @@ def main():
             n, d = per.get(name, [0, 0])
             print(f"  {d:4d} of {n:4d}  {name}")
         print(f"\n  {len(tdone):4d} of {len(twant):4d}  in total")
+        raise SystemExit(0)
+
+    if "--ids" in args:
+        # Every id a line in the game can ask for, whether or not it has been drawn. tests/smoke46.js
+        # reads this and demands that the narrator never asks for anything outside it — the check
+        # that would have caught OUT and "Heat like a wall." Printed from the real harvest rather
+        # than reimplemented there, because a test that reimplements what it checks is a test of
+        # its own copy (see the top of tests/smoke45.js).
+        # "<table>\t<id>" a line, so a test can say which FAMILY of lines lost its drawings rather
+        # than only that a count fell.
+        for i in sorted(wanted):
+            print(wanted[i][0] + "\t" + i)
         raise SystemExit(0)
 
     if "--prompts" in args:
