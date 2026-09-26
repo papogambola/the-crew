@@ -173,6 +173,61 @@ def main():
     listed = have_in_game()
     wanted = {art_id(t): (name, t) for name, t in rows}
 
+    if "--inbox" in args:
+        """Triage a folder of drawings that has just arrived, before anything is moved.
+
+        Files turning up in bulk have one of three relationships to the ids this game wants, and each
+        needs something different done about it:
+
+            matched    the filename IS an id. It can be filed as it stands.
+            stem       an id is inside a longer name — a "(1)", a download prefix, another extension.
+                       Recoverable by rule.
+            unknown    the name says nothing about which sentence it draws. Only looking at the
+                       picture can place these.
+
+        It REPORTS and moves nothing. Shuffling hundreds of files on a guess is not undoable by
+        anybody who was not watching it happen."""
+        i = args.index("--inbox")
+        if i + 1 >= len(args):
+            raise SystemExit("--inbox needs a directory")
+        box = args[i + 1]
+        if not os.path.isdir(box):
+            raise SystemExit(f"no such directory: {box}")
+        files = sorted(f for f in os.listdir(box)
+                       if os.path.splitext(f)[1].lower() in (".webp", ".png", ".jpg", ".jpeg"))
+        ids = set(wanted)
+        matched, stemmed, unknown = [], [], []
+        for f in files:
+            base = os.path.splitext(f)[0]
+            if base in ids:
+                matched.append((f, base))
+                continue
+            m = re.search(r"([a-z0-9-]+-[0-9a-f]{8})", base)
+            if m and m.group(1) in ids:
+                stemmed.append((f, m.group(1)))
+            else:
+                unknown.append(f)
+        print(f"{len(files)} images in {box}")
+        print(f"  {len(matched):4d} named exactly as an id — ready to file")
+        print(f"  {len(stemmed):4d} carry an id inside a longer name — recoverable")
+        print(f"  {len(unknown):4d} say nothing about which line they draw")
+        dup = {}
+        for f, got in matched + stemmed:
+            dup.setdefault(got, []).append(f)
+        clashes = {k: v for k, v in dup.items() if len(v) > 1}
+        if clashes:
+            print(f"\n  {len(clashes)} ids have more than one file claiming them:")
+            for k, v in list(clashes.items())[:5]:
+                print(f"     {k}: " + ", ".join(v))
+        if unknown:
+            print("\n  first few with no id in the name:")
+            for f in unknown[:8]:
+                print("     " + f)
+        covered = {got for _, got in matched + stemmed}
+        print(f"\n  would cover {len(covered)} of {len(wanted)} templates"
+              f" ({len(wanted) - len(covered)} still without a drawing)")
+        raise SystemExit(0)
+
     if "--prompts" in args:
         todo = [(i, v) for i, v in wanted.items() if i not in disk]
         print(f"# {len(todo)} of {len(wanted)} still to draw. One 4:3 image each, saved as art/<id>.webp\n")
