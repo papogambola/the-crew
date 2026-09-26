@@ -48,9 +48,20 @@ Two rules the prompts enforce, both about a drawing being reused everywhere:
   and a fjord is wrong in Jeddah. Where you are belongs to the words and the flag above them.
 - **No faces.** The cast is generated per player. A drawn face is always somebody else's Itai.
 
-**577 files and 105MB, which is the threshold this file has been pointing at for four builds, and it
-has now arrived.** They still sit beside the game and are served with it. That is
-inside GitHub Pages' limits, but every player fetching ten to fifteen drawings a job adds up in a
-way 54MB of music already did. The move is one line — `ART_HOME` in play.html — and it is the same
-move the music made. It is a decision for the person paying for the bucket, not one this file
-should make on its own, and nothing is broken until it is made.
+**577 files, 108MB, served from GitHub Pages beside the game — and staying there.** Four earlier
+versions of this file said the move to object storage was coming at six hundred files. It was
+measured instead of assumed, and the number says wait:
+
+    average drawing            187 KB
+    a 20-job playthrough       240 fetches, 45 MB
+    GitHub Pages' soft limit   ~100 GB a month
+    so                         ~2,200 complete playthroughs a month before it is a question
+
+And browsers cache, so a player's second run costs nothing. The 54MB of music moved because it was
+ninety-seven per cent of this site's bandwidth against a 1.4MB download; drawings are not in that
+position and will not be until there is real traffic.
+
+The move itself stays cheap whenever it is wanted — `ART_HOME` in play.html is the one line, and
+the tests already read `window.THE_CREW_ART` so they can keep using the local copy. By the time it
+matters the right version of it is a custom domain rather than a bucket's public URL, which is a
+job to do once, with traffic to point at, rather than now.
