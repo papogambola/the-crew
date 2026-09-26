@@ -218,6 +218,88 @@ def prompt_for(template: str) -> str:
     return f"{t} — {STYLE}"
 
 
+# Where each trip table falls in the shape of a trip, and what that part of it is. Written out
+# rather than derived, because a table's NAME does not say what a drawing of it should contain —
+# TRIP_READ is not "reading", it is watching somebody's face across a table while they talk — and
+# the person drawing 121 pictures needs to know that once per group rather than working it out
+# line by line.
+TRIP_SHAPE = [
+    ("TRIP_OUT",   "1 \u00b7 Getting there",
+     "How you travel out to meet them. You are alone: nobody from the crew is with you."),
+    ("TRIP_LOOK",  "2 \u00b7 The city, while you wait",
+     "A few days in a city you flew to on somebody else's business. Waiting, looking, killing time."),
+    ("TRIP_TALK",  "3 \u00b7 The meeting itself",
+     "The two of you sitting down. The biggest group, because this is the part the trip is about."),
+    ("TRIP_READ",  "4 \u00b7 Reading them across the table",
+     "What you notice about the person while they talk. Close and watchful: one face, one detail."),
+    ("TRIP_SNAGS", "5 \u00b7 When it goes wrong",
+     "The headline of the trouble that interrupts a meeting \u2014 the ones with a decision after them."),
+    ("TRIP_SIGN",  "6 \u00b7 They sign",
+     "The moment it is agreed. Paper, a handshake, a drink: the deal being done."),
+    ("TRIP_NO",    "7 \u00b7 They don't",
+     "The moment it is refused. The same table, the other answer."),
+    ("TRIP_HOME",  "8 \u00b7 Going home",
+     "The flight back, with them or without them."),
+]
+
+
+def trip_sheet(twant, disk):
+    """The trip's drawings, grouped by where in the trip they happen."""
+    by = {}
+    for aid, (name, t) in twant.items():
+        by.setdefault(name, []).append((aid, t))
+    # Table order inside a group, so the sheet comes out the same twice running.
+    for v in by.values():
+        v.sort(key=lambda x: x[1])
+    out, w = [], lambda s="": out.append(s)
+    total = len(twant)
+    done = sum(1 for aid in twant if aid in disk)
+    w("THE RECRUITMENT TRIP \u2014 %d drawings" % total)
+    w("=" * 62)
+    w("")
+    w("One 4:3 image each. SAVE EACH ONE UNDER THE FILENAME EXACTLY AS WRITTEN,")
+    w("including the eight characters after the last dash. That name is the only thing")
+    w("that says which sentence a drawing belongs to; get it wrong and nothing but a")
+    w("person looking at the picture can place it.")
+    w("")
+    w("Each prompt already ends with the house style, so a line can be pasted straight")
+    w("in. The style, once, for reference:")
+    w("")
+    w("    " + STYLE)
+    w("")
+    w("WHAT THESE ARE, AND HOW THEY DIFFER FROM THE JOB DRAWINGS. A recruitment trip is")
+    w("you, alone, flying out to ask one person to join. No crew, no job, no police. One")
+    w("person travelling, one person waiting, and two people at a table. Quieter than")
+    w("the job drawings and closer in \u2014 a face and a table rather than a street and five")
+    w("people.")
+    if done:
+        w("")
+        w("%d of the %d already exist. They are listed anyway, marked [have], so the sheet" % (done, total))
+        w("is the whole set rather than a remainder that goes stale the moment one is drawn.")
+    for key, title, blurb in TRIP_SHAPE:
+        rows = by.get(key, [])
+        if not rows:
+            continue
+        w("")
+        w("")
+        w("-" * 62)
+        w("%s   (%d drawings)" % (title, len(rows)))
+        w("-" * 62)
+        w(blurb)
+        w("")
+        for aid, t in rows:
+            w("  %s.webp%s" % (aid, "   [have]" if aid in disk else ""))
+            w("     %s" % prompt_for(t))
+            w("")
+    w("-" * 62)
+    w("%d drawings in total." % total)
+    w("")
+    w("When they are done, send the whole folder in one go. The importer reads the id out")
+    w("of each filename, skips anything already there, and LISTS BY NAME anything it could")
+    w("not place \u2014 a misnamed file is reported rather than guessed at.")
+    return "\n".join(out)
+
+
 def main():
     """Everything the command line does. Behind __main__ so the module can be IMPORTED — which is
     how tests/smoke45.js checks that art_id() here and artId() in the game agree. A test that
@@ -299,6 +381,17 @@ def main():
             for i, (name, t) in todo:
                 print(f"{i}.webp")
                 print(f"    {prompt_for(t)}\n")
+            raise SystemExit(0)
+        if "--sheet" in args:
+            """The same list, in the order somebody would actually draw it.
+
+            --prompts is a flat dump in whatever order the tables happen to iterate, which is fine
+            for a script and useless for a person: the meeting's thirty lines end up interleaved
+            with the flight out and the flight home, and each one has to be re-understood from
+            cold. Drawing 121 pictures is a week of somebody's attention, and the single thing
+            that makes it quicker is doing all of one kind at a time. So this groups them by where
+            in the trip they happen and says, once per group, what that part of the trip IS."""
+            print(trip_sheet(twant, disk))
             raise SystemExit(0)
         per = {}
         for name, t in trips:
