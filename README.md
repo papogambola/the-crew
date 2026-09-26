@@ -287,8 +287,8 @@ told you whether the night had anything in it before you had read a line of it. 
   This is affordable because **the feed's lines are templates**, not free text — a finite set of
   them, with the city, the country and a name slotted in — so it is one drawing per template, drawn
   once, rather than one per line per playthrough per player. Each line carries the id of the
-  template that wrote it, derived from the words themselves, and `art/` holds a file per id. **400 of
-  the 409 lines a job report can print are drawn** — the nine outstanding are the six ways it says
+  template that wrote it, derived from the words themselves, and `art/` holds a file per id. **396 of
+  the 405 lines a job report can print are drawn** — the nine outstanding are the six ways it says
   somebody would not take the job, the police arriving, boots on the stairs and one kind of
   weather; the 121 a recruitment trip needs are not drawn either, and
   `art/RECRUITMENT-TRIP-DRAWINGS.txt` is the list of them, grouped by where in the trip they

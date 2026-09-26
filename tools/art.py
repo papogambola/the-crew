@@ -186,9 +186,15 @@ def templates():
         # Done the other way round — a lookbehind excluding a preceding "[" or "," — it found one
         # line out of twenty-six, because in a flat array every string but the first is preceded
         # by a comma. It reported 1 of 26 and called itself consistent.
+        # is_line() applies here too. A genuine pair's first element IS a line — "{X} stays behind
+        # — {why}." — so nothing real is lost; what it drops is a nested array that is not a pair at
+        # all. STREET is an array of OBJECTS, and one of their fields is a list of limits, so
+        # `limits:["tight","night"]` read as a pair and made "tight" a template. There is a drawing
+        # in art/ whose id came from that word. Four of them survived the first pass of this fix
+        # because it only filtered the flat branch.
         for pair in re.findall(r"\[[^\[\]]*\]", body):
             first = re.findall(r"\"((?:[^\"\\]|\\.)*)\"", pair)
-            if first:
+            if first and is_line(first[0]):
                 out.append((name, first[0]))
         rest = re.sub(r"\[[^\[\]]*\]", "", body)
         for t in re.findall(r"\"((?:[^\"\\]|\\.)*)\"", rest):
@@ -417,6 +423,12 @@ def main():
             for i, (name, t) in todo:
                 print(f"{i}.webp")
                 print(f"    {prompt_for(t)}\n")
+            raise SystemExit(0)
+        if "--ids" in args:
+            # "<table>\t<id>", as the job side prints it, so tests/smoke47.js can hold the trip
+            # narrator to the same rule: never ask for an id the plan has not heard of.
+            for i in sorted(twant):
+                print(twant[i][0] + "\t" + i)
             raise SystemExit(0)
         if "--sheet" in args:
             """The same list, in the order somebody would actually draw it.
