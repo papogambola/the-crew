@@ -13,6 +13,17 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   await page.goto("file://"+(process.argv[2]?require("path").resolve(process.argv[2]):GAME));
   await page.evaluate(()=>{try{localStorage.clear();}catch(e){}});
   await page.reload();
+  /* THE PLAN IS WHAT SHOWS WHEN A LINE HAS NO DRAWING, and that is what this file is about.
+     Since build 120 a job report puts the country's drawing where the plan was, so on a covered
+     line every assertion below — the clock, the figures, the glyphs, the tethers — is asking
+     about elements that are correctly not on the screen. It died mid-run reading .fm-clock off
+     null, which looks like the plan being broken rather than the plan being hidden on purpose.
+
+     So the manifest is emptied here. That is not a contrivance: it is the state every uncovered
+     line is in (190 of the 456 templates, at the time of writing), and the state every
+     recruitment trip is in, since none of the TRIP_ tables are illustrated. The plan is live
+     code with live callers; this is the condition under which a player sees it. */
+  await page.evaluate(()=>{try{ART_HAVE.length=0;if(typeof ART_SET!=="undefined"&&ART_SET)ART_SET.clear();}catch(e){}});
   await page.click('[data-act="begin"]');await page.fill("#pname","Paz");await page.click('[data-act="confirm-create"]');
   await page.waitForSelector(".topbar");
   await putDownPaper(page);

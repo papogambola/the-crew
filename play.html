@@ -4507,7 +4507,11 @@ function narrate(job,a,tier,rng,x,mode,clock){
     const kind=co.terrain.some(t=>["islands","coast","port","fjords","canal"].includes(t))&&chance(rng,0.5)?"water":co.terrain.includes("megacity")?"city":co.terrain.includes("mountains")?"mountain":"road";
     const how=fresh(HOW[kind]);
     const arr=fresh(ARRIVE);
-    push(fill2(arr,{city:job.city,country:job.country,how,How:cap(how)}),"","road","*",arr);
+    // push(t, tone, at, who, act, tpl) — the template is the SIXTH argument. Passed as the fifth
+    // it lands in `act`, which is a silent miss: the line renders perfectly and simply has no
+    // drawing, and this is the first line of every job report, so it was the one line guaranteed
+    // to be wrong.
+    push(fill2(arr,{city:job.city,country:job.country,how,How:cap(how)}),"","road","*",null,arr);
     if(chance(rng,0.5)){const w=fresh(WEATHER);push(w,"","road",null,null,w);}
     a.checks.forEach(c=>{
       if(c.ok){
@@ -8634,7 +8638,7 @@ function artURL(id){return ART_BASE+id+".webp";}
    panel has to know BEFORE it draws whether it is showing a picture or the plan, or every line
    without art flashes a broken image on its way to the fallback. Written by tools/art.py --write,
    and --check fails if it has drifted from what is in art/. */
-/* art.py:have */const ART_HAVE=[];
+/* art.py:have */const ART_HAVE=["answers-the-door-and-84385f7b","argues-with-policeman-about-92163a83","asked-the-purpose-the-9108a69a","asks-the-porter-which-ba6bfba5","bar-with-the-football-94f18c66","barber-chair-for-hour-1cfcc423","barman-who-remembers-accent-20a128cc","bench-outside-church-74efcf69","boat-the-canal-not-662f1d8e","borrowed-office-the-ninth-5af28269","bus-shelter-with-broken-25717fdc","buys-the-bread-and-1a36483e","buys-the-sim-cards-0b4c1242","caf-across-the-street-32f2ad80","carnival-which-noise-and-aa6f627c","chain-through-both-wheels-c143bba3","chats-the-woman-the-891a8c6a","chats-with-the-night-fa714c95","clear-and-cold-with-1e644fbf","cold-enough-that-nobody-13408614","collect-somebody-else-debt-eec6bc27","comes-goes-out-the-7c5991b8","costs-twenty-minutes-and-dcea9b41","costs-watch-handed-over-b110e3e9","counted-twice-the-crew-d1cbbdb5","crosses-dentist-from-the-c1a74d51","crosses-paper-that-cost-39a97d59","crosses-queue-forty-and-35d37880","crosses-the-forger-paper-2775932d","dealt-with-the-how-4e78db4d","dentist-waiting-room-across-e82a8440","does-the-phone-calls-9077a360","does-the-talking-c013fe98","door-held-open-thirty-41d752f8","drives-like-taxi-and-0924deb6","drives-past-the-police-c376aacc","election-week-every-street-42a974bd","every-phone-call-goes-c4efce8e","everyone-who-can-run-a8591e52","fog-all-week-the-08ad4ea5","fog-off-the-water-4d839942","footage-somebody-back-b550771c","football-match-every-screen-8673a543","full-time-the-crew-b6fb0458","gets-directions-and-better-38c2a33a","gets-the-rent-receipt-f40c9eb1","grey-and-mild-the-e5319b50","haggles-for-the-van-0c025cd7","half-face-cashpoint-camera-0920f900","hand-comes-down-wrist-a2e2fe46","handled-nobody-outside-the-a38b01cb","handled-the-cost-the-bc261d45","handles-the-landlord-the-7e35bbd0","handles-the-pharmacy-the-5dd7b5c7","has-list-not-puzzle-f8c6de64","has-the-engine-running-3e76682b","has-two-routes-out-50501ae1","have-breakfast-heat-e6753afa","heatwave-the-street-empty-3dab6e32","heights-aaadae23","hire-car-contract-name-2102e9d9","hire-car-supermarket-car-2753d83f","home-and-knows-which-bc5a394f","home-and-the-one-3e65023f","home-and-walks-through-d31fa191","home-dinner-with-the-a6897eab","home-nobody-asks-for-daaf98bc","home-nobody-checks-local-f64aba6b","home-the-accent-the-97d791f9","home-the-man-the-d3353b63","home-the-taxi-driver-7ec24515","home-there-aunt-with-6ab1e2a2","hotel-bar-with-view-b8f4d8af","hotel-room-with-the-79a44463","ice-the-pavements-everyone-da540830","into-flat-rented-man-a2d36983","key-the-wrong-pocket-ea8b64d8","knows-well-enough-bored-49fd2a40","lands-account-that-isn-1898a3f6","lands-after-the-crew-1f058f8f","laundrette-with-view-the-8b29365e","left-outside-bakery-door-5e36212a","list-everyone-who-flew-a6b2bd97","listens-more-than-talks-0f09f1f4","loses-the-first-car-10ab02bb","morning-have-heat-cdd95ed5","morning-nothing-not-line-fd7c636b","morning-the-building-has-897d79fa","morning-the-radio-have-cc0ce6cb","name-address-and-figure-fcd6b5b0","name-that-isn-yours-24d075c9","neighbour-dashcam-9fda1dd6","new-name-said-out-5cedb31d","new-passport-gets-second-66780c25","night-e6de9f61","nobody-here-for-one-1b9ddb34","nobody-here-stands-having-e585a2cc","nobody-here-was-learning-8ae2f0cb","nobody-here-was-taught-52aa1e49","nobody-knows-guesswork-574e984e","nobody-knows-the-part-8d4e2766","nobody-knows-worked-out-c2b90b7a","nobody-leaves-the-flat-037c8489","nobody-named-the-news-c82b66fa","nobody-reports-anything-because-5637784b","nobody-runs-nobody-looks-175c4f3c","nobody-speaks-draws-pictures-7828ab2d","nobody-speaks-everything-takes-ca567da0","nobody-speaks-finds-waiter-ac0757b0","nobody-speaks-learns-six-67015801","nobody-speaks-nobody-says-a9d12d4c","nobody-speaks-phone-does-384a76f5","nobody-speaks-points-and-a19a9e8e","nobody-speaks-says-thank-86be102e","nobody-speaks-smiles-lot-32852b61","nobody-speaks-the-crew-0cc60831","nobody-speaks-the-crew-d6b6cc1a","nobody-speaks-the-signs-d8e1b808","nobody-the-crew-has-f3fd11d5","nobody-the-crew-knows-362a2a3c","noon-have-and-press-1b1abf3c","not-word-the-people-06f46ec3","nothing-the-news-nothing-5349fa77","noviolence-0fc5fbc3","one-here-has-takes-3dfcc475","one-member-staff-back-ef4f8fdd","one-time-nobody-together-4db7e492","orders-for-everyone-and-d605fa9b","orders-the-coffee-and-00cb38fa","paid-the-crew-share-11248a42","papers-are-checked-machine-7b1d397b","parcel-off-the-back-2c1a71b9","park-bench-with-newspaper-0eb05a2e","parked-taxi-with-the-039bd9bc","passport-goes-under-the-401b94f6","passport-week-old-and-9fec53d5","phone-box-that-still-c2de4f42","phone-call-fixes-the-a99840be","phone-that-was-switched-56262cf8","photograph-the-back-head-63f80f8d","public-holiday-the-streets-d24a5828","pulls-out-the-speed-2ca17576","put-out-appeal-what-0b458427","quiet-the-kind-quiet-3b3cf7f0","rain-every-afternoon-four-cde166ae","rain-the-first-day-a03fe160","rains-for-two-days-a3852e86","reads-the-local-paper-5a8f136b","reads-the-menu-the-90ebecdd","receipt-from-the-wrong-3e986bb7","rents-the-lock-from-4fef74e5","report-filed-somebody-would-3a75ad6d","roadworks-every-route-out-f430c415","rooftop-with-thermos-ddd96aa0","room-over-the-bookmaker-818056bd","runs-the-day-you-34026642","runs-while-you-wait-47351a01","rush-hour-four-platforms-92847f89","second-way-found-the-99d50208","sees-the-trap-that-3b5b30e0","short-piece-about-break-f795bf82","short-piece-page-five-95cbaa13","sketch-that-looks-like-e3eb1847","snow-which-keeps-the-30a717c9","solved-with-screwdriver-and-dfe71cb1","somebody-improvises-and-for-b509b976","somebody-knew-man-and-7aba92ff","somebody-laughs-about-afterwards-6a6a4952","somebody-the-flats-above-e0356230","sorts-the-parking-the-bd310dd5","speaks-like-local-which-fb0bf399","speaks-the-cleaner-who-3f1e0ea2","speaks-the-market-and-66fe3a2b","speaks-well-enough-boring-18ccaa9a","speaks-with-accent-from-6d966164","statement-the-news-arrests-e3f82d23","station-caf-under-the-d1d7f401","storm-forecast-for-friday-21b3cd56","strike-the-trains-the-8db3af6b","swaps-cars-car-park-e6dfc633","take-the-car-with-e95bbbfb","takes-the-crew-place-2de5c691","takes-the-lead-you-08168c31","takes-the-long-way-0ebe473e","talks-the-rent-down-70d58e06","talks-the-taxi-drivers-2663666a","taxi-driver-story-5017c4f5","tells-joke-isn-funny-72f037d1","tells-the-waiter-story-82a496bf","ten-minutes-improvising-and-49bc882b","the-address-door-between-aaba90b1","the-back-seat-rented-586c55ca","the-car-leaves-with-24fcddbe","the-car-out-the-b3bd5486","the-client-pays-full-cc673165","the-crew-and-where-2c56b99e","the-crew-arrives-and-2d80a92a","the-crew-arrives-and-9652c0d1","the-crew-arrives-and-acbb8c5e","the-crew-arrives-and-df5686da","the-crew-arrives-ead65be0","the-crew-arrives-nobody-48e44345","the-crew-arrives-nobody-4d6ed888","the-crew-arrives-somebody-9c14db38","the-crew-arrives-the-26f5a269","the-crew-arrives-the-45c6fc91","the-crew-arrives-the-823a7085","the-crew-arrives-the-b39fb790","the-crew-arrives-the-ef6a095d","the-crew-bought-the-512653b6","the-crew-gets-shrug-f2e384c2","the-crew-has-been-a185dc5a","the-crew-has-manual-40919646","the-crew-has-practised-01909dfa","the-crew-read-the-8fa2db63","the-crew-says-nothing-71a2beed","the-crew-spent-the-216590e8","the-driver-four-doors-092eed99","the-fee-cuts-come-29c09c22","the-first-warm-day-15a4b24a","the-flat-above-the-a997da30","the-harbour-wall-pretending-b8d05d14","the-keys-are-under-c5667258","the-kind-dry-heat-9e22b339","the-kind-trouble-that-e3b145cb","the-lift-broken-which-e9cd3696","the-morning-paper-has-c8536a0c","the-morning-paper-leads-bd23678e","the-one-behind-the-9a750a3a","the-owner-came-out-9267fc3b","the-place-was-let-46272f64","the-plan-bends-doesn-f5703c22","the-police-are-told-03b333bc","the-rest-them-are-d906f2a8","the-safe-house-has-4fa411ad","the-safe-house-has-cf4cfc55","the-sixth-level-car-798d9392","the-split-gross-the-528aa591","the-table-across-the-7dd3b1c2","the-time-anyone-counts-eb9867f3","the-top-deck-bus-35b78dd8","the-van-gone-before-954c8f45","the-van-the-lock-65ebcbe2","the-windows-face-courtyard-a1eaed0b","three-hotels-three-names-1e94d86d","three-sets-keys-one-be31f2d4","tight-and-then-isn-160c9b5c","tight-f654e087","too-hot-sit-car-44ab055b","translates-the-menu-the-abbf5381","twenty-minutes-nobody-breathing-ee8dbcff","two-hotels-hostel-and-5d159dff","two-lines-the-paper-5c1a1807","two-minutes-over-nobody-40e4592d","two-sets-gloved-fingerprints-f868ec2d","van-that-will-turn-79ec6c31","was-not-alone-the-012e0edc","wedding-the-square-every-2fd74e82","when-policeman-asks-question-dbf4acd1","whoever-still-standing-gets-df3f9a56","wind-that-takes-hats-b709447e","without-coin-toss-ca5a01e6","without-wall-with-door-01a5fd01","witness-who-saw-foreigners-5533c544","work-the-crowd-the-4b2f5901","wrong-turn-right-one-d647d222"];
 const ART_SET=(typeof Set!=="undefined")?new Set(ART_HAVE):null;
 function artHas(id){return !!id&&(ART_SET?ART_SET.has(id):ART_HAVE.indexOf(id)>=0);}
 function scRot(a,cx,cy){const r=a*Math.PI/180,c=Math.cos(r),s=Math.sin(r);return (x,y)=>({x:cx+(x-cx)*c-(y-cy)*s,y:cy+(x-cx)*s+(y-cy)*c});}
@@ -9007,6 +9011,28 @@ function feedArtPreload(d){
     }
   }
 }
+/* The ticker does not re-render the sheet. It appends one line to #ticker and steps the figures
+   on the plan, which is why the panel beside it was frozen on whatever it held when the modal
+   opened — and that is always BEFORE the first line, so it was always the plan. The drawings were
+   correct, the manifest was correct, the panel simply was never asked again.
+
+   So the side is kept in step here. Two rules, both about not undoing work:
+
+     — it never redraws the plan. feedMapStep has been walking figures across it line by line, and
+       rebuilding it would put them all back at the door.
+     — it redraws only when the drawing CHANGES. A run of lines with no art of their own leaves
+       the last picture up, which is what feedArtLine already decides; re-rendering identical
+       markup every few seconds would restart the image load and flash. */
+function feedSideSync(d){
+  if(!d)return;
+  const L=feedArtLine(d);
+  if(!L)return;                       // nothing drawn yet: the plan stays, untouched
+  const side=document.querySelector(".feed-side");
+  if(!side||side.getAttribute("data-art")===L.art)return;
+  side.innerHTML=feedArt(d);
+  side.setAttribute("data-art",L.art);
+  feedArtPreload(d);
+}
 function feedSide(d){
   const art=feedArt(d);
   if(art){feedArtPreload(d);return art;}
@@ -9161,7 +9187,8 @@ function tickerArm(){
   const d=S.modal.data;
   // a re-render shows the latest line, not the first: the marker sits right above the decision
   if(!d.done){const el0=document.getElementById("ticker");if(el0)el0.scrollTop=el0.scrollHeight;
-    for(let i=0;i<d.revealed;i++)feedMapStep(d,d.narrative[i]);}
+    for(let i=0;i<d.revealed;i++)feedMapStep(d,d.narrative[i]);
+    feedSideSync(d);}
   if(d.done||d.awaiting)return;
   if(d.estab)return;              // the establishing card is up; the night has not started
   if(UI.hold||UI.office)return;   // Pause on the feed, or the office open: the clock stops where it is
@@ -9175,6 +9202,7 @@ function tickerArm(){
     const el=document.getElementById("ticker");
     if(el&&line){el.insertAdjacentHTML("beforeend",tickLine(line));el.scrollTop=el.scrollHeight;}
     feedMapStep(d,line);
+    feedSideSync(d);
     sfx("tick");
     if(line&&line.siren)sirenFx();
     if(line&&line.twist&&!d.resolved){clearInterval(TICK);TICK=null;d.awaiting=true;sfx("bad");render();return;}
@@ -12477,7 +12505,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 119 · September 2026";
+const BUILD="build 120 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a

@@ -51,6 +51,17 @@ TABLES = [
 # one per wording of it: the three s[] variants are the same moment told three ways.
 TWIST_TABLE = "TWISTS"
 
+# The recruitment trip: you fly out alone to meet one person. A different chapter from a job, with
+# its own beats — going, looking, reading them, talking, signing or not, coming home — so it is
+# its own set rather than more of the same, and counted separately so the two efforts' progress
+# never gets conflated. TRIP_TALK is an object of lists keyed by what the conversation turned on.
+TRIP_TABLES = ["TRIP_OUT", "TRIP_LOOK", "TRIP_READ", "TRIP_SIGN", "TRIP_HOME", "TRIP_NO"]
+TRIP_OBJECTS = ["TRIP_TALK"]
+# TRIP_SNAGS is shaped like TWISTS — {k, h, s:[three wordings], opts:[...]} — so the drawable
+# moment is the HEADLINE, one per snag. Read as a flat array it yielded the first wording and the
+# first answer option of each, which is 26 entries that are not moments and miss the ones that are.
+TRIP_HEADLINE_TABLES = ["TRIP_SNAGS"]
+
 # The look, held in one place so six hundred drawings are recognisably one hand. It is the game's
 # own look: black ink on white paper, no colour, no lettering — the sentence is already on the
 # screen beside it and a drawing that repeats it in a speech bubble is a drawing arguing with the
@@ -85,6 +96,51 @@ def art_id(t: str) -> str:
     """Byte for byte what artId() in play.html produces. If these two ever disagree the game asks
     for files that are not there and --check passes, so the pair is tested in tests/smoke45.js."""
     return slug(t) + "-" + format(fnv1a(t), "08x")
+
+
+def _flat(name):
+    """The prose lines out of a flat const array, pairs counted once."""
+    m = re.search(r"^const " + name + r"=(\[.*?\]);$", game, re.M | re.S)
+    if not m:
+        raise SystemExit(f"no flat const {name}= in play.html — has the table moved?")
+    body = m.group(1)[1:-1]
+    out = []
+    for pair in re.findall(r"\[[^\[\]]*\]", body):
+        first = re.findall(r"\"((?:[^\"\\\\]|\\\\.)*)\"", pair)
+        if first:
+            out.append(first[0])
+    rest = re.sub(r"\[[^\[\]]*\]", "", body)
+    for t in re.findall(r"\"((?:[^\"\\\\]|\\\\.)*)\"", rest):
+        if len(t) > 20 and " " in t:
+            out.append(t)
+    return out
+
+
+def trip_templates():
+    """Every line a recruitment trip can print, as (table, template)."""
+    out = []
+    for name in TRIP_TABLES:
+        out += [(name, t) for t in _flat(name)]
+    for name in TRIP_OBJECTS:
+        m = re.search(r"^const " + name + r"=(\{.*?\});$", game, re.M | re.S)
+        if not m:
+            continue
+        for t in re.findall(r"\"((?:[^\"\\\\]|\\\\.)*)\"", m.group(1)):
+            if len(t) > 20 and " " in t:
+                out.append((name, t))
+    for name in TRIP_HEADLINE_TABLES:
+        m = re.search(r"^const " + name + r"=(\[.*?\]);$", game, re.M | re.S)
+        if not m:
+            continue
+        for h in re.findall(r"\bh:\"((?:[^\"\\\\]|\\\\.)*)\"", m.group(1)):
+            if len(h) > 6:
+                out.append((name, h))
+    seen, uniq = set(), []
+    for name, t in out:
+        if t not in seen:
+            seen.add(t)
+            uniq.append((name, t))
+    return uniq
 
 
 def templates():
@@ -226,6 +282,34 @@ def main():
         covered = {got for _, got in matched + stemmed}
         print(f"\n  would cover {len(covered)} of {len(wanted)} templates"
               f" ({len(wanted) - len(covered)} still without a drawing)")
+        raise SystemExit(0)
+
+    if "--trips" in args:
+        """The recruitment trip's own list, kept apart from the job's.
+
+        Mixing them would make one number out of two efforts, and "190 still to draw" would stop
+        meaning anything once trip lines were in it."""
+        trips = trip_templates()
+        twant = {art_id(t): (name, t) for name, t in trips}
+        tdone = {i for i in twant if i in disk}
+        if "--prompts" in args:
+            todo = [(i, v) for i, v in twant.items() if i not in disk]
+            print(f"# The recruitment trip. {len(todo)} of {len(twant)} still to draw.")
+            print(f"# One 4:3 image each, saved as art/<id>.webp\n")
+            for i, (name, t) in todo:
+                print(f"{i}.webp")
+                print(f"    {prompt_for(t)}\n")
+            raise SystemExit(0)
+        per = {}
+        for name, t in trips:
+            per.setdefault(name, [0, 0])
+            per[name][0] += 1
+            if art_id(t) in disk:
+                per[name][1] += 1
+        for name in TRIP_TABLES + TRIP_OBJECTS + TRIP_HEADLINE_TABLES:
+            n, d = per.get(name, [0, 0])
+            print(f"  {d:4d} of {n:4d}  {name}")
+        print(f"\n  {len(tdone):4d} of {len(twant):4d}  in total")
         raise SystemExit(0)
 
     if "--prompts" in args:
