@@ -680,18 +680,14 @@
      you could least read. This is what !important is actually for: a state that owns the row. */
   .twist-opt.on b,.twist-opt.on .ob,.twist-opt.on .why,.twist-opt.on .mono,
   .twist-opt.on .num,.twist-opt.on span{color:var(--paper)!important}
-  /* ---- the police arrive: darkness, and two beams sweeping the room ---- */
-  #sirenfx{position:fixed;inset:0;z-index:95;pointer-events:none;background:rgba(6,4,4,.58);opacity:0;visibility:hidden;transition:opacity .35s ease,visibility 0s linear .35s;overflow:hidden;mix-blend-mode:normal}
-  #sirenfx.on{opacity:1;visibility:visible;transition:opacity .12s ease}
-  #sirenfx i{position:absolute;left:50%;top:50%;width:320vmax;height:320vmax;margin:-160vmax 0 0 -160vmax;border-radius:50%;opacity:.9;
-    background:conic-gradient(from 0deg,transparent 0 38%,rgba(255,30,30,.75) 45%,rgba(255,30,30,.85) 50%,rgba(255,30,30,.75) 55%,transparent 62%)}
-  #sirenfx i.s-blue{background:conic-gradient(from 180deg,transparent 0 38%,rgba(40,90,255,.75) 45%,rgba(40,90,255,.85) 50%,rgba(40,90,255,.75) 55%,transparent 62%)}
-  #sirenfx.on i.s-red{animation:siren-turn .9s linear infinite}
-  #sirenfx.on i.s-blue{animation:siren-turn .9s linear infinite}
-  #sirenfx.on::after{content:"";position:absolute;inset:0;animation:siren-flash .45s steps(2,end) infinite;background:rgba(255,40,40,.16)}
-  @keyframes siren-turn{to{transform:rotate(360deg)}}
-  @keyframes siren-flash{0%{background:rgba(255,40,40,.16)}50%{background:rgba(40,90,255,.16)}}
-  @media(prefers-reduced-motion:reduce){#sirenfx.on i,#sirenfx.on::after{animation:none}}
+  /* ---- somebody who left, and what left with them ---- */
+  /* The decision on the left, their file on the right. 320px is what a crew card is drawn for —
+     narrower and the attribute bars start wrapping their labels. Under 820 the two stack, file
+     first, because on a phone the thing worth seeing before you choose is who this is. */
+  .modal.loose-wide{max-width:1020px}
+  .loose-cols{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+  .loose-who .id{margin:0}
+  @media(max-width:820px){.loose-cols{grid-template-columns:1fr}.loose-who{order:-1}}
   /* ---- the week's paper ---- */
   .modal.paper{max-width:640px;border-width:3px;outline:1px solid var(--ink);outline-offset:4px;background:var(--card)}
   .nw-head{padding:14px 18px 10px;border-bottom:3px double var(--ink);text-align:center}
@@ -6245,6 +6241,10 @@ function memberCard(c,cr,opts){
         : "A few weeks and a few thousand, and "+c.first+" can work a country nobody could talk their way through"))+'" '
       +(lwhy?"disabled":"")+'>Teach a language</button>';
     btns+='<button class="btn ghost sm" data-act="drop" data-id="'+c.id+'">Cut loose</button>';
+  } else if(opts&&opts.gone){
+    // They are not on the crew any more. Pointing at the Crew tab, or at a weekly upkeep for
+    // somebody who is no longer being paid, is the card describing a person who does not exist.
+    btns='<span class="mono" style="font-size:11px;color:var(--muted)">Not on the crew.</span>';
   } else {
     // No controls on this card, so the card says where they went rather than leaving a hole.
     btns='<span class="mono" style="font-size:11px;color:var(--muted)">A bonus, a new trade, cutting loose — all on the Crew tab.</span>';
@@ -6253,7 +6253,8 @@ function memberCard(c,cr,opts){
     +'<div style="padding:0 11px 4px"><div class="field" style="gap:2px"><label>Loyalty '+c.loyalty+' · takes '+Math.round(c.cut*100)+'% of each score</label>'
       +'<div class="loy'+(low?" low":"")+'"><i style="width:'+c.loyalty+'%"></i></div></div></div>'
     +'<div class="attrs">'+attrRow(c)+'</div>'+xpLine(c)+profLine(c)
-    +'<div class="foot stack"><span class="mono" style="font-size:11px;color:var(--muted)">upkeep '+money(c.upkeep)+'/wk</span>'
+    +'<div class="foot stack"><span class="mono" style="font-size:11px;color:var(--muted)">'
+      +((opts&&opts.gone)?'':'upkeep '+money(c.upkeep)+'/wk')+'</span>'
       +'<span style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end">'+btns+'</span></div></div>';
 }
 /* Your own file, which is not the same card as anybody else's: no vetting stamp, because you do
@@ -8747,9 +8748,38 @@ function wentWrong(d){
   return {gap:W.eff-W.diff,eff:W.eff,diff:W.diff,roll:W.roll,items:out};
 }
 function tickLine(l){return '<div class="tk '+(l.tone||"")+(l.twist?" tk-twist":"")+'"><span class="tk-t">'+esc(l.t)+'</span><span class="tk-x">'+esc(l.x)+'</span></div>';}
-let TICK=null;
+let TICK=null,TICKGEN=0;
+/* Stopping the clock has to INVALIDATE the step that is already running, not just clear the timer
+   it has not set yet. feedSideSync() renders when the first drawing arrives, render() calls
+   tickerArm(), and tickerArm() re-arms — so a step that was half way through would come back and
+   overwrite TICK with its own timeout, orphaning the one tickerArm had just set. Two chains, both
+   running, and lines arriving in a fifth of the time they were given: 990ms of a 5,000ms wait.
+   The generation makes a stale step return instead of rescheduling. */
+function tickStop(){if(TICK){clearTimeout(TICK);TICK=null;}TICKGEN++;}
+/* HOW LONG A LINE STAYS UP IS HOW LONG IT TAKES TO READ.
+
+   It was a fixed number of milliseconds a line, whatever the line said, and that is why Slowest
+   did not feel slow. Measured over 1,620 feed lines: the median is 12 words, a quarter are 15 or
+   more and the longest is 26. At an ordinary reading pace — 250 words a minute — a median line
+   takes 2.9 seconds to read and a long one 4.6. Slowest gave every one of them a flat 4.5, so the
+   long lines were on screen for LESS TIME THAN IT TAKES TO READ THEM, and the short ones sat
+   there with nothing happening.
+
+   So the setting sets the pace and the line sets the length: a line of median length gets exactly
+   the setting's number, and everything else is scaled by how much there is to read, between 0.6×
+   and 2.2×. A three-word line goes by; "Accra, Ghana. The crew arrives on the last boat of the
+   day, in the rain. The flat has four mattresses and no table." gets more than twice what it did.
+
+   Which is why this is a chain of setTimeouts rather than one setInterval — the gap is not the
+   same twice running. */
+const LINE_WORDS=12;                      // the measured median; the setting's number is for this
+function lineMs(line){
+  const base=SPEEDS[speedIdx()][0];
+  const w=String((line&&line.x)||"").trim().split(/\s+/).filter(Boolean).length;
+  return Math.round(base*clamp(w/LINE_WORDS,0.6,2.2));
+}
 function tickerArm(){
-  if(TICK){clearInterval(TICK);TICK=null;}
+  tickStop();
   if(!S||!S.modal||!isFeed(S.modal.type))return;
   const d=S.modal.data;
   // a re-render shows the latest line, not the first: the marker sits right above the decision
@@ -8761,8 +8791,10 @@ function tickerArm(){
   let reduced=false;
   try{reduced=!!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);}catch(e){}
   if(reduced){tickerFinish();return;}
-  TICK=setInterval(()=>{
-    if(!S||!S.modal||!isFeed(S.modal.type)||S.modal.data!==d){clearInterval(TICK);TICK=null;return;}
+  const gen=TICKGEN;
+  const step=()=>{
+    if(gen!==TICKGEN)return;                     // a newer tickerArm owns the clock now
+    if(!S||!S.modal||!isFeed(S.modal.type)||S.modal.data!==d){tickStop();return;}
     d.revealed++;
     const line=d.narrative[d.revealed-1];
     const el=document.getElementById("ticker");
@@ -8770,16 +8802,21 @@ function tickerArm(){
     feedSideSync(d);
     sfx("tick");
     if(line&&line.siren)sirenFx();
-    if(line&&line.twist&&!d.resolved){clearInterval(TICK);TICK=null;d.awaiting=true;sfx("bad");render();return;}
+    if(line&&line.twist&&!d.resolved){tickStop();d.awaiting=true;sfx("bad");render();return;}
     // The end of a trip that nobody had to decide anything about: settle it here, where the
     // player is watching, and let the feed carry straight on into what was decided.
     if(S.modal.type==="trip"&&!d.resolved&&!d.snag&&S.pendingTrip&&d.revealed>=d.narrative.length)finishTrip(S.pendingTrip,null,d);
-    if(S.modal.type==="trip"&&d.resolved&&d.revealed>=d.narrative.length){clearInterval(TICK);TICK=null;tickerFinish();return;}
-    if(d.revealed>=d.narrative.length){clearInterval(TICK);TICK=null;tickerFinish();}
-  },SPEEDS[speedIdx()][0]);
+    if(S.modal.type==="trip"&&d.resolved&&d.revealed>=d.narrative.length){tickStop();tickerFinish();return;}
+    if(d.revealed>=d.narrative.length){tickStop();tickerFinish();return;}
+    // The line just put up is the one being read, so it is the one that sets the wait.
+    if(gen===TICKGEN)TICK=setTimeout(step,lineMs(line));
+  };
+  // Nothing is on screen to read yet when the feed opens, so the first line does not wait for a
+  // line's worth of reading — it waits for the short end of the setting.
+  TICK=setTimeout(step,d.revealed?lineMs(d.narrative[d.revealed-1]):Math.round(SPEEDS[speedIdx()][0]*0.6));
 }
 function tickerFinish(){
-  if(TICK){clearInterval(TICK);TICK=null;}
+  tickStop();
   const d=feedData();if(!d)return;
   /* Skip means nothing is left waiting, and the card of the city is a wait. Nobody can reach
      this from the card — it draws no Skip and swallows the keys — but leaving the flag set
@@ -11164,7 +11201,15 @@ function musicRoute(){
   if(S&&S.modal&&S.modal.type==="news"){if(!musicWant||musicWant.pool!==TRACKS.news)musicShuffle(TRACKS.news,"the week's news");return;}
   musicAmbient();
 }
-const SPEEDS=[[4500,"Slowest"],[3000,"Slow"],[2000,"Normal"],[1300,"Fast"],[800,"Fastest"]];
+/* What a line of MEDIAN length gets. Everything else is scaled from it by lineMs(), so these are
+   readable as "a normal line stays up this long" rather than as a bare interval.
+
+   They all went up, and Normal went up because the measurement said so: a 12-word line takes 2.9
+   seconds to read at an ordinary 250 words a minute, and Normal was giving it 2.0 — below the
+   reading time, before any thinking about it. Slowest went from 4.5 to 6.0, and with the scaling
+   a long line at Slowest now gets 13 seconds instead of the same flat 4.5 that a three-word line
+   got. */
+const SPEEDS=[[6000,"Slowest"],[4000,"Slow"],[2600,"Normal"],[1700,"Fast"],[1000,"Fastest"]];
 function speedIdx(){return clamp(Math.round(SET.speed==null?2:SET.speed),0,SPEEDS.length-1);}
 let MUSIC=null,userGestured=false,musicState="idle",musicNote="",musicWant=null,musicSrc=null;
 /* ------------------------------ THE SIREN ------------------------------ */
@@ -11179,14 +11224,21 @@ let MUSIC=null,userGestured=false,musicState="idle",musicNote="",musicWant=null,
 // deadline is now set once, by the first line, and a later one does not move it. A shock that
 // outstays its welcome stops being a shock and becomes something you wait out.
 const SIREN_MS=5000, SIREN_FADE=600;
-const SIREN={on:false,el:null,timer:null,audio:null,fade:null};
+const SIREN={on:false,timer:null,audio:null,fade:null};
+/* THE SOUND, AND NOT THE LIGHT SHOW.
+
+   This used to darken the whole page and sweep two coloured beams across it, with a red-and-blue
+   flash on top. It is gone. The game is black ink on white paper, and for five seconds every time
+   the police arrive it stopped being that and became a nightclub — over the top of the sheet the
+   player was in the middle of reading. The siren is the right idea; the beams were the idea
+   turned up until it was the loudest thing on the screen.
+
+   The sound stays, unchanged, and so does its clock: SIREN_MS still times the run and sirenEnd
+   still rides the recording down rather than cutting it off mid-wail. */
 function sirenFx(){
   try{
-    let el=document.getElementById("sirenfx");
-    if(!el){el=document.createElement("div");el.id="sirenfx";el.setAttribute("aria-hidden","true");el.innerHTML='<i class="s-red"></i><i class="s-blue"></i>';document.body.appendChild(el);}
     const already=SIREN.on;
-    el.classList.add("on");
-    SIREN.on=true;SIREN.el=el;
+    SIREN.on=true;
     if(already)return;                                  // already running: it keeps its own clock
     SIREN.timer=setTimeout(sirenEnd,SIREN_MS);
     if(SET.sound&&SET.volume>0){
@@ -11200,9 +11252,8 @@ function sirenFx(){
 }
 function sirenEnd(){
   SIREN.on=false;SIREN.timer=null;
-  if(SIREN.el)SIREN.el.classList.remove("on");
   // The recording is eight seconds with its own fade at the end, so stopping it at five would
-  // cut a siren off mid-wail. Ride it down instead over the time the beams take to fade out.
+  // cut a siren off mid-wail. Ride it down over SIREN_FADE instead.
   try{
     const a=SIREN.audio;
     if(a&&!a.paused){
@@ -12097,7 +12148,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 122 · September 2026";
+const BUILD="build 123 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a
@@ -12921,7 +12972,17 @@ function modalLoose(){
       +'<b>'+(o.kill?'✕':'·')+'</b> <span><b>'+esc(o.t)+'</b><br><span class="mono" style="font-size:11.5px;color:var(--muted);line-height:1.6">'+esc(o.d)+'</span></span></button>';
   }).join("")+'</div>';
   const foot='<div class="sel-help" style="margin-top:10px">The crew finds out what you decide. So, eventually, does everybody else.</div>';
-  return modalWrap(h+'<div class="modal-b">'+who+list+foot+'</div>');
+  /* THEIR FILE, BESIDE THE DECISION.
+
+     The card named them and said how many jobs they had worked and what loyalty they left on, and
+     that was all — so "Rizal Villanueva left for another crew" told you nothing about what had
+     actually walked out of the door. A Wheelman with 62 nerve who speaks Portuguese and Tagalog is
+     a different loss from a Lookout with 30 brains, and it is a different risk standing outside:
+     what they know is what they can tell. The same file the crew screen draws, without the buttons
+     — there is nothing left to pay them or teach them. */
+  const card='<div class="loose-who">'+memberCard(c,null,{controls:false,gone:true})+'</div>';
+  return modalWrap(h+'<div class="modal-b"><div class="loose-cols"><div class="loose-main">'
+    +who+list+foot+'</div>'+card+'</div></div>',"loose-wide");
 }
 // A talker is a slow leak, not an event: every few weeks they put something else in the file.
 function looseTick(rng){

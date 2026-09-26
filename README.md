@@ -244,12 +244,39 @@ told you whether the night had anything in it before you had read a line of it. 
   anthem is worse than none** — it is the game being wrong about something the player knows better
   than it does, over a card with their own flag on it.
 
-- **The police arrive, and the room knows it.** When the feed reaches the line where the police
-  show up — sirens two streets over, a patrol car at the door, the squad that was waiting because
-  somebody talked, the two officers in the hotel lobby on a recruitment trip — the screen darkens,
-  red and blue beams sweep across it and a siren plays for eight seconds (`music/siren.mp3`),
-  with the music ducked under it. Only a line revealed live sets it off; skipping to the end does
-  not.
+- **The police arrive, and you hear it.** When the feed reaches the line where the police show up
+  — sirens two streets over, a patrol car at the door, the squad that was waiting because somebody
+  talked, the two officers in the hotel lobby on a recruitment trip — a siren plays for eight
+  seconds (`music/siren.mp3`), with the music ducked under it. Only a line revealed live sets it
+  off; skipping to the end does not.
+
+  It used to darken the whole page as well, and sweep two coloured beams across it with a
+  red-and-blue flash on top, for five seconds, over the sheet you were in the middle of reading.
+  The game is black ink on white paper and for those five seconds it stopped being that. The
+  siren was the right idea; the light show was the idea turned up until it was the loudest thing
+  on the screen. Gone as of build 123 — the sound is unchanged, and so is its clock.
+
+- **A line stays up for as long as it takes to read it.** The five speeds set the pace and the
+  line sets the length: `base × words ÷ 12`, floored at 0.6× and capped at 2.2×, so a median line
+  gets exactly the setting's number and everything else is scaled by how much there is to read.
+
+  It was a flat number of milliseconds a line, whatever the line said, which is why Slowest did
+  not feel slow. Measured over 1,620 feed lines: the median is 12 words, a quarter are 15 or more,
+  the longest is 26. At an ordinary 250 words a minute a median line takes 2.9 seconds to read and
+  a 19-word one 4.6 — so at a flat 4,500ms **the long lines were on screen for less time than it
+  takes to read them**, while a three-word line sat there doing nothing for the same 4.5 seconds.
+  A 19-word line at Slowest now gets 9.5 seconds; at Normal, 4.1.
+
+  | | 3 words | 12 words | 19 words | 26 words |
+  |---|---|---|---|---|
+  | Slowest | 3.6s | **6.0s** | 9.5s | 13.0s |
+  | Slow | 2.4s | **4.0s** | 6.3s | 8.7s |
+  | Normal | 1.6s | **2.6s** | 4.1s | 5.6s |
+  | Fast | 1.0s | **1.7s** | 2.7s | 3.7s |
+  | Fastest | 0.6s | **1.0s** | 1.6s | 2.2s |
+
+  Normal went up from 2.0s because the measurement said it had to — it was below the reading time
+  of a median line. `tests/smoke35.js` checks the proportionality, the floor and the ceiling.
 - **And a drawing of the moment, running beside it.** The feed reads down the left of the screen;
   on the right, pinned while the feed scrolls, is a **drawing of what the line on screen says is
   happening** — black ink on off-white paper, cross-hatched, the same hand as everything else. Not
@@ -316,6 +343,12 @@ told you whether the night had anything in it before you had read a line of it. 
   are going to do about it, with **the odds written on every answer**. The box says how many
   jobs they worked with you and the percentage they eventually talk; a talker is a slow leak,
   putting something else in the detective's file every few weeks for as long as they are alive.
+  **Their file is on the screen beside the decision** — the same card the crew tab draws, so you
+  can see which trade just walked out, what attributes went with it, what they know and what they
+  speak. It was a name and a loyalty score before, which told you nothing about what you had lost
+  or about what is standing outside: a Wheelman with 62 nerve who speaks Portuguese is a different
+  loss from a Lookout with 30 brains, and a different risk, because what they know is what they
+  can tell.
   Let them go and that percentage stands. Buy the silence, and it will be asked for again. A
   word from your **enforcer** costs heat and some of the crew's good opinion. Your **fixer** can
   put them four borders away — the cleanest thing on the list that leaves them breathing.

@@ -202,7 +202,11 @@ async function putDownPaper(page){
   await page.waitForTimeout(120);
 
   /* 4 — a twist, mid-job. Six ways out, no right one. This is the game. */
-  await page.evaluate(id=>{S.jobOpen=id;render();},job.id);
+  // Run the feed at its fastest while waiting for the decision to come up. It changes nothing
+  // about what the screenshot looks like — only how long this has to stand there — and since
+  // build 123 a line stays up for as long as it takes to read, so a decision eight lines in is
+  // half a minute away at the ordinary pace and this loop used to give up before it arrived.
+  await page.evaluate(id=>{SET.speed=4;S.jobOpen=id;render();},job.id);
   await page.waitForTimeout(150);
   if(await page.$('[data-act="execute"]:not([disabled])')){
     await page.click('[data-act="execute"]:not([disabled])');

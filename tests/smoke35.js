@@ -61,6 +61,27 @@ const beats=N.lines.map(l=>{const m=/^(\\S+) \\(([^)]+)\\) /.exec(l.x);return m&
 if(beats.length){beats.forEach(b=>assert(b.l.at===techSite(b.k),b.who+" the "+b.k+" is at "+b.l.at));}
 else assert(true,"no trade beat in this feed — the crew stood in for all of them");
 
+/* ---------- how long a line stays up is how long it takes to read ----------
+   It was a flat number of milliseconds a line, whatever the line said, which is why Slowest did
+   not feel slow: measured over 1,620 feed lines the median is 12 words and the longest is 26, so
+   at a flat 4,500ms the long lines were on screen for LESS TIME THAN IT TAKES TO READ THEM (4.6
+   seconds at an ordinary 250 words a minute) and the three-word ones sat there doing nothing. */
+const ms=(w,i)=>{SET.speed=i;return lineMs({x:new Array(w+1).join("x ")});};
+assert(SPEEDS.length===5,"five speeds: "+SPEEDS.map(s=>s[1]).join(", "));
+assert(SPEEDS.every((s,i)=>i===0||s[0]<SPEEDS[i-1][0]),"and each one is faster than the last");
+assert(ms(LINE_WORDS,2)===SPEEDS[2][0],"a line of median length gets exactly the setting's number ("+ms(LINE_WORDS,2)+"ms at Normal)");
+assert(ms(24,2)>ms(12,2)&&ms(12,2)>ms(6,2),"a longer line gets longer: 6w "+ms(6,2)+" < 12w "+ms(12,2)+" < 24w "+ms(24,2));
+assert(Math.abs(ms(24,2)/ms(12,2)-2)<0.02,"and in proportion — twice the words, twice the time");
+assert(ms(12,0)>ms(12,4),"Slowest is slower than Fastest for the same line ("+ms(12,0)+" vs "+ms(12,4)+")");
+// The long lines are the ones this was for. At Slowest a 19-word line used to get 4,500ms flat,
+// which is less than the 4,560ms it takes to read at an ordinary pace.
+assert(ms(19,0)>4560,"the longest lines now outlast the time it takes to read them ("+ms(19,0)+"ms for 19 words at Slowest)");
+assert(ms(2,0)<ms(12,0),"and a line of two words does not sit there for a line of twelve's worth");
+// A floor and a ceiling, so neither end runs away: nothing under 0.6x and nothing over 2.2x.
+assert(ms(1,2)===Math.round(SPEEDS[2][0]*0.6),"there is a floor, so nothing flickers past");
+assert(ms(400,2)===Math.round(SPEEDS[2][0]*2.2),"and a ceiling, so one runaway line cannot stop the night");
+SET.speed=2;
+
 // ---------- the clock the feed keeps ----------
 assert(/^\\d\\d:\\d\\d$/.test(N.lines[0].t),"every line is stamped with a time ("+N.lines[0].t+")");
 const mins=N.lines.map(l=>+l.t.slice(0,2)*60+ +l.t.slice(3));

@@ -156,6 +156,19 @@ assert(lh.indexOf("Outside the crew")>=0,"the box names what this is");
 assert(/\\d+%/.test(lh),"and states the odds as a number");
 assert((lh.match(/data-act="loose"/g)||[]).length>=5,"with every answer on it");
 assert(lh.indexOf("kill")>=0,"the ones that end somebody are marked");
+/* THEIR FILE IS ON IT. "X left for another crew" said how many jobs they had worked and what
+   loyalty they left on, and nothing about what had actually walked out: a Wheelman with 62 nerve
+   who speaks Portuguese is a different loss from a Lookout with 30 brains, and a different risk
+   standing outside, because what they know is what they can tell. */
+const lv=byId(leaver.id);
+assert(lh.indexOf('class="loose-cols"')>=0,"the sheet is the decision and their file side by side");
+assert(lh.indexOf(TECH_BY_K[lv.tech].l)>=0,"the file says which trade left: "+TECH_BY_K[lv.tech].l);
+ATTRS.forEach(a=>assert(lh.indexOf(ATTR_ABBR[a])>=0,"and carries their "+a));
+assert(lv.langs.every(l=>lh.indexOf(l)>=0),"and what they speak: "+lv.langs.join(", "));
+assert(lv.know.every(k=>lh.indexOf(k)>=0),"and what they know: "+lv.know.join(", "));
+assert(lh.indexOf("Not on the crew.")>=0,"and it does not offer to pay or teach somebody who has gone");
+assert(lh.indexOf("upkeep")<0||lh.indexOf("Not on the crew.")<lh.indexOf("upkeep"),
+  "nor charge a weekly upkeep for them");
 // the question cannot be clicked away
 const opts=looseOptions(byId(leaver.id),"dropped");
 assert(opts[0].k==="let"&&opts[0].money===0&&opts[0].need!==false,"letting them go is always available and free");

@@ -108,6 +108,31 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
     return {up,down:ANTHEM.nodes.length};});
   check(stopped.up>0&&stopped.down===0,"the tune is taken down with the card ("+stopped.up+" notes → "+stopped.down+")");
 
+  // ---- and the police arriving is a sound, not a light show
+  /* It used to darken the whole page and sweep two coloured beams across it with a red-and-blue
+     flash on top, for five seconds, over the sheet the player was in the middle of reading. The
+     game is black ink on white paper; that was a nightclub. The sound is the idea and it stays. */
+  const pol=await page.evaluate(()=>{
+    SET.sound=true;SET.music=true;SET.volume=1;userGestured=true;
+    sirenFx();
+    const out={on:!!SIREN.on,
+      overlay:!!document.getElementById("sirenfx"),
+      anyBeam:document.querySelectorAll(".s-red,.s-blue,#sirenfx").length,
+      audio:!!(SIREN.audio),
+      timer:SIREN.timer!=null};
+    if(SIREN.timer){clearTimeout(SIREN.timer);SIREN.timer=null;}
+    sirenEnd();
+    return out;});
+  check(pol.on,"the siren runs when the police arrive");
+  check(pol.audio,"and it is a recording, playing");
+  check(pol.timer,"on its own clock, so it rides down rather than being cut off mid-wail");
+  check(!pol.overlay&&pol.anyBeam===0,
+    "and NOTHING is drawn over the page for it — no darkening, no beams, no flash ("+pol.anyBeam+" elements)");
+  const css=await page.evaluate(()=>{
+    const src=[...document.querySelectorAll("style")].map(s=>s.textContent).join("\n");
+    return {fx:/#sirenfx/.test(src),turn:/siren-turn/.test(src),flash:/siren-flash/.test(src)};});
+  check(!css.fx&&!css.turn&&!css.flash,"and the rules that drew it are gone from the sheet too");
+
   check(errors.length===0,"no page errors"+(errors.length?": "+errors.join(" | "):""));
   await browser.close();
 })().catch(e=>{console.error(e);process.exit(1);});

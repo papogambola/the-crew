@@ -989,7 +989,10 @@ ch("controls","Controls and the file cabinet","Keys, saving, settings",[
       +"Reading a code in tells you whose file it is, which week and which ranking, <i>before</i> it replaces what is in the browser.")),
   S("settings","Settings",
     p("Sound, music, brightness and report speed, all in the office. The report speed runs from "+m("Slowest")+" to "+m("Fastest")+" — "
-      +"five settings, because reading a job as it happens and pressing through one you already understand are different things.")),
+      +"five settings, because reading a job as it happens and pressing through one you already understand are different things. "
+      +"The setting is the pace, not a fixed wait: a line stays up for as long as there is to read on it, so a long line gets more "
+      +"time than a short one at every setting. A line of average length gets about six seconds at "+m("Slowest")+" and one at "
+      +m("Fastest")+"; the longest lines in the game get thirteen and two.")),
 ]);
 
 /* ---------------- 19 -------------------------------- */
