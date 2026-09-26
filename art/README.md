@@ -11,15 +11,11 @@ and a FINITE one, and that is the only reason a drawing for every moment is affo
     python3 tools/art.py --trips --sheet    # the recruitment trip's list, grouped to draw from
     python3 tools/art-import.py <folder>    # convert and file a folder that has just arrived
 
-**The recruitment trip is finished — 121 of 121.** Every part of it: 30 at the table, 18 walking the
-city, 16 reading them, 14 flying out, 12 signing, 11 snags, 10 going home, 10 refusals.
+**Both chapters are drawn: 405 of 405 in a job report, 121 of 121 in a recruitment trip.** Every
+line either of them can print has a picture of its own moment. `--check` says the two as two
+numbers, because one total hid a whole chapter sitting at zero.
 
-**396 of the 405 job templates are drawn**, and nine are not: the six ways the report says somebody
-would not take the job (`OUT`), `{P} arrive {where}.` and `Boots on the stairs.` (`POLICE_COME`),
-and `Heat like a wall.` (`WEATHER`). `--prompts` lists them, and `--check` now says the two chapters
-as two numbers, because one total hid a whole chapter sitting at zero.
-
-**577 files are in here, and 60 of them illustrate nothing.** This directory was built against a
+**586 files are in here, and 60 of them illustrate nothing.** This directory was built against a
 list that harvested strings out of the tables without asking whether each one was a LINE:
 
     PLACES  23    "an all-night bakery"      fills {place} in a YOU_RUN line
@@ -48,7 +44,7 @@ Two rules the prompts enforce, both about a drawing being reused everywhere:
   and a fjord is wrong in Jeddah. Where you are belongs to the words and the flag above them.
 - **No faces.** The cast is generated per player. A drawn face is always somebody else's Itai.
 
-**577 files, 108MB, served from GitHub Pages beside the game — and staying there.** Four earlier
+**586 files, 106MB, served from GitHub Pages beside the game — and staying there.** Four earlier
 versions of this file said the move to object storage was coming at six hundred files. It was
 measured instead of assumed, and the number says wait:
 
