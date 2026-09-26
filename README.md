@@ -207,31 +207,31 @@ told you whether the night had anything in it before you had read a line of it. 
   red and blue beams sweep across it and a siren plays for eight seconds (`music/siren.mp3`),
   with the music ducked under it. Only a line revealed live sets it off; skipping to the end does
   not.
-- **And the plan, running beside it.** The feed reads down the left of the screen; on the right,
-  pinned while the feed scrolls, is a **plan of the place** — not the world, the place: the streets
-  and the building with its strongroom on a vault job, the quay, the stacks and the ship alongside
-  on a port job, the road, the ridge and the stop on an interception, the switchbacks and the
-  barrier on a pass, the fence, the sheds and the tanks on a sabotage, the strip and the hangar on an
-  air lift. It is drawn from the posting itself — its kind, its tags, the country's terrain (a
-  coast, a river, hills, a railway) — off a seed taken from the posting, so a job always draws the
-  same plan and no two jobs draw one alike. The country's flag and the city sit in one corner and
-  the **clock in the other**, reading the time of the line on screen. The five places a job happens
-  in — the street, the post, the way in, the room, the car, named for what they are on that plan —
-  sit where the plan puts them, and every operator stands at one of them, each tied to their place
-  by a hairline so there is never a doubt who is where. A recruitment trip draws the city you flew
-  into the same way.
-- **The icons are the operators' own faces** — the same ink bust their crew card carries, clipped
-  into a disc, with their name under it. **What they are doing rides as a small mark on the corner
-  of the face**: a mark that **changes with the line** — a
-  figure on foot arriving, an eye watching, a document at a border, a key at the way in, a dial in
-  the room, a wheel at the car, a handset, a banknote, a fist, a cross when somebody goes down.
-  Nothing on it is decided separately from the text: each line of the feed is written with the place
-  it happens in, who it is about, and what they are doing, so **where somebody stands is what their
-  trade is** — the wheelman never leaves the car, the lookout stays on the corner, the forger is at
-  the way in, the safecracker is in the room. The lines after the crew have gone — the morning, the
-  quiet week, the split — name no place and leave the map where it stood. **A recruitment trip gets
-  the same map**, framed on the city you flew to, with four places of its own — off the plane, the
-  city, the table, the answer — and two people on it: you, and whoever you went to meet.
+- **And a drawing of the moment, running beside it.** The feed reads down the left of the screen;
+  on the right, pinned while the feed scrolls, is a **drawing of what the line on screen says is
+  happening** — black ink on off-white paper, cross-hatched, the same hand as everything else. Not
+  a picture of the job: a picture of *that sentence*. "The keys are under the mat, as promised,
+  which is a worry" gets a hand, a mat and a key. The picture changes when the line does, and a run
+  of lines with no drawing of their own leaves the last one up rather than flashing.
+
+  This is affordable because **the feed's lines are templates**, not free text — a finite set of
+  them, with the city, the country and a name slotted in — so it is one drawing per template, drawn
+  once, rather than one per line per playthrough per player. Each line carries the id of the
+  template that wrote it, derived from the words themselves, and `art/` holds a file per id. 266 of
+  456 job templates are drawn; the 122 a recruitment trip needs are not drawn yet. **A line with no
+  drawing shows nothing at all** — the sheet goes to one column and the report takes the width,
+  rather than holding a space open with an empty frame. `tools/art.py` is the single source of what
+  is wanted and what each file is called: `--prompts` writes the list, `--inbox` files a folder of
+  them, `--check` fails if the manifest in `play.html` has drifted from what is on disk.
+
+  **What was there before was a plan of the place** — the streets and the building on a vault job,
+  the quay and the stacks on a port job, drawn from the posting off its own seed — with the five
+  places a job happens in marked on it and the crew standing at them as their own ink busts, a mark
+  of what each was doing on the corner. It was accurate and it was deterministic and it told you
+  nothing the sentence had not already said better: you watched two figures slide two centimetres
+  while reading that somebody's papers had passed. It is gone as of build 121, and so are the 583
+  lines and 48 top-level names that drew it. What it was really carrying — which city, what time it
+  is — was never the plan's to carry: the city is on the header, the clock is on every line.
 - **A night that went wrong says why.** Botch one, or worse, and the report carries **What went
   wrong**: your crew's number against the room's — and whether the gap was there before anybody
   rolled anything — then every factor that was against you, each with **the thing that would have

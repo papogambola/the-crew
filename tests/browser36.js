@@ -1,4 +1,5 @@
-// Build 37: nothing is paid until the trip ends, and the trip has a map of the city.
+// Build 37: nothing is paid until the trip ends. The map of the city it drew is gone (build 121);
+// what that section checks now is that the sheet is clean where the plan was.
 const {chromium,CHROME,ROOT,GAME}=require("./env.js");
 const path=require("path"),fs=require("fs");
 const putDownPaper=require("./paper.js");
@@ -46,24 +47,31 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
     "and they have not joined the crew before you have met them");
   const week0=await page.evaluate(()=>S.week);
 
-  // ---- the map of the city
-  check(await page.$(".modal .feedmap"),"the trip draws a map too");
-  const m=await page.evaluate(()=>{const m=document.querySelector(".feedmap");
-    return {where:m.querySelector(".fm-where").textContent.trim(),
-      clock:m.querySelector(".fm-clock").textContent.trim(),
-      sites:[...m.querySelectorAll(".fm-site")].map(e=>e.getAttribute("data-site")),
-      labels:[...m.querySelectorAll(".fm-site text")].map(e=>e.textContent),
-      names:[...m.querySelectorAll(".fm-op-n")].map(e=>e.textContent),
-      blocks:m.querySelectorAll(".sc-block").length,
-      cafe:[...m.querySelectorAll(".sc-text")].map(e=>e.textContent).join(" ")};});
-  check(m.where===start.city+" · "+start.country,"of the city you flew to: "+m.where);
-  // A trip draws the city you flew into the same way a job draws its place — a plan, not the
-  // world zoomed in — with the café you are meeting in marked on it.
-  check(m.blocks>10,"drawn as a plan of that city, like the job's — "+m.blocks+" blocks on it");
-  check(/CAF/i.test(m.cafe),"with the place you are meeting marked: "+m.cafe.trim());
-  check(m.sites.join(",")==="land,city,table,deal","with a trip's own places, not a job's: "+m.labels.join(", "));
-  check(m.names.length===2&&m.names[0]==="YOU","two people on it — you and them: "+m.names.join(", "));
-  check(/^[A-Z]{3} \d\d:\d\d$/.test(m.clock),"and the clock is the trip's own, days and all: "+m.clock);
+  // ---- where the plan of the city used to be
+  // The trip drew a plan of the city you flew into, with you and them standing at four dots on
+  // it. It is gone, from here and from the job — five labelled dots and some shuffling figures
+  // said nothing the sentence had not already said. A drawing of the moment says it instead, and
+  // no TRIP_ table is drawn yet, so a running trip is one column and the story takes the width.
+  // What the plan was really for — which city, whose week, what time it is — was never the plan's
+  // to carry: it is in the header and on every line of the ticker, which is where it is checked.
+  const m=await page.evaluate(()=>{
+    const cols=document.querySelector(".modal.feed .feed-cols");
+    return {map:!!document.querySelector(".feedmap"),
+      fm:document.querySelectorAll(".modal [class*='fm-']").length,
+      solo:!!(cols&&cols.classList.contains("solo")),
+      side:!!document.querySelector(".feed-side"),
+      kicker:(document.querySelector(".modal.feed .kicker")||{}).textContent||""};});
+  check(!m.map,"the trip does not draw a plan of the city");
+  check(m.fm===0,"and nothing of the map's furniture is left on the screen ("+m.fm+" fm- elements)");
+  check(m.solo&&!m.side,"so the story takes the whole sheet");
+  check(m.kicker.indexOf(start.city)>=0&&m.kicker.indexOf(start.country)>=0,
+    "the city you flew to is on the header, where it belongs: "+m.kicker.trim());
+  // The plan carried the clock in its corner, so it had one before the first line did. The ticker
+  // carries it per line instead, which means waiting for a line before asking what time it is.
+  await page.waitForSelector("#ticker .tk-t",{timeout:30000});
+  const times=await page.evaluate(()=>[...document.querySelectorAll("#ticker .tk-t")].map(e=>e.textContent));
+  check(times.length>0&&times.every(t=>/^([A-Z]{3} )?\d\d:\d\d$/.test(t)),
+    "and the trip's own clock is on every line, days and all: "+times[0]);
   await page.screenshot({path:OUT+"/01-trip.png"});
 
   // ---- the money still has not moved part-way through

@@ -91,7 +91,9 @@ const srv=http.createServer((q,r)=>{
     const img=document.querySelector(".feed-side .feedart img");
     const d=S.modal&&S.modal.data;
     return {hasFigure:!!document.querySelector(".feed-side .feedart"),
-            hasMap:!!document.querySelector(".feed-side .fm-clock"),
+            // Any of the map's furniture, not just its clock: the plan was a dozen classes and
+            // half of it coming back would be as wrong as all of it.
+            hasMap:document.querySelectorAll(".modal [class*='fm-'], .modal [class*='sc-']").length,
             src:img?img.getAttribute("src"):null,
             alt:img?(img.getAttribute("alt")||"").slice(0,40):null,
             complete:img?(img.complete&&img.naturalWidth>0):false,
@@ -99,7 +101,7 @@ const srv=http.createServer((q,r)=>{
             revealed:d?d.revealed:0};
   });
   check(shown.hasFigure,"once the feed is running, the panel holds a drawing ("+shown.revealed+" lines in)");
-  check(!shown.hasMap,"and the plan is gone from it");
+  check(shown.hasMap===0,"and not a trace of the plan is left on the sheet ("+shown.hasMap+" of its elements)");
   check(/^art\/.+\.webp$/.test(shown.src||""),"pointing at a real file: "+shown.src);
   // The file must actually LOAD. A correct src for a file that is not there looks identical in
   // the DOM and shows an empty box on the screen.

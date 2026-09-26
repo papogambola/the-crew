@@ -63,9 +63,7 @@ const mine=NOW("TECHS_BIG").filter(t=>asked.indexOf(t.k)<0);
 ok(mine.length===10,"and ten more: "+mine.map(t=>t.l).join(", "));
 ok(NOW("TECHS_BIG").every(t=>NOW("KNOW").indexOf(t.know)>=0),"each comes with a kind of knowledge the game has");
 ok(NOW("TECHS_BIG").every(t=>NOW("ATTRS").indexOf(t.a)>=0),"and leans on one of the five attributes");
-ok(NOW("TECHS_BIG").every(t=>NOW("TECH_SITE")[t.k]),"each has a place to stand on the plan");
-ok(NOW("TECHS_BIG").every(t=>NOW("FM_TECH_GLYPH")[t.k]&&NOW("FM_GLYPH")[NOW("FM_TECH_GLYPH")[t.k]]),
-  "and a mark on the map that is actually drawn");
+ok(NOW("TECHS_BIG").every(t=>NOW("TECH_SITE")[t.k]),"each has a place in the night it happens at");
 ok(NOW("TECHS_BIG").every(t=>Array.isArray(NOW("TECH_BEAT")[t.k])&&NOW("TECH_BEAT")[t.k].length>=3),
   "and three lines of its own in the report");
 ok(NOW("TECHS_BIG").every(t=>NOW("TECH_BEAT")[t.k].every(p=>Array.isArray(p)&&p.length===2)),

@@ -619,39 +619,13 @@
   .tut-target{outline:3px solid var(--stamp);outline-offset:4px;box-shadow:0 0 0 8px rgba(154,43,30,.14)}
 
   /* ---- the live job report ---- */
-  /* the job on the world, zoomed to where it is, with the crew working on it */
-  .feedmap{position:relative;border:1px solid var(--line-2);background:var(--card);margin-top:8px;overflow:hidden}
-  .fm-clock{position:absolute;left:0;top:0;z-index:2;background:var(--ink);color:var(--paper);
-    font-size:13px;letter-spacing:.14em;padding:3px 8px 2px;line-height:1.2}
-  .fm-svg{display:block;width:100%;height:auto}
-  .fm-grid{stroke:var(--line);stroke-width:.25;vector-effect:non-scaling-stroke;opacity:.7}
-  .fm-land{fill:var(--paper-2);stroke:var(--ink);stroke-width:1.1px;vector-effect:non-scaling-stroke;stroke-linejoin:round}
-  .fm-water{fill:var(--card);stroke:var(--ink);stroke-width:.9px;vector-effect:non-scaling-stroke}
-  .fm-city-h{fill:none;stroke:var(--stamp);stroke-width:.8px;vector-effect:non-scaling-stroke;opacity:.35}
-  .fm-city-d{fill:var(--stamp)}
-  .fm-where{position:absolute;right:0;top:0;z-index:2;background:var(--paper);border-left:1px solid var(--line-2);
-    border-bottom:1px solid var(--line-2);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--muted);padding:4px 8px 3px;line-height:1.2}
-  .fm-tether line{stroke:var(--ink);stroke-width:.7px;vector-effect:non-scaling-stroke;opacity:.28}
-  .fm-site circle{fill:var(--paper);stroke:var(--ink);stroke-width:1px;vector-effect:non-scaling-stroke}
-  .fm-site text{font-family:var(--f-mono);letter-spacing:.18em;fill:var(--ink);text-anchor:middle;font-weight:500;
-    paint-order:stroke;stroke:var(--paper-2);stroke-width:1.6px;stroke-linejoin:round}
-  .fm-site.on circle{stroke:var(--stamp);stroke-width:2px}
-  .fm-site.on text{fill:var(--stamp)}
-  .fm-op{transition:transform .55s ease}
-  .fm-op-b{fill:#fff}
-  .fm-op-r{fill:none;stroke:var(--ink);stroke-width:1.5px;vector-effect:non-scaling-stroke}
-  .fm-op-bb{fill:var(--ink);stroke:var(--paper);stroke-width:1.1}
-  .fm-op-g{fill:none;stroke:var(--paper);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-  .fm-op-g circle{fill:none}
-  .fm-op-n{font-family:var(--f-mono);font-size:2.8px;fill:var(--ink);text-anchor:middle;
-    paint-order:stroke;stroke:var(--paper);stroke-width:1.6px;stroke-linejoin:round}
-  @media(prefers-reduced-motion:reduce){.fm-op{transition:none}}
-  /* the live screen: the feed on the left, the plan on the right, pinned while the feed scrolls */
+  /* the live screen: the feed on the left, the drawing on the right, pinned while the feed scrolls */
   .modal.feed{max-width:1060px}
   .feed-cols{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start}
   .feed-side{position:sticky;top:0}
-  .feed-side .feedmap{margin-top:0}
+  /* No drawing for anything read so far: the report takes the sheet. Better than an empty frame
+     holding a space open for a picture that may never come. */
+  .feed-cols.solo{grid-template-columns:minmax(0,1fr)}
   /* The drawing sits where the plan sat: same width, same ink, same border. A fixed 4:3 box so a
      line with a picture and a line without do not shove the feed up and down as they alternate. */
   .feedart{margin:0;border:1px solid var(--line-2);background:var(--card)}
@@ -666,24 +640,6 @@
   .modal.trip-done .feed-main .ticker{max-height:min(46vh,420px)}
   .modal.trip-done .feed-side .id{margin:0}
   @media(max-width:920px){.feed-cols,.modal.trip-done .feed-cols{grid-template-columns:1fr}.feed-side{position:static;order:-1}}
-  .fm-flag{width:16px;height:11px;vertical-align:-1px;margin-right:5px}
-  /* the plan: streets, water, the building, in ink */
-  .sc-ground{fill:var(--paper-2)}
-  .sc-block{fill:var(--paper);stroke:var(--ink);stroke-width:.5px;vector-effect:non-scaling-stroke;stroke-linejoin:round}
-  .sc-inner{fill:var(--paper-2);stroke:var(--ink);stroke-width:.4px;vector-effect:non-scaling-stroke}
-  .sc-target{fill:var(--paper);stroke:var(--ink);stroke-width:1.5px;vector-effect:non-scaling-stroke;stroke-linejoin:round}
-  .sc-strong{fill:var(--paper);stroke:var(--ink);stroke-width:2px;vector-effect:non-scaling-stroke}
-  .sc-line{fill:none;stroke:var(--ink);stroke-width:.6px;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
-  .sc-thin{fill:none;stroke:var(--ink);stroke-width:.35px;vector-effect:non-scaling-stroke;opacity:.7}
-  .sc-hatch{stroke:var(--ink);stroke-width:.3px;vector-effect:non-scaling-stroke;opacity:.5}
-  .sc-road-e{fill:none;stroke:var(--ink);stroke-linejoin:round;stroke-linecap:round;opacity:.8}
-  .sc-road{fill:none;stroke:var(--paper-2);stroke-linejoin:round;stroke-linecap:round}
-  .sc-water{fill:var(--card);stroke:var(--ink);stroke-width:.7px;vector-effect:non-scaling-stroke}
-  .sc-fence{fill:none;stroke:var(--ink);stroke-width:.5px;vector-effect:non-scaling-stroke;stroke-dasharray:1.2 .9}
-  .sc-tree{fill:var(--paper);stroke:var(--ink);stroke-width:.4px;vector-effect:non-scaling-stroke}
-  .sc-dash{fill:none;stroke:var(--ink);stroke-width:.45px;vector-effect:non-scaling-stroke;stroke-dasharray:1.5 1.1}
-  .sc-solid{fill:var(--ink);stroke:none}
-  .sc-text{font-family:var(--f-mono);fill:var(--muted);letter-spacing:.12em;paint-order:stroke;stroke:var(--paper-2);stroke-width:.8px;stroke-linejoin:round}
   .ticker{max-height:320px;overflow:auto;border:1px solid var(--line-2);background:var(--card);padding:6px 10px;font-family:var(--f-mono);font-size:12.5px;line-height:1.5;margin-top:8px}
   .tk{display:flex;gap:10px;padding:4px 0;border-bottom:1px dotted var(--line)}
   .tk:last-child{border-bottom:0}
@@ -1138,7 +1094,7 @@ const FLAG_SPEC={
   "Indonesia":()=>FL_H(["#FF0000","#fff"]),
 };
 function flagInner(co){const f=co&&FLAG_SPEC[co.name];return f?f():FL_R(0,0,30,20,"#c8c4bc");}
-// An inline flag for a line of text, and one for inside an SVG (the maps).
+// An inline flag for a line of text, and one for inside an SVG (the board's map).
 function flagSvg(co,cls){if(!co)return "";return '<svg class="flag'+(cls?" "+cls:"")+'" viewBox="0 0 30 20" preserveAspectRatio="none" role="img" aria-label="'+esc(co.name)+'">'+flagInner(co)+'</svg>';}
 function flagAt(co,x,y,w){if(!co)return "";const h=w*2/3;return '<svg x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" viewBox="0 0 30 20" preserveAspectRatio="none">'+flagInner(co)+'<rect x=".3" y=".3" width="29.4" height="19.4" fill="none" stroke="rgba(17,16,16,.6)" stroke-width=".7"/></svg>';}
 const TIER_WORD=["","strong","strong","limited","weak"];
@@ -1208,26 +1164,19 @@ function techOptions(cur){
 // isBigTech lives further down, with the specialists. This was a second copy of it, and the two
 // agreed on all fourteen trades — which is the only reason it was harmless rather than the same
 // bug signed() turned out to be. Both cannot stay: the check in the suite counts names, not luck.
-const SITES=[
-  {k:"road",  l:"The street", x:14, y:50, ly:-10.5},
-  {k:"watch", l:"The post",   x:20, y:20, ly:-10.5},
-  {k:"door",  l:"The way in", x:50, y:38, ly:-10.5},
-  {k:"inside",l:"The room",   x:74, y:20, ly:-10.5},
-  {k:"exit",  l:"The car",    x:84, y:52, ly:-11.5},
-];
-const SITE_BY_K={};SITES.forEach(p=>SITE_BY_K[p.k]=p);
-const TRIP_SITES=[
-  {k:"land",  l:"Off the plane", x:-17, y:10},
-  {k:"city",  l:"The city",      x:-13, y:-10},
-  {k:"table", l:"The table",     x:9,   y:-9},
-  {k:"deal",  l:"The answer",    x:15,  y:10},
-];
-const TRIP_SITE_BY_K={};TRIP_SITES.forEach(p=>TRIP_SITE_BY_K[p.k]=p);
-const TRIP_SITE_GLYPH={land:"walk",city:"watch",table:"talk",deal:"paper"};
-// A feed is a job or a trip, and the two have different places. Everything downstream — where a
-// line happens, where an icon stands, what is lit — reads the list through here.
-function feedSites(d){return d&&d.cid?TRIP_SITES:SITES;}
-function feedSiteBy(d,k){return (d&&d.cid?TRIP_SITE_BY_K:SITE_BY_K)[k];}
+// Where in the night a line happened: five places on a job, four on a recruitment trip. A line
+// either names one of them or names none, and it is what a trade maps onto through TECH_SITE
+// below — so the lookout's line lands at the post and the wheelman's at the car.
+//
+// These were coordinates too, and a label each: x, y and a label offset, because a plan of the
+// place was drawn beside the feed and the crew stood at these dots. The plan is gone — it told you
+// nothing the sentence had not already said, and a drawing of the moment tells you instead — and
+// its geometry went with it. The keys stayed, because where a line happens is a fact about the
+// night rather than about any picture of it.
+const SITES=["road","watch","door","inside","exit"];
+const TRIP_SITES=["land","city","table","deal"];
+const SITE_BY_K={};SITES.forEach(k=>SITE_BY_K[k]=k);
+const TRIP_SITE_BY_K={};TRIP_SITES.forEach(k=>TRIP_SITE_BY_K[k]=k);
 const TECH_SITE={
   wheelman:"exit", smuggler:"exit", cleaner:"exit",
   lookout:"watch", overwatch:"watch", hacker:"watch", launderer:"watch", fixer:"watch",
@@ -1498,7 +1447,7 @@ function normFace(face,gender){
   return out;
 }
 // seed draws the texture (stubble, wisps, a buzz cut's flecks); face decides the parts.
-// The bust itself, on a 100x120 field. avatar() frames it; the map nests it.
+// The bust itself, on a 100x120 field. avatar() frames it.
 function avatarBody(seed,gender,face){
   const rng=mulberry32(seed>>>0);
   const K="#111010",W="#ffffff";
@@ -7356,56 +7305,6 @@ function modalRecruit(id){
   return modalWrap(h+b);
 }
 
-// The job on the world, zoomed to where it is: the same ink, the same projection and the same
-// coastlines as the board's map, framed on the country the job is in. The crew stand around the
-// city as marks of what they are doing — an eye watching, a key at the door, a wheel at the car —
-// and the mark changes as the feed says what they are doing now.
-//
-// The map data is twenty-two coarse polygons for the whole world, so there is no street to zoom
-// to; the frame is the country in its region, which is as close as the ink goes.
-const FM_GLYPH={
-  walk:'<path d="M0 -2.6 a1 1 0 1 0 .01 0"/><path d="M0 -1.6 V.6 M0 .6 L-1.3 2.6 M0 .6 L1.3 2.6 M-1.5 -.4 H1.5"/>',
-  watch:'<path d="M-3 0 Q0 -2.4 3 0 Q0 2.4 -3 0 Z"/><circle r=".9"/>',
-  talk:'<path d="M-2.8 -2 H2.8 V1 H-.6 L-1.8 2.6 V1 H-2.8 Z"/>',
-  open:'<circle cy="-1.6" r="1.2"/><path d="M0 -.4 V2.6 M0 1.4 H1.4 M0 2.2 H1.1"/>',
-  work:'<circle r="2.2"/><path d="M0 -2.2 V-1.2 M0 2.2 V1.2 M-2.2 0 H-1.2 M2.2 0 H1.2"/>',
-  drive:'<circle r="2.5"/><circle r=".7"/><path d="M-2.5 0 H-.7 M2.5 0 H.7 M0 .7 V2.5"/>',
-  down:'<path d="M-2.4 -2.4 L2.4 2.4 M2.4 -2.4 L-2.4 2.4"/>',
-  wire:'<path d="M-2.8 -2 H2.8 V1.2 H-2.8 Z M-1.2 1.2 V2.6 M1.2 1.2 V2.6 M-2 2.6 H2"/>',
-  paper:'<path d="M-2 -2.6 H1.2 L2.2 -1.6 V2.6 H-2 Z M1.2 -2.6 V-1.6 H2.2"/>',
-  fist:'<path d="M-2.2 -.6 Q-2.2 -2.2 -.6 -2.2 H1 Q2.4 -2.2 2.4 -.6 V1 Q2.4 2.4 1 2.4 H-.8 Q-2.2 2.4 -2.2 1 Z"/><path d="M-2.2 -.2 H2.4"/>',
-  crate:'<path d="M-2.4 -2 H2.4 V2 H-2.4 Z M-2.4 -2 L2.4 2 M2.4 -2 L-2.4 2"/>',
-  cash:'<path d="M-2.8 -1.6 H2.8 V1.6 H-2.8 Z"/><circle r=".9"/>',
-  phone:'<path d="M-2.4 -2.4 H-.4 L.2 -.6 L-.8 0 Q0 1.4 1.4 2.2 L2 1.2 L3 1.8 V2.6 Q.6 2.8 -1.4 .6 Q-2.8 -.8 -2.4 -2.4 Z"/>',
-  // the seven-place specialists
-  air:'<path d="M0 -2.8 L.7 -.6 L2.9 .2 L.7 .5 L.4 2.8 L0 1.4 L-.4 2.8 L-.7 .5 L-2.9 .2 L-.7 -.6 Z"/>',
-  rotor:'<circle r="1"/><path d="M-2.8 -2.2 H-1.2 M1.2 -2.2 H2.8 M-2.8 2.2 H-1.2 M1.2 2.2 H2.8 M-2 -2.2 V-1 L-.7 -.5 M2 -2.2 V-1 L.7 -.5 M-2 2.2 V1 L-.7 .5 M2 2.2 V1 L.7 .5"/>',
-  water:'<path d="M-3 -1.4 Q-1.5 -2.6 0 -1.4 Q1.5 -.2 3 -1.4 M-3 .6 Q-1.5 -.6 0 .6 Q1.5 1.8 3 .6 M-3 2.6 Q-1.5 1.4 0 2.6"/>',
-  boat:'<path d="M-2.8 .6 H2.8 L1.8 2.4 H-1.8 Z M0 .6 V-2.6 M0 -2.2 L2 -1 L0 -.4"/>',
-  rope:'<path d="M0 -2.8 V2.8 M-1.2 -2 L1.2 -1.2 M-1.2 -.4 L1.2 .4 M-1.2 1.2 L1.2 2"/>',
-  dig:'<path d="M-2.6 2.6 L.4 -.4 M-.8 -1.2 L1.6 -2.6 L2.6 -1.6 L1.2 .8 Z"/>',
-  flask:'<path d="M-1 -2.6 H1 M0 -2.6 V-.6 L2.2 2.6 H-2.2 L0 -.6 Z"/>',
-  cross:'<path d="M-.9 -2.6 H.9 V-.9 H2.6 V.9 H.9 V2.6 H-.9 V.9 H-2.6 V-.9 H-.9 Z"/>',
-  bolt:'<path d="M.8 -2.8 L-1.8 .4 H.2 L-.6 2.8 L2 -.4 H0 Z"/>',
-  wave:'<path d="M0 2.4 V.6"/><circle cy="2.4" r=".7"/><path d="M-1.4 -.2 Q0 -1.6 1.4 -.2 M-2.6 -1.4 Q0 -3.4 2.6 -1.4"/>',
-  chart:'<path d="M-2.6 2.4 V-2.6 M-2.6 2.4 H2.8 M-1.4 1.4 V-.4 M0 1.4 V-1.8 M1.4 1.4 V-.8"/>',
-};
-const FM_SITE_GLYPH={road:"walk",watch:"watch",door:"open",inside:"work",exit:"drive"};
-const FM_TECH_GLYPH={
-  wheelman:"drive", smuggler:"crate", cleaner:"work",
-  lookout:"watch", overwatch:"watch", hacker:"wire", launderer:"cash", fixer:"phone",
-  forger:"paper", grifter:"talk", face:"talk", infiltrator:"walk", pickpocket:"work",
-  safecracker:"work", demolitions:"work", enforcer:"fist",
-  drone:"rotor", pilot:"air", skipper:"boat", diver:"water", climber:"rope",
-  tunneller:"dig", chemist:"flask", medic:"cross", electrician:"bolt", signals:"wave",
-  analyst:"chart", quarter:"crate", linguist:"talk", handler:"phone",
-};
-function fmGlyphFor(line,c){
-  if(line&&line.act&&FM_GLYPH[line.act])return line.act;
-  if(c&&FM_TECH_GLYPH[c.tech]&&line&&line.at&&line.at===techSite(c.tech))return FM_TECH_GLYPH[c.tech];
-  return (line&&(FM_SITE_GLYPH[line.at]||TRIP_SITE_GLYPH[line.at]))||"walk";
-}
-/* --------------------------- THE JOB, AS A PLAN ------------------------ */
 /* ======================== THE ESTABLISHING SHOT ========================
    Seven seconds of the city before the night starts. A film cuts to a skyline and a caption
    before it cuts to the room, and for the same reason: the crew has just landed somewhere, and
@@ -8590,13 +8489,8 @@ function estabArm(){
     estabDrop(d);render();},ESTAB_MS);
 }
 
-// The live map is a plan of the place, not the world: the streets and the building on a vault job,
-// the quay and the stacks on a port job, the road and the ridge on an interception, the runway on
-// an air lift. It is drawn from the posting itself — its kind, its tags, the country's terrain —
-// off a seed taken from the posting, so a job always draws the same plan and no two draw one alike.
-// Every plan is 100 wide and 84 high, in ink, and puts the five places somewhere that means something.
-const SC_W=100,SC_H=84;
-const SC_CACHE={};
+// One decimal place, for the numbers that go into an SVG path. Used by the skyline on the
+// establishing card. It was the plan's formatter first — the plan is gone; the formatter is not.
 const f1=v=>(+v).toFixed(1);
 function fmHash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
 
@@ -8641,338 +8535,6 @@ function artURL(id){return ART_BASE+id+".webp";}
 /* art.py:have */const ART_HAVE=["answers-the-door-and-84385f7b","argues-with-policeman-about-92163a83","asked-the-purpose-the-9108a69a","asks-the-porter-which-ba6bfba5","bar-with-the-football-94f18c66","barber-chair-for-hour-1cfcc423","barman-who-remembers-accent-20a128cc","bench-outside-church-74efcf69","boat-the-canal-not-662f1d8e","borrowed-office-the-ninth-5af28269","bus-shelter-with-broken-25717fdc","buys-the-bread-and-1a36483e","buys-the-sim-cards-0b4c1242","caf-across-the-street-32f2ad80","carnival-which-noise-and-aa6f627c","chain-through-both-wheels-c143bba3","chats-the-woman-the-891a8c6a","chats-with-the-night-fa714c95","clear-and-cold-with-1e644fbf","cold-enough-that-nobody-13408614","collect-somebody-else-debt-eec6bc27","comes-goes-out-the-7c5991b8","costs-twenty-minutes-and-dcea9b41","costs-watch-handed-over-b110e3e9","counted-twice-the-crew-d1cbbdb5","crosses-dentist-from-the-c1a74d51","crosses-paper-that-cost-39a97d59","crosses-queue-forty-and-35d37880","crosses-the-forger-paper-2775932d","dealt-with-the-how-4e78db4d","dentist-waiting-room-across-e82a8440","does-the-phone-calls-9077a360","does-the-talking-c013fe98","door-held-open-thirty-41d752f8","drives-like-taxi-and-0924deb6","drives-past-the-police-c376aacc","election-week-every-street-42a974bd","every-phone-call-goes-c4efce8e","everyone-who-can-run-a8591e52","fog-all-week-the-08ad4ea5","fog-off-the-water-4d839942","footage-somebody-back-b550771c","football-match-every-screen-8673a543","full-time-the-crew-b6fb0458","gets-directions-and-better-38c2a33a","gets-the-rent-receipt-f40c9eb1","grey-and-mild-the-e5319b50","haggles-for-the-van-0c025cd7","half-face-cashpoint-camera-0920f900","hand-comes-down-wrist-a2e2fe46","handled-nobody-outside-the-a38b01cb","handled-the-cost-the-bc261d45","handles-the-landlord-the-7e35bbd0","handles-the-pharmacy-the-5dd7b5c7","has-list-not-puzzle-f8c6de64","has-the-engine-running-3e76682b","has-two-routes-out-50501ae1","have-breakfast-heat-e6753afa","heatwave-the-street-empty-3dab6e32","heights-aaadae23","hire-car-contract-name-2102e9d9","hire-car-supermarket-car-2753d83f","home-and-knows-which-bc5a394f","home-and-the-one-3e65023f","home-and-walks-through-d31fa191","home-dinner-with-the-a6897eab","home-nobody-asks-for-daaf98bc","home-nobody-checks-local-f64aba6b","home-the-accent-the-97d791f9","home-the-man-the-d3353b63","home-the-taxi-driver-7ec24515","home-there-aunt-with-6ab1e2a2","hotel-bar-with-view-b8f4d8af","hotel-room-with-the-79a44463","ice-the-pavements-everyone-da540830","into-flat-rented-man-a2d36983","key-the-wrong-pocket-ea8b64d8","knows-well-enough-bored-49fd2a40","lands-account-that-isn-1898a3f6","lands-after-the-crew-1f058f8f","laundrette-with-view-the-8b29365e","left-outside-bakery-door-5e36212a","list-everyone-who-flew-a6b2bd97","listens-more-than-talks-0f09f1f4","loses-the-first-car-10ab02bb","morning-have-heat-cdd95ed5","morning-nothing-not-line-fd7c636b","morning-the-building-has-897d79fa","morning-the-radio-have-cc0ce6cb","name-address-and-figure-fcd6b5b0","name-that-isn-yours-24d075c9","neighbour-dashcam-9fda1dd6","new-name-said-out-5cedb31d","new-passport-gets-second-66780c25","night-e6de9f61","nobody-here-for-one-1b9ddb34","nobody-here-stands-having-e585a2cc","nobody-here-was-learning-8ae2f0cb","nobody-here-was-taught-52aa1e49","nobody-knows-guesswork-574e984e","nobody-knows-the-part-8d4e2766","nobody-knows-worked-out-c2b90b7a","nobody-leaves-the-flat-037c8489","nobody-named-the-news-c82b66fa","nobody-reports-anything-because-5637784b","nobody-runs-nobody-looks-175c4f3c","nobody-speaks-draws-pictures-7828ab2d","nobody-speaks-everything-takes-ca567da0","nobody-speaks-finds-waiter-ac0757b0","nobody-speaks-learns-six-67015801","nobody-speaks-nobody-says-a9d12d4c","nobody-speaks-phone-does-384a76f5","nobody-speaks-points-and-a19a9e8e","nobody-speaks-says-thank-86be102e","nobody-speaks-smiles-lot-32852b61","nobody-speaks-the-crew-0cc60831","nobody-speaks-the-crew-d6b6cc1a","nobody-speaks-the-signs-d8e1b808","nobody-the-crew-has-f3fd11d5","nobody-the-crew-knows-362a2a3c","noon-have-and-press-1b1abf3c","not-word-the-people-06f46ec3","nothing-the-news-nothing-5349fa77","noviolence-0fc5fbc3","one-here-has-takes-3dfcc475","one-member-staff-back-ef4f8fdd","one-time-nobody-together-4db7e492","orders-for-everyone-and-d605fa9b","orders-the-coffee-and-00cb38fa","paid-the-crew-share-11248a42","papers-are-checked-machine-7b1d397b","parcel-off-the-back-2c1a71b9","park-bench-with-newspaper-0eb05a2e","parked-taxi-with-the-039bd9bc","passport-goes-under-the-401b94f6","passport-week-old-and-9fec53d5","phone-box-that-still-c2de4f42","phone-call-fixes-the-a99840be","phone-that-was-switched-56262cf8","photograph-the-back-head-63f80f8d","public-holiday-the-streets-d24a5828","pulls-out-the-speed-2ca17576","put-out-appeal-what-0b458427","quiet-the-kind-quiet-3b3cf7f0","rain-every-afternoon-four-cde166ae","rain-the-first-day-a03fe160","rains-for-two-days-a3852e86","reads-the-local-paper-5a8f136b","reads-the-menu-the-90ebecdd","receipt-from-the-wrong-3e986bb7","rents-the-lock-from-4fef74e5","report-filed-somebody-would-3a75ad6d","roadworks-every-route-out-f430c415","rooftop-with-thermos-ddd96aa0","room-over-the-bookmaker-818056bd","runs-the-day-you-34026642","runs-while-you-wait-47351a01","rush-hour-four-platforms-92847f89","second-way-found-the-99d50208","sees-the-trap-that-3b5b30e0","short-piece-about-break-f795bf82","short-piece-page-five-95cbaa13","sketch-that-looks-like-e3eb1847","snow-which-keeps-the-30a717c9","solved-with-screwdriver-and-dfe71cb1","somebody-improvises-and-for-b509b976","somebody-knew-man-and-7aba92ff","somebody-laughs-about-afterwards-6a6a4952","somebody-the-flats-above-e0356230","sorts-the-parking-the-bd310dd5","speaks-like-local-which-fb0bf399","speaks-the-cleaner-who-3f1e0ea2","speaks-the-market-and-66fe3a2b","speaks-well-enough-boring-18ccaa9a","speaks-with-accent-from-6d966164","statement-the-news-arrests-e3f82d23","station-caf-under-the-d1d7f401","storm-forecast-for-friday-21b3cd56","strike-the-trains-the-8db3af6b","swaps-cars-car-park-e6dfc633","take-the-car-with-e95bbbfb","takes-the-crew-place-2de5c691","takes-the-lead-you-08168c31","takes-the-long-way-0ebe473e","talks-the-rent-down-70d58e06","talks-the-taxi-drivers-2663666a","taxi-driver-story-5017c4f5","tells-joke-isn-funny-72f037d1","tells-the-waiter-story-82a496bf","ten-minutes-improvising-and-49bc882b","the-address-door-between-aaba90b1","the-back-seat-rented-586c55ca","the-car-leaves-with-24fcddbe","the-car-out-the-b3bd5486","the-client-pays-full-cc673165","the-crew-and-where-2c56b99e","the-crew-arrives-and-2d80a92a","the-crew-arrives-and-9652c0d1","the-crew-arrives-and-acbb8c5e","the-crew-arrives-and-df5686da","the-crew-arrives-ead65be0","the-crew-arrives-nobody-48e44345","the-crew-arrives-nobody-4d6ed888","the-crew-arrives-somebody-9c14db38","the-crew-arrives-the-26f5a269","the-crew-arrives-the-45c6fc91","the-crew-arrives-the-823a7085","the-crew-arrives-the-b39fb790","the-crew-arrives-the-ef6a095d","the-crew-bought-the-512653b6","the-crew-gets-shrug-f2e384c2","the-crew-has-been-a185dc5a","the-crew-has-manual-40919646","the-crew-has-practised-01909dfa","the-crew-read-the-8fa2db63","the-crew-says-nothing-71a2beed","the-crew-spent-the-216590e8","the-driver-four-doors-092eed99","the-fee-cuts-come-29c09c22","the-first-warm-day-15a4b24a","the-flat-above-the-a997da30","the-harbour-wall-pretending-b8d05d14","the-keys-are-under-c5667258","the-kind-dry-heat-9e22b339","the-kind-trouble-that-e3b145cb","the-lift-broken-which-e9cd3696","the-morning-paper-has-c8536a0c","the-morning-paper-leads-bd23678e","the-one-behind-the-9a750a3a","the-owner-came-out-9267fc3b","the-place-was-let-46272f64","the-plan-bends-doesn-f5703c22","the-police-are-told-03b333bc","the-rest-them-are-d906f2a8","the-safe-house-has-4fa411ad","the-safe-house-has-cf4cfc55","the-sixth-level-car-798d9392","the-split-gross-the-528aa591","the-table-across-the-7dd3b1c2","the-time-anyone-counts-eb9867f3","the-top-deck-bus-35b78dd8","the-van-gone-before-954c8f45","the-van-the-lock-65ebcbe2","the-windows-face-courtyard-a1eaed0b","three-hotels-three-names-1e94d86d","three-sets-keys-one-be31f2d4","tight-and-then-isn-160c9b5c","tight-f654e087","too-hot-sit-car-44ab055b","translates-the-menu-the-abbf5381","twenty-minutes-nobody-breathing-ee8dbcff","two-hotels-hostel-and-5d159dff","two-lines-the-paper-5c1a1807","two-minutes-over-nobody-40e4592d","two-sets-gloved-fingerprints-f868ec2d","van-that-will-turn-79ec6c31","was-not-alone-the-012e0edc","wedding-the-square-every-2fd74e82","when-policeman-asks-question-dbf4acd1","whoever-still-standing-gets-df3f9a56","wind-that-takes-hats-b709447e","without-coin-toss-ca5a01e6","without-wall-with-door-01a5fd01","witness-who-saw-foreigners-5533c544","work-the-crowd-the-4b2f5901","wrong-turn-right-one-d647d222"];
 const ART_SET=(typeof Set!=="undefined")?new Set(ART_HAVE):null;
 function artHas(id){return !!id&&(ART_SET?ART_SET.has(id):ART_HAVE.indexOf(id)>=0);}
-function scRot(a,cx,cy){const r=a*Math.PI/180,c=Math.cos(r),s=Math.sin(r);return (x,y)=>({x:cx+(x-cx)*c-(y-cy)*s,y:cy+(x-cx)*s+(y-cy)*c});}
-function scClamp(p,m){m=m||9;return {x:Math.min(SC_W-m,Math.max(m,p.x)),y:Math.min(SC_H-13,Math.max(m+3,p.y))};}
-const scRect=(x,y,w,h,cls,extra)=>'<rect class="'+cls+'" x="'+f1(x)+'" y="'+f1(y)+'" width="'+f1(w)+'" height="'+f1(h)+'"'+(extra||"")+'/>';
-const scPath=(d,cls,extra)=>'<path class="'+cls+'" d="'+d+'"'+(extra||"")+'/>';
-const scCirc=(x,y,r,cls)=>'<circle class="'+cls+'" cx="'+f1(x)+'" cy="'+f1(y)+'" r="'+f1(r)+'"/>';
-const scLine=(x1,y1,x2,y2,cls)=>'<line class="'+cls+'" x1="'+f1(x1)+'" y1="'+f1(y1)+'" x2="'+f1(x2)+'" y2="'+f1(y2)+'"/>';
-const scText=(x,y,t,size,anchor)=>'<text class="sc-text" x="'+f1(x)+'" y="'+f1(y)+'" text-anchor="'+(anchor||"middle")+'" style="font-size:'+(size||2.2)+'px">'+esc(t)+'</text>';
-function scHatch(x,y,w,h,step,slant){let o="";for(let yy=y+step;yy<y+h-.2;yy+=step)o+=scLine(x+.5,yy,x+w-.5,slant?Math.min(y+h-.3,yy+step*.7):yy,"sc-hatch");return o;}
-function scTrees(rng,x,y,w,h,n){let o="";for(let i=0;i<n;i++)o+=scCirc(x+1.2+rng()*(w-2.4),y+1.2+rng()*(h-2.4),.7+rng()*.6,"sc-tree");return o;}
-function scCompass(x,y){return '<g transform="translate('+x+','+y+')">'+scPath("M0 -3.6L1.3 1.6L0 .6L-1.3 1.6Z","sc-solid")+scCirc(0,0,4.2,"sc-thin")+scText(0,-5,"N",2.2)+'</g>';}
-function scScale(x,y,label){return scPath("M"+f1(x)+" "+f1(y)+"h10M"+f1(x)+" "+f1(y-.9)+"v1.8M"+f1(x+5)+" "+f1(y-.6)+"v1.2M"+f1(x+10)+" "+f1(y-.9)+"v1.8","sc-line")+scText(x+5,y-1.6,label,2);}
-function scRoad(d,w){return scPath(d,"sc-road-e",' style="stroke-width:'+f1((w||2.4)+.8)+'px"')+scPath(d,"sc-road",' style="stroke-width:'+f1(w||2.4)+'px"');}
-// a road through waypoints, smoothed through the midpoints
-function scWayPath(pts){let d="M"+f1(pts[0].x)+" "+f1(pts[0].y);for(let i=1;i<pts.length-1;i++){const m={x:(pts[i].x+pts[i+1].x)/2,y:(pts[i].y+pts[i+1].y)/2};d+=" Q"+f1(pts[i].x)+" "+f1(pts[i].y)+" "+f1(m.x)+" "+f1(m.y);}const L=pts[pts.length-1];d+=" L"+f1(L.x)+" "+f1(L.y);return d;}
-function scLPath(x,y,w,h,left,top,cw,ch){
-  if(left&&top)return "M"+f1(x+cw)+" "+f1(y)+"H"+f1(x+w)+"V"+f1(y+h)+"H"+f1(x)+"V"+f1(y+ch)+"H"+f1(x+cw)+"Z";
-  if(!left&&top)return "M"+f1(x)+" "+f1(y)+"H"+f1(x+w-cw)+"V"+f1(y+ch)+"H"+f1(x+w)+"V"+f1(y+h)+"H"+f1(x)+"Z";
-  if(left)return "M"+f1(x)+" "+f1(y)+"H"+f1(x+w)+"V"+f1(y+h)+"H"+f1(x+cw)+"V"+f1(y+h-ch)+"H"+f1(x)+"Z";
-  return "M"+f1(x)+" "+f1(y)+"H"+f1(x+w)+"V"+f1(y+h-ch)+"H"+f1(x+w-cw)+"V"+f1(y+h)+"H"+f1(x)+"Z";
-}
-// a small car on the road, and a truck
-function scCar(x,y,a){return '<g transform="translate('+f1(x)+','+f1(y)+') rotate('+f1(a||0)+')">'+scRect(-1.4,-.7,2.8,1.4,"sc-block")+scLine(-.5,-.7,-.5,.7,"sc-thin")+scLine(.6,-.7,.6,.7,"sc-thin")+'</g>';}
-function scTruck(x,y,a){return '<g transform="translate('+f1(x)+','+f1(y)+') rotate('+f1(a||0)+')">'+scRect(-3.2,-1,4.6,2,"sc-block")+scRect(1.6,-.8,1.6,1.6,"sc-block")+'</g>';}
-
-// Terrain the plan sits on: the sea along one edge, a river across, hills in a corner, a railway.
-// Each says where nothing can be built, and each is drawn from what the country's file says.
-function scTerrain(rng,co,o){
-  o=o||{};const ter=co?co.terrain:[];const T={svg:"",over:"",avoid:[],river:null,sea:null};
-  const seaOk=ter.some(t=>["coast","port","islands","fjords","delta"].includes(t));
-  const sea=o.sea!==false&&seaOk&&rng()<(o.seaP==null?.6:o.seaP);
-  const river=!sea&&(ter.some(t=>["river","delta","canal","lakes","rivers","fjords"].includes(t))?rng()<.85:rng()<.16);
-  const hills=ter.includes("mountains")&&rng()<.7&&o.hills!==false;
-  const rail=o.rail!==false&&((ter.includes("megacity")&&rng()<.6)||rng()<.18);
-  if(sea){
-    const ph=rng()*6;
-    if(rng()<.6){const sy=x=>68+2.6*Math.sin(x/9+ph)+1.3*Math.sin(x/3.1+ph*2);let d="M-2 "+f1(sy(-2));for(let x=0;x<=102;x+=3)d+=" L"+x+" "+f1(sy(x));d+=" L102 90 L-2 90 Z";
-      T.over+=scPath(d,"sc-water");T.avoid.push((x,y)=>y>sy(x)-1.6);T.sea={side:"b",at:sy};
-      for(let i=0;i<8;i++){const wx=3+rng()*88,wy=sy(wx)+4+rng()*9;T.over+=scPath("M"+f1(wx)+" "+f1(wy)+"q1.4-1 2.8 0t2.8 0","sc-thin");}
-    } else {const sx=y=>74+2.4*Math.sin(y/8+ph)+1.2*Math.sin(y/3.3+ph);let d="M"+f1(sx(-2))+" -2";for(let y=0;y<=86;y+=3)d+=" L"+f1(sx(y))+" "+y;d+=" L104 86 L104 -2 Z";
-      T.over+=scPath(d,"sc-water");T.avoid.push((x,y)=>x>sx(y)-1.6);T.sea={side:"r",at:sx};
-      for(let i=0;i<8;i++){const wy=3+rng()*76,wx=sx(wy)+4+rng()*10;T.over+=scPath("M"+f1(wx)+" "+f1(wy)+"q1.4-1 2.8 0t2.8 0","sc-thin");}}
-  } else if(river){
-    const a=rng()*50-25,R=scRot(a,50,42),inv=scRot(-a,50,42),yy=rng()<.5?16+rng()*6:66+rng()*6,half=2.4+rng()*1.4;
-    const pts=[[-40,yy-half],[140,yy-half],[140,yy+half],[-40,yy+half]].map(p=>R(p[0],p[1]));
-    T.over+='<polygon class="sc-water" points="'+pts.map(p=>f1(p.x)+","+f1(p.y)).join(" ")+'"/>';
-    T.avoid.push((x,y)=>Math.abs(inv(x,y).y-yy)<half+1.6);T.river={a,yy,half,R,inv};
-  }
-  if(hills){const hx=rng()<.5?-8:108,hy=rng()<.5?-6:90;for(let r=9;r<=44;r+=6.5)T.svg+=scCirc(hx+rng()*2,hy+rng()*2,r,"sc-thin");T.avoid.push((x,y)=>Math.hypot(x-hx,y-hy)<46);T.hill={x:hx,y:hy};}
-  if(rail){const a=rng()*26-13,R=scRot(a,50,42),inv=scRot(-a,50,42),yy=rng()<.5?7:77;const p1=R(-30,yy),p2=R(130,yy);
-    T.over+=scLine(p1.x,p1.y,p2.x,p2.y,"sc-line");const dx=p2.x-p1.x,dy=p2.y-p1.y,L=Math.hypot(dx,dy),nx=-dy/L,ny=dx/L;
-    for(let t=0;t<=1;t+=2.2/L){const px=p1.x+dx*t,py=p1.y+dy*t;if(px<-1||px>101||py<-1||py>85)continue;T.over+=scLine(px-nx*.9,py-ny*.9,px+nx*.9,py+ny*.9,"sc-thin");}
-    T.avoid.push((x,y)=>Math.abs(inv(x,y).y-yy)<3.2);}
-  return T;
-}
-// A street grid turned a few degrees so no two plans sit square, with the building the job is about
-// on the main street and the one across from it for the post. Returns the target cell and the cell
-// opposite, in grid coordinates, and R to put a grid point on the page.
-function scStreets(rng,o){
-  o=o||{};
-  const rot=Math.round(rng()*22-11),R=scRot(rot,50,42);
-  const MAIN=42,gapM=3.6,gap=2.1;
-  const rows=[];let y=MAIN+gapM/2;for(let i=0;i<6;i++){const h=i?8+rng()*7:13+rng()*4;rows.push({y,h,side:1});y+=h+gap;}
-  y=MAIN-gapM/2;for(let i=0;i<6;i++){const h=i?8+rng()*7:10+rng()*3;rows.push({y:y-h,h,side:-1});y-=h+gap;}
-  const cols=[];let x=-34,big=false;while(x<134){const w=(!big&&x+12>44)?(big=true,17+rng()*4):9+rng()*9;cols.push({x,w});x+=w+(rng()<.16?3.4:gap);}
-  const avoid=(px,py)=>(o.avoid||[]).some(f=>f(px,py));
-  const cells=[];
-  rows.forEach(r=>cols.forEach(c=>{const cx=c.x+c.w/2,cy=r.y+r.h/2,p=R(cx,cy);
-    if(p.x<-10||p.x>110||p.y<-10||p.y>94)return;if(avoid(p.x,p.y))return;
-    cells.push({x:c.x,y:r.y,w:c.w,h:r.h,cx,cy,side:r.side,p});}));
-  const below=cells.filter(c=>c.side===1&&Math.abs(c.y-(MAIN+gapM/2))<.2&&c.w>=(o.targetW||10)&&c.h>=(o.targetH||8));
-  const target=below.sort((a,b)=>Math.hypot(a.p.x-50,a.p.y-49)-Math.hypot(b.p.x-50,b.p.y-49))[0]||cells.sort((a,b)=>Math.hypot(a.p.x-50,a.p.y-49)-Math.hypot(b.p.x-50,b.p.y-49))[0];
-  const above=cells.filter(c=>c.side===-1&&Math.abs(c.y+c.h-(MAIN-gapM/2))<.2&&c!==target);
-  const across=above.sort((a,b)=>Math.abs(a.cx-target.cx)-Math.abs(b.cx-target.cx))[0]||null;
-  let g="";
-  cells.forEach(c=>{
-    if(c===target||c===across)return;
-    const r=rng(),i=.7,x=c.x+i,y=c.y+i,w=c.w-2*i,h=c.h-2*i;
-    if(r<.07){g+=scTrees(rng,c.x,c.y,c.w,c.h,3+Math.floor(rng()*5));return;}
-    if(r<.32){const cw=w*(.35+rng()*.25),ch=h*(.35+rng()*.25);g+=scPath(scLPath(x,y,w,h,rng()<.5,rng()<.5,cw,ch),"sc-block");}
-    else if(r<.5){g+=scRect(x,y,w,h,"sc-block")+scRect(x+w*.3,y+h*.3,w*.4,h*.4,"sc-inner");}
-    else if(r<.7){const s=w*(.4+rng()*.2);g+=scRect(x,y,s-.5,h,"sc-block")+scRect(x+s+.5,y,w-s-.5,h,"sc-block");}
-    else g+=scRect(x,y,w,h,"sc-block");
-  });
-  if(across){const i=.7;g+=scRect(across.x+i,across.y+i,across.w-2*i,across.h-2*i,"sc-block")+scRect(across.x+across.w*.36,across.y+across.h*.36,across.w*.28,across.h*.28,"sc-inner");}
-  // the main street: parked cars, crossings either side of the target, trees along the far kerb
-  let s="";
-  for(let px=target.cx-44;px<target.cx+44;px+=5.5+rng()*3){if(rng()<.5)s+=scRect(px,MAIN-gapM/2+.35,1.7,.8,"sc-line");if(rng()<.5)s+=scRect(px+2,MAIN+gapM/2-1.15,1.7,.8,"sc-line");}
-  for(let k=-1;k<=1;k+=2)s+=scPath("M"+f1(target.cx+k*(target.w/2+1.1))+" "+f1(MAIN-gapM/2)+"v"+gapM,"sc-dash");
-  return {rot,R,MAIN,gapM,gap,target,across,cells,svg:'<g transform="rotate('+rot+' 50 42)">'+g+s+'</g>'};
-}
-// The bridge where the main street crosses the river, if it does.
-function scBridge(G,T){
-  if(!T.river)return "";let lo=null,hi=null;
-  for(let x=-30;x<=130;x+=1){const p=G.R(x,G.MAIN);if(Math.abs(T.river.inv(p.x,p.y).y-T.river.yy)<T.river.half+1.4){if(lo===null)lo=x;hi=x;}}
-  if(lo===null)return "";
-  return '<g transform="rotate('+G.rot+' 50 42)">'+scRect(lo-1.2,G.MAIN-G.gapM/2-.4,hi-lo+2.4,G.gapM+.8,"sc-block")+scLine(lo-1.2,G.MAIN-G.gapM/2+.5,hi+1.2,G.MAIN-G.gapM/2+.5,"sc-thin")+scLine(lo-1.2,G.MAIN+G.gapM/2-.5,hi+1.2,G.MAIN+G.gapM/2-.5,"sc-thin")+'</g>';
-}
-// The building itself, by what the job is: a strongroom for a vault, a core for an office, flats
-// for an extraction, a garden for a villa. Drawn in grid coordinates.
-function scTargetBuilding(rng,t,kind,tags){
-  const i=.5,x=t.x+i,y=t.y+i,w=t.w-2*i,h=t.h-2*i;let g=scRect(x,y,w,h,"sc-target");
-  const door=scRect(t.cx-1.1,y-.2,2.2,.6,"sc-solid");
-  if(kind==="bank"){
-    const sw=w*.42,sh=h*.4;const sx=x+w-sw-1.2,sy=y+h-sh-1.2;
-    g+=scRect(sx,sy,sw,sh,"sc-strong")+scHatch(sx,sy,sw,sh,1.1,true)+scRect(x+1.2,y+h-3.6,2.6,2.6,"sc-inner")+scLine(x+1.2,y+h-1,x+3.8,y+h-3.6,"sc-thin")
-      +scRect(x+1.2,y+1.2,w*.35,2.2,"sc-inner")+scText(sx+sw/2,sy-.8,"STRONGROOM",1.4);
-    if(tags.includes("underground")){g+=scPath("M"+f1(x-8)+" "+f1(y+h+3)+"q4-2 "+f1(sx-x+8)+" "+f1(sy-y-h-3+sh/2),"sc-dash")+scText(x-8,y+h+5.4,"TUNNEL",1.4);}
-  } else if(kind==="tower"){
-    g+=scRect(t.cx-w*.16,t.cy-h*.16,w*.32,h*.32,"sc-strong")+scCirc(t.cx+w*.28,t.cy-h*.24,1.6,"sc-thin")+scText(t.cx+w*.28,t.cy-h*.24+.5,"H",1.6)
-      +scHatch(x,y,w,h,2.2,false)+scText(t.cx,y+h+2.4,"PLAZA",1.4);
-  } else if(kind==="flats"){
-    for(let k=0;k<3;k++)g+=scRect(x+1+k*(w-2)/3,y+h*.42,(w-2)/3-.6,h*.5,"sc-inner");
-    g+=scRect(x+w*.3,y+1,w*.4,h*.3,"sc-inner")+scText(t.cx,y+h*.28,"COURT",1.3);
-  } else if(kind==="villa"){
-    g=scRect(x,y,w,h,"sc-thin")+scTrees(rng,x,y,w,h*.5,4)+scRect(x+w*.22,y+h*.5,w*.56,h*.42,"sc-target")+scPath("M"+f1(t.cx)+" "+f1(y)+"V"+f1(y+h*.5),"sc-dash");
-    return g+scRect(t.cx-1.1,y-.2,2.2,.6,"sc-solid");
-  } else if(kind==="office"){
-    g+=scRect(t.cx-w*.14,t.cy-h*.14,w*.28,h*.28,"sc-inner")+scLine(x,y+h*.5,x+w,y+h*.5,"sc-thin")+scLine(t.cx,y,t.cx,y+h,"sc-thin");
-  } else if(kind==="hall"){
-    g+=scRect(x+1.5,y+2.2,w-3,h-3.8,"sc-inner")+scText(t.cx,t.cy+.6,"FLOOR",1.4);
-  }
-  return g+door;
-}
-// The plan for a job in a city: the grid, the terrain, the building, the five places.
-function scCity(rng,job,co,kind){
-  const tags=job.tags||[];
-  const T=scTerrain(rng,co,{});
-  const G=scStreets(rng,{avoid:T.avoid,targetW:kind==="tower"?14:12});
-  const t=G.target,R=G.R,MAIN=G.MAIN;
-  const bld=scTargetBuilding(rng,t,kind,tags);
-  const dir=rng()<.5?-1:1;
-  const sites={
-    road:scClamp(R(t.cx-(t.w/2+9)*dir,MAIN)),
-    watch:scClamp(G.across?R(G.across.cx+4*dir,G.across.cy-1):R(t.cx-16,MAIN-9)),
-    door:R(t.cx-t.w*.18*dir,t.y+1.2),
-    inside:R(t.cx+t.w*.2*dir,t.cy+2.6),
-    exit:scClamp(R(t.cx+36*dir,MAIN)),
-  };
-  const labels=kind==="bank"?{inside:"THE STRONGROOM",door:"THE DOOR"}:kind==="tower"?{inside:"THE FLOOR",door:"THE LOBBY",exit:"THE RAMP"}:kind==="flats"?{inside:"THE FLAT",door:"THE STAIRS"}:kind==="villa"?{inside:"THE HOUSE",door:"THE GATE"}:kind==="hall"?{inside:"THE TABLE",door:"THE DOOR"}:{};
-  const car=R(t.cx+30*dir,MAIN);
-  const svg=T.svg+G.svg+'<g transform="rotate('+G.rot+' 50 42)">'+bld+'</g>'+T.over+scBridge(G,T)
-    +scCar(car.x,car.y,G.rot)+scCompass(93,77)+scScale(4,79,"100 m");
-  return {sites,labels,svg};
-}
-// A port: the quay, the stacks, the cranes, the ship alongside, the gate.
-function scPort(rng,job,co,deep){
-  const qy=56+rng()*6;let g="";
-  g+=scPath("M-2 "+f1(qy)+"H102V90H-2Z","sc-water");
-  for(let i=0;i<12;i++){const wx=2+rng()*90,wy=qy+6+rng()*20;g+=scPath("M"+f1(wx)+" "+f1(wy)+"q1.4-1 2.8 0t2.8 0","sc-thin");}
-  // two piers, a ship alongside the long one
-  const p1x=14+rng()*8,p2x=66+rng()*10;
-  g+=scRect(p1x,qy-.5,5,20,"sc-block")+scRect(p2x,qy-.5,7,15,"sc-block");
-  for(let yy=qy+2;yy<qy+19;yy+=3)g+=scCirc(p1x-.7,yy,.35,"sc-solid")+scCirc(p2x+7.7,yy,.35,"sc-solid");
-  for(let xx=3;xx<98;xx+=4.5)g+=scCirc(xx,qy+.9,.35,"sc-solid");
-  const shx=p1x+7,shy=qy+3;
-  g+=scPath("M"+f1(shx)+" "+f1(shy)+"h26q5 0 6 4q-1 4-6 4h-26q-3-4 0-8z","sc-target")+scRect(shx+4,shy+2,6,4,"sc-inner")+scLine(shx+12,shy+1.2,shx+28,shy+1.2,"sc-thin")+scText(shx+16,shy+10.6,"ALONGSIDE",1.4);
-  // the stacks: rows of containers
-  let stacks=[];
-  for(let sx=6;sx<60;sx+=16+rng()*6){const rows=2+Math.floor(rng()*3),cols=5+Math.floor(rng()*5);const sy=qy-4-rows*2.2;stacks.push({x:sx+cols*1.9/2,y:sy+rows*2.2/2});
-    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(rng()<.85)g+=scRect(sx+c*1.9,sy+r*2.2,1.7,2,"sc-block");}
-  // cranes on rails along the quay
-  g+=scLine(2,qy-1.6,98,qy-1.6,"sc-thin");
-  for(let cx=p1x+10+rng()*10,k=0;k<2;k++,cx+=26+rng()*10){g+=scRect(cx-1.4,qy-3.2,2.8,3,"sc-block")+scLine(cx,qy-3.2,cx,qy-11,"sc-line")+scLine(cx-2,qy-11,cx+9,qy-13.5,"sc-line")+scLine(cx,qy-11,cx+9,qy-13.5,"sc-thin");}
-  // warehouses with sawtooth roofs, the fence, the gate and the gatehouse, the road in
-  const whs=[];
-  for(let wx=20,k=0;wx<86&&k<3;k++){const ww=18+rng()*10,wh=10+rng()*6,wy=18+rng()*4;whs.push({x:wx,y:wy,w:ww,h:wh});g+=scRect(wx,wy,ww,wh,"sc-block")+scHatch(wx,wy,ww,wh,2.4,true);wx+=ww+5+rng()*6;}
-  const gate=14+rng()*40;
-  g+=scLine(-2,12,gate-3,12,"sc-fence")+scLine(gate+3,12,102,12,"sc-fence")+scRect(gate+3.2,9.4,3.2,2.6,"sc-block")+scLine(gate-3,12,gate+3,12,"sc-line");
-  g+=scRoad("M"+f1(gate)+" -2V"+f1(qy-16)+"H96",2.6)+scRoad("M-2 24H"+f1(gate-8)+"V10H"+f1(gate),2.2);
-  g+=scTruck(gate,qy-16,0)+scTruck(88,qy-16,0);
-  const w0=whs.sort((a,b)=>b.w-a.w)[0];
-  const stack=stacks[Math.floor(rng()*stacks.length)]||{x:30,y:qy-6};
-  const hold=rng()<.5;
-  const sites={road:{x:9,y:24},watch:{x:w0.x+w0.w/2,y:w0.y+w0.h/2},door:{x:gate,y:12},inside:deep?{x:shx+40,y:qy+14}:hold?{x:shx+13,y:shy+4}:stack,exit:{x:92,y:qy-16}};
-  if(deep)g+=scCirc(shx+40,qy+14,1.2,"sc-line")+scCirc(shx+40,qy+14,3.2,"sc-thin")+scText(shx+40,qy+19.5,"THE WRECK",1.4);
-  const labels={road:"THE ROAD",watch:"THE ROOF",door:"THE GATE",inside:deep?"THE WATER":hold?"THE HOLD":"THE STACK",exit:"THE TRUCK"};
-  return {sites,labels,svg:g+scCompass(93,77)+scScale(4,79,"100 m")};
-}
-// A road across open country: fields, a wood, a village, a bridge, and the place it is stopped.
-function scRoute(rng,job,co,mountain){
-  const ter=co?co.terrain:[];let g="";
-  // fields, hedged
-  for(let k=0;k<7;k++){const fx=-6+rng()*96,fy=-6+rng()*84,fw=14+rng()*20,fh=10+rng()*16;g+='<g transform="rotate('+f1(rng()*40-20)+' '+f1(fx+fw/2)+' '+f1(fy+fh/2)+')">'+scRect(fx,fy,fw,fh,"sc-thin")+(rng()<.5?scHatch(fx,fy,fw,fh,1.8,false):"")+'</g>';}
-  // a wood
-  const wx=rng()<.5?6:70,wy=rng()<.5?6:60;g+=scTrees(rng,wx,wy,24,18,12);
-  // the road
-  const pts=[];let px=-4,py=50+rng()*20;
-  while(px<104){pts.push({x:px,y:py});px+=14+rng()*10;py+=(rng()*26-13)*(mountain?1.4:1);py=Math.max(14,Math.min(72,py));}
-  if(mountain){for(let r=8;r<=60;r+=7)g+=scCirc(112,-8,r+rng()*3,"sc-thin");}
-  const rd=scWayPath(pts);
-  if(mountain){g+=scRoad(rd,2.4);const t=pts[Math.floor(pts.length*.7)];g+=scRect(t.x-6,t.y-2.2,12,4.4,"sc-inner")+scText(t.x,t.y-3,"TUNNEL",1.4);}
-  else g+=scRoad(rd,2.4);
-  // a river across, and the bridge
-  if(rng()<.6&&!mountain){const rx=30+rng()*40;g+=scPath("M"+f1(rx)+" -2q4 20 -2 40t3 48","sc-water",' style="stroke-width:4px;fill:none"');const on=pts.reduce((b,p)=>Math.abs(p.x-rx)<Math.abs(b.x-rx)?p:b);g+=scRect(rx-4,on.y-2.2,8,4.4,"sc-block");}
-  // a village near one end
-  const vx=rng()<.5?8:74,vy=rng()<.5?12:62;for(let k=0;k<6;k++)g+=scRect(vx+rng()*18,vy+rng()*12,2+rng()*3,2+rng()*2.5,"sc-block");
-  // the stop: a lay-by and a barrier, the truck, the ridge above it
-  const i=Math.max(1,Math.floor(pts.length/2)),stop=pts[i],nxt=pts[i+1]||stop,ang=Math.atan2(nxt.y-stop.y,nxt.x-stop.x)*180/Math.PI;
-  g+=scRect(stop.x-4,stop.y+1.8,8,1.8,"sc-inner")+scLine(stop.x+5,stop.y-2.4,stop.x+5,stop.y+2.4,"sc-line")+scRect(stop.x+5.4,stop.y-3.4,1.8,1.8,"sc-block");
-  const truck={x:(stop.x+pts[i-1].x)/2,y:(stop.y+pts[i-1].y)/2};g+=scTruck(truck.x,truck.y,ang);
-  const ridge={x:stop.x+(stop.y>42?-2:2),y:stop.y+(stop.y>42?-16:16)};
-  for(let r=4;r<=12;r+=3)g+=scCirc(ridge.x,ridge.y,r,"sc-thin");
-  g+=scCar(pts[pts.length-1].x-6,pts[pts.length-1].y,0);
-  const sites={road:scClamp(pts[0]),watch:scClamp(ridge),door:scClamp(stop),inside:scClamp(truck),exit:scClamp(pts[pts.length-1])};
-  const labels={road:"THE ROAD",watch:"THE RIDGE",door:"THE STOP",inside:"THE TRUCK",exit:"THE CAR"};
-  return {sites,labels,svg:g+scCompass(93,77)+scScale(4,79,"1 km")};
-}
-// A mountain pass: the road climbs in switchbacks to a hut and a barrier, and down the far side.
-function scPass(rng,job,co){
-  let g="";
-  for(let r=10;r<=70;r+=6)g+=scCirc(96,4,r+rng()*3,"sc-thin");
-  for(let r=8;r<=40;r+=6)g+=scCirc(-2,80,r+rng()*3,"sc-thin");
-  const pts=[{x:-2,y:78},{x:34,y:74},{x:14,y:62},{x:48,y:54},{x:24,y:42},{x:58,y:34},{x:38,y:24},{x:76,y:18},{x:102,y:10}].map(p=>({x:p.x+rng()*6-3,y:p.y+rng()*4-2}));
-  g+=scRoad(scWayPath(pts),2.2);
-  const hut=pts[5];g+=scRect(hut.x+1.5,hut.y-4.6,3.4,2.8,"sc-block")+scLine(hut.x-2.6,hut.y-2.6,hut.x+2.6,hut.y+2.6,"sc-line")+scText(hut.x+3.2,hut.y-5.6,"BORDER",1.4);
-  const tun=pts[3];g+=scRect(tun.x-5,tun.y-2.6,10,5.2,"sc-inner")+scText(tun.x,tun.y-3.4,"TUNNEL",1.4);
-  g+=scTrees(rng,4,8,22,26,9);
-  const truck={x:(pts[3].x+pts[4].x)/2,y:(pts[3].y+pts[4].y)/2};g+=scTruck(truck.x,truck.y,-30);
-  g+=scCar(pts[7].x,pts[7].y,-20);
-  const sites={road:scClamp(pts[1]),watch:scClamp({x:pts[5].x+16,y:pts[5].y+10}),door:scClamp(hut),inside:scClamp(truck),exit:scClamp(pts[7])};
-  const labels={road:"THE ROAD",watch:"THE RIDGE",door:"THE BARRIER",inside:"THE TRUCK",exit:"THE FAR SIDE"};
-  return {sites,labels,svg:g+scCompass(93,77)+scScale(4,79,"1 km")};
-}
-// A compound: the fence, the sheds, the tanks, the rail spur, the gatehouse, the pylons outside.
-function scCompound(rng,job,co,blackout){
-  let g="";
-  const fx=24,fy=14,fw=62,fh=58;
-  g+=scRect(fx,fy,fw,fh,"sc-fence")+scRect(fx-.8,fy-.8,fw+1.6,fh+1.6,"sc-fence");
-  g+=scTrees(rng,2,74,60,9,7)+scTrees(rng,90,20,9,40,5);
-  // sheds
-  const sheds=[];for(let k=0;k<2;k++){const sw=18+rng()*10,sh=10+rng()*6,sx=fx+4+k*34+rng()*4,sy=fy+4+rng()*4;sheds.push({x:sx,y:sy,w:sw,h:sh});g+=scRect(sx,sy,sw,sh,k?"sc-block":"sc-target")+scHatch(sx,sy,sw,sh,2.2,true);}
-  // tanks
-  const tanks=[];for(let k=0;k<3+Math.floor(rng()*2);k++){const r=3.5+rng()*3,tx=fx+8+k*15+rng()*4,ty=fy+fh-10-rng()*6;tanks.push({x:tx,y:ty,r});g+=scCirc(tx,ty,r,"sc-block")+scCirc(tx,ty,r*.5,"sc-thin")+scCirc(tx,ty,.5,"sc-solid");}
-  tanks.forEach((t,k)=>{const s=sheds[k%2];g+=scPath("M"+f1(t.x)+" "+f1(t.y-t.r)+"V"+f1(s.y+s.h+2)+"H"+f1(s.x+s.w/2)+"V"+f1(s.y+s.h),"sc-thin");});
-  // the chimney, the rail spur, the gatehouse and the road
-  g+=scCirc(sheds[0].x+sheds[0].w+2.6,sheds[0].y+2,1.1,"sc-line")+scCirc(sheds[0].x+sheds[0].w+2.6,sheds[0].y+2,.4,"sc-solid");
-  const ry=fy+fh-3;g+=scLine(fx+fw+14,ry,fx+10,ry,"sc-line");for(let x=fx+10;x<fx+fw+14;x+=2.2)g+=scLine(x,ry-.9,x,ry+.9,"sc-thin");
-  const gy=fy+fh*.55;g+=scRoad("M-2 "+f1(gy)+"H"+f1(fx-1),2.4)+scRect(fx+1,gy-4.2,3.4,2.8,"sc-block")+scLine(fx-.8,gy-2.6,fx-.8,gy+2.6,"sc-road")+scRoad("M"+f1(fx)+" "+f1(gy)+"H"+f1(fx+fw-2),2)+scRoad("M"+f1(fx+fw)+" "+f1(gy)+"H102",2.4);
-  // pylons outside the fence
-  for(let x=6;x<100;x+=22)g+=scPath("M"+f1(x)+" 4l1.6 4h-3.2zM"+f1(x-1.6)+" 6h3.2","sc-line");g+=scLine(2,5.2,100,5.2,"sc-thin");
-  let sub="";if(blackout){for(let r=0;r<3;r++)for(let c=0;c<4;c++)g+=scRect(fx+fw-16+c*3,fy+4+r*3,2.2,2.2,"sc-inner");g+=scRect(fx+fw-17,fy+3,13,10,"sc-thin");sub="SUBSTATION";g+=scText(fx+fw-10.5,fy+15.4,sub,1.3);}
-  g+=scTruck(fx+fw+7,gy,0)+scCar(6,gy,0);
-  const sites={road:{x:8,y:gy},watch:{x:92,y:9},door:{x:fx,y:gy},inside:blackout?{x:fx+fw-10.5,y:fy+8}:{x:sheds[0].x+sheds[0].w/2,y:sheds[0].y+sheds[0].h/2},exit:{x:fx+fw+7,y:gy}};
-  const labels={road:"THE ROAD",watch:"THE PYLON",door:"THE GATE",inside:blackout?"THE SWITCHGEAR":"THE SHED",exit:"THE TRUCK"};
-  return {sites,labels,svg:g+scCompass(93,77)+scScale(4,79,"200 m")};
-}
-// An airfield: the strip, the apron, the hangar, the tower, the fence, the fields around it.
-function scAirfield(rng,job,co){
-  let g="";
-  for(let k=0;k<5;k++){const fx=-6+rng()*100,fy=58+rng()*20,fw=16+rng()*18,fh=8+rng()*10;g+=scRect(fx,fy,fw,fh,"sc-thin")+(rng()<.6?scHatch(fx,fy,fw,fh,1.8,false):"");}
-  const ry=44+rng()*4,rot=rng()*8-4;
-  g+='<g transform="rotate('+f1(rot)+' 50 '+f1(ry)+')">'+scRect(4,ry-4,92,8,"sc-block")+scPath("M10 "+f1(ry)+"H90","sc-dash");
-  for(let x=6;x<12;x+=1.4)g+=scLine(x,ry-3,x,ry+3,"sc-thin");for(let x=88;x<94;x+=1.4)g+=scLine(x,ry-3,x,ry+3,"sc-thin");
-  g+=scText(14,ry+1,"09",2.6)+scText(86,ry+1,"27",2.6)+'</g>';
-  const ax=34+rng()*20;
-  g+=scRect(ax+8,ry-18,8,14.5,"sc-inner")+scRect(ax,ry-30,26,12,"sc-inner")+scRect(ax+2,ry-42,18,11,"sc-target")+scHatch(ax+2,ry-42,18,11,2,true)+scLine(ax+4,ry-31,ax+18,ry-31,"sc-solid");
-  g+=scRect(ax+30,ry-40,3.4,3.4,"sc-block")+scCirc(ax+31.7,ry-38.3,1,"sc-thin");
-  for(let k=0;k<3;k++)g+=scCirc(ax+26+k*2.2,ry-33,.9,"sc-line");
-  g+=scPath("M"+f1(ax+13)+" "+f1(ry-27)+"l.6 2.4 4-.4-3.4 1.6.4 3-1.6-1.4-1.6 1.4.4-3-3.4-1.6 4 .4z","sc-solid");
-  g+=scPath("M84 "+f1(ry-30)+"l0-5 3 1.6z","sc-solid")+scLine(84,ry-30,84,ry-24,"sc-line");
-  g+=scRect(2,2,96,ry+14,"sc-fence")+scRoad("M-2 "+f1(ry-24)+"H"+f1(ax),2.2)+scLine(2,ry-26.5,2,ry-21.5,"sc-road");
-  g+=scCar(8,ry-24,0);
-  const sites={road:{x:9,y:ry-24},watch:{x:92,y:ry+22},door:{x:ax+11,y:ry-30.5},inside:{x:ax+13,y:ry-25},exit:{x:88,y:ry}};
-  const labels={road:"THE ROAD",watch:"THE FENCE",door:"THE HANGAR",inside:"THE APRON",exit:"THE STRIP"};
-  return {sites,labels,svg:g+scCompass(93,77)+scScale(4,79,"200 m")};
-}
-// Which plan a posting gets, from what it is and where.
-function scKind(job,co){
-  const cat=job.cat,tags=job.tags||[],ter=co?co.terrain:[];
-  const water=tags.includes("water"),air=tags.includes("air");
-  if(air||cat==="airlift")return "airfield";
-  if(cat==="deepwater")return "deep";
-  if(water&&["smuggling","interception","escort"].includes(cat))return "port";
-  if(cat==="interception"||cat==="escort")return ter.includes("mountains")?"pass":"route";
-  if(cat==="smuggling")return ter.includes("mountains")?"pass":ter.some(t=>["coast","port","islands","delta"].includes(t))?"port":"route";
-  if(cat==="sabotage"||cat==="labwork")return "compound";
-  if(cat==="blackout")return "blackout";
-  if(cat==="vault"||cat==="ledger"||cat==="undercity")return "bank";
-  if(cat==="highrise")return "tower";
-  if(cat==="extraction")return "flats";
-  if(cat==="negotiation")return "hall";
-  if(cat==="recovery"||cat==="surveillance")return "villa";
-  return "office";
-}
-function scJob(d){
-  const job=d.job,co=COUNTRY_BY_NAME[job.country];
-  const rng=mulberry32(fmHash(String(d.id||job.id)+"|"+job.city+"|"+job.cat));
-  const k=scKind(job,co);
-  let sc;
-  if(k==="airfield")sc=scAirfield(rng,job,co);
-  else if(k==="port"||k==="deep")sc=scPort(rng,job,co,k==="deep");
-  else if(k==="route")sc=scRoute(rng,job,co,false);
-  else if(k==="pass")sc=scPass(rng,job,co);
-  else if(k==="compound"||k==="blackout")sc=scCompound(rng,job,co,k==="blackout");
-  else sc=scCity(rng,job,co,k);
-  sc.kind=k;return sc;
-}
-// A recruitment trip draws the city you flew into: off the plane at the edge of the plan, the city
-// itself, the place you sat down, and the street outside it where the answer was given.
-function scTrip(d){
-  const co=COUNTRY_BY_NAME[d.country];
-  const rng=mulberry32(fmHash("trip|"+d.cid+"|"+d.city+"|"+d.week));
-  const T=scTerrain(rng,co,{});
-  const G=scStreets(rng,{avoid:T.avoid});
-  const t=G.target,R=G.R,MAIN=G.MAIN;
-  const cafe=scRect(t.x+.5,t.y+.5,t.w-1,t.h-1,"sc-target")+scRect(t.x+1.6,t.y+1.6,t.w*.3,t.h*.32,"sc-inner")+scText(t.cx,t.cy+2.2,"CAFÉ",1.5)+scRect(t.cx-1.1,t.y-.2,2.2,.6,"sc-solid");
-  const park=G.cells.filter(c=>c!==t&&c!==G.across).sort((a,b)=>Math.hypot(a.p.x-30,a.p.y-24)-Math.hypot(b.p.x-30,b.p.y-24))[0];
-  let extra="";if(park){extra='<g transform="rotate('+G.rot+' 50 42)">'+scRect(park.x+.7,park.y+.7,park.w-1.4,park.h-1.4,"sc-ground")+scTrees(rng,park.x,park.y,park.w,park.h,6)+'</g>';}
-  const dir=rng()<.5?-1:1;
-  const sites={land:scClamp(R(t.cx-36*dir,MAIN)),city:park?scClamp(R(park.cx,park.cy)):scClamp(R(t.cx-16,MAIN-12)),table:R(t.cx,t.cy+1.2),deal:scClamp(R(t.cx+9*dir,MAIN))};
-  const svg=T.svg+G.svg+'<g transform="rotate('+G.rot+' 50 42)">'+cafe+'</g>'+extra+T.over+scBridge(G,T)+scCompass(93,77)+scScale(4,79,"100 m");
-  return {sites,labels:{},svg,kind:"trip"};
-}
-function fmSceneFor(d){
-  const key=d.cid?("T|"+d.cid+"|"+d.city+"|"+d.week):("J|"+(d.id||(d.job&&d.job.id))+"|"+(d.job?d.job.city:""));
-  if(SC_CACHE[key])return SC_CACHE[key];
-  const sc=d.cid?scTrip(d):scJob(d);
-  sc.x=0;sc.y=0;sc.w=SC_W;sc.h=SC_H;sc.cx=SC_W/2;sc.cy=SC_H/2;
-  SC_CACHE[key]=sc;return sc;
-}
-// The frame is the plan: 100 by 84, with the places where the plan put them.
-function fmFrame(d){return fmSceneFor(d);}
-function fmSitePos(k,F){
-  const s=F.sites&&F.sites[k];
-  if(s)return {x:s.x,y:s.y};
-  const u=F.w/100;
-  const j={road:[-17,10],watch:[-15,-10],door:[0,-1],inside:[16,-10],exit:[18,10]}[k];
-  const t=TRIP_SITE_BY_K[k];
-  const off=j||(t?[t.x,t.y]:[0,0]);
-  return {x:F.cx+off[0]*u,y:F.cy+off[1]*u};
-}
-const FM_OP_SCALE=0.74;
 /* THE PICTURE BESIDE THE LINE.
 
    The plan showed five labelled dots and some figures shuffling between them, and it told you
@@ -9011,135 +8573,52 @@ function feedArtPreload(d){
     }
   }
 }
-/* The ticker does not re-render the sheet. It appends one line to #ticker and steps the figures
-   on the plan, which is why the panel beside it was frozen on whatever it held when the modal
-   opened — and that is always BEFORE the first line, so it was always the plan. The drawings were
-   correct, the manifest was correct, the panel simply was never asked again.
+/* The ticker does not re-render the sheet — it appends one line to #ticker and nothing else — so
+   the panel beside it stayed on whatever it held when the modal opened. That is always BEFORE the
+   first line, which in the days of the plan meant the panel was always the plan: the drawings were
+   correct, the manifest was correct, the panel was simply never asked again.
 
-   So the side is kept in step here. Two rules, both about not undoing work:
-
-     — it never redraws the plan. feedMapStep has been walking figures across it line by line, and
-       rebuilding it would put them all back at the door.
-     — it redraws only when the drawing CHANGES. A run of lines with no art of their own leaves
-       the last picture up, which is what feedArtLine already decides; re-rendering identical
-       markup every few seconds would restart the image load and flash. */
+   So the side is kept in step here, and it redraws only when the drawing CHANGES. A run of lines
+   with no art of their own leaves the last picture up, which is what feedArtLine already decides;
+   re-rendering identical markup every few seconds would restart the image load and flash. */
+/* render() calls tickerArm(), and tickerArm() calls this, so the rebuild below is a cycle unless
+   it is held open. In a browser it usually stops on its own — the second pass finds the panel it
+   just built — but it does not have to, and under the suite's stubbed DOM querySelector always
+   answers null, so it never stopped: two smoke suites died on "Maximum call stack size exceeded"
+   rather than on anything they were testing. */
+let SIDE_BUILDING=false;
 function feedSideSync(d){
   if(!d)return;
   const L=feedArtLine(d);
-  if(!L)return;                       // nothing drawn yet: the plan stays, untouched
+  if(!L)return;                       // nothing drawn yet: one column, and the report has it
   const side=document.querySelector(".feed-side");
-  if(!side||side.getAttribute("data-art")===L.art)return;
+  if(!side){
+    // The sheet is in its one-column state and the first drawing has just arrived. There is no
+    // panel to refill, so the whole modal is rebuilt — once per report, on the first drawn line.
+    if(SIDE_BUILDING)return;
+    SIDE_BUILDING=true;
+    try{render();}finally{SIDE_BUILDING=false;}
+    const s2=document.querySelector(".feed-side");
+    if(s2)s2.setAttribute("data-art",L.art);
+    return;
+  }
+  if(side.getAttribute("data-art")===L.art)return;
   side.innerHTML=feedArt(d);
   side.setAttribute("data-art",L.art);
   feedArtPreload(d);
 }
+/* A drawing or nothing. The plan is not a fallback any more — it was five labelled dots and some
+   figures shuffling between them, and it told you nothing the sentence had not already said. The
+   seven seconds before the first line used to show it, which is how it survived the first pass.
+
+   Nothing means NOTHING: no empty bordered box holding a space open. The sheet goes to one column
+   and the report takes the width, which is what those lines want anyway. In a job that is a state
+   nobody sees, because ARRIVE is drawn 26 of 26 and is always the first line; in a recruitment
+   trip, where no TRIP_ table is illustrated yet, it is the whole chapter. */
 function feedSide(d){
   const art=feedArt(d);
-  if(art){feedArtPreload(d);return art;}
-  return feedMap(d);              // nothing read so far has a drawing: the plan, as before
-}
-function feedMap(d){
-  // a job is the crew; a trip is you and whoever you flew out to meet
-  const team=d.cid?[S.player,byId(d.cid)].filter(Boolean):(d.teamIds||[]).map(byId).filter(Boolean);
-  if(!team.length)return "";
-  const F=fmFrame(d);
-  const sites=feedSites(d);
-  const u=1;
-  const city=d.cid?d.city:d.job.city,country=d.cid?d.country:d.job.country,co=COUNTRY_BY_NAME[country];
-  const site=k=>{const p=fmSitePos(k,F),S2=feedSiteBy(d,k),l=(F.labels&&F.labels[k])||S2.l;
-    return '<g class="fm-site" data-site="'+k+'" transform="translate('+p.x.toFixed(1)+','+p.y.toFixed(1)+')">'
-      +'<circle r="1.5"/><text y="-2.7" style="font-size:2.3px">'+esc(l.toUpperCase())+'</text></g>';};
-  const home=fmSitePos(sites[0].k,F);
-  const op=(c,i)=>{const o=fmSpot(i,team.length,u);
-    const cid="fmc"+String(c.id).replace(/[^A-Za-z0-9]/g,"");
-    return '<g class="fm-op" data-id="'+c.id+'" data-site="'+sites[0].k+'" data-glyph="walk" transform="translate('+(home.x+o.dx).toFixed(1)+','+(home.y+o.dy).toFixed(1)+') scale('+FM_OP_SCALE+')">'
-      +'<clipPath id="'+cid+'"><circle r="4.4"/></clipPath>'
-      +'<circle class="fm-op-b" r="4.4"/>'
-      // the bust is a 100x120 field; this window is the head, so a disc this small is a face
-      +'<g clip-path="url(#'+cid+')"><svg x="-4.6" y="-4.6" width="9.2" height="9.2" viewBox="22 16 56 56" preserveAspectRatio="xMidYMid slice">'
-        +avatarBody(c.avseed,c.gender,c.face)+'</svg></g>'
-      +'<circle class="fm-op-r" r="4.4"/>'
-      +'<g class="fm-op-badge" transform="translate(3.5,3.5) scale(0.42)"><circle class="fm-op-bb" r="5.6"/><g class="fm-op-g">'+FM_GLYPH.walk+'</g></g>'
-      +'<text class="fm-op-n" y="8.6">'+esc(fmShort(c,team))+'</text></g>';};
-  return '<div class="feedmap"><div class="fm-clock mono" id="fm-clock">'+esc(d.narrative[0]?d.narrative[0].t:"--:--")+'</div>'
-    +'<div class="fm-where mono">'+flagSvg(co,"fm-flag")+esc(city)+' · '+esc(country)+'</div>'
-    +'<svg class="fm-svg" viewBox="0 0 '+F.w+' '+F.h+'" aria-label="'+esc(city+", "+country)+' — the plan, and where they are">'
-    +'<rect class="sc-ground" x="0" y="0" width="'+F.w+'" height="'+F.h+'"/>'+F.svg
-    +'<g class="fm-tether"></g>'
-    // The places are drawn OVER the crew. They stand below their own marker, so a cluster never
-    // covers its own name — but it reaches the name of whatever site is below it, and a place
-    // name behind a face is a place name nobody can read. Labels over symbols, like any map.
-    +'<g class="fm-ops">'+team.map(op).join("")+'</g>'
-    +sites.map(p=>site(p.k)).join("")
-    +'</svg></div>';
-}
-/* The name under a figure on the operation map. It is drawn at about two pixels, so it is a
-   first name and has to be — but a crew with two Brunos on it put "Bruno" under two different
-   people standing in two different places, which is worse than no label. An initial costs four
-   pixels and settles it. Only when there is something to settle: one Bruno stays Bruno. */
-function fmShort(c,pool){
-  if(c.isPlayer)return "YOU";
-  const n=String(c.first||"");
-  const p=Array.isArray(pool)?pool:crewAll();
-  const short=x=>x.length>6?x.slice(0,5)+"·":x;
-  if(!p.some(o=>o&&o.id!==c.id&&!o.isPlayer&&String(o.first||"")===n))return short(n);
-  /* Two Brunos. The surname, not "Bruno B." — an initial made the label a third wider and the
-     figures on this map stand in a ring close enough together that the extra width ran the two
-     of them into each other, which is the same unreadable thing in a new shape. A surname is
-     about as long as a first name and is the other half of what you already know. */
-  const last=x=>String(x.n||"").trim().split(/\s+/).pop()||String(x.first||"");
-  const mine=last(c);
-  if(!p.some(o=>o&&o.id!==c.id&&!o.isPlayer&&last(o)===mine))return short(mine);
-  return short(n)+" "+mine.slice(0,1)+".";   // same name twice over: initial, and give up
-}
-// Several people stand in the same place, so they are spread evenly round it — the ring grows
-// with the number standing there, and one person stands on the spot rather than beside it.
-const FM_DROP=4.6;   // how far below the marker the crew stand, so the place keeps its name
-const FM_COLS=4, FM_GAPX=7.4, FM_GAPY=6.6;   // wide enough for a six-letter name under each face
-function fmSpot(i,n,u){
-  u=u||1;
-  const cols=Math.min(n||1,FM_COLS);
-  const col=i%cols, row=Math.floor(i/cols);
-  return {dx:(col-(cols-1)/2)*FM_GAPX*u, dy:(FM_DROP+row*FM_GAPY)*u};
-}
-function fmLayout(root,F,sites){
-  const u=F.w/100;
-  let tether="";
-  (sites||SITES).forEach(p=>{
-    const at=fmSitePos(p.k,F);
-    const here=[...root.querySelectorAll('.fm-op[data-site="'+p.k+'"]')];
-    here.forEach((el,i)=>{const o=fmSpot(i,here.length,u);
-      const x=at.x+o.dx, y=at.y+o.dy;
-      el.setAttribute("transform","translate("+x.toFixed(1)+","+y.toFixed(1)+") scale("+FM_OP_SCALE+")");
-      tether+='<line x1="'+at.x.toFixed(1)+'" y1="'+at.y.toFixed(1)+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'"/>';});
-  });
-  const t=root.querySelector(".fm-tether");if(t)t.innerHTML=tether;
-}
-// One revealed line moves the map: the clock to its time, whoever it names to where it happens
-// and to the mark of what they are doing, and the place itself lit. "*" is the whole crew.
-function feedMapStep(d,line){
-  if(!line)return;
-  const cl=document.getElementById("fm-clock");
-  if(cl&&line.t)cl.textContent=line.t;
-  const root=document.querySelector(".feedmap");
-  if(!root)return;
-  root.querySelectorAll(".fm-site.on").forEach(e=>e.classList.remove("on"));
-  if(!line.at)return;
-  if(!feedSiteBy(d,line.at))return;
-  const here=root.querySelector('.fm-site[data-site="'+line.at+'"]');if(here)here.classList.add("on");
-  const ops=[...root.querySelectorAll(".fm-op")];
-  const move=els=>els.forEach(el=>{
-    el.setAttribute("data-site",line.at);
-    const c=byId(el.getAttribute("data-id"));
-    const k=fmGlyphFor(line,c);
-    if(el.getAttribute("data-glyph")!==k){
-      el.setAttribute("data-glyph",k);
-      const g=el.querySelector(".fm-op-badge .fm-op-g");if(g)g.innerHTML=FM_GLYPH[k]||FM_GLYPH.walk;
-    }
-  });
-  if(line.who==="*")move(ops);
-  else if(line.who)move(ops.filter(el=>el.getAttribute("data-id")===String(line.who)));
-  fmLayout(root,fmFrame(d),feedSites(d));
+  if(art)feedArtPreload(d);
+  return art;
 }
 
 function wentWrong(d){
@@ -9187,7 +8666,6 @@ function tickerArm(){
   const d=S.modal.data;
   // a re-render shows the latest line, not the first: the marker sits right above the decision
   if(!d.done){const el0=document.getElementById("ticker");if(el0)el0.scrollTop=el0.scrollHeight;
-    for(let i=0;i<d.revealed;i++)feedMapStep(d,d.narrative[i]);
     feedSideSync(d);}
   if(d.done||d.awaiting)return;
   if(d.estab)return;              // the establishing card is up; the night has not started
@@ -9201,7 +8679,6 @@ function tickerArm(){
     const line=d.narrative[d.revealed-1];
     const el=document.getElementById("ticker");
     if(el&&line){el.insertAdjacentHTML("beforeend",tickLine(line));el.scrollTop=el.scrollHeight;}
-    feedMapStep(d,line);
     feedSideSync(d);
     sfx("tick");
     if(line&&line.siren)sirenFx();
@@ -9316,7 +8793,9 @@ function modalTrip(T){
         +'<button class="btn ghost sm" data-act="tick-hold" aria-pressed="'+(UI.hold?"true":"false")+'" title="Hold the feed where it is">'+(UI.hold?"▶ Resume":"❚❚ Pause")+'</button>'
         +'<button class="btn ghost sm" data-act="skip-ticker" title="Run the rest of it at once">Skip →</button></div>';
     }
-    return modalWrap(h+'<div class="modal-b"><div class="feed-cols"><div class="feed-main">'+ticker+below+'</div><div class="feed-side">'+feedMap(T)+'</div></div></div>',"feed");
+    const side=feedSide(T);
+    return modalWrap(h+'<div class="modal-b"><div class="feed-cols'+(side?'':' solo')+'"><div class="feed-main">'+ticker+below+'</div>'
+      +(side?'<div class="feed-side">'+side+'</div>':'')+'</div></div>',"feed");
   }
   const nums='<div class="num-grid">'
     +'<div class="b"><div class="k">Paid</div><div class="v num">'+money(-(T.paid||0))+'</div></div>'
@@ -9374,7 +8853,9 @@ function modalResult(d){
         +'<button class="btn ghost sm" data-act="tick-hold" aria-pressed="'+(UI.hold?"true":"false")+'" title="Hold the feed where it is">'+(UI.hold?"▶ Resume":"❚❚ Pause")+'</button>'
         +'<button class="btn ghost sm" data-act="skip-ticker" title="Run the rest of it at once">Skip →</button></div>';
     }
-    return modalWrap(h+'<div class="modal-b"><div class="feed-cols"><div class="feed-main">'+ticker+below+'</div><div class="feed-side">'+feedSide(d)+'</div></div></div>',"feed");
+    const side=feedSide(d);
+    return modalWrap(h+'<div class="modal-b"><div class="feed-cols'+(side?'':' solo')+'"><div class="feed-main">'+ticker+below+'</div>'
+      +(side?'<div class="feed-side">'+side+'</div>':'')+'</div></div>',"feed");
   }
   const nums='<div class="num-grid">'
     +'<div class="b"><div class="k">Gross</div><div class="v num">'+money(d.take)+'</div></div>'
@@ -12505,7 +11986,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 120 · September 2026";
+const BUILD="build 121 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a

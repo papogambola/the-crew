@@ -22,10 +22,18 @@ exports.attrs=()=>T(["","Attribute","What it is for","Whose attribute it is"],
   D.ATTRS.map(a=>['<b class="mono">'+D.ATTR_ABBR[a]+'</b>',esc(a[0].toUpperCase()+a.slice(1)),
     esc(ATTR_WHAT[a]),'<span class="note">'+esc(leansOn(a))+'</span>']));
 
-// The place a trade stands is the map's own label, lowercased, so the handbook and the mini map
-// call it the same thing — and a site the game adds cannot leave a blank cell here.
-const SITE_WORD={};(D.SITES||[]).forEach(s=>{SITE_WORD[s.k]=s.l.replace(/^The /,"the ");});
-const techTable=list=>T(["Trade","Leans on","Comes with","What they do","On the map"],
+// Where a trade stands on the night. These words used to be the live map's own labels, read
+// straight off SITES, so the handbook and the map could not disagree. The map is gone as of build
+// 121 and SITES is five bare keys now — where a line happens is still a fact about the night, it
+// just is not drawn any more — so the words live here, with the rest of the handbook's prose.
+//
+// The guard below is what the shared table used to give for free: a place the game adds and the
+// handbook has no word for would otherwise leave a blank cell in every trade that stands there.
+const SITE_WORD={road:"the street", watch:"the post", door:"the way in",
+                 inside:"the room", exit:"the car"};
+(D.SITES||[]).forEach(k=>{if(!SITE_WORD[typeof k==="string"?k:k.k])
+  throw new Error("hb-data: no word for the place "+JSON.stringify(k)+" — add one to SITE_WORD");});
+const techTable=list=>T(["Trade","Leans on","Comes with","What they do","Where they work"],
   list.map(t=>['<b>'+esc(t.l)+'</b>','<span class="mono">'+D.ATTR_ABBR[t.a]+'</span>',esc(t.know),esc(t.d),
     '<span class="mono">'+esc(SITE_WORD[(D.TECH_SITE||{})[t.k]]||"")+'</span>']));
 exports.techs=()=>techTable(D.TECHS);
@@ -99,10 +107,16 @@ exports.events=()=>T(["Between jobs","What happens"],
   D.WEEKLY.map(w=>['<b>'+esc(w.h.replace("{M}","Somebody").replace("{G}","An old face"))+'</b>',
     esc(w.text.replace(/\{M\}/g,"They").replace(/\{G\}/g,"They").replace(/\{L\}/g,"somebody").replace(/\{R\}/g,"another crew").replace(/\{B\}/g,"their boss").replace(/\{D\}/g,"a detective"))]));
 
-exports.sites=()=>T(["On the plan","Who stands there"],
-  D.SITES.map(p=>['<b>'+esc(p.l)+'</b>',
-    D.TECHS.filter(t=>({wheelman:"exit",smuggler:"exit",cleaner:"exit",lookout:"watch",overwatch:"watch",hacker:"watch",launderer:"watch",fixer:"watch",forger:"door",grifter:"door",face:"door",infiltrator:"door",pickpocket:"door",safecracker:"inside",demolitions:"inside",enforcer:"inside"})[t.k]===p.k)
-      .map(t=>esc(t.l)).join(", ")||'whoever the line is about']));
+// Which trades stand where. This read a hardcoded copy of TECH_SITE written out inline — sixteen
+// pairs that had to be kept in step with the game's own table by somebody remembering to, and that
+// silently listed no specialist at all, because the copy stopped at the sixteen ordinary trades.
+// D.TECH_SITE is the game's table, dumped with the rest; there is no second copy now.
+const siteCap=k=>SITE_WORD[k].charAt(0).toUpperCase()+SITE_WORD[k].slice(1);
+exports.sites=()=>T(["Where it happens","Who stands there"],
+  (D.SITES||[]).map(k=>{const s=typeof k==="string"?k:k.k;
+    return ['<b>'+esc(siteCap(s))+'</b>',
+      (D.TECHS||[]).concat(D.TECHS_BIG||[]).filter(t=>(D.TECH_SITE||{})[t.k]===s)
+        .map(t=>esc(t.l)).join(", ")||'whoever the line is about'];}));
 
 /* Every city that has a landmark on its establishing card, and what the landmark is. Two pairs
    to a row: eighty-seven of these down a single column is four pages of a book that is meant to

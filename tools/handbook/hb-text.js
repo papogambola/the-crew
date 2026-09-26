@@ -677,13 +677,15 @@ ch("night","The night itself","The live report",[
       +"Medellín. A made-up one would be the one thing on the card that was a lie, and a player who knows the city would catch it "
       +"inside the seconds it is up.")),
   S("live","Reading the report",
-    p("A job does not resolve into a number. It plays out: a clock in the top left, a line at a time, with the crew named and what each of them is doing named with them. "
+    p("A job does not resolve into a number. It plays out: a clock beside every line, a line at a time, with the crew named and what each of them is doing named with them. "
       +"You can run it at five speeds, hold it where it is with Pause, or press through it as fast as you can read.")),
-  S("map","The map",
-    p("Beside the report is the world, drawn in ink — the country the job is in, with the sites of the job on it and your people standing at them, as faces, with a small symbol for what they are doing.")
-    +p("The plan has five positions, and which one somebody stands at follows from their trade:")
+  S("art","The drawing",
+    p("Beside the report is a drawing of the line you are reading — black ink on off-white paper, cross-hatched, the same hand as everything else in the game. Not a picture of the job: a picture of that sentence. It changes when the line does, and a run of lines with no drawing of their own leaves the last one up.")
+    +p("Not every line has one yet. A line with no drawing shows nothing at all — the report simply takes the whole width of the sheet, which is what those lines want anyway.")
+    +p("Where somebody is when a line happens is still written into the line, and it follows from their trade:")
     +G.sites()
-    +p("A recruitment trip gets the same treatment, with four positions instead: landing, the city, the table, and the deal.")),
+    +p("A recruitment trip has four places of its own instead: off the plane, the city, the table, and the answer.")
+    +note("Until build 121 this space held a plan of the place — the streets and the building on a vault job, the quay on a port job — with the crew standing at those five positions as their own faces, each with a small symbol for what it was doing. It was drawn from the posting, so a job always drew the same plan. It came out because it told you nothing the sentence had not already said better: you watched two figures slide two centimetres while reading that somebody's papers had passed.")),
   S("twist","The twist",
     p("Most jobs go wrong in the middle. The report stops, states the problem, and offers up to six ways out — each one with the odds on it and a requirement written into it. "
       +"One of them is always something your crew can actually do.")

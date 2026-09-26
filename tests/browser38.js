@@ -1,4 +1,5 @@
-// Build 39: a night that went wrong says why, and the map carries faces.
+// Build 39: a night that went wrong says why. (The map that carried the crew's faces is gone as of
+// build 121; that section now checks the running sheet is clean of it.)
 const {chromium,CHROME,ROOT,GAME}=require("./env.js");
 const path=require("path"),fs=require("fs");
 const putDownPaper=require("./paper.js");
@@ -84,38 +85,34 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
     check(await page.evaluate(()=>!!S.modal.data.why),"though the reckoning is kept on it either way, for the log");
   }
 
-  // ---- the map carries faces
+  // ---- where the faces on the map used to be
+  // The second half of this file put the crew's own busts on the operation map, each clipped into
+  // a disc with a mark of what it was doing on the corner. The map is gone (build 121) and so is
+  // that half: the busts it checked are the crew cards' busts, which browser33 and browser47
+  // already check where a player actually reads them. What is left to check here is that the
+  // running feed no longer builds any of it.
   await heal();
-  const mapped=await page.evaluate(()=>{
+  const running=await page.evaluate(()=>{
     S.modal=null;S.notices=[];
     const j=S.jobs.filter(x=>!x.final&&assessJob(x,jobPool(x)).canRun)[0];
     if(!j)return null;doExecute(j.id);estabClear();   // build 102: the night opens on a card of the city. Click it away, as a player does.
     return {n:S.modal.data.teamIds.length};});
-  check(mapped,"a job running, to look at the map");
-  if(!mapped){console.error("cannot look at the map without one");process.exit(1);}
-  await drain();await page.waitForTimeout(400);
-  const F=await page.evaluate(()=>{
-    const ops=[...document.querySelectorAll(".fm-op")];
-    return {n:ops.length,
-      faces:ops.filter(e=>e.querySelector("svg")).length,
-      clipped:ops.filter(e=>e.querySelector("clipPath")).length,
-      badges:ops.filter(e=>e.querySelector(".fm-op-badge")).length,
-      names:ops.map(e=>e.querySelector(".fm-op-n").textContent),
-      distinct:new Set(ops.map(e=>e.querySelector("svg").innerHTML)).size};});
-  check(F.faces===F.n,"every operator on the map is a face ("+F.faces+" of "+F.n+")");
-  check(F.clipped===F.n,"each clipped into its disc");
-  check(F.distinct===F.n,"and they are different faces, not one repeated ("+F.distinct+" distinct)");
-  check(F.badges===F.n,"with what they are doing still on the corner of each");
-  check(F.names.every(n=>n.length<=6),"names are cut to fit beside each other: "+F.names.join(", "));
-  // the face is the same bust the crew card draws
-  const same=await page.evaluate(()=>{
-    const el=document.querySelector(".fm-op");
-    const c=byId(el.getAttribute("data-id"));
-    const tmp=document.createElementNS("http://www.w3.org/2000/svg","svg");
-    tmp.innerHTML=avatarBody(c.avseed,c.gender,c.face);
-    return tmp.innerHTML===el.querySelector("svg").innerHTML;});
-  check(same,"and it is the same bust their own card carries, not a second drawing");
-  await page.screenshot({path:OUT+"/04-map-faces.png"});
+  check(running,"a job running, to look at the sheet");
+  if(!running){console.error("cannot look at a running job without one");process.exit(1);}
+  await drain();
+  // The panel is one column until the first line is read, so wait for a line before asking what
+  // is beside it — otherwise "no plan" would pass on a sheet that is simply still empty.
+  await page.waitForFunction(()=>{const d=S&&S.modal&&S.modal.data;return d&&(d.revealed||0)>=1;},{timeout:60000});
+  await page.waitForTimeout(400);
+  const gone=await page.evaluate(()=>({
+    fm:document.querySelectorAll(".modal [class*='fm-']").length,
+    sc:document.querySelectorAll(".modal [class*='sc-']").length,
+    map:document.querySelectorAll(".feedmap").length,
+    art:document.querySelectorAll(".feed-side .feedart").length}));
+  check(gone.map===0&&gone.fm===0&&gone.sc===0,
+    "the night draws no plan and none of its parts ("+gone.map+" maps, "+gone.fm+" fm-, "+gone.sc+" sc-)");
+  check(gone.art===1,"what stands beside the feed is a drawing of the moment");
+  await page.screenshot({path:OUT+"/04-running.png"});
 
   check(errors.length===0,"no page errors"+(errors.length?": "+errors.join(" | "):""));
   await browser.close();

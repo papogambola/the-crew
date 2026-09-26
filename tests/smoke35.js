@@ -18,10 +18,11 @@ if(TUT.on)tutEnd();
 S.money=5e8;drain();
 
 // ---------- five places, and every trade stands in one of them ----------
-assert(SITES.length===5,"a job happens in five places: "+SITES.map(p=>p.l).join(", "));
-SITES.forEach(p=>{assert(SITE_BY_K[p.k]===p,p.l+" can be looked up by key");
-  assert(p.x>0&&p.x<100&&p.y>0&&p.y<62,p.l+" is on the plan ("+p.x+","+p.y+")");});
-TECHS.forEach(t=>assert(SITE_BY_K[techSite(t.k)],t.l+" works at "+SITE_BY_K[techSite(t.k)].l));
+assert(SITES.length===5,"a job happens in five places: "+SITES.join(", "));
+SITES.forEach(k=>assert(SITE_BY_K[k]===k,k+" can be looked up by key"));
+assert(TRIP_SITES.length===4,"a recruitment trip happens in four: "+TRIP_SITES.join(", "));
+TRIP_SITES.forEach(k=>assert(TRIP_SITE_BY_K[k]===k,k+" can be looked up by key"));
+TECHS.forEach(t=>assert(SITE_BY_K[techSite(t.k)],t.l+" works at "+techSite(t.k)));
 assert(techSite("wheelman")==="exit","the wheelman never leaves the car");
 assert(techSite("lookout")==="watch"&&techSite("overwatch")==="watch","the lookout and the overwatch are on the corner");
 assert(techSite("safecracker")==="inside","the safecracker is in the room");
@@ -60,46 +61,45 @@ const beats=N.lines.map(l=>{const m=/^(\\S+) \\(([^)]+)\\) /.exec(l.x);return m&
 if(beats.length){beats.forEach(b=>assert(b.l.at===techSite(b.k),b.who+" the "+b.k+" is at "+b.l.at));}
 else assert(true,"no trade beat in this feed — the crew stood in for all of them");
 
-// ---------- the clock the map shows is the clock the feed keeps ----------
+// ---------- the clock the feed keeps ----------
 assert(/^\\d\\d:\\d\\d$/.test(N.lines[0].t),"every line is stamped with a time ("+N.lines[0].t+")");
 const mins=N.lines.map(l=>+l.t.slice(0,2)*60+ +l.t.slice(3));
 let forward=true;for(let i=1;i<mins.length;i++)if(mins[i]<mins[i-1]&&mins[i-1]-mins[i]<1000)forward=forward&&(mins[i-1]-mins[i]>1200);
 assert(forward,"and the clock only ever goes forward: "+N.lines[0].t+" to "+N.lines[N.lines.length-1].t);
 
-// ---------- the ring never stacks people, at any crew size ----------
-let worst=999,top=999;
-for(let n=1;n<=7;n++)for(let i=0;i<n;i++){
-  top=Math.min(top,fmSpot(i,n,1).dy);
-  for(let j=i+1;j<n;j++){const p=fmSpot(i,n,1),q=fmSpot(j,n,1);
-    worst=Math.min(worst,Math.hypot(p.dx-q.dx,p.dy-q.dy));}}
-assert(worst>5.5,"nobody is drawn on top of anybody, at one to seven in the field (closest "+Math.round(worst*10)/10+" against a 5.5-wide disc)");
-assert(top>1.5,"and nobody stands on the place's own name, which sits above the marker ("+top+" below it)");
-assert(fmSpot(0,1,1).dx===0,"one person stands under the marker rather than beside it");
-
-// ---------- the frame is a plan of the place, drawn from the posting ----------
-// It used to be the world map zoomed in on the job's country, and fmFrame took a country name.
-// It is a plan of the actual place now, and fmFrame takes the feed's data, so what is asked of it
-// is what the plan promises: the same posting always draws the same place, two postings draw
-// different ones, and the five places are somewhere on it.
-const F=fmFrame({id:job.id,job:job});
-assert(F.w>0&&F.h>0,"the plan has a size: "+F.w+" by "+F.h);
-assert(F.svg&&F.svg.length>1000,"and real ink on it ("+F.svg.length+" characters of it)");
-assert(fmFrame({id:job.id,job:job}).svg===F.svg,"a posting always draws the same plan");
-const other=S.jobs.find(j=>j!==job&&!j.final);
-if(other)assert(fmFrame({id:other.id,job:other}).svg!==F.svg,"and two postings draw different ones");
-SITES.forEach(p=>{const q=fmSitePos(p.k,F);
-  assert(q.x>=0&&q.x<=F.w&&q.y>=0&&q.y<=F.h,p.l+" is somewhere on the plan");});
-
-// ---------- every mark the game can draw is a mark it has ----------
-Object.keys(FM_SITE_GLYPH).forEach(k=>assert(FM_GLYPH[FM_SITE_GLYPH[k]],"the "+SITE_BY_K[k].l+" has a mark"));
-TECHS.forEach(t=>assert(FM_GLYPH[FM_TECH_GLYPH[t.k]],t.l+" has a mark of its own"));
-assert(FM_TECH_GLYPH.wheelman==="drive"&&FM_TECH_GLYPH.lookout==="watch"&&FM_TECH_GLYPH.forger==="paper",
-  "and the mark says the trade: a wheel, an eye, a document");
-assert(fmGlyphFor({at:"road"},null)==="walk","arriving is a figure on foot");
-assert(fmGlyphFor({act:"down"},null)==="down","somebody going down is marked as that, whatever the place");
-assert(fmGlyphFor({at:"exit"},{tech:"wheelman"})==="drive","the wheelman at the car is a wheel");
-assert(fmGlyphFor({at:"exit"},{tech:"safecracker"})==="drive","and somebody else at the car is just at the car");
-assert(FM_GLYPH[fmGlyphFor({at:"nowhere"},null)],"a place the game does not know still gets a mark");
+// ---------- and nothing is left of the plan that was drawn from them ----------
+// The five places were five dots on a plan of the street, with the crew standing under them as
+// marks of what they were doing. All of that is gone — it said nothing the sentence had not
+// already said — and this checks it is gone rather than half gone: a leftover scene builder or
+// glyph table would sit in the file being carried for nobody.
+//
+// typeof, not "name in globalThis". A top-level const is NOT a property of the global object, so
+// the \`in\` form answers false for FM_GLYPH whether or not FM_GLYPH exists — an assertion that
+// cannot fail, which is worse than no assertion. typeof reads the lexical binding and tells the
+// two apart.
+assert(typeof fmFrame==="undefined","fmFrame() is gone, not merely unused");
+assert(typeof fmSitePos==="undefined","fmSitePos() is gone");
+assert(typeof fmSpot==="undefined","fmSpot() is gone");
+assert(typeof fmLayout==="undefined","fmLayout() is gone");
+assert(typeof fmSceneFor==="undefined","fmSceneFor() is gone");
+assert(typeof fmShort==="undefined","fmShort() is gone");
+assert(typeof fmGlyphFor==="undefined","fmGlyphFor() is gone");
+assert(typeof feedMap==="undefined","feedMap() is gone");
+assert(typeof feedMapStep==="undefined","feedMapStep() is gone");
+assert(typeof feedSites==="undefined","feedSites() is gone");
+assert(typeof feedSiteBy==="undefined","feedSiteBy() is gone");
+assert(typeof scJob==="undefined"&&typeof scTrip==="undefined","the scene builders are gone");
+assert(typeof scStreets==="undefined"&&typeof scTerrain==="undefined","and so is what they drew with");
+assert(typeof FM_GLYPH==="undefined","FM_GLYPH is gone");
+assert(typeof FM_SITE_GLYPH==="undefined"&&typeof FM_TECH_GLYPH==="undefined","and both glyph maps with it");
+assert(typeof TRIP_SITE_GLYPH==="undefined","the trip's glyphs too");
+assert(typeof FM_OP_SCALE==="undefined","FM_OP_SCALE is gone");
+assert(typeof SC_W==="undefined"&&typeof SC_CACHE==="undefined","and the plan's page and its cache");
+// f1 and fmHash were the plan's and are not the plan's any more: one formats the skyline's numbers,
+// the other is the hash every drawing's id is built from. Both must survive the clear-out.
+assert(typeof f1==="function"&&f1(1.234)==="1.2","f1() stayed — the skyline still needs it");
+assert(typeof fmHash==="function"&&fmHash("x")===fmHash("x")&&fmHash("x")!==fmHash("y"),
+  "and fmHash() stayed, because every drawing's id is built on it");
 
 console.log("ALL OK");
 })();
