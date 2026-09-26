@@ -353,6 +353,20 @@ def main():
     listed = have_in_game()
     wanted = {art_id(t): (name, t) for name, t in rows}
 
+    # ART_HAVE IS ONE MANIFEST FOR BOTH CHAPTERS, because the game consults one list before putting a
+    # figure on the panel and it does not care whether the line came from a job or a trip. The
+    # progress counts stay separate — that is what --trips is for, and "121 of 526" would say nothing
+    # about whether the trip set is finished — but the manifest cannot be, or a drawing that exists
+    # is a drawing nobody ever sees.
+    #
+    # Found when the 121 trip drawings landed: --write refused with "ART_HAVE could not be
+    # rewritten", which was it noticing, the only way it could, that the list it was about to write
+    # was identical to the one already there. It was building from the job harvest alone, so all 121
+    # were on disk, correctly named, and invisible.
+    everything = dict(wanted)
+    for i, v in {art_id(t): (name, t) for name, t in trip_templates()}.items():
+        everything.setdefault(i, v)
+
     if "--inbox" in args:
         """Triage a folder of drawings that has just arrived, before anything is moved.
 
@@ -474,32 +488,51 @@ def main():
         raise SystemExit(0)
 
     if "--write" in args:
-        ids = sorted(i for i in disk if i in wanted)
+        ids = sorted(i for i in disk if i in everything)
         new = MARK + "[" + ",".join('"' + i + '"' for i in ids) + "];"
+        # The refusal is about the MARKER, not about whether the text changed. It used to be
+        # `out == game and ids`, which fires when the list is already correct — so the one run that
+        # needed to say "nothing to do" said "ART_HAVE could not be rewritten" instead.
+        if not re.search(re.escape(MARK) + r"\[[^\]]*\];", game):
+            raise SystemExit("no ART_HAVE marker in play.html — has it been renamed?")
         out = re.sub(re.escape(MARK) + r"\[[^\]]*\];", new.replace("\\", "\\\\"), game, count=1)
-        if out == game and ids:
-            raise SystemExit("ART_HAVE could not be rewritten")
+        if out == game:
+            print(f"ART_HAVE already lists {len(ids)} drawings — nothing to do")
+            raise SystemExit(0)
         open(GAME, "w", encoding="utf-8").write(out)
         print(f"ART_HAVE now lists {len(ids)} drawings")
         raise SystemExit(0)
 
-    orphans = sorted(disk - set(wanted))
-    missing = sorted(set(wanted) - disk)
-    drift = listed != {i for i in disk if i in wanted}
+    orphans = sorted(disk - set(everything))
+    missing = sorted(set(wanted) - disk)                       # the job report's own remainder
+    trip_missing = sorted({art_id(t) for n, t in trip_templates()} - disk)
+    drift = listed != {i for i in disk if i in everything}
 
     if "--check" in args:
-        bad = False
+        # AN ORPHAN IS NOT A FAILURE, and making it one meant --check could never come back green
+        # again. Sixty of the drawings in art/ illustrate strings that were never lines — {place},
+        # {thing} and {where} fillers, and limit keys read out of an array of objects — and they are
+        # staying until somebody decides otherwise, because they are a person's work. Reported every
+        # time, loudly enough not to be forgotten, and not counted as something broken.
+        #
+        # DRIFT IS a failure: the manifest disagreeing with the disk is the one state the tool can
+        # fix itself, and the one that makes a drawing that exists invisible in the game.
         if orphans:
-            bad = True
-            print("art/ holds drawings no template asks for any more — the words were edited under them:")
+            print(f"art/ holds {len(orphans)} drawings no template asks for — a decision, not a fault:")
             for o in orphans:
                 print("   ", o + ".webp")
+            print("  (see art/README.md — nothing in the game fetches them)\n")
         if drift:
-            bad = True
             print("ART_HAVE in play.html disagrees with art/ — run: python3 tools/art.py --write")
-        if bad:
             raise SystemExit(1)
-        print(f"art is consistent — {len(listed)} drawn, {len(missing)} still to draw")
+        # Said as two efforts, because one number out of two never answered the question anybody
+        # asks — "is the trip finished" — and a single total hid a whole chapter at 0.
+        print(f"art is consistent — {len(listed)} drawn")
+        print(f"  the job report      {len(wanted)-len(missing):4d} of {len(wanted):4d}"
+              + ("" if not missing else f"   {len(missing)} still to draw"))
+        ntrip = len(trip_templates())
+        print(f"  a recruitment trip  {ntrip-len(trip_missing):4d} of {ntrip:4d}"
+              + ("" if not trip_missing else f"   {len(trip_missing)} still to draw"))
         raise SystemExit(0)
 
     per = {}

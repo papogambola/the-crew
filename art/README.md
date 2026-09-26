@@ -11,13 +11,15 @@ and a FINITE one, and that is the only reason a drawing for every moment is affo
     python3 tools/art.py --trips --sheet    # the recruitment trip's list, grouped to draw from
     python3 tools/art-import.py <folder>    # convert and file a folder that has just arrived
 
+**The recruitment trip is finished — 121 of 121.** Every part of it: 30 at the table, 18 walking the
+city, 16 reading them, 14 flying out, 12 signing, 11 snags, 10 going home, 10 refusals.
+
 **396 of the 405 job templates are drawn**, and nine are not: the six ways the report says somebody
 would not take the job (`OUT`), `{P} arrive {where}.` and `Boots on the stairs.` (`POLICE_COME`),
-and `Heat like a wall.` (`WEATHER`). `--prompts` lists them. The 121 a recruitment trip needs are
-not drawn either; `RECRUITMENT-TRIP-DRAWINGS.txt` beside this file is that list, grouped by where in
-the trip each moment falls.
+and `Heat like a wall.` (`WEATHER`). `--prompts` lists them, and `--check` now says the two chapters
+as two numbers, because one total hid a whole chapter sitting at zero.
 
-**456 files are in here, and 60 of them illustrate nothing.** This directory was built against a
+**577 files are in here, and 60 of them illustrate nothing.** This directory was built against a
 list that harvested strings out of the tables without asking whether each one was a LINE:
 
     PLACES  23    "an all-night bakery"      fills {place} in a YOU_RUN line
@@ -46,9 +48,9 @@ Two rules the prompts enforce, both about a drawing being reused everywhere:
   and a fjord is wrong in Jeddah. Where you are belongs to the words and the flag above them.
 - **No faces.** The cast is generated per player. A drawn face is always somebody else's Itai.
 
-At 456 files and 83MB they still sit beside the game and are served with it. The nine outstanding
-and the trip's 121 will take that to roughly 586 files and 106MB, which is where this stops being
-obviously fine: it is
+**577 files and 105MB, which is the threshold this file has been pointing at for four builds, and it
+has now arrived.** They still sit beside the game and are served with it. That is
 inside GitHub Pages' limits, but every player fetching ten to fifteen drawings a job adds up in a
 way 54MB of music already did. The move is one line — `ART_HOME` in play.html — and it is the same
-move the music made. Worth doing when the trip set lands, not before.
+move the music made. It is a decision for the person paying for the bucket, not one this file
+should make on its own, and nothing is broken until it is made.

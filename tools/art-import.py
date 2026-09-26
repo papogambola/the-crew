@@ -71,7 +71,18 @@ def main():
         raise SystemExit("no such folder: " + a.folder)
     os.makedirs(ART, exist_ok=True)
 
+    # BOTH chapters. This knew only about the job report, so the 121 recruitment-trip drawings
+    # arrived and every one of them was reported as "could not be placed from their name" — 121 of
+    # 121 unplaceable, and "0 of 405 templates would have a drawing", which reads as a set of files
+    # that have nothing to do with the game. Their names were right; the list they were checked
+    # against was the wrong one. A drawing is filed under its id whichever chapter that id belongs
+    # to, so the importer is not the place to keep the two apart — art.py --check and --trips are,
+    # and they still count the two efforts separately.
     wanted = {artmod.art_id(t): (name, t) for name, t in artmod.templates()}
+    trip_wanted = {artmod.art_id(t): (name, t) for name, t in artmod.trip_templates()}
+    for i, v in trip_wanted.items():
+        wanted.setdefault(i, v)
+    n_job, n_trip = len(wanted) - len(trip_wanted), len(trip_wanted)
     files = []
     for dirpath, _dirs, names in os.walk(a.folder):
         for n in sorted(names):
@@ -125,8 +136,12 @@ def main():
             print("     " + os.path.basename(f))
         if len(unplaceable) > 15:
             print(f"     ... and {len(unplaceable)-15} more")
-    covered = len({p[0] for p in placed} | set(skipped))
-    print(f"\n  {covered} of {len(wanted)} templates would have a drawing")
+    # Split by chapter, because one number out of two efforts is the thing --trips exists to avoid:
+    # "121 of 526" says nothing about whether the trip set is finished.
+    touched = {p[0] for p in placed} | set(skipped)
+    print(f"\n  {len(touched & set(t for t in wanted if t not in trip_wanted)):4d} of {n_job:4d}"
+          "  job-report templates in this folder")
+    print(f"  {len(touched & set(trip_wanted)):4d} of {n_trip:4d}  recruitment-trip templates in this folder")
     if not a.dry_run and placed:
         print("\nnow run:  python3 tools/art.py --write && python3 tools/art.py --check")
 
