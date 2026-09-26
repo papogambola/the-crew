@@ -20,7 +20,11 @@ const srv=http.createServer((q,r)=>{
     r.writeHead(200,{"content-type":T[path.extname(f)]||"application/octet-stream"});r.end(b);});});
 
 let ok=0,bad=0;
-const check=(c,m)=>{ if(c){ok++;console.log("  ok   "+m);} else {bad++;console.log("  FAIL "+m);} };
+// The suite counts `grep -c "^ok  "` at column zero and reads failures off `^FAIL`. Printed
+// indented, as this file first did, eleven assertions counted as none and a failure would have
+// been invisible in the summary — the same hole browser80 and browser81 have. Column zero, two
+// spaces, exactly as every other drive prints it.
+const check=(c,m)=>{ if(c){ok++;console.log("ok  "+m);} else {bad++;console.error("FAIL: "+m);} };
 
 (async()=>{
   await new Promise(r=>srv.listen(PORT,"127.0.0.1",r));
@@ -128,6 +132,6 @@ const check=(c,m)=>{ if(c){ok++;console.log("  ok   "+m);} else {bad++;console.l
   check(errs.length===0,"no page errors"+(errs.length?" — "+errs[0]:""));
 
   await browser.close();srv.close();
-  console.log(bad?("FAIL "+bad+" of "+(ok+bad)):(ok+" ok"));
+  if(bad)console.error("FAIL: "+bad+" of "+(ok+bad)+" checks");
   process.exit(bad?1:0);
 })();
