@@ -37,7 +37,7 @@ Inside the exe the game is `index.html` again, because Neutralino opens the reso
 | | |
 |---|---|
 | `index.html` | the download page — `tools/site.py` stamps its build and sizes, `tools/site-drive.js` drives it |
-| `music/` | **the tunes are not here any more.** 54MB of mp3 was ninety-seven per cent of this site's bandwidth against a 1.4MB download, so they live in Cloudflare R2; `MUSIC_HOME` in the game is the one line that says where, and `tools/music-check.py` asks whether all 18 are still there and still the right size. What is left is `sizes.json`, which is what it checks against, the split manifest, `anthems/` — 23 national anthems, seven seconds each, played under the establishing card and served from here rather than R2 because one 56KB file a job is not what the bandwidth argument was about — and `city-cue.mp3` — the one piece of audio that is *not* streamed. It is the seven seconds under the establishing card, and it is carried inside `play.html` as a data URI by `tools/city-cue.py`, because a cue that has to sound in the frame the card appears cannot wait for a cold fetch, and because inside the exe it then plays with no connection at all. 55KB against 54MB is not what the bandwidth argument was about. The mp3 stays here so it can be re-encoded; `--check` fails if it and the embedded copy have drifted |
+| `music/` | **the tunes are not here any more.** 54MB of mp3 was ninety-seven per cent of this site's bandwidth against a 1.4MB download, so they live in Cloudflare R2; `MUSIC_HOME` in the game is the one line that says where, and `tools/music-check.py` asks whether all 18 are still there and still the right size. What is left is `sizes.json`, which is what it checks against, the split manifest, and `city-cue.mp3` — the one piece of audio that is *not* streamed. It is the seven seconds under the establishing card, and it is carried inside `play.html` as a data URI by `tools/city-cue.py`, because a cue that has to sound in the frame the card appears cannot wait for a cold fetch, and because inside the exe it then plays with no connection at all. 55KB against 54MB is not what the bandwidth argument was about. The mp3 stays here so it can be re-encoded; `--check` fails if it and the embedded copy have drifted |
 | `play.html` | the game, one file. Served, but not offered on the download page — the page is for the Windows build, and a free browser copy beside the button is an argument against pressing it. The handbook still links back to it |
 | `handbook.html` | the handbook, built by `tools/handbook/`. Served, but not offered on the download page either — the game reaches it on key 5, and a copy ships inside the exe |
 | `shots/*.png` | the four screenshots on the page, taken from the running game by `tools/shots.js` |
@@ -221,28 +221,27 @@ told you whether the night had anything in it before you had read a line of it. 
   into the save and lands when the file is opened again. That is the one way this could have cost
   somebody real money, so it is checked as an actual reload rather than a simulated one.
 
-- **The card of the city has the country's anthem on it.** A few seconds of the opening phrase,
-  synthesised from eight note names rather than streamed — forty-nine mp3s would be megabytes on a
-  file that has to arrive before anybody can play, and a melody written as note names costs eighty
-  bytes. It is the card's sound, not a layer under it: a country with a tune plays the tune and
-  **not** the old cue, and a country without one keeps the cue rather than going silent.
+- **The card of the city has one sound, in every country.** Soft music and a sea, cut to the exact
+  length of the card so it fades to silence on its last frame rather than being chopped off. The
+  report's own track is held under it and comes in with the first line of the night, so the seven
+  seconds belong to the city. Going straight on cuts it short; the music switch in the office
+  silences it like everything else.
 
-  It shipped inaudible. Both halves were wrong — the cue and the anthem played together with the
-  anthem deliberately mixed underneath, and "underneath" turned out to be 15 dB below the cue at the
-  peak and 23 dB below it in RMS, which is not a mix, it is silence. Nothing tested the sound of the
-  card, which is why it survived. `tests/browser84.js` renders both through an `OfflineAudioContext`
-  and compares them in decibels, which is the only form of that assertion that could have failed.
+  **There was a national anthem here, three times, and it is gone.** It is worth the paragraph
+  because each version failed differently and the last one failed for a reason that had nothing to
+  do with the code. First it played *under* the cue, mixed 15 dB below it at the peak and 23 dB
+  below in RMS — which is not a mix, it is silence, and "I still hear the old music" was exactly
+  right. Then it was the card's sound rather than a layer under it, but synthesised: a melody
+  through one `OscillatorNode`, a triangle wave, one note at a time, which under a card reads as a
+  ringtone — *"sometimes this beeping sound which doesn't make sense"*. Then it was real
+  recordings, public domain, correctly mastered — and only 23 of the 49 countries could be got
+  hold of before Wikimedia rate-limited the address they came from, which left the card sounding
+  like one game in some countries and a different game in the rest.
 
-  **12 of the 49 countries have a tune.** Six were written out by hand and checked by ear; the other
-  six were read off the LilyPond score published on the anthem's own Wikipedia article by
-  `tools/anthems.py` — LilyPond note names are absolute pitches, so there is nothing in that to
-  remember and nothing to interpret. `--check` runs the same reader over the six hand-written ones
-  and rebuilds Hatikvah interval for interval. Where a page disagrees with a tune somebody listened
-  to, the tune wins and the tool leaves it alone: O Canada's page carries a different arrangement,
-  and choosing between two arrangements is not a thing a script gets to do. The remaining 37 have no
-  score on their article and keep the cue until somebody with a piano fills them in. **A wrong
-  anthem is worse than none** — it is the game being wrong about something the player knows better
-  than it does, over a card with their own flag on it.
+  That last state is the one worth naming, because it was the best version and it was still wrong.
+  **A feature that works in half the world is not half a feature.** The card already says where you
+  are, in words and in a flag; it did not need to say it a third time in a way that worked
+  sometimes. One sound everywhere is the answer, and it is the sound that was always there.
 
 - **The police arrive, and you hear it.** When the feed reaches the line where the police show up
   — sirens two streets over, a patrol car at the door, the squad that was waiting because somebody
