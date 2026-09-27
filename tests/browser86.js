@@ -10,6 +10,22 @@
 // So the check is not "is there a map" — it is "is the picture in the same projection as the
 // arithmetic". It is asked of the pins, because that is what a player sees: a country with a
 // posting has a lit mark, and that mark must sit where that country is.
+//
+// WHAT THIS FILE DOES NOT ASK, learned the hard way. Every assertion below passed while the game
+// drew Italy's marker over the Balkans, and all of them were right to: the marker lands on exactly
+// 12.5°E 42.5°N, measured in a browser to a tenth of a pixel. The projection and the arithmetic
+// agree perfectly. What nothing here asks is whether the PICTURE IS AN ACCURATE MAP — and this
+// one is not, at country scale. Between 5°E and 45°E it draws a generic sea with generic coasts:
+// no Italian boot, no Aegean, no Black Sea worth the name.
+//
+// The land-vs-sea probe at the bottom is continental — Australia, the Amazon and India against the
+// mid-Pacific and South Atlantic — and passes on a map whose Mediterranean is fiction. It cannot
+// be sharpened into a cartographic test either: on this drawing the Sahara reads 231 against open
+// ocean at 229, so there is no threshold that separates land from water.
+//
+// A picture cannot be checked for being a good map by a machine that has no better map to check it
+// against. What CAN be checked is that the game never magnifies this one past the point where its
+// inaccuracy shows — which is the last assertion in this file, and the only guard there is.
 const {chromium,CHROME,ROOT,GAME}=require("./env.js");
 const path=require("path"),http=require("http"),fs=require("fs");
 const PORT=Number(process.env.PORT||8961);
@@ -112,6 +128,44 @@ const check=(c,m)=>{ if(c){ok++;console.log("ok  "+m);} else {bad++;console.erro
     check(land<sea-12,"and land is inked where land is, ocean where ocean is"
       +" (land "+land.toFixed(0)+" vs open sea "+sea.toFixed(0)+")");
   }
+
+  /* AND NOTHING ZOOMS PAST WHAT THE DRAWING SUPPORTS. MAP_MAX_ZOOM is a fact about
+     map/world.webp, and every zoom in the game has to sit under it. The focus ring is drawn
+     outside #mapg at a fixed 46 units, so it covers 16.56/z degrees of longitude — at 6 that is
+     2.8°, narrower than this map's error, and Italy's marker sat visibly off its own country. */
+  const zooms=await page.evaluate(()=>{
+    const out=[];
+    for(const cn of Object.keys(GEO)){
+      S.jobCountry=cn; S.jobOpen=null;
+      const m=/scale\(([\d.]+)\)/.exec(mapTransform());
+      if(m)out.push([cn,+m[1]]);
+    }
+    S.jobCountry=null;
+    return {max:Math.max(...out.map(o=>o[1])), cap:MAP_MAX_ZOOM, n:out.length,
+      countries:COUNTRIES.length, missing:COUNTRIES.map(c=>c.name).filter(n=>!GEO[n]).slice(0,3),
+      worst:out.filter(o=>o[1]>MAP_MAX_ZOOM+1e-9).slice(0,3)};
+  });
+  /* Counted against COUNTRIES rather than a number typed here: every country the game can post a
+     job in needs somewhere to be on the map, and a new one added without a GEO entry would
+     otherwise just quietly never focus. */
+  check(zooms.n===zooms.countries,"all "+zooms.countries+" countries have a place on the map"
+    +(zooms.missing.length?" — missing "+zooms.missing.join(", "):""));
+  check(zooms.worst.length===0,"and not one of them magnifies the drawing past "+zooms.cap
+    +"x, where its geography stops holding up"
+    +(zooms.worst.length?" — "+zooms.worst.map(w=>w[0]+" at "+w[1]).join(", "):" (highest is "+zooms.max+"x)"));
+  /* The ring has to be wider than the drawing's error or the mismatch shows through it. 5 degrees
+     is the number Italy needed: at 2.8x the ring covers 5.9 and reads as the country, at 4.2x it
+     covers 3.9 and does not. */
+  /* The one of these two that can actually catch a bad decision. The check above compares the code
+     with its own constant, so raising the constant raises the bar with it — it catches
+     mapTransform() ignoring the cap, not the cap being set wrong. This one encodes the fact about
+     the DRAWING and does not move: 5 degrees is what Italy needed. */
+  const ring=16.56/zooms.max;
+  check(ring>=5,ring>=5
+    ? "and the focus ring covers "+ring.toFixed(1)+"° of longitude — wider than this map's error, "
+      +"so it reads as the country"
+    : "BUT the focus ring now covers only "+ring.toFixed(1)+"° at "+zooms.max+"x, narrower than this "
+      +"map's error — markers will sit visibly off their own countries, as Italy's did at 6x");
 
   check(missed.length===0,"nothing 404s"+(missed.length?" — "+missed.slice(0,3).join(", "):""));
   check(errs.length===0,"no page errors"+(errs.length?" — "+errs[0]:""));
