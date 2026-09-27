@@ -46,67 +46,52 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
         narrative:[],revealed:0,teamIds:[]}};
       estabArm();
       if(ESTAB){clearTimeout(ESTAB);ESTAB=null;}        // do not let the card drop mid-check
-      res.push({country,anthem:ANTHEM.nodes.length>0,notes:ANTHEM.nodes.length,
-                cue:!!CITY_CUE.on,known:!!ANTHEMS[country]});
+      res.push({country,anthem:!!ANTHEM.on,cue:!!CITY_CUE.on,known:anthemHas(country)});
       cityCueStop();anthemStop();CITY_CUE.on=false;S.modal=null;
     };
-    const withTune=Object.keys(ANTHEMS).slice(0,4);
-    const without=COUNTRIES.map(c=>c.name).filter(n=>!ANTHEMS[n]).slice(0,3);
+    const names=COUNTRIES.map(c=>c.name);
+    const withTune=names.filter(anthemHas).slice(0,4);
+    const without=names.filter(n=>!anthemHas(n)).slice(0,3);
     withTune.concat(without).forEach(run);
-    return {res,known:Object.keys(ANTHEMS).length,all:COUNTRIES.length};
+    return {res,known:names.filter(anthemHas).length,all:COUNTRIES.length};
   });
-  check(sound.known>=6,sound.known+" of "+sound.all+" countries have a tune");
+  check(sound.known>=6,sound.known+" of "+sound.all+" countries have a recording");
   const tuned=sound.res.filter(r=>r.known), plain=sound.res.filter(r=>!r.known);
-  check(tuned.length&&tuned.every(r=>r.anthem&&r.notes>0),
-    "a country with a tune plays it: "+tuned.map(r=>r.country+" ("+r.notes+" notes)").join(", "));
+  check(tuned.length&&tuned.every(r=>r.anthem),
+    "a country with a recording plays it: "+tuned.map(r=>r.country).join(", "));
   check(tuned.every(r=>!r.cue),"and the old cue does NOT play under it — that was the complaint");
-  check(plain.length&&plain.every(r=>!r.anthem&&r.notes===0),
-    "a country with no tune improvises nothing: "+plain.map(r=>r.country).join(", "));
+  check(plain.length&&plain.every(r=>!r.anthem),
+    "a country with no recording invents nothing: "+plain.map(r=>r.country).join(", "));
   check(plain.every(r=>r.cue),"and keeps the cue, rather than going silent");
 
-  // ---- and it is loud enough to be the thing you hear
-  const level=await page.evaluate(async()=>{
-    const SECS=7, OC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
-    const peak=b=>{const d=b.getChannelData(0);let m=0;for(let i=0;i<d.length;i++)if(Math.abs(d[i])>m)m=Math.abs(d[i]);return m;};
-    const bin=atob(CITY_CUE_SRC.split(",")[1]);
-    const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
-    const cuePeak=peak(await new OC(1,44100*SECS,44100).decodeAudioData(arr.buffer))*0.5;  // volume*0.5
-    // rendered exactly the way anthemStart builds it, at the gain the game ships
-    const c=new OC(1,44100*SECS,44100);
-    const master=c.createGain();master.gain.setValueAtTime(ANTHEM_GAIN*1,0);master.connect(c.destination);
-    anthemNotes(ANTHEMS["United Kingdom"]).forEach(n=>{
-      const o=c.createOscillator(),g=c.createGain();
-      o.type="triangle";o.frequency.setValueAtTime(n.hz,0.25+n.at);
-      const s=0.25+n.at,e=s+Math.max(0.12,n.dur*0.9);
-      g.gain.setValueAtTime(0.0001,s);g.gain.exponentialRampToValueAtTime(1,s+0.03);
-      g.gain.exponentialRampToValueAtTime(0.0001,e);
-      o.connect(g);g.connect(master);o.start(s);o.stop(e+0.05);});
-    const aPeak=peak(await c.startRendering());
-    return {cuePeak,aPeak,db:20*Math.log10(aPeak/cuePeak),gain:ANTHEM_GAIN,clips:aPeak>=1};
-  });
-  check(level.db>-6,"and it is within 6 dB of the cue it replaced, at the peak ("+level.db.toFixed(1)+" dB)");
-  check(!level.clips,"without clipping (peak "+level.aPeak.toFixed(3)+", against the cue's "+level.cuePeak.toFixed(3)+")");
+  /* THE LOUDNESS CHECK MOVED, because there is no longer an oscillator to render. It used to
+     build the anthem note by note through an OfflineAudioContext and compare its peak with the
+     cue's, which was the only form of it that could have failed when the anthem was a melody mixed
+     15 dB under. The anthem is a recording now and the question became a question about the FILE —
+     is it seven seconds, is it mono, is it at the level the rest of the music sits at — which
+     ffmpeg answers exactly and a browser can only approximate. tests/smoke48.js asks it of every
+     one of them rather than of a sample of one. */
 
   // ---- the music switch turns it off, because it is music
   const off=await page.evaluate(()=>{
     cityCueStop();anthemStop();CITY_CUE.on=false;
     SET.music=false;
-    S.modal={type:"result",data:{estab:true,done:false,job:{country:Object.keys(ANTHEMS)[0],city:"X",id:"t"},
+    S.modal={type:"result",data:{estab:true,done:false,job:{country:COUNTRIES.map(c=>c.name).filter(anthemHas)[0],city:"X",id:"t"},
       narrative:[],revealed:0,teamIds:[]}};
     estabArm();
     if(ESTAB){clearTimeout(ESTAB);ESTAB=null;}
-    const r={anthem:ANTHEM.nodes.length>0,cue:!!CITY_CUE.on};
+    const r={anthem:!!ANTHEM.on,cue:!!CITY_CUE.on};
     SET.music=true;cityCueStop();anthemStop();CITY_CUE.on=false;S.modal=null;
     return r;});
   check(!off.anthem&&!off.cue,"with the music switched off in the office, the card is silent");
 
   // ---- and both stop when the card goes
   const stopped=await page.evaluate(()=>{
-    SET.music=true;anthemStart(Object.keys(ANTHEMS)[0]);
-    const up=ANTHEM.nodes.length;
+    SET.music=true;anthemStart(COUNTRIES.map(c=>c.name).filter(anthemHas)[0]);
+    const up=!!ANTHEM.on;
     anthemStop();
-    return {up,down:ANTHEM.nodes.length};});
-  check(stopped.up>0&&stopped.down===0,"the tune is taken down with the card ("+stopped.up+" notes → "+stopped.down+")");
+    return {up,down:!!ANTHEM.on};});
+  check(stopped.up&&!stopped.down,"the anthem is taken down with the card");
 
   // ---- and the police arriving is a sound, not a light show
   /* It used to darken the whole page and sweep two coloured beams across it with a red-and-blue

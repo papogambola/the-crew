@@ -11036,112 +11036,73 @@ const CITY_CUE={audio:null,on:false,fade:null};
    Notes are absolute so they can be read and corrected by anybody who can find a piano: a letter,
    an optional # or b, an octave, and beats after a colon (one beat if left off). "-" is a rest. */
 const ANTHEM_BEAT=430;                 // ms per beat: an anthem is walked, not run
-/* Measured, not chosen. At 0.075 the anthem rendered 23 dB under the cue in RMS and 15 dB under
-   it in peak — which is not "mixed underneath", it is inaudible, and it is the other half of why
-   the feature read as missing. The cue peaks at 0.434 (it is an mp3 played at volume*0.5); 0.30
-   puts a triangle oscillator's peak at 0.297, three decibels under that, with headroom against
-   clipping. RMS stays about 11 dB under because this is eight struck notes with air between them
-   rather than a continuous track, which is what a melody in front of nothing should look like. */
-const ANTHEM_GAIN=0.30;
-const ANTHEM_STEP={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
-const ANTHEMS={
-  // "Oh say can you see" — 5 3 1 3 5 8, the rising arpeggio everybody can finish.
-  "United States":"G4:1 E4:.5 C4:1.5 E4:1 G4:1 C5:2.5",
-  // "God save our gracious King" — 1 1 2, 7 1 2, in three.
-  "United Kingdom":"G4 G4 A4 F#4:1.5 G4:.5 A4:2",
-  // "Allons enfants de la Patrie" — the dotted repeated dominant, then up to the tonic.
-  "France":"D4:.75 D4:.25 D4:1 G4:1 G4:1 A4:1 A4:1 D5:2",
-  // "Kol od balevav p'nimah" — a stepwise climb of a fifth and back onto it.
-  "Israel":"D4 E4 F4 G4 A4:2 A4 Bb4 A4:2",
-  // "O Ca-na-da" — the triad, with the first syllable held.
-  "Canada":"F4:1.5 A4:.5 C5:1 C5:2",
-  // "Rossiya, svyashchennaya nasha derzhava" — the leap of a fourth off the tonic.
-  "Russia":"C4:1 F4:1.5 F4:.5 G4:1 A4:1 A4:2",
-  "Germany":"Eb4:1.5 F4:.5 G4 F4 Ab4 G4 F4:.5 D4:.5 Eb4",    // Deutschlandlied, by tools/anthems.py
-  "Sweden":"D5:.5 D5 Bb4:.5 Bb4:.5 Bb4 C5:.5 D5:.5 D5 C5:.5",    // Du gamla, Du fria, by tools/anthems.py
-  "Italy":"F4 F4:.75 G4:.25 F4 D5 D5:.75 Eb5:.25 D5 D5",    // Il Canto degli Italiani, by tools/anthems.py
-  "China":"G4:.75 B4:.25 D5:.5 D5:.5 E5 D5 B4:.75 G4:.25 D5:.5",    // March of the Volunteers, by tools/anthems.py
-  "Japan":"D4 C4 D4 E4 G4 E4 D4:2 E4",    // Kimigayo, by tools/anthems.py
-  "Indonesia":"B3:.75 C4:.25 D4 B4:1.75 B4:.25 A4:.75 A4:.25 G4 D4:1.5",    // Indonesia Raya, by tools/anthems.py
-};
-/* Every country the game can send you to, and whether it has a tune yet. Printed by the suite so
-   the gap is a number somebody can see rather than something you find out by playing to Jakarta
-   and hearing nothing. */
-function anthemsMissing(){
-  // c.name, not c[0]. COUNTRIES is written in the source as rows of raw arrays and mapped into
-  // objects immediately after, so reading it positionally gives 49 undefineds and a table that
-  // reports perfect coverage of nothing. smoke44 caught exactly that.
-  return (typeof COUNTRIES==="undefined"?[]:COUNTRIES.map(c=>c.name)).filter(n=>!ANTHEMS[n]);
-}
-function anthemHz(tok){
-  const m=/^([A-G])([#b]?)(\d)$/.exec(tok);
-  if(!m)return 0;
-  const semis=ANTHEM_STEP[m[1]]+(m[2]==="#"?1:m[2]==="b"?-1:0);
-  const midi=12*(+m[3]+1)+semis;       // C4 is 60, as everywhere else that counts in semitones
-  return 440*Math.pow(2,(midi-69)/12);
-}
-/* Parsed rather than stored as numbers so the table above stays something a person can read.
-   Returns [{hz,at,dur}] with everything already in seconds. */
-function anthemNotes(str){
-  let at=0;const out=[];
-  String(str||"").trim().split(/\s+/).forEach(tok=>{
-    if(!tok)return;
-    const bits=tok.split(":");
-    const beats=bits.length>1?parseFloat(bits[1]):1;
-    const b=(isFinite(beats)&&beats>0?beats:1)*ANTHEM_BEAT/1000;
-    if(bits[0]!=="-"){
-      const hz=anthemHz(bits[0]);
-      if(hz)out.push({hz:hz,at:at,dur:b});
-    }
-    at+=b;
-  });
-  return out;
-}
-const ANTHEM={nodes:[],gain:null};
+/* THE ANTHEM, AS A RECORDING RATHER THAN AS A MELODY.
+
+   It used to be a tune replayed on one OscillatorNode: a triangle wave, one note at a time, no
+   harmony and nothing that sounds like an instrument. Under the card that reads as a phone
+   ringtone, and the report from the person playing it was "sometimes this beeping sound which
+   doesn't make sense". Twelve countries had that. The other thirty-seven had no tune at all and
+   fell through to the city cue, so the sea played over a skyline in Lagos. Neither is a national
+   anthem, and no envelope on a solo oscillator was going to make one.
+
+   These are performances, mostly by the United States Navy and Army Bands — works of the US
+   government, so public domain worldwide with nothing owed to anybody, which is the only kind
+   worth having in something that is sold. tools/anthem-audio.py found them, read each one's
+   licence off its own Commons page, cut it to ESTAB_MS and levelled it to the -14 LUFS the rest of
+   the game's music sits at.
+
+   They live beside the game rather than on R2 with the tunes: one 56KB file a job is not the 54MB
+   that moved, and a cue that has to be sounding while the card is up cannot wait on a cold fetch
+   from another host. */
+const ANTHEM_HOME="music/anthems/";
+const ANTHEM_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_ANTHEMS==="string")?window.THE_CREW_ANTHEMS:ANTHEM_HOME;
+/* The level the city cue plays at, because they are the same thing in the same place — music under
+   the card — and both are mastered to the same loudness now. The old 0.30 was chosen against an
+   oscillator's harshness, which is not a problem a recording has. */
+const ANTHEM_GAIN=0.5;
+/* Which countries have one. A list rather than asking for the file and handling the 404, for the
+   same reason ART_HAVE is a list: the card has to know BEFORE it starts whether to play an anthem
+   or the cue, and a miss would be seven seconds of silence over the skyline. Written by
+   tools/anthem-audio.py --write. */
+/* anthem-audio.py:have */const ANTHEM_HAVE=["australia","canada","chile","colombia","czechia","finland","france","germany","greece","ireland","mexico","netherlands","norway","poland","portugal","russia","serbia","spain","sweden","switzerland","ukraine","united-kingdom","united-states"];
+const ANTHEM_SET=(typeof Set!=="undefined")?new Set(ANTHEM_HAVE):null;
+function anthemSlug(country){return String(country||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");}
+function anthemHas(country){const k=anthemSlug(country);return !!k&&(ANTHEM_SET?ANTHEM_SET.has(k):ANTHEM_HAVE.indexOf(k)>=0);}
+const ANTHEM={audio:null,fade:null,on:false};
 function anthemStop(){
-  const c=AC;
-  if(ANTHEM.gain&&c){
-    // Ramped, not cut. The card can be skipped on any frame, and an oscillator stopped mid-cycle
-    // is a click — which on a quiet card is louder than the note it interrupted.
+  if(!ANTHEM.on&&!ANTHEM.audio)return;
+  ANTHEM.on=false;
+  const a=ANTHEM.audio;
+  if(a){
+    // Faded over seven steps of 20ms, not cut. The card can be skipped on any frame and a paused
+    // element is a click, which on a quiet card is louder than what it interrupted. The same ride
+    // down the city cue uses.
     try{
-      const t=c.currentTime;
-      ANTHEM.gain.gain.cancelScheduledValues(t);
-      ANTHEM.gain.gain.setValueAtTime(ANTHEM.gain.gain.value||0.0001,t);
-      ANTHEM.gain.gain.exponentialRampToValueAtTime(0.0001,t+0.08);
+      if(ANTHEM.fade){clearInterval(ANTHEM.fade);ANTHEM.fade=null;}
+      const step=(a.volume||0)/7;
+      ANTHEM.fade=setInterval(()=>{
+        try{
+          a.volume=Math.max(0,a.volume-step);
+          if(a.volume<=0.001){clearInterval(ANTHEM.fade);ANTHEM.fade=null;a.pause();try{a.currentTime=0;}catch(e){}}
+        }catch(e){clearInterval(ANTHEM.fade);ANTHEM.fade=null;}
+      },20);
     }catch(e){}
   }
-  ANTHEM.nodes.forEach(o=>{try{o.stop((AC?AC.currentTime:0)+0.1);}catch(e){}});
-  ANTHEM.nodes=[];
-  const g=ANTHEM.gain;ANTHEM.gain=null;
-  if(g)setTimeout(()=>{try{g.disconnect();}catch(e){}},200);
+  musicSync();
 }
 function anthemStart(country){
   anthemStop();
-  const line=ANTHEMS[country];
-  if(!line)return false;                                             // no tune known: the cue alone
+  if(!anthemHas(country))return false;                             // no recording: the cue instead
   // The same four conditions the cue answers to. It is music, so it is off when music is off.
   if(!(SET.sound&&SET.music&&SET.volume>0&&userGestured))return false;
-  const c=ac();if(!c)return false;
   try{
-    const master=c.createGain();
-    master.gain.setValueAtTime(Math.max(0.0002,ANTHEM_GAIN*SET.volume),c.currentTime);
-    master.connect(c.destination);
-    ANTHEM.gain=master;
-    const t0=c.currentTime+0.25;                                     // a beat of card before it starts
-    anthemNotes(line).forEach(n=>{
-      const o=c.createOscillator(),g=c.createGain();
-      // Triangle with the edge taken off it: a square reads as a games console and a sine reads as
-      // a test tone. This is meant to sound like it is coming through a wall.
-      o.type="triangle";o.frequency.setValueAtTime(n.hz,t0+n.at);
-      const s=t0+n.at,e=s+Math.max(0.12,n.dur*0.9);
-      g.gain.setValueAtTime(0.0001,s);
-      g.gain.exponentialRampToValueAtTime(1,s+0.03);                 // struck, not faded in
-      g.gain.exponentialRampToValueAtTime(0.0001,e);
-      o.connect(g);g.connect(master);
-      o.start(s);o.stop(e+0.05);
-      ANTHEM.nodes.push(o);
-    });
+    const a=new Audio(ANTHEM_BASE+anthemSlug(country)+".mp3");
+    a.preload="auto";
+    a.volume=clamp(SET.volume*ANTHEM_GAIN,0,1);
+    const p=a.play();if(p&&p.catch)p.catch(()=>{});
+    ANTHEM.audio=a;ANTHEM.on=true;
   }catch(e){return false;}
+  musicSync();
   return true;
 }
 function cityCueStart(){
@@ -12157,7 +12118,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 127 · September 2026";
+const BUILD="build 128 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a

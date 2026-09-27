@@ -72,9 +72,13 @@ def get(url, binary=False, pause=2.5):
     # recording; every one of those 31 was a rate-limit page. A tool that reports "nothing found"
     # when it was told to slow down is worse than one that crashes, because the number looks like a
     # result. So: back off and try again, and only call it missing when the wiki actually says so.
+    # The politeness pause and the retry backoff are DIFFERENT NUMBERS. They were the same one, so
+    # raising the pause to 20s for the audio files made the fifth retry wait ten minutes, and a run
+    # that looked throttled was asleep in its own arithmetic. Wait `pause` between requests because
+    # the host asked; back off from five seconds when it says no.
     last = None
     for attempt in range(6):
-        time.sleep(pause if attempt == 0 else pause * (2 ** attempt))
+        time.sleep(pause if attempt == 0 else 5 * (2 ** attempt))
         req = urllib.request.Request(url, headers={"User-Agent": UA})
         try:
             with urllib.request.urlopen(req, timeout=60) as r:
@@ -251,14 +255,52 @@ def fetch(rows, ms):
             continue
         slug = re.sub(r"[^a-z0-9]+", "-", c.lower()).strip("-")
         dst = os.path.join(OUT, slug + ".mp3")
-        raw = get(url, binary=True)
+        # Resumable, because the download is the slow part and the address gets throttled: a file
+        # already cut is a file not fetched again.
+        if os.path.exists(dst):
+            done.append((c, slug, os.path.getsize(dst), "already cut"))
+            continue
+        # TWENTY SECONDS BETWEEN FILES. upload.wikimedia.org answers a burst with a 429 that asks,
+        # in the error body, for "a less disruptive approach" — which is a fair thing to ask of
+        # somebody pulling 46 audio files through a shared address. Measured rather than guessed:
+        # at 20s apart the requests go through, and 46 of them is a quarter of an hour, which costs
+        # nothing but wall-clock.
+        # One refusal is one country, not the end of the run. It used to propagate and kill the
+        # whole fetch on the first 429, throwing away the files that would have come after it.
+        try:
+            raw = get(url, binary=True, pause=60)
+        except Exception as e:
+            skipped.append((c, "download refused", str(e)[:70]))
+            print("  %-14s refused  %s" % (c, str(e)[:52]), flush=True)
+            continue
         tmp = os.path.join(CACHE, slug + os.path.splitext(url)[1])
         open(tmp, "wb").write(raw)
         # Mono, the level the rest of the game's music sits at, and faded at the end so it stops with
         # the card rather than being chopped mid-phrase — the rule city-cue.py already follows.
         cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", tmp,
                "-t", "%.2f" % secs, "-ac", "1", "-ar", "44100",
-               "-af", "loudnorm=I=-14:TP=-1.5:LRA=11,afade=t=out:st=%.2f:d=0.6" % max(0.1, secs - 0.6),
+               # THE MASTERING, WHICH TOOK THREE GOES AND IS WRITTEN DOWN SO IT TAKES ONE NEXT TIME.
+               #
+               # loudnorm in a single pass overshoots its own true-peak target: asked for TP=-1.5 it
+               # delivered +0.3 and +0.7 dBFS on four of the first eight, which is clipping and is
+               # audible on a brass band. Its limiter is predictive, and the mp3 encode adds
+               # inter-sample overshoot on top of whatever it leaves.
+               #
+               # alimiter after it made that WORSE, not better, and the reason is a default: `level`
+               # is auto-level and defaults to ON, so it limits the peaks and then normalises the
+               # whole thing back up to full scale. Lowering the limit made the file LOUDER, which
+               # is the sort of result that means a setting is doing something other than its name.
+               # level=disabled is the whole fix.
+               #
+               # Measured across different recordings rather than tuned on one — and tuning on two
+               # was still not enough: at limit=0.794 four of twenty-two came out over 0 dBFS,
+               # because a dense brass recording is not the same problem as a sparse one. Set from
+               # the WORST of them (Colombia, a US Navy Band performance that peaked at +0.4): at
+               # 0.631 it lands at -1.2 dBFS, and the cost of the extra headroom is two tenths of a
+               # LUFS. Consistency between forty-six files matters more than hitting -14 exactly,
+               # because they play one after another in the same place.
+               "-af", "loudnorm=I=-14:TP=-2:LRA=11,alimiter=limit=0.631:level=disabled,"
+                      "afade=t=out:st=%.2f:d=0.6" % max(0.1, secs - 0.6),
                "-codec:a", "libmp3lame", "-b:a", "72k", dst]
         r = subprocess.run(cmd, capture_output=True, text=True)
         if r.returncode != 0:
@@ -267,6 +309,29 @@ def fetch(rows, ms):
         done.append((c, slug, os.path.getsize(dst), why))
         print("  %-14s %6.1f KB  %s" % (c, os.path.getsize(dst) / 1000, why[:40]), flush=True)
     return done, skipped
+
+
+ANTHEM_MARK = "/* anthem-audio.py:have */const ANTHEM_HAVE="
+
+
+def write_manifest():
+    """Which countries have a recording, told to the game in one line.
+
+    The same shape as ART_HAVE and for the same reason: the card has to know BEFORE it starts
+    whether there is an anthem or whether the city cue should play instead. Asking for the file and
+    handling the 404 would mean seven seconds of silence over the skyline every time a country has
+    none, which is thirty-odd countries today."""
+    have = sorted(f[:-4] for f in os.listdir(OUT)) if os.path.isdir(OUT) else []
+    game = open(GAME, encoding="utf-8").read()
+    if not re.search(re.escape(ANTHEM_MARK) + r"\[[^\]]*\];", game):
+        raise SystemExit("no ANTHEM_HAVE marker in play.html — has it been renamed?")
+    new = ANTHEM_MARK + "[" + ",".join('"' + i + '"' for i in have) + "];"
+    out = re.sub(re.escape(ANTHEM_MARK) + r"\[[^\]]*\];", new.replace("\\", "\\\\"), game, count=1)
+    if out == game:
+        print("ANTHEM_HAVE already lists %d anthems — nothing to do" % len(have))
+        return
+    open(GAME, "w", encoding="utf-8").write(out)
+    print("ANTHEM_HAVE now lists %d anthems" % len(have))
 
 
 def main():
@@ -291,10 +356,15 @@ def main():
         print("\n  attribution ones: " + ", ".join(r[0] for r in attrib))
     if rest:
         print("\n  nothing usable:   " + ", ".join(r[0] for r in rest))
+    if "--write" in args:
+        write_manifest()
+        raise SystemExit(0)
+
     if "--fetch" in args:
         print("\n— cutting to %d ms —" % ms)
         done, skipped = fetch(rows, ms)
         print("\n  %d written to music/anthems/" % len(done))
+        write_manifest()
 
 
 if __name__ == "__main__":
