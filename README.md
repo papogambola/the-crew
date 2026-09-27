@@ -545,10 +545,28 @@ told you whether the night had anything in it before you had read a line of it. 
   builds, and wrong at speed is worse than absent. browser56 checks the card against the code, not
   against itself.
 - **The office.** Esc, or the three-line button top right, opens the boss's office — the
-  pause and settings screen, drawn as line art you can click. The radio's SOUND switch, MUSIC
+  pause and settings screen, a drawing you can click. The radio's SOUND switch, MUSIC
   switch and VOLUME knob, the DISPLAY monitor's brightness slider, the LANGUAGE paper, the
   CONTROLS book, the EXIT door, and your hat on the hook (your own file). Settings are kept
   separately from the game and survive a new game.
+
+  The room is one picture — `office/room.webp` — with **five things drawn over it**, and only
+  five: the dot in each switch, the volume knob's pointer, the brightness handle, and the line
+  under the speaker. Those are the things that answer to a setting; each covers its own patch of
+  the picture and redraws it live, cut to the ink so the drawn pill, rim and track still show.
+  Everything else on top is an invisible rectangle to catch a click, washed at 6% on hover so the
+  area that will answer is the area that lights.
+
+  **Every word in the room is ink**, not type: TUTORIAL, HANDBOOK, SOUND, MUSIC, VOLUME, ON, OFF,
+  DISPLAY, LANGUAGE, CONTROLS, EXIT, FILES. They were code, on little white plates, which read as
+  stickers pasted onto a pencil drawing. The one exception is the radio's status line, because it
+  has five states — and in the one the drawing depicts (RADIO OFF, lettered on the panel) nothing
+  is printed at all. `RADIO_DRAWN` is the join between the two; `tests/smoke49.js` fails if the
+  code and the picture stop agreeing on those words, and `tests/browser87.js` fails if a control
+  stops moving, moves outside the ink it is drawn inside, or lands anywhere but under the click.
+  That last one matters because the failure is invisible: underneath every live control there is a
+  drawing of that control, in a plausible position, so an office that has stopped working still
+  looks exactly right.
 - **Music.** The creator's 14-track compilation, split on the silences between tracks and
   re-encoded to 128 kbps for the web (`music/`), plus two more delivered on their own. Eleven
   tracks rotate under the live job report, one per job; three score the verdict — the quietest

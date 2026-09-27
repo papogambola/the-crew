@@ -583,9 +583,18 @@
     border:1px solid var(--line-2);background:#fff}
   .office-svg :is(path,rect,line,polygon,polyline,ellipse,circle):not(.ns){stroke:var(--ink);stroke-width:2.2px;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
   .office-svg text{font-family:var(--f-mono);fill:var(--ink);stroke:none}
-  .office-label{font-size:16px;font-weight:500;letter-spacing:.08em}
+  /* The one piece of type left in the office: the radio's live line. Every other word in the room —
+     TUTORIAL, HANDBOOK, SOUND, MUSIC, VOLUME, ON, OFF, DISPLAY, LANGUAGE, CONTROLS, EXIT, FILES —
+     is ink in office/room.webp. .office-label, at 16px, was the big ones; it went with them. */
   .office-small{font-size:12px;letter-spacing:.06em}
   .office-svg .hot{cursor:pointer}
+  /* Hovering an object says so by washing over it. It used to fill the SHAPE — the office was two
+     hundred white-filled polygons and the door you were about to open turned grey. The room is a
+     photograph of a pencil drawing now and a photograph cannot be filled, so the wash goes on the
+     invisible rectangle that catches the click, which is the same thing said the only way that is
+     left: the area that will answer is the area that lights. Kept to 6% so it reads as a highlight
+     over ink rather than a grey box over a drawing. */
+  .office-svg .hot:hover rect.hit{fill:rgba(17,16,16,.06)}
   .office-svg .hot:hover :is(rect,path,polygon,ellipse):not(.ns){fill:var(--paper-2)}
   .office-words{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;font-family:var(--f-mono);font-size:12px}
   .office-words .grp{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line-2);padding:3px 6px;background:var(--card)}
@@ -6447,6 +6456,8 @@ function mapTransform(){
    It lives inside #mapg so it zooms and pans with the pins when a country is focused. The
    graticule went with the polygons: faint rules over a drawn map are a grid on a drawing, not a
    map with a grid. */
+const OFFICE_HOME="office/";
+const OFFICE_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_OFFICE==="string")?window.THE_CREW_OFFICE:OFFICE_HOME;
 const MAP_HOME="map/";
 const MAP_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_MAP==="string")?window.THE_CREW_MAP:MAP_HOME;
 function worldMap(){
@@ -11041,8 +11052,13 @@ function musicStatusText(){
   if(musicState==="blocked")return "Radio silent: "+musicNote;
   return "Radio ready — "+musicWant.label+" · press Start the radio, or click anywhere";
 }
+/* The words under the radio's speaker. RADIO_DRAWN is the one that is IN the picture:
+   office/room.webp has RADIO OFF lettered on the panel, so when that is the truth the office
+   prints nothing over it. Change the wording here and the drawing starts lying — which is why
+   the two are named together and tests/smoke49.js checks they still agree. */
+const RADIO_DRAWN="RADIO OFF";
 function radioLabel(){
-  if(!SET.sound||!SET.music)return "RADIO OFF";
+  if(!SET.sound||!SET.music)return RADIO_DRAWN;
   if(!musicWant)return "STANDBY";
   if(musicState==="playing")return "♪ ON AIR";
   if(musicState==="blocked")return "NO SIGNAL";
@@ -11477,112 +11493,100 @@ function chrome(){
    condition, and nothing left to be wrong the next time the address changes. */
 function handbookHref(){return "handbook.html";}
 function openHandbook(){try{window.open(handbookHref(),"_blank","noopener");}catch(e){location.href=handbookHref();}}
+/* THE ROOM IS A DRAWING, AND ONLY WHAT MOVES IS DRAWN OVER IT.
+
+   It used to be the whole office in SVG — window, chair, desk, lamp, door, cabinet, the radio's
+   case, every book on the shelf, and every word — perhaps two hundred shapes, each filled white
+   with an ink edge, which is exactly what the game looked like before anybody drew anything.
+
+   Then the room became a picture and the words stayed in code, sitting on little white plates,
+   which read as stickers pasted onto a pencil drawing. Now the words are in the pencil too, so
+   what is left here is only the five things a picture cannot hold, because they answer to a
+   setting the player can change:
+
+     the dot in the sound switch      SET.sound
+     the dot in the music switch      SET.music
+     the volume knob's pointer        SET.volume
+     the brightness handle            SET.bright
+     the line under the speaker       whether the radio is actually playing
+
+   Each of those five sits on top of a drawn one, so each first covers its own patch of the
+   drawing in paper-white and redraws it live. The covers are cut to the ink: inside the switch
+   pill, inside the knob's rim, the short right end of the slider. What stays visible is the
+   drawing's own line — the pill outline, the knob's rim and ticks, the rest of the slider —
+   which is why they do not read as pasted on. Everything else here is an invisible rectangle to
+   catch a click. If it is in this function, it is because it moves.
+
+   The numbers are measured off office/room.webp, not carried over: the drawing was made to keep
+   every object where it already was, but "near enough" on a knob is a pointer growing out of the
+   rim. */
 function officeSVG(){
   const K="#111010";
   const on=SET.sound, vol=SET.volume;
   const ang=(-135+270*vol-90)*Math.PI/180;
-  const bx=1035+135*((clamp(SET.bright,55,100)-55)/45);
-  let dots="";for(let y=580;y<=626;y+=9)for(let x=128;x<=194;x+=9)dots+='<circle class="ns" cx="'+x+'" cy="'+y+'" r="2.2" fill="'+K+'"/>';
-  /* The three controls on the radio, as the x each one is centred on. They used to be spelled
-     out at every coordinate — label, switch, dot, the words ON and OFF, the knob, its ticks and
-     its pointer, nine numbers per control — so moving one meant finding all nine, and VOLUME's
-     label at 375 overlapped MUSIC's by seven units on every machine, webfont or not, because
-     VOLUME is the widest word on the set and nobody had measured it. Named once, derived from
-     here, and checked: the labels are 54.6 / 54.6 / 65.5 units wide in IBM Plex Mono, so these
-     three centres leave about ten units of air between each and end at 405.8, inside the
-     radio's own right edge at 410. tools/office-labels.js fails if any two labels in this
-     drawing touch. */
-  const SNDX=238, MUSX=303, VOLX=373, KNOBY=614;
-  let ticks="";for(let i=0;i<=8;i++){const a=(-135+i*33.75-90)*Math.PI/180;ticks+='<line x1="'+(VOLX+25*Math.cos(a)).toFixed(1)+'" y1="'+(KNOBY+25*Math.sin(a)).toFixed(1)+'" x2="'+(VOLX+29*Math.cos(a)).toFixed(1)+'" y2="'+(KNOBY+29*Math.sin(a)).toFixed(1)+'"/>';}
-  let rays="";for(let d=0;d<360;d+=45){const a=d*Math.PI/180;rays+='<line x1="'+(1005+10*Math.cos(a)).toFixed(1)+'" y1="'+(474+10*Math.sin(a)).toFixed(1)+'" x2="'+(1005+13*Math.cos(a)).toFixed(1)+'" y2="'+(474+13*Math.sin(a)).toFixed(1)+'"/>';}
-  return '<svg class="office-svg" viewBox="0 0 1700 900" role="img" aria-label="The boss\'s office: a window, a tutorial clipboard on the wall, a chair, a radio with a sound switch and volume knob, a language paper, a display monitor, a controls book, the exit door, and your hat on the hook">'
-    +'<rect class="ns" x="0" y="0" width="1700" height="900" fill="#ffffff"/>'
-    // window with the skyline
-    +'<g><rect x="60" y="30" width="370" height="350" fill="#fff"/><line x1="245" y1="30" x2="245" y2="380"/>'
-    +'<polyline fill="none" points="75,378 110,378 110,255 165,255 165,378 190,378 190,185 215,185 215,150 232,118 249,150 249,185 262,185 262,378 320,378 320,240 380,240 380,378 425,378"/>'
-    +'<rect x="42" y="380" width="405" height="22" fill="#fff"/></g>'
+  /* The handle's centre, on the drawn track, which runs 1036 to 1170. The same two numbers are
+     the click target below, so the handle lands under the finger rather than near it. */
+  const bx=1036+134*((clamp(SET.bright,55,100)-55)/45);
+  /* Two tones sampled out of office/room.webp — the radio's front panel and the monitor's screen.
+     The five live controls each cover a patch of the drawing before redrawing it, and a patch
+     filled with the CSS paper (#fbfaf6) reads as a sticker because the drawing's paper is warmer
+     and darker than the page's. Sampled, not guessed: mean of the un-inked pixels in each area. */
+  const PANEL="#dad3c5", SCREEN="#f3edde";
+  /* The three controls on the radio, as the x each one is centred on, and the knob's y. Measured
+     off the drawing: the sound pill's ink runs 218–242, the music pill's 285–307, and the knob's
+     rim 348–395 across and 588–630 down. The pointer's sweep is unchanged — 270 degrees opening
+     at the bottom — because the drawing's own ticks are in exactly those nine places. */
+  const SNDX=230, MUSX=296, VOLX=371, KNOBY=608;
+  const hit=(act,x,y,w,h,title,extra)=>'<g class="hot" data-act="'+act+'">'+(title?'<title>'+title+'</title>':'')
+    +'<rect class="ns hit" x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="transparent"/>'+(extra||'')+'</g>';
+  /* Inside the pill, not over it: 18 wide against the ink's 24, so the drawn outline survives and
+     only the dot is ours. */
+  const sw=(x,st)=>'<rect class="ns" x="'+(x-9)+'" y="591" width="18" height="34" rx="9" fill="var(--card)"/>'
+    +'<circle class="ns" cx="'+x+'" cy="'+(st?600:616)+'" r="6" fill="'+K+'"/>';
+  return '<svg class="office-svg" viewBox="0 0 1700 900" role="img" aria-label="The boss\'s office: a window, a tutorial clipboard on the wall, a chair, a radio with a sound switch, a music switch and a volume knob, a monitor with a brightness slider, a door marked exit, a hat on a hook, a file cabinet and the handbook on the shelf.">'
+    +'<image class="ns" href="'+esc(OFFICE_BASE+"room.webp")+'" x="0" y="0" width="1700" height="900" preserveAspectRatio="none"/>'
     // the clipboard on the wall: the tutorial, whenever you want it
-    +'<g class="hot" data-act="off-tutor"><title>'+(S?"Recap — the tutorial, any card, whenever you want":"Recap — the tutorial; open a dossier first")+'</title>'
-    +'<rect x="640" y="96" width="200" height="214" rx="4" fill="#fff"/><rect x="654" y="124" width="172" height="172" fill="#fff"/>'
-    +'<rect x="712" y="84" width="56" height="26" rx="6" fill="#fff"/><circle class="ns" cx="740" cy="97" r="4" fill="'+K+'"/>'
-    +'<text x="740" y="152" text-anchor="middle" class="office-label">TUTORIAL</text>'
-    +'<line x1="672" y1="176" x2="808" y2="176"/><line x1="672" y1="198" x2="792" y2="198"/><line x1="672" y1="220" x2="800" y2="220"/><line x1="672" y1="242" x2="776" y2="242"/><line x1="672" y1="264" x2="796" y2="264"/>'
-    +'<text x="740" y="286" text-anchor="middle" class="office-small">RECAP ANY TIME</text></g>'
-    // framed picture
-    +'<g><rect x="975" y="140" width="175" height="180" fill="#fff"/><rect x="990" y="155" width="145" height="150" fill="#fff"/>'
-    +'<polyline fill="none" points="1000,290 1015,290 1015,215 1035,215 1035,195 1045,195 1045,215 1060,215 1060,290 1075,290 1075,240 1095,240 1095,290 1105,290 1105,205 1120,205 1120,290 1128,290"/><line x1="998" y1="296" x2="1128" y2="296"/></g>'
+    +hit("off-tutor",640,84,200,226,(S?"Recap — the tutorial, any card, whenever you want":"Recap — the tutorial; open a dossier first"))
     // the door
-    +'<g class="hot" data-act="off-exit"><title>Exit — leave the office, or burn the file</title>'
-    +'<rect x="1250" y="50" width="300" height="650" fill="#fff"/><rect x="1272" y="72" width="262" height="628" fill="#fff"/>'
-    +'<rect x="1302" y="112" width="200" height="245" fill="#fff"/><rect x="1302" y="410" width="200" height="240" fill="#fff"/>'
-    +'<rect x="1398" y="392" width="72" height="28" fill="#fff"/><text x="1434" y="412" text-anchor="middle" class="office-label">EXIT</text>'
-    +'<rect x="1500" y="395" width="36" height="14" rx="7" fill="#fff"/><circle class="ns" cx="1510" cy="402" r="4" fill="'+K+'"/></g>'
+    +hit("off-exit",1250,50,300,650,"Exit — leave the office, or burn the file")
     // the hat on the hook
-    +'<g class="hot" data-act="off-hat"><title>'+(S?"Your file":"Your file — start a game first")+'</title>'
-    +'<path d="M1610 262 q-12 14 -2 28 q10 10 20 0" fill="none"/>'
-    +'<path d="M1576 236 C1580 198 1612 186 1636 206 L1646 236 Z" fill="#fff"/>'
-    +'<ellipse cx="1606" cy="240" rx="48" ry="12" fill="#fff" transform="rotate(-18 1606 240)"/></g>'
-    // the chair, behind the desk
-    +'<g><rect x="560" y="320" width="240" height="250" rx="44" fill="#fff"/><path d="M600 340 q80 -14 160 0" fill="none"/><line x1="680" y1="345" x2="680" y2="560"/>'
-    +'<rect x="528" y="546" width="62" height="30" rx="10" fill="#fff"/><rect x="770" y="546" width="62" height="30" rx="10" fill="#fff"/></g>'
-    // the desk
-    +'<g><polygon points="30,700 1520,700 1300,590 300,590" fill="#fff"/><rect x="30" y="700" width="1490" height="26" fill="#fff"/>'
-    +'<line x1="62" y1="726" x2="62" y2="900"/><line x1="1490" y1="726" x2="1490" y2="900"/></g>'
-    // the lamp
-    +'<g><ellipse cx="475" cy="628" rx="44" ry="11" fill="#fff"/><line x1="475" y1="617" x2="462" y2="470"/><path d="M456 472 Q530 410 606 466 Z" fill="#fff"/></g>'
-    // the radio
-    +'<g><polyline fill="none" points="100,548 118,534 427,520 410,548"/><rect x="100" y="548" width="310" height="112" rx="6" fill="#fff"/>'
-    +'<rect x="120" y="572" width="82" height="60" rx="4" fill="#fff"/>'+dots
-    +'<text x="161" y="652" text-anchor="middle" class="office-small">'+radioLabel()+'</text></g>'
+    +hit("off-hat",1557,196,99,99,(S?"Your file":"Your file — start a game first"))
     // the radio: sound switch (master)
-    +'<g class="hot" data-act="off-sound"><title>Sound '+(on?"on — click to switch off":"off — click to switch on")+'</title>'
-    +'<rect class="ns" x="'+(SNDX-35)+'" y="562" width="66" height="76" fill="transparent"/>'
-    +'<text x="'+SNDX+'" y="580" text-anchor="middle" class="office-label">SOUND</text>'
-    +'<rect x="'+(SNDX-17)+'" y="590" width="14" height="34" rx="7" fill="#fff"/><circle class="ns" cx="'+(SNDX-10)+'" cy="'+(on?599:615)+'" r="5" fill="'+K+'"/>'
-    +'<text x="'+(SNDX+5)+'" y="603" class="office-small">ON</text><text x="'+(SNDX+5)+'" y="627" class="office-small">OFF</text></g>'
+    +hit("off-sound",SNDX-24,585,48,46,"Sound "+(on?"on — click to switch off":"off — click to switch on"),sw(SNDX,on))
     // the radio: music switch
-    +'<g class="hot" data-act="off-music"><title>Music — the job tracks — '+(SET.music?"on, click to switch off":"off, click to switch on")+'</title>'
-    +'<rect class="ns" x="'+(MUSX-32)+'" y="562" width="63" height="76" fill="transparent"/>'
-    +'<text x="'+MUSX+'" y="580" text-anchor="middle" class="office-label">MUSIC</text>'
-    +'<rect x="'+(MUSX-17)+'" y="590" width="14" height="34" rx="7" fill="#fff"/><circle class="ns" cx="'+(MUSX-10)+'" cy="'+(SET.music?599:615)+'" r="5" fill="'+K+'"/>'
-    +'<text x="'+(MUSX+5)+'" y="603" class="office-small">ON</text><text x="'+(MUSX+5)+'" y="627" class="office-small">OFF</text></g>'
-    // the radio: volume knob. Respaced rather than shortened — MUS / VOL would fit and would
-    // read like a spreadsheet, and this is a drawing of a radio.
+    +hit("off-music",MUSX-24,585,48,46,"Music — the job tracks — "+(SET.music?"on, click to switch off":"off, click to switch on"),sw(MUSX,SET.music))
+    // the radio: volume knob. The rim and the ticks are drawn; the pointer is the only live part.
     +'<g class="hot" data-act="off-vol" id="volKnob"><title>Volume '+Math.round(vol*100)+'% — click the left of the knob to lower, the right to raise</title>'
-    +'<text x="'+VOLX+'" y="578" text-anchor="middle" class="office-label">VOLUME</text>'
-    +'<circle cx="'+VOLX+'" cy="'+KNOBY+'" r="21" fill="#fff"/>'+ticks
-    +'<line x1="'+VOLX+'" y1="'+KNOBY+'" x2="'+(VOLX+16*Math.cos(ang)).toFixed(1)+'" y2="'+(KNOBY+16*Math.sin(ang)).toFixed(1)+'" style="stroke-width:4px"/></g>'
+    +'<rect class="ns hit" x="'+(VOLX-32)+'" y="'+(KNOBY-32)+'" width="64" height="64" fill="transparent"/>'
+    +'<circle class="ns" cx="'+VOLX+'" cy="'+KNOBY+'" r="18" fill="var(--card)"/>'
+    +'<line x1="'+VOLX+'" y1="'+KNOBY+'" x2="'+(VOLX+14*Math.cos(ang)).toFixed(1)+'" y2="'+(KNOBY+14*Math.sin(ang)).toFixed(1)+'" style="stroke-width:4px"/></g>'
+    /* What the radio says it is doing. The drawing says RADIO OFF under the speaker, which is the
+       truth in the state the office opens in — so in that state nothing is printed and the panel
+       stays pure pencil. The plate appears only when the radio has something else to say, which
+       makes it read like an indicator lighting rather than a label stuck on. RADIO_DRAWN is the
+       word in the picture; tests/smoke49.js fails if radioLabel() ever stops returning it with the
+       sound off, because then the drawing would be saying something untrue with nothing over it. */
+    +(radioLabel()!==RADIO_DRAWN
+      ? '<rect class="ns" x="104" y="639" width="98" height="19" fill="'+PANEL+'"/>'
+        +'<text x="153" y="653" text-anchor="middle" class="office-small ns" fill="'+K+'">'+radioLabel()+'</text>'
+      : '')
     // the paper: language
-    +'<g class="hot" data-act="off-lang"><title>Language</title>'
-    +'<polygon points="672,618 842,610 852,662 682,670" fill="#fff"/><text x="762" y="640" text-anchor="middle" class="office-label">LANGUAGE</text>'
-    +'<line x1="712" y1="650" x2="812" y2="647"/><line x1="720" y1="658" x2="800" y2="655"/></g>'
-    // the monitor: display brightness
+    +hit("off-lang",672,610,180,60,"Language")
+    /* The monitor: display brightness. The sun and most of the track are drawn; only the right end
+       is covered, because that is where the drawn handle sits. The covered stretch of track is put
+       back by hand so it meets the drawn line. */
     +'<g class="hot" data-act="off-bright"><title>Brightness '+SET.bright+'% — click along the slider</title>'
-    +'<rect x="960" y="400" width="236" height="160" rx="5" fill="#fff"/><rect x="972" y="411" width="212" height="138" fill="#fff"/>'
-    +'<text x="1078" y="444" text-anchor="middle" class="office-label">DISPLAY</text>'
-    +'<circle cx="1005" cy="474" r="7" fill="#fff"/>'+rays
-    +'<rect id="brightTrack" class="ns" x="1030" y="462" width="145" height="24" fill="transparent"/><line x1="1035" y1="474" x2="1170" y2="474"/><rect x="'+(bx-6).toFixed(1)+'" y="467" width="12" height="14" fill="#fff"/>'
-    +'<rect x="1065" y="560" width="26" height="20" fill="#fff"/><rect x="1030" y="580" width="96" height="12" rx="4" fill="#fff"/></g>'
+    +'<rect class="ns hit" x="960" y="400" width="236" height="160" fill="transparent"/>'
+    +'<rect id="brightTrack" class="ns" x="1036" y="462" width="134" height="24" fill="transparent"/>'
+    +'<rect class="ns" x="1141" y="462" width="35" height="24" fill="'+SCREEN+'"/>'
+    +'<line x1="1139" y1="473" x2="1170" y2="473"/>'
+    +'<rect x="'+(bx-9).toFixed(1)+'" y="464" width="18" height="18" fill="var(--card)"/></g>'
     // the file cabinet: carry the game out and back in
-    +'<g class="hot" data-act="off-cabinet"><title>The file cabinet — write the game out as a code, or read one in</title>'
-    +'<rect x="1230" y="742" width="250" height="150" rx="4" fill="#fff"/>'
-    +'<rect x="1248" y="758" width="214" height="52" rx="3" fill="#fff"/><rect x="1248" y="822" width="214" height="52" rx="3" fill="#fff"/>'
-    +'<rect x="1320" y="778" width="70" height="12" rx="6" fill="#fff"/><rect x="1320" y="842" width="70" height="12" rx="6" fill="#fff"/>'
-    +'<text x="1355" y="736" text-anchor="middle" class="office-small">FILES</text></g>'
-    // the shelf under the window: the player's handbook, and the books it keeps company with
-    +'<g class="hot" data-act="off-handbook"><title>The player\'s handbook — every rule and number in the game, with a search bar over it</title>'
-    +'<rect x="92" y="470" width="316" height="12" fill="#fff"/>'
-    +'<rect x="112" y="482" width="10" height="16" fill="#fff"/><rect x="378" y="482" width="10" height="16" fill="#fff"/>'
-    +'<rect x="112" y="412" width="28" height="58" fill="#fff"/>'
-    +'<rect x="144" y="402" width="34" height="68" fill="#fff"/><line x1="151" y1="416" x2="171" y2="416"/><line x1="151" y1="456" x2="171" y2="456"/>'
-    +'<rect x="182" y="418" width="24" height="52" fill="#fff"/>'
-    +'<polygon points="212,470 240,414 256,420 232,470" fill="#fff"/>'
-    +'<rect x="270" y="416" width="128" height="30" rx="3" fill="#fff"/>'
-    +'<text x="334" y="436" text-anchor="middle" class="office-small">HANDBOOK</text></g>'
+    +hit("off-cabinet",1230,724,250,168,"The file cabinet — write the game out as a code, or read one in")
+    // the shelf under the window: the player's handbook
+    +hit("off-handbook",92,402,316,96,"The player’s handbook — every rule and number in the game, with a search bar over it")
     // the book: controls
-    +'<g class="hot" data-act="off-controls"><title>Controls</title>'
-    +'<polygon points="960,605 1150,598 1250,650 1060,660" fill="#fff"/><polygon points="1060,660 1250,650 1250,674 1060,684" fill="#fff"/>'
-    +'<polygon points="1152,654 1242,650 1242,668 1152,672" fill="#fff"/><text x="1197" y="665" text-anchor="middle" class="office-small">CONTROLS</text></g>'
+    +hit("off-controls",960,598,290,86,"Controls")
     +'</svg>';
 }
 function officeHTML(){
@@ -11839,7 +11843,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 131 · September 2026";
+const BUILD="build 132 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a

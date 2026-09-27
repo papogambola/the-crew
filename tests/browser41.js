@@ -78,8 +78,15 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   await page.waitForSelector(".office");
   const onDesk=await page.$('.office-svg [data-act="off-handbook"]');
   check(!!onDesk,"the office has the handbook in it");
-  const label=await page.textContent('.office-svg [data-act="off-handbook"] text');
-  check(label.trim()==="HANDBOOK","the book says "+label.trim());
+  /* The word HANDBOOK used to be a <text> in this group and is now ink in office/room.webp — the
+     room is a drawing, and every label in it was moved into the pencil rather than printed over it
+     on a little white plate. So the word cannot be read out of the DOM any more. What this line was
+     really asking is whether the thing on the shelf announces itself as the handbook, and the
+     answer to that lives in the <title>: it is the hover text, and it is the accessible name a
+     screen reader gets, which is the only route to that word for anyone who cannot see the drawing.
+     browser87.js is what now fails if a label creeps back out of the pencil and into the code. */
+  const said=(await page.textContent('.office-svg [data-act="off-handbook"] title')||"").toLowerCase();
+  check(said.indexOf("handbook")>=0,"and it says it is the handbook when you point at it: "+JSON.stringify(said));
   const box=await onDesk.boundingBox();
   const ctrl=await (await page.$('.office-svg [data-act="off-controls"]')).boundingBox();
   check(box.width>40&&box.height>20,"it is a real object in the room ("+Math.round(box.width)+"×"+Math.round(box.height)+")");
