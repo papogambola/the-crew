@@ -44,7 +44,10 @@ class Said(BaseModel):
 
 
 def _me(db: Session, p: Player) -> dict:
-    return {"email": p.email, **state(db, p.id)}
+    # shop_open rides along because the game asks this on every sign-in and after coming back from
+    # Stripe. /health says the same thing to somebody with no account; this is the same fact,
+    # answered fresh, for somebody who has one.
+    return {"email": p.email, "shop_open": settings.shop_open, **state(db, p.id)}
 
 
 @router.post("/signup", response_model=Signed, status_code=status.HTTP_201_CREATED)

@@ -102,11 +102,21 @@ class FreeRun(Base):
 
 
 class Licence(Base):
-    """A receipt. The key Lemon Squeezy issued, validated by us, against this account.
+    """A receipt: one order, against one account, for good.
 
     A row rather than a column because a player may buy again — a gift, a second order, a
     replacement after a refund — and the history of what was bought is worth more than the
-    latest value of a field. `active` is what the game asks about."""
+    latest value of a field. `active` is what the game asks about.
+
+    `key` is Stripe's checkout session id (cs_...), and it is unique for the reason it always
+    was: one order opens one account. It held a Lemon Squeezy licence key before, which the
+    player had to copy out of an email and paste into the game. Nobody pastes anything now — the
+    webhook writes this row — so the column keeps its name and its job and loses its typing.
+
+    The rest is what a support question actually needs answered. `payment_intent` is what Stripe
+    wants quoted for a refund; `email` is who paid, kept separately from the account's own address
+    because the two differ more often than anybody expects — a partner's card, a work address on
+    the receipt — and a mismatch is not a fraud signal, it is the normal case for a gift."""
     __tablename__ = "licences"
     __table_args__ = (UniqueConstraint("key", name="uq_licences_key"),)
 
@@ -114,11 +124,15 @@ class Licence(Base):
     player_id: Mapped[int] = mapped_column(ForeignKey("players.id", ondelete="CASCADE"),
                                            nullable=False, index=True)
     key: Mapped[str] = mapped_column(String(128), nullable=False)
-    # What Lemon Squeezy called it, so a support question can be answered without logging in there.
-    instance_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    payment_intent: Mapped[str | None] = mapped_column(String(128), nullable=True)
     name: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    store_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    product_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    price_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # What they actually paid, in the smallest unit, and in what. Stored rather than assumed:
+    # the price can change, and a receipt that says "$12" because $12 is what the code charges
+    # today is not a receipt.
+    amount: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     activated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
     checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

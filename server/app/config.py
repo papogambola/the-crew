@@ -59,11 +59,32 @@ class Settings:
     # The free run, in the GAME'S weeks — the number in the top bar, not weeks of anybody's life.
     free_weeks: int = 12
 
-    # Lemon Squeezy, which takes the money and hands out one key per order. Empty means the shop
-    # is shut and nothing is gated, which is how it ships until Paz opens it.
-    ls_api: str = os.environ.get("LEMON_API", "https://api.lemonsqueezy.com/v1/licenses/")
-    ls_store: str = os.environ.get("LEMON_STORE", "")
-    ls_product: str = os.environ.get("LEMON_PRODUCT", "")
+    # STRIPE, which takes the money and carries the tax.
+    #
+    # It was Lemon Squeezy, who issued one key per order that the player pasted into the game.
+    # Stripe bought them and routes new sellers to its own merchant-of-record product, so there is
+    # no Lemon Squeezy store to open — and no key, which is the better half of the change: a key is
+    # a thing to lose, mistype, and write in about. Now the player presses Buy while signed in, and
+    # what comes back is a row against their account.
+    #
+    # The card and PayPal are the same integration. Stripe Checkout offers whatever payment methods
+    # the dashboard has enabled and the buyer is eligible for, which is why nothing here names a
+    # method: naming one would EXCLUDE the others, and PayPal-through-Stripe is what keeps the tax
+    # cover that choosing Stripe was for in the first place.
+    stripe_api: str = os.environ.get("STRIPE_API", "https://api.stripe.com/v1/")
+    stripe_secret: str = os.environ.get("STRIPE_SECRET_KEY", "")
+    stripe_webhook_secret: str = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+    stripe_price: str = os.environ.get("STRIPE_PRICE_ID", "")
+
+    @property
+    def shop_open(self) -> bool:
+        """All three, or the till is shut.
+
+        A wall with no way to pay is worse than no wall, so the game asks this and simply does not
+        gate anybody when it is false. Half-configured counts as shut: a secret with no price would
+        let Buy be pressed and then fail at Stripe, which is the same as being shut except that it
+        wastes the one moment somebody had decided to pay."""
+        return bool(self.stripe_secret and self.stripe_webhook_secret and self.stripe_price)
 
     # Where the game is served from, for CORS. The site is on GitHub Pages and the API is here,
     # so every call is cross-origin and the list has to be explicit.

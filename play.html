@@ -10302,46 +10302,64 @@ function loadSettings(){try{const r=localStorage.getItem(SET_KEY);if(r)Object.as
 function saveSettings(){try{localStorage.setItem(SET_KEY,JSON.stringify(SET));}catch(e){}}
 
 /* ------------------------------ THE TILL ------------------------------ */
-// Free to a point, then one payment for life. The free run is counted in this browser across
-// every game it opens — twelve weeks of play, or a name that reaches Known, whichever comes
-// first — so a new dossier is not a new free run. Then the game stops, on a card that cannot be
-// closed, with the checkout and a box for the key. The key comes from Lemon Squeezy, who take
-// the money, handle the tax, and hand out one key per order; its licence endpoints need no
-// secret and answer a browser directly (checked: no auth, CORS open), so nothing here has a
-// server. A key that activates is kept in this browser and asked about again once a week, and
-// only an explicit "not valid" from the till locks the door again — a dead connection never does.
+// Free to a point, then one payment for life. The free run is twelve weeks on the GAME'S calendar
+// — the number in the top bar, not twelve weeks of anybody's life — or a name that reaches Known,
+// whichever comes first. Signed in it is counted per game and summed on the account, so a new
+// dossier is not a new free run and a cleared cache is not either.
 //
-// The whole of it is honest rather than hard: the game is a file the browser has, and anybody who
-// clears this browser's storage starts the count again. That is the price of having no server,
-// and it is the right price for twelve dollars.
+// THERE IS NO KEY. It went like this and stopped:
 //
-// Until `checkout` is filled in the till is shut and nobody is stopped: a wall with no way to pay
-// is worse than no wall.
+//   the first way   the player pasted a Lemon Squeezy key and THIS FILE validated it, keeping the
+//                   answer in localStorage — which is to say the answer was whatever anybody
+//                   typed into the console, and it was true in one browser only
+//   the second way  the same key, validated by the server, kept as a row against the account.
+//                   Sound, and still wrong in the way that mattered: a key is a thing to copy out
+//                   of an email, mistype, lose and write in about, and each of those is somebody
+//                   who paid and cannot play
+//   this way        the player presses Buy, Stripe takes the money and tells the server, and the
+//                   row appears. They come back to a game that is already open.
+//
+// THE CARD AND PAYPAL ARE ONE BUTTON. Stripe Checkout offers whatever the shop has switched on
+// and the buyer can actually use, so which methods appear is a setting rather than a second
+// integration here — and it keeps PayPal inside the merchant-of-record cover that Stripe was
+// chosen for.
+//
+// WHAT THIS FILE IS TRUSTED WITH: nothing. It cannot say which price, which account, or that
+// anybody paid. licensed() is the server's answer and nothing else, which is the whole of the
+// difference from the first way.
 const SHOP={
   price:"$12",
-  checkout:"",                 // the Lemon Squeezy checkout link — https://<store>.lemonsqueezy.com/buy/<uuid>
-  store:0,                     // the store id the key must come from — 0 accepts any store
-  product:0,                   // the product id the key must be for — 0 accepts any product
-  api:"https://api.lemonsqueezy.com/v1/licenses/",
-  freeWeeks:12,                // weeks ON THE GAME'S CALENDAR, not weeks of the player's life. Counted in
-                               // weekTick across every game this browser opens, and kept in SET rather than
-                               // in the save — so starting a new game at week 11 does not hand back the 11.
+  freeWeeks:12,                // weeks ON THE GAME'S CALENDAR. Counted in weekTick across every game
+                               // this browser opens, and kept in SET rather than in the save — so
+                               // starting a new game at week 11 does not hand back the 11.
   freeRep:35,                  // or the name reaching this — Known — whichever comes first
-  recheckDays:7,               // how often a kept key is asked about again
 };
-const LIC_KEY="thecrew_licence_v1";
-let LIC=null;                  // {key, instance, ok, at, name, product} — the key this browser was paid for with
-function licLoad(){try{const r=localStorage.getItem(LIC_KEY);LIC=r?JSON.parse(r):null;}catch(e){LIC=null;}}
-function licSave(){try{if(LIC)localStorage.setItem(LIC_KEY,JSON.stringify(LIC));else localStorage.removeItem(LIC_KEY);}catch(e){}}
-function shopOpen(){return !!SHOP.checkout;}
-function licensed(){return !!(LIC&&LIC.ok&&LIC.key);}
+/* IS THERE A WAY TO PAY — the server's answer, and only to somebody signed in.
+
+   This briefly asked /health on the way up so a SIGNED-OUT player could be walled too. It is gone,
+   and the reasoning is worth keeping because its absence looks like a hole and mostly is not.
+
+   A signed-out player cannot buy: the licence hangs off a player id, so the only action a wall
+   could offer them is "sign in". And their free run is counted in this browser's storage, which
+   they can clear, as it always could be. So walling them bought a sentence they could dismiss by
+   signing out, and cost a cross-origin call on every boot of the game — which on any origin the
+   API does not allow is a console error in front of every player.
+
+   Signing out IS a way round the wall. Closing it means requiring an account to play at all, which
+   is a decision about what this game is rather than a flag to fudge in here. The invitation is
+   already on the title screen anyway, for the better reason: the crew stops living in one
+   browser. */
+function shopOpen(){return !!(ACC&&ACC.shop_open);}
+/* PAID IS THE SERVER'S WORD. Not a value in this browser — that was the first way's mistake and
+   it is the one worth not repeating. Signed out there is no answer, so nobody is paid and nobody
+   is walled either: paywallDue() needs a shop, and the wall's way through is to sign in. */
+function licensed(){return !!(ACC&&ACC.paid);}
 /* Is the free run up? Two answers, and the server's wins when there is one.
 
    Signed in, ACC.over is the truth: it is counted per game and summed on the account, so a
    cleared cache or a second browser arrives at the same number and a new dossier is not a new
    run. Signed out — or with the server unreachable — the old local count stands, which is the
-   honest fallback and exactly as weak as it always was. That weakness closes when signing in
-   becomes required, and that is a decision about the shop opening rather than about this line. */
+   honest fallback and exactly as weak as it always was. */
 function freeOver(){
   const srv=freeOverServer();
   if(srv!==null)return srv||!!(S&&S.rep>=SHOP.freeRep);
@@ -10349,59 +10367,47 @@ function freeOver(){
 }
 function freeRepName(){return rankNameAt(SHOP.freeRep);}
 function paywallDue(){return shopOpen()&&!licensed()&&!!S&&!S.over&&freeOver();}
-function licPost(path,fields,done){
-  const body=Object.keys(fields).filter(k=>fields[k]!=null&&fields[k]!=="").map(k=>k+"="+encodeURIComponent(fields[k])).join("&");
-  let p;
-  try{p=fetch(SHOP.api+path,{method:"POST",headers:{"Accept":"application/json","Content-Type":"application/x-www-form-urlencoded"},body});}
-  catch(e){done(null);return;}
-  p.then(r=>r.json()).then(b=>done(b&&typeof b==="object"?b:null)).catch(()=>done(null));
-}
-function licInstanceName(){let where="browser";try{where=navigator.platform||where;}catch(e){}return "The Crew · "+where+" · "+new Date().toISOString().slice(0,10);}
-// Activate the key on this machine. done(null) on success, done("why") otherwise, in words a
-// player can act on.
-function licActivate(key,done){
-  key=String(key||"").trim();
-  if(!key){done("Paste the key first — it is on the receipt, and in the email.");return;}
-  licPost("activate",{license_key:key,instance_name:licInstanceName()},b=>{
-    if(!b){done("Could not reach the till. Check the connection, then try again.");return;}
-    if(!b.activated){
-      const err=String(b.error||"");
-      if(/activation limit/i.test(err))done("That key is already on every machine it allows. Free one up on the receipt's page, or write to us.");
-      else if(/not found/i.test(err))done("That key is not on the list. Check it against the receipt — every character counts.");
-      else if(/disabled|expired|inactive/i.test(err))done("That key has been switched off. Write to us with the receipt.");
-      else done(err||"The till said no, and did not say why. Try again in a minute.");
-      return;
-    }
-    const meta=b.meta||{};
-    if((SHOP.store&&+meta.store_id!==SHOP.store)||(SHOP.product&&+meta.product_id!==SHOP.product)){done("That key is for something else.");return;}
-    LIC={key,instance:(b.instance&&b.instance.id)||null,ok:true,at:Date.now(),name:meta.customer_name||"",product:meta.product_name||""};
-    licSave();done(null);
-  });
-}
-// Once a week, ask whether the key is still good. Only a plain "not valid" closes the door —
-// a machine that cannot reach the till keeps playing.
-function licRecheck(){
-  if(!licensed())return;
-  if(Date.now()-(LIC.at||0)<SHOP.recheckDays*864e5)return;
-  licPost("validate",{license_key:LIC.key,instance_id:LIC.instance},b=>{
-    if(!b)return;
-    if(b.valid===false){LIC.ok=false;LIC.why=String(b.error||"");licSave();render();}
-    else if(b.valid){LIC.at=Date.now();licSave();}
-  });
-}
-function tillUnlock(v){
+/* Somewhere to pay, made by the server, tied to this account before the player sees it.
+   The game asks for a checkout and is told where to go; it never says which price or whose
+   account, because both of those come off the bearer token at the other end. */
+function tillBuy(){
   if(UI.tillBusy)return;
-  UI.tillBusy=true;UI.tillMsg="Asking the till…";render();
-  licActivate(v,err=>{
-    UI.tillBusy=false;UI.tillMsg=err||"";
-    if(!err){
-      sfx("stamp");UI.tillKey="";
-      if(S&&S.modal&&S.modal.type==="paywall")S.modal=null;
-      if(S&&!S.over)logMsg("Paid for. Lifetime access — this build and every one after it.","good",true);
-      UI.till=true;   // the same card, now saying so
-    }
+  if(!signedIn()){UI.tillMsg="";UI.till=false;UI.account=true;render();return;}
+  UI.tillBusy=true;UI.tillMsg="Opening the till…";render();
+  api("POST","/licence/checkout").then(r=>{
+    UI.tillBusy=false;
+    if(r&&r.ok&&r.body&&r.body.already){UI.tillMsg="";accRefresh().then(()=>render());return;}
+    if(r&&r.ok&&r.body&&r.body.url){location.href=r.body.url;return;}
+    UI.tillMsg=(r&&r.body&&r.body.detail)||"Could not reach the till. Nothing was charged — try again in a minute.";
     render();
-  });
+  }).catch(()=>{UI.tillBusy=false;UI.tillMsg="Could not reach the till. Nothing was charged.";render();});
+}
+/* BACK FROM STRIPE. success_url carries ?paid=1, and that is a hint rather than proof — the truth
+   is the webhook, which may land a second before or a second after the player does. So this asks
+   the server, and asks again a few times if the answer is still no: the alternative is telling
+   somebody who has just paid that they have not, which is the worst sentence this game could say.
+   The parameter is scrubbed from the address either way so a reload does not re-run any of it. */
+function tillReturn(){
+  let q=null;
+  try{q=new URLSearchParams(location.search).get("paid");}catch(e){}
+  if(q===null)return;
+  try{history.replaceState(null,"",location.pathname);}catch(e){}
+  if(q!=="1")return;
+  if(!signedIn())return;
+  let tries=0;
+  const ask=()=>{
+    accRefresh().then(()=>{
+      if(licensed()){
+        sfx("stamp");UI.till=true;UI.tillMsg="";
+        if(S&&S.modal&&S.modal.type==="paywall")S.modal=null;
+        if(S&&!S.over)logMsg("Paid for. Lifetime access — this build and every one after it.","good",true);
+        render();return;
+      }
+      if(++tries<6)setTimeout(ask,1500);
+      else{UI.till=true;UI.tillMsg="Stripe has the payment; the receipt has not reached us yet. Give it a minute and reload — nothing is lost.";render();}
+    }).catch(()=>{if(++tries<6)setTimeout(ask,1500);});
+  };
+  ask();
 }
 // One card, two moods: the wall — the free run is over and it does not close — and the till on
 // the title screen, where a key bought elsewhere goes in, or a paid-for browser says so.
@@ -10496,27 +10502,38 @@ function modalAccount(){
 function modalTill(mode){
   const wall=mode==="wall";
   const lic=licensed();
+  const inn=signedIn();
   const msg=UI.tillMsg||"";const busy=!!UI.tillBusy;
-  const key=UI.tillKey||"";
   const head=wall
     ?'<div class="kicker" style="color:var(--stamp)">The till · week '+S.week+'</div><h2 style="font-size:28px;margin-top:4px">That\'s the free run.</h2>'
-    :'<div class="kicker" style="color:var(--stamp)">The till</div><h2 style="font-size:28px;margin-top:4px">'+(lic?"Paid for.":"Have a key?")+'</h2>';
-  const text=wall
-    ?SHOP.freeWeeks+" weeks on the game's calendar in this browser — the number in the top bar, not "+SHOP.freeWeeks+" weeks of your life — or a "+esc(freeRepName())+" name, whichever comes first. That is where you are. The game stops here. Nothing is lost: the crew, the float and the file are saved where they stand, and they pick up the moment the door is paid for. <b>"+esc(SHOP.price)+", once.</b> Lifetime access — this build, every build after it, and any other machine you bring the key to."
-    :lic?"This browser is paid for"+(LIC.name?" — the key is in "+esc(LIC.name)+"'s name":"")+". Lifetime access: every build, and any other machine you bring the key to."
-    :"Lifetime access is <b>"+esc(SHOP.price)+", once</b>, and the key it comes with opens the game on any machine. The free run is "+SHOP.freeWeeks+" weeks on the game's calendar in this browser — the number in the top bar, not "+SHOP.freeWeeks+" weeks of your life — or a "+esc(freeRepName())+" name, whichever comes first. Bought already? Paste the key from the receipt or the email, and this browser is paid for too.";
-  const buy=lic?"":'<a class="btn stamp" href="'+esc(SHOP.checkout)+'" target="_blank" rel="noopener" data-act="till-buy">Buy lifetime access · '+esc(SHOP.price)+' →</a>';
-  const entry=lic?"":'<hr class="rule"><div class="field" style="margin-bottom:10px"><label for="lkey">'+(wall?"Already paid? The key is on the receipt and in the email":"The key")+'</label>'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="lkey" value="'+esc(key)+'" placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" autocomplete="off" spellcheck="false" style="flex:1;min-width:220px" '+(busy?"disabled":"")+'>'
-    +'<button class="btn" data-act="till-unlock" '+(busy?"disabled":"")+'>Unlock</button></div>'
-    +(msg?'<div class="mono" style="font-size:12px;margin-top:8px;color:'+(busy?"var(--muted)":"var(--stamp)")+'">'+esc(msg)+'</div>':'')+'</div>';
-  const foot='<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:'+(lic||wall?"14px":"4px")+'">'
-    +(wall?'<span class="mono" style="font-size:11px;color:var(--muted);align-self:center;margin-right:auto">Esc opens the office; the door out is in there.</span>':'<button class="btn ghost" data-act="till-close">'+(lic?"Close":"Not now")+'</button>')+'</div>';
+    :'<div class="kicker" style="color:var(--stamp)">The till</div><h2 style="font-size:28px;margin-top:4px">'+(lic?"Paid for.":"Lifetime access")+'</h2>';
+  const free=SHOP.freeWeeks+" weeks on the game's calendar — the number in the top bar, not "+SHOP.freeWeeks
+    +" weeks of your life — or a "+esc(freeRepName())+" name, whichever comes first.";
+  const text=lic
+    ?"Paid for. Lifetime access: every build, and any machine you sign in on. The crew goes with the account, not with this browser."
+    :wall?free+" Lifetime access is <b>"+esc(SHOP.price)+", once</b> — card or PayPal — and it is the account that is paid for, so it follows you to any machine you sign in on."
+    :"Lifetime access is <b>"+esc(SHOP.price)+", once</b>, paid by card or PayPal. It is the account that is paid for, so it opens the game on any machine you sign in on. The free run is "+free;
+  /* ONE BUTTON, AND IT SAYS WHAT IT IS. There is no key box any more: nothing is pasted, nothing
+     is emailed, and the row that opens the door is written by Stripe telling the server. Signed
+     out the same button goes to the account screen instead, because the licence hangs off a
+     player id and there is nowhere for an anonymous order to land. */
+  const cta=lic?""
+    :'<button class="btn stamp" data-act="till-buy"'+(busy?" disabled":"")+'>'
+      +(inn?"Buy lifetime access · "+esc(SHOP.price)+" →":"Sign in to buy · "+esc(SHOP.price))+'</button>';
+  const note=lic?""
+    :'<div class="mono" style="font-size:11.5px;color:var(--muted);margin-top:10px">'
+      +(inn?"Stripe takes the payment and the receipt. You come back here and the game is open."
+           :"The free run and the payment both live on the account, which is why this needs one first.")+'</div>';
+  const said=msg?'<div class="mono" style="font-size:12px;margin-top:10px;color:'+(busy?"var(--muted)":"var(--stamp)")+'">'+esc(msg)+'</div>':'';
+  const foot='<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px">'
+    +(wall?'<span class="mono" style="font-size:11px;color:var(--muted);align-self:center;margin-right:auto">Esc opens the office; the door out is in there.</span>'
+          :'<button class="btn ghost" data-act="till-close">Close</button>')
+    +(wall&&inn?'<button class="btn ghost" data-act="acc-open">The account</button>':'')+'</div>';
   // the title card sits over the logotype, and black type through a thin scrim is still black — so this one is thick
   return '<div class="scrim center"'+(wall?'':' data-act="till-close" style="background:rgba(17,16,16,.84)"')+'><div class="modal notice" role="dialog" aria-modal="true">'
     +'<div class="modal-h"><div>'+head+'</div>'+(wall?'':'<button class="x" data-act="till-close" aria-label="Close">✕</button>')+'</div>'
     +'<div class="modal-b"><p style="margin:0 0 14px;font-size:15px;line-height:1.6">'+text+'</p>'
-    +(buy?'<div style="display:flex;gap:8px;flex-wrap:wrap">'+buy+'</div>':'')+entry+foot+'</div></div></div>';
+    +(cta?'<div style="display:flex;gap:8px;flex-wrap:wrap">'+cta+'</div>':'')+note+said+foot+'</div></div></div>';
 }
 /* --------------------------- YOUR OWN FILE ----------------------------
    One sheet that answers "how big am I", in the only voice this game has: the file. Not a
@@ -11863,7 +11880,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 134 · September 2026";
+const BUILD="build 135 · September 2026";
 /* There was a version check here. A bundled copy fetched one line of text from the site, compared
    it with the build it was packed with, and printed a note in the footer when it was behind. It
    went with the download it was for, and so did the line of text and the constant that said where
@@ -11883,10 +11900,6 @@ function bind(){
   const js=document.getElementById("jsort");if(js)js.onchange=()=>{S.jobSort=js.value;save();render();};
   const lw=document.getElementById("logweek");if(lw)lw.onchange=()=>{S.logWeek=lw.value;save();render();};
   const pn=document.getElementById("pname");if(pn)pn.oninput=()=>{draft.name=pn.value;const btn=document.querySelector('[data-act=confirm-create]');if(btn)btn.disabled=!draft.name.trim();};
-  const lk=document.getElementById("lkey");if(lk){
-    lk.oninput=()=>{UI.tillKey=lk.value;};
-    lk.onkeydown=ev=>{if(ev.key==="Enter"){ev.preventDefault();tillUnlock(lk.value);}};
-  }
   const cn=document.getElementById("cname");if(cn){
     cn.oninput=()=>{UI.cname=cn.value;const btn=document.querySelector('[data-act=crewname-ok]');if(btn)btn.disabled=!cn.value.trim();};
     cn.onkeydown=ev=>{if(ev.key==="Enter"&&cn.value.trim()){ev.preventDefault();if(crewNameSet(cn.value))render();}};
@@ -12146,9 +12159,9 @@ document.addEventListener("click",e=>{
         location.reload();
       });
       break; }
-    case "till-open": e.preventDefault(); UI.till=true; UI.tillMsg=""; render(); { const el=document.getElementById("lkey"); if(el)el.focus(); } break;
+    case "till-open": e.preventDefault(); UI.till=true; UI.tillMsg=""; render(); break;
     case "till-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){UI.till=false;UI.tillMsg="";render();} break;
-    case "till-unlock": { const el=document.getElementById("lkey"); tillUnlock(el?el.value:UI.tillKey); break; }
+    case "till-buy": e.preventDefault(); tillBuy(); break;
     case "crewname-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){S.modal=null;UI.cname=null;render();} break;
     case "notice-go": noticeDone(); if(k==="found"){UI.found={lead:null,ids:[]};S.modal={type:"found"};} else if(k){S.tab=k;S.jobOpen=null;} render(); window.scrollTo(0,0); break;
     case "found-lead": if(UI.found){UI.found.lead=UI.found.lead===id?null:id;UI.found.ids=UI.found.ids.filter(x=>x!==id);} render(); break;
@@ -13296,7 +13309,16 @@ function pcOnlyDoor(){
 (function boot(){
   if(mobileDevice()){pcOnlyDoor();return;}
   loadSettings();applySettings();
-  licLoad();licRecheck();   // the key this browser was paid for with, and a weekly word with the till about it
+  /* Is there a way to pay at all, did somebody just come back from paying, and — if there is a
+     token in this browser — what does the account say.
+
+     THE THIRD ONE IS NEW AND IT IS NOT OPTIONAL. Nothing asked the server on the way up before,
+     because being paid was a value in localStorage and localStorage is there the moment the page
+     is. It is the server's answer now, so a player who paid last week and opens the game today
+     has ACC null until something fetches it — and without this, that something was opening the
+     account screen. They would have been shown the wall by a game that had their receipt. */
+  tillReturn();
+  if(signedIn())accRefresh().then(()=>render()).catch(()=>{});
   // a play is a sitting: a return after half an hour away counts as the next one
   try{const now=Date.now();if(!SET.lastSeen||now-SET.lastSeen>PLAY_GAP_MS)SET.plays=(SET.plays||0)+1;SET.lastSeen=now;saveSettings();}catch(e){}
   try{

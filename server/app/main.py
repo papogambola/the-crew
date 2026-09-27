@@ -45,5 +45,11 @@ def health():
     `mail` is here because the one thing that cannot report its own failure is the reset email:
     /auth/forgot answers identically whether or not it sent anything, deliberately (see
     routers/auth.py), so without this the only way to find out that mail is misconfigured is for
-    a locked-out player to write in and say the link never arrived."""
-    return {"ok": True, "mail": email_status()}
+    a locked-out player to write in and say the link never arrived.
+
+    `shop` is here because it is the one fact about this server that somebody with NO ACCOUNT
+    needs. The free run ends for everybody, signed in or not, and the game must not put a wall in
+    front of a player it cannot sell anything to — so it asks this once on the way up. Putting it
+    behind /licence instead would mean only signed-in players could learn it, and then the wall
+    would appear for exactly the people who have no way through it."""
+    return {"ok": True, "mail": email_status(), "shop": settings.shop_open}

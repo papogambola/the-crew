@@ -1,72 +1,220 @@
 """Paying once, and having it follow you.
 
-The shop is not open — SHOP.checkout is empty in the game and LEMON_STORE is unset here — so
-these test the parts that do not need Lemon Squeezy to answer: that a key is one account's, that
-an unpaid account is unpaid, and that being paid takes the free run out of the way entirely."""
+The weight of this file is on the WEBHOOK, because it is the only thing in the service that opens
+a door and the only one a stranger can post at. Everything else needs a bearer token; this needs a
+signature, and if that signature is not checked properly then the endpoint is a button on the
+internet that says "give me the game".
+
+Nothing here reaches Stripe. The checkout call is theirs to answer, and a test that needs their
+API to be up is a test that fails for reasons that have nothing to do with the code. What is
+tested is everything on this side of that call: who a session is tied to, what a signature must
+look like to be believed, and what happens when the same event arrives twice — which it will,
+because Stripe delivers at least once and in practice more.
+"""
+import hashlib
+import hmac
+import json
+import time
 import uuid
 
+import pytest
 from sqlalchemy import select
 
+from app.config import settings
 from app.database import SessionLocal
 from app.models import Licence, Player
 
+SECRET = "whsec_test_not_a_real_secret_but_long_enough"
 
-def _pay(email: str, key: str):
-    """What a successful activation leaves behind, written directly — the call to Lemon Squeezy
-    is theirs to answer and not something to reach across the internet for in a test."""
+
+@pytest.fixture
+def shop(monkeypatch):
+    """A configured shop, without a Stripe account behind it."""
+    monkeypatch.setattr(settings, "stripe_secret", "sk_test_x", raising=False)
+    monkeypatch.setattr(settings, "stripe_webhook_secret", SECRET, raising=False)
+    monkeypatch.setattr(settings, "stripe_price", "price_test", raising=False)
+    return True
+
+
+def _player_id(email: str) -> int:
     with SessionLocal() as db:
-        p = db.scalar(select(Player).where(Player.email == email))
-        db.add(Licence(player_id=p.id, key=key, active=True))
-        db.commit()
+        return db.scalar(select(Player).where(Player.email == email)).id
 
+
+def _event(player_id, session_id=None, paid=True, kind="checkout.session.completed", amount=1200):
+    return {
+        "type": kind,
+        "data": {"object": {
+            "id": session_id or ("cs_test_" + uuid.uuid4().hex),
+            "payment_status": "paid" if paid else "unpaid",
+            "payment_intent": "pi_test_" + uuid.uuid4().hex,
+            "client_reference_id": str(player_id),
+            "amount_total": amount,
+            "currency": "usd",
+            "customer_details": {"name": "A Buyer", "email": "buyer@example.com"},
+        }},
+    }
+
+
+def _sign(body: bytes, secret=SECRET, ts=None):
+    ts = str(int(ts if ts is not None else time.time()))
+    sig = hmac.new(secret.encode(), ts.encode() + b"." + body, hashlib.sha256).hexdigest()
+    return "t=%s,v1=%s" % (ts, sig)
+
+
+def _post(client, event, **kw):
+    body = json.dumps(event).encode()
+    return client.post("/licence/stripe-hook", content=body,
+                       headers={"Stripe-Signature": _sign(body, **kw)})
+
+
+# ---------------------------------------------------------------- the state
 
 def test_an_account_starts_unpaid(client, signed_up):
     assert client.get("/licence", headers=signed_up["h"]).json()["paid"] is False
 
 
-def test_paying_ends_the_free_run_whatever_the_count(client, signed_up):
+def test_the_game_is_told_whether_there_is_any_way_to_pay(client, signed_up):
+    """A wall with no way through is worse than no wall, so the game asks rather than assuming."""
+    assert client.get("/licence", headers=signed_up["h"]).json()["shop_open"] is False
+
+
+def test_the_shop_needs_all_three_settings(monkeypatch):
+    """Half-configured is shut. A secret with no price lets Buy be pressed and then fails at
+    Stripe, which is being shut except that it wastes the moment somebody decided to pay."""
+    monkeypatch.setattr(settings, "stripe_secret", "sk_test_x", raising=False)
+    monkeypatch.setattr(settings, "stripe_webhook_secret", "", raising=False)
+    monkeypatch.setattr(settings, "stripe_price", "price_test", raising=False)
+    assert settings.shop_open is False
+
+
+def test_checkout_is_refused_while_the_shop_is_shut(client, signed_up):
+    assert client.post("/licence/checkout", headers=signed_up["h"]).status_code == 503
+
+
+def test_checkout_needs_an_account(client):
+    """There is nowhere for an anonymous order to land: the licence hangs off a player id."""
+    assert client.post("/licence/checkout").status_code in (401, 403)
+
+
+# ------------------------------------------------------------- the webhook
+
+def test_an_unsigned_webhook_is_refused(client, shop):
+    r = client.post("/licence/stripe-hook", content=b'{"type":"checkout.session.completed"}')
+    assert r.status_code == 400
+
+
+def test_a_webhook_signed_with_the_wrong_secret_is_refused(client, signed_up, shop):
+    pid = _player_id(signed_up["email"])
+    r = _post(client, _event(pid), secret="whsec_somebody_elses_secret")
+    assert r.status_code == 400
+    assert client.get("/licence", headers=signed_up["h"]).json()["paid"] is False
+
+
+def test_a_tampered_body_is_refused(client, signed_up, shop):
+    """The signature covers the body. Sign one event, post another — which is exactly what an
+    attacker who sniffed one real webhook would try."""
+    pid = _player_id(signed_up["email"])
+    honest = json.dumps(_event(pid, amount=1200)).encode()
+    header = _sign(honest)
+    forged = json.dumps(_event(pid, amount=1)).encode()
+    r = client.post("/licence/stripe-hook", content=forged, headers={"Stripe-Signature": header})
+    assert r.status_code == 400
+    assert client.get("/licence", headers=signed_up["h"]).json()["paid"] is False
+
+
+def test_an_old_signature_is_refused(client, signed_up, shop):
+    """Without this a signature captured once is good for ever."""
+    pid = _player_id(signed_up["email"])
+    r = _post(client, _event(pid), ts=time.time() - 3600)
+    assert r.status_code == 400
+    assert client.get("/licence", headers=signed_up["h"]).json()["paid"] is False
+
+
+def test_a_signed_paid_session_opens_the_account(client, signed_up, shop):
+    pid = _player_id(signed_up["email"])
+    assert _post(client, _event(pid)).status_code == 200
+    body = client.get("/licence", headers=signed_up["h"]).json()
+    assert body["paid"] is True
+    assert body["price"] == 1200 and body["currency"] == "USD"
+
+
+def test_what_the_receipt_keeps(client, signed_up, shop):
+    """Enough to answer a support question without logging in to Stripe."""
+    pid = _player_id(signed_up["email"])
+    ev = _event(pid)
+    _post(client, ev)
+    with SessionLocal() as db:
+        lic = db.scalar(select(Licence).where(Licence.player_id == pid))
+    assert lic.key == ev["data"]["object"]["id"]
+    assert lic.payment_intent == ev["data"]["object"]["payment_intent"]
+    assert lic.email == "buyer@example.com" and lic.name == "A Buyer"
+
+
+def test_an_unpaid_session_opens_nothing(client, signed_up, shop):
+    """A session can complete without being paid — an async method still clearing, a zero total.
+    Acting on 'completed' alone hands the game to anyone who can reach that state."""
+    pid = _player_id(signed_up["email"])
+    assert _post(client, _event(pid, paid=False)).status_code == 200
+    assert client.get("/licence", headers=signed_up["h"]).json()["paid"] is False
+
+
+def test_another_kind_of_event_is_ignored_politely(client, signed_up, shop):
+    """200, not 500. Stripe retries anything that is not 2xx for days, and a hook that fails on
+    events it does not care about buries the one that matters in a queue of noise."""
+    pid = _player_id(signed_up["email"])
+    r = _post(client, _event(pid, kind="payment_intent.created"))
+    assert r.status_code == 200
+    assert client.get("/licence", headers=signed_up["h"]).json()["paid"] is False
+
+
+def test_the_same_event_twice_is_one_licence(client, signed_up, shop):
+    """Stripe delivers at least once, which means twice more often than anybody expects."""
+    pid = _player_id(signed_up["email"])
+    ev = _event(pid)
+    assert _post(client, ev).status_code == 200
+    assert _post(client, ev).status_code == 200
+    with SessionLocal() as db:
+        n = len(db.scalars(select(Licence).where(Licence.player_id == pid)).all())
+    assert n == 1
+
+
+def test_an_order_for_a_player_who_does_not_exist_is_dropped(client, shop):
+    """Not retried: the account is gone, or the session was not made by us. Nothing here will ever
+    succeed, so say so and leave it in Stripe's log rather than in a retry queue."""
+    r = _post(client, _event(999999))
+    assert r.status_code == 200
+    assert r.json().get("no_such_player") == "999999"
+
+
+def test_one_order_opens_one_account(client, signed_up, shop):
+    """The unique index on the session id is the backstop. Somebody replaying a friend's webhook
+    onto their own account cannot, because the id is already spent."""
+    a = _player_id(signed_up["email"])
+    mail = "second-%s@example.com" % uuid.uuid4().hex[:10]
+    r = client.post("/auth/signup", json={"email": mail, "password": "a long enough password"})
+    other = {"email": mail, "h": {"Authorization": "Bearer " + r.json()["token"]}}
+    b = _player_id(other["email"])
+    ev = _event(a)
+    _post(client, ev)
+    ev_b = json.loads(json.dumps(ev))
+    ev_b["data"]["object"]["client_reference_id"] = str(b)
+    _post(client, ev_b)
+    assert client.get("/licence", headers=other["h"]).json()["paid"] is False
+
+
+# ------------------------------------------------- what being paid is worth
+
+def test_paying_ends_the_free_run_whatever_the_count(client, signed_up, shop):
     for w in range(1, 13):
         client.post("/run/week", headers=signed_up["h"], json={"game_id": "g", "game_week": w})
     assert client.get("/run", headers=signed_up["h"]).json()["over"] is True
-    _pay(signed_up["email"], "KEY-" + uuid.uuid4().hex[:12])
-    s = client.get("/run", headers=signed_up["h"]).json()
-    assert s["paid"] is True
-    assert s["over"] is False, "paid is paid — the twelve weeks stop mattering"
-    assert s["weeks_left"] is None, "and there is no countdown to show somebody who has paid"
+    _post(client, _event(_player_id(signed_up["email"])))
+    body = client.get("/run", headers=signed_up["h"]).json()
+    assert body["over"] is False and body["paid"] is True
 
 
-def test_the_licence_follows_the_account_not_the_browser(client, signed_up):
-    _pay(signed_up["email"], "KEY-" + uuid.uuid4().hex[:12])
-    fresh = client.post("/auth/login", json={"email": signed_up["email"],
-                                             "password": "a long enough password"})
-    h2 = {"Authorization": "Bearer " + fresh.json()["token"]}
-    assert client.get("/licence", headers=h2).json()["paid"] is True
-
-
-def test_one_key_does_not_open_two_accounts(client, signed_up):
-    key = "KEY-" + uuid.uuid4().hex[:12]
-    _pay(signed_up["email"], key)
-    other = client.post("/auth/signup", json={"email": f"o-{uuid.uuid4().hex[:8]}@example.com",
-                                              "password": "another long password"}).json()
-    r = client.post("/licence/activate", headers={"Authorization": "Bearer " + other["token"]},
-                    json={"key": key})
-    assert r.status_code == 409, "otherwise one $12 key opens the game for a forum"
-
-
-def test_the_key_is_not_handed_back_in_full(client, signed_up):
-    key = "KEY-" + uuid.uuid4().hex[:12]
-    _pay(signed_up["email"], key)
-    body = client.get("/licence", headers=signed_up["h"]).json()
-    assert body["key_tail"] and body["key_tail"].startswith("…")
-    assert key not in str(body), "enough to recognise the receipt, not enough to be the receipt"
-
-
-def test_the_shop_being_shut_is_said_plainly(client, signed_up, monkeypatch):
-    from app.config import settings
-    monkeypatch.setattr(type(settings), "ls_api", "", raising=False)
-    r = client.post("/licence/activate", headers=signed_up["h"], json={"key": "ABCDEFGH"})
-    assert r.status_code == 503
-
-
-def test_nobody_signed_in_sees_no_licence(client):
-    assert client.get("/licence").status_code in (401, 403)
+def test_buying_twice_is_answered_rather_than_charged(client, signed_up, shop):
+    _post(client, _event(_player_id(signed_up["email"])))
+    r = client.post("/licence/checkout", headers=signed_up["h"])
+    assert r.status_code == 200 and r.json()["already"] is True and r.json()["url"] is None
