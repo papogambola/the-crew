@@ -44,11 +44,11 @@ console.log("no name in the game is declared twice ("+Object.keys(at).length+" c
 if [ -f ../tools/favicon.js ]; then
   node ../tools/favicon.js --check || echo "  (the icon in play.html is stale)"
 fi
-# The five faces under the logo on the front page come out of the same builder, and go stale the
-# same way — silently, in the one file a stranger sees first.
-if [ -f ../tools/lineup.js ]; then
-  node ../tools/lineup.js --check || echo "  (the line-up on index.html is stale)"
-fi
+# The five faces under the logo on the front page came out of the same builder and went stale the
+# same way, so tools/lineup.js kept them in step and this ran its check. The front page leads with
+# a drawing now — poster/hero.webp, faces and all — so there is nothing left to keep in step and
+# the tool has gone. What replaced the worry: browser88.js, which asks whether the drawn PLAY NOW
+# in that poster is still a button.
 
 shaky=(); broken=()
 # Re-run a suite RETRIES times and print how many runs were bad. A run is bad if it printed a

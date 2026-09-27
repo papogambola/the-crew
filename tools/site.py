@@ -100,11 +100,37 @@ for s in shots:
     h.update(open(s, "rb").read())
 shotv = h.hexdigest()[:8]
 
-pat = re.compile(r'(shots/[A-Za-z0-9_-]+\.png)(\?v=[0-9a-f]+)?')
+# The lookbehind is not decoration. Without it the substitution also rewrites any COMMENT that
+# names one of these files, so a comment explaining where a number was measured from turns into
+# "measured off poster/hero.webp?v=056b231d" and then churns on every redraw. Only a path inside
+# an attribute is a path the browser fetches, and only those are cache-busted.
+pat = re.compile(r'(?<=")(shots/[A-Za-z0-9_-]+\.png)(\?v=[0-9a-f]+)?')
 seen = set(m.group(2) or "" for m in pat.finditer(out))
 if seen != {"?v=" + shotv}:
     stale.append("shots    %s -> ?v=%s" % (", ".join(sorted(x or "(none)" for x in seen)), shotv))
 out = pat.sub(lambda _m: _m.group(1) + "?v=" + shotv, out)
+
+# THE POSTER, for exactly the same reason and by exactly the same means. It is one file rather
+# than four, it is the FIRST thing anybody sees, and it is the file most likely to be redrawn and
+# dropped in under the same name — which without this would reach everyone who had visited before
+# as whatever their browser still had. Kept separate from the shots' hash so that re-taking the
+# screenshots does not re-download the poster, or the other way about.
+poster = sorted(glob.glob(os.path.join(ROOT, "poster", "*.webp")))
+if not poster:
+    raise SystemExit("no poster/*.webp — has the hero drawing moved?")
+h = hashlib.sha256()
+for p in poster:
+    h.update(os.path.basename(p).encode())
+    h.update(open(p, "rb").read())
+posterv = h.hexdigest()[:8]
+
+pat = re.compile(r'(?<=")(poster/[A-Za-z0-9_-]+\.webp)(\?v=[0-9a-f]+)?')
+seen = set(m.group(2) or "" for m in pat.finditer(out))
+if not seen:
+    raise SystemExit("index.html references no poster/*.webp — has the hero changed?")
+if seen != {"?v=" + posterv}:
+    stale.append("poster   %s -> ?v=%s" % (", ".join(sorted(x or "(none)" for x in seen)), posterv))
+out = pat.sub(lambda _m: _m.group(1) + "?v=" + posterv, out)
 
 pat = re.compile(r'(<!-- site\.py:favicon -->)<link rel="icon" href="[^"]*">')
 m = pat.search(out)

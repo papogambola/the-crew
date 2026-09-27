@@ -41,6 +41,7 @@ Inside the exe the game is `index.html` again, because Neutralino opens the reso
 | `play.html` | the game, one file. Served, but not offered on the download page — the page is for the Windows build, and a free browser copy beside the button is an argument against pressing it. The handbook still links back to it |
 | `handbook.html` | the handbook, built by `tools/handbook/`. Served, but not offered on the download page either — the game reaches it on key 5, and a copy ships inside the exe |
 | `shots/*.png` | the four screenshots on the page, taken from the running game by `tools/shots.js` |
+| `poster/hero.webp` | the drawing the download page opens with — wordmark, five faces, the world, and a PLAY NOW that is a painted button with a real link laid over it. `tools/site.py` hashes it into the `src`, `tests/browser88.js` checks the link is still on it |
 | `CNAME` | `playthecrew.com`. Written by GitHub, not by hand — setting the custom domain in Settings → Pages commits it for you, and writing it yourself is the same act, so doing it before the DNS resolves points the live site at an address that answers nothing |
 | `desktop/` | the Windows exe and the zip it ships in |
 

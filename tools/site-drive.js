@@ -64,8 +64,13 @@ const server=http.createServer((rq,rs)=>{
   ok(/Build a crew you trust/.test(tag)&&/consequences\.?$/.test(tag),"the tagline is whole: \""+tag+"\"");
 
   console.log("\n— the button, and what it claims —");
-  const dl=await page.$eval('.hero a.btn.big',a=>({href:a.getAttribute("href"),text:a.innerText.trim(),dl:a.hasAttribute("download")}));
-  ok(/play now/i.test(dl.text),"the button says what it does: \""+dl.text+"\"");
+  /* The button is PAINTED now: the words PLAY NOW are ink in poster/hero.webp and what you press
+     is an anchor laid over them. So the text is read with textContent rather than innerText —
+     innerText is what is RENDERED, and this link's text is deliberately not rendered, because the
+     drawing already says it. Everything else asked of it is unchanged, and matters more than
+     before: a painted button that points nowhere looks exactly like one that works. */
+  const dl=await page.$eval('.poster-play',a=>({href:a.getAttribute("href"),text:a.textContent.trim(),dl:a.hasAttribute("download")}));
+  ok(/play now/i.test(dl.text),"the button says what it does, for anyone who cannot see the drawing: \""+dl.text+"\"");
   ok(dl.href==="play.html","and points at the game beside it, relatively — so it works on the "
     +"domain, on github.io and on disk ('"+dl.href+"')");
   ok(!dl.dl,"and does NOT carry a download attribute, which would save the page instead of opening it");
@@ -185,7 +190,7 @@ with zipfile.ZipFile(sys.argv[1]) as z:
   await page.screenshot({path:path.join(TMP,"desktop.png"),fullPage:false});
 
   // Above the fold, on the laptop the game is aimed at: the name, the promise, and the button.
-  const foldBtn=await page.$eval(".hero a.btn.big",a=>a.getBoundingClientRect().bottom);
+  const foldBtn=await page.$eval(".poster-play",a=>a.getBoundingClientRect().bottom);
   ok(foldBtn<900,"the download button is above the fold on a 900px window (bottom at "+Math.round(foldBtn)+")");
 
   console.log("\n— on a phone, which is where the link gets opened —");
@@ -194,7 +199,7 @@ with zipfile.ZipFile(sys.argv[1]) as z:
   const phw=await ph.evaluate(()=>({doc:document.documentElement.scrollWidth,win:innerWidth}));
   ok(phw.doc<=phw.win+1,"no sideways scrolling at 390 ("+phw.doc+" ≤ "+phw.win+")");
   const gut=await ph.evaluate(()=>{
-    const b=document.querySelector(".hero a.btn.big").getBoundingClientRect();
+    const b=document.querySelector(".poster-play").getBoundingClientRect();
     return {l:Math.round(b.left),r:Math.round(innerWidth-b.right)};});
   ok(gut.l>=16&&gut.r>=16,"the download button is not jammed against the glass ("+gut.l+"px / "+gut.r+"px)");
   const note=await ph.$eval(".phoneonly",e=>({shown:getComputedStyle(e).display!=="none",t:e.innerText.replace(/\s+/g," ").trim()}));
