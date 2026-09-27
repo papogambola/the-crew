@@ -11764,7 +11764,7 @@ function titleFoot(){
     +'<div class="year">2026 · Shhh Games</div>'
     +'<div class="foot-note" style="margin-top:14px">THE CREW · a work of fiction. Every operative, client and job is invented.<br>'
     +'Black ink, white paper, and a great deal of nerve. · '
-    +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div></div>';
+    +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+newerNote()+'</div></div>';
 }
 function savedSummary(){
   try{const r=localStorage.getItem(SAVE_KEY);if(!r)return null;const d=JSON.parse(r);if(!d||!d.player||d.over)return null;return {n:d.player.n,crew:d.crewName||null,week:d.week,rep:d.rep||0,money:d.money||0};}catch(e){return null;}
@@ -11866,15 +11866,30 @@ function updateCheck(){
 }
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD
-  /* The download is no longer what the site offers — the game runs in a browser now, and the
-     packaged copy is kept published only so the ones already installed keep working. So a
-     packaged copy that finds it is behind is told where the game actually lives, as TEXT and
-     not as a link: this is a WebView with no address bar and no back button, and a plain <a>
-     in it navigates the game away with no way home. An address somebody types is slower and
-     cannot strand them. The zip link stays because it is the one that has always been here. */
-  +(NEWER?' · <span style="color:var(--stamp)">'+esc(NEWER)+' is out — it plays in your browser at '
-    +'<b>playthecrew.com</b>, or <a href="'+esc(MEDIA_BASE)+'desktop/The-Crew-Windows.zip">download it</a></span>':'')
+  +newerNote()
   +'</div>';}
+/* THERE IS NO DOWNLOAD ANY MORE. The game runs in a browser; the Windows build is gone, zip and
+   toolchain both, and so is the link that used to sit at the end of this line.
+
+   This note matters more without it, not less. Only a PACKAGED copy ever sees it — updateCheck()
+   returns immediately unless window.THE_CREW_BUILD is set, and nothing but the old exe sets it —
+   so everyone reading it is holding a copy that can no longer be replaced. It is the only way
+   those players will ever hear the game moved.
+
+   Which is why it is a function now rather than a line inside footNote(). The TITLE screen has a
+   footer of its own, titleFoot(), and it never carried this: a packaged copy was told it was
+   behind only once it had started or continued a game, never on the screen it actually opens on.
+   That was survivable while the site still offered a download to find by other means. It is not
+   survivable as the only channel, so both footers say it, from here.
+
+   The address is TEXT and not a link, on purpose: this is a WebView with no address bar and no
+   back button, so a plain <a> navigates the game away with no way home. An address somebody types
+   is slower and cannot strand them — and a link to a zip that has been deleted would strand them
+   somewhere worse still. */
+function newerNote(){
+  return NEWER?' · <span style="color:var(--stamp)">'+esc(NEWER)+' is out — it plays in your browser at '
+    +'<b>playthecrew.com</b></span>':'';
+}
 
 /* ------------------------------ ACTIONS ------------------------------- */
 function bind(){

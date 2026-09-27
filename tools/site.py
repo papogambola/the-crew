@@ -10,39 +10,33 @@ a fact about a file sitting next to it, and a fact typed by hand goes stale — 
 build 84 while serving 91 is worse than one that says nothing, because it is read as the product
 being careless rather than the page.
 
-So they are read rather than typed: the build stamp, the icon out of play.html's <head>, and a
-content hash over the screenshots. Same argument, and the same shape, as version.txt in
-desktop/tools/build.py and the icon in tools/favicon.js. --check runs in the test suite.
+So they are read rather than typed: the build stamp, the icon out of play.html's <head>, a
+content hash over the screenshots and another over the poster. Same argument, and the same shape,
+as the icon in tools/favicon.js. --check runs in the test suite.
 
-The page used to sell a Windows download and carried its size in two places. It offers the
-browser now, so those two markers are gone — see WANT, and the note there about why the zip
-itself is still built and still published.
+It also writes version.txt, which is not about this page at all — see the note where it is
+written. That job used to belong to desktop/tools/pack.py, which is gone with the Windows build.
 
 Each value is marked in the page with an HTML comment and replaced up to the next tag:
 
     <!-- site.py:build -->build 91 · 19 September 2026</b>
                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this
 """
-import glob, hashlib, os, re, sys, zipfile
+import glob, hashlib, os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PAGE = os.path.join(ROOT, "index.html")
 GAME = os.path.join(ROOT, "play.html")
-ZIP  = os.path.join(ROOT, "desktop", "The-Crew-Windows.zip")
+VERSION = os.path.join(ROOT, "version.txt")
 
 check = "--check" in sys.argv[1:]
 
 game = open(GAME, encoding="utf-8").read()
 
-# The build the PAGE names is the build of the THING IT OFFERS. That used to be the zip, so this
-# read the stamp out of resources.neu inside it — correct then, because the web build could move
-# ahead of the exe (a web-only fix, no Windows toolchain to repack with) and the download page
-# must not advertise a build nobody can download.
-#
-# The page offers play.html now. The zip is still built and still served for the exes already on
-# people's machines, but nothing on the page points at it — so reading the stamp from it had the
-# page saying build 99 over a game that said 100, which is the exact failure the old comment was
-# written to prevent, pointing the other way. It reads the game it serves.
+# The build the PAGE names is the build of the THING IT OFFERS, and the only thing it offers is
+# play.html beside it. This once read the stamp out of resources.neu inside the zip, which was
+# right while the zip was what the button handed you and wrong the moment it was not: it had the
+# page saying build 99 over a game that said 100. It reads the game it serves.
 m = re.search(r'const BUILD="([^"]+)"', game)
 if not m:
     raise SystemExit("no const BUILD= in play.html")
@@ -61,13 +55,9 @@ if not icon:
     raise SystemExit("no <link rel=\"icon\"> in play.html — run tools/favicon.js?")
 icon = icon.group(0)
 
-mb = lambda n: "%.1f MB" % (n / 1048576.0)
-zipped   = os.path.getsize(ZIP)
-
-# The page offers the browser now and no longer advertises the zip, so the two size markers are
-# gone from it. The zip itself is still built, still published and still what version.txt names —
-# every exe already on somebody's machine checks that file and links to it, and pulling it would
-# break the players who are least able to do anything about it. Built and served, just not sold.
+# Nothing here measures a download any more. The page carried the zip's size in two places, then
+# stopped naming it, and now there is no zip to name: the Windows build is gone, toolchain and
+# all, so os.path.getsize on it would simply raise.
 WANT = {
     "build":  build,
     "build2": build,
@@ -140,17 +130,38 @@ if m.group(0) != m.group(1) + icon:
     stale.append("favicon is not the one in play.html")
 out = pat.sub(lambda _m: _m.group(1) + icon.replace("\\", "\\\\"), out, count=1)
 
+# VERSION.TXT IS FOR THE COPIES THAT CANNOT BE REPLACED.
+#
+# It is not about this page. It is one line of text that an already-installed exe fetches on
+# startup and compares with the build it was packed with; when they differ it prints "build N is
+# out — it plays in your browser at playthecrew.com". That note is the only way those players
+# ever hear that the game has moved, and now that the download is gone it is the only way they
+# ever will.
+#
+# desktop/tools/pack.py used to write it, out of the zip it had just packed, because the claim
+# "a newer build exists" only became true at the moment one was published. There is no pack.py
+# now, and the file it left behind said BUILD 107 over a game on 132 — twenty-five builds of
+# silence, because a stale line that happens to match nothing still reads as an answer. So it is
+# written here instead, from the same stamp the page gets, and every deploy keeps it true.
+version = build + "\n"
+was = open(VERSION, encoding="utf-8").read() if os.path.exists(VERSION) else None
+if was != version:
+    stale.append("version %r -> %r" % ((was or "").strip(), version.strip()))
+
 if check:
     if stale:
         print("index.html is out of date:")
         for s in stale:
             print("  " + s)
         sys.exit(1)
-    print("index.html is current — %s, %s" % (build, mb(zipped)))
+    print("index.html is current — %s" % build)
     sys.exit(0)
 
+if was != version:
+    open(VERSION, "w", encoding="utf-8").write(version)
+
 if out == page:
-    print("index.html already current — %s, %s" % (build, mb(zipped)))
+    print("index.html already current — %s" % build)
 else:
     open(PAGE, "w", encoding="utf-8").write(out)
     print("stamped index.html:")

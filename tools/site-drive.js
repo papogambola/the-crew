@@ -95,29 +95,33 @@ const server=http.createServer((rq,rs)=>{
     "and all three platforms, which is the point of moving: \""+facts+"\"");
   ok(!/\bMB\b/i.test(facts),"and no download size, because there is no download");
 
-  console.log("\n— and nothing still sells the zip —");
+  console.log("\n— and there is no download left to sell —");
   const html=fs.readFileSync(path.join(ROOT,"index.html"),"utf8");
   ok(!/The-Crew-Windows\.zip/.test(html),"no link to the zip anywhere on the page");
   ok(!/SmartScreen|isn.t commonly downloaded|Run anyway/i.test(html),
     "and none of the warnings copy that only a download needed");
 
-  /* The zip is still BUILT and still PUBLISHED even though nothing points at it: every exe
-     already on somebody's machine reads version.txt and links to that file, and pulling it
-     would break exactly the players who can do least about it. */
+  /* THE WINDOWS BUILD IS GONE, and this used to assert the opposite — that the zip was still
+     there for the copies already installed. It was, and it was two months stale and carried none
+     of the 526 drawings, so anybody who paid and downloaded got a strictly worse game than the
+     free one in their browser. What is asserted now is that it is really gone: a half-removed
+     download is the shape where the page stops mentioning it and something else still links to
+     a file that 404s. */
   const ZIP=path.join(ROOT,"desktop","The-Crew-Windows.zip");
-  ok(fs.existsSync(ZIP),"the zip is still there for the copies already installed");
-  const zipBuild=execFileSync("python3",["-c",`
-import re,sys,zipfile
-with zipfile.ZipFile(sys.argv[1]) as z:
-    neu=next(i for i in z.infolist() if i.filename.endswith("resources.neu"))
-    print(re.search(rb'const BUILD="([^"]+)"',z.read(neu)).group(1).decode())
-`,ZIP],{encoding:"utf8"}).trim();
+  ok(!fs.existsSync(ZIP),"the zip is gone from the repository");
+  ok(!fs.existsSync(path.join(ROOT,"desktop")),"and so is the toolchain that built it");
+  const gameSrc=fs.readFileSync(path.join(ROOT,"play.html"),"utf8");
+  ok(!/The-Crew-Windows\.zip/.test(gameSrc),"and the game itself no longer offers it either");
 
-  /* The one that must never drift: version.txt is what a packed copy asks the site in order to
-     find out it is behind. If it runs ahead of the zip, every exe in the world is told a newer
-     build exists and handed the one it already has. */
+  /* VERSION.TXT OUTLIVES THE DOWNLOAD, and is the whole reason removing it needed care. It is
+     one line an already-installed exe fetches to learn it is behind; with no way to re-download,
+     that note pointing at playthecrew.com is the only way those players ever hear the game moved.
+     It named the zip's build before and named build 107 over a game on 132 — so tools/site.py
+     writes it from play.html now, and this is what fails if the two drift apart again. */
   const vtxt=fs.readFileSync(path.join(ROOT,"version.txt"),"utf8").trim();
-  ok(vtxt===zipBuild,"version.txt names the build people can actually download ('"+vtxt+"')");
+  const gameBuild=(gameSrc.match(/const BUILD="([^"]+)"/)||[])[1];
+  ok(vtxt===gameBuild,"version.txt names the build actually being served ('"+vtxt+"')");
+  ok(/playthecrew\.com/.test(gameSrc),"and a stale copy is still told where the game lives");
 
   const icoPage=await page.$eval('link[rel="icon"]',l=>l.getAttribute("href"));
   const icoGame=(fs.readFileSync(path.join(ROOT,"play.html"),"utf8").match(/<link rel="icon" href="([^"]+)">/)||[])[1];

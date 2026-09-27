@@ -8,15 +8,23 @@ online — country by country, each with its own language, money, politics, reli
 and job categories. Everyone on the crew goes on every job, if the border lets them in and the job
 doesn't hit one of their limits.
 
-**https://playthecrew.com** — the download page. Every push to `main` redeploys it.
-`papogambola.github.io/the-crew/` redirects there, which is why copies of the exe built before the
-domain existed still find their music: their `MEDIA_BASE` is the old address and it 301s.
+**https://playthecrew.com** — the front page. Every push to `main` redeploys it.
+`papogambola.github.io/the-crew/` redirects there, which is why copies of the old Windows app
+still find their music: their `MEDIA_BASE` is the old address and it 301s.
 
-Or on Windows, as a program: **https://playthecrew.com/desktop/The-Crew-Windows.zip** — unzip,
-keep the two files together, double-click `The Crew.exe`. The game is inside it and runs with no
-internet at all; the music is streamed from object storage, and a line in the footer says when
-a newer build is out. It was a shell that fetched the game until build 85, which meant it went
-dark whenever the address did (`desktop/README.md` says what changed and how it is built).
+**There is no download.** It plays in the browser, and that is the whole offer. A Windows build
+existed until build 132 — a Neutralino shell with the game bundled inside it — and it is gone:
+zip, toolchain, `desktop/` and all. It had been shipping without a single one of the 526 drawings
+since build 124, so anyone who paid and installed it got a strictly worse game than the free one
+in their browser, and nothing on the page had pointed at it for months anyway.
+
+The copies already installed keep working; they are self-contained. What they get is
+`version.txt`, which `tools/site.py` now writes from `play.html`'s own stamp — one line those
+copies fetch on startup, so a stale one still prints *"build N is out — it plays in your browser
+at playthecrew.com"* in its footer. That note is the only way those players ever hear the game
+moved, which is why it outlived the thing it used to sit beside. `recover.html` stays for the
+same reason: it lifts a save out of the old app's storage, and it is the one page those players
+may still need.
 
 The rules, in full: **https://playthecrew.com/handbook.html** — a player's handbook of nineteen
 chapters with a pinned search bar and a clickable index, and the same thing as a
@@ -25,25 +33,21 @@ Handbook button under it, the controls book, and the footer of every screen.
 
 ### What is served where
 
-`index.html` at the root is **the download page**, not the game — that is what a stranger who
+`index.html` at the root is **the front page**, not the game — that is what a stranger who
 types the domain should be handed. The game is `play.html` beside it. It was `index.html` until
-the domain existed, which is the whole of why the rename happened; the handbook, `version.txt`
-and the zip are at the paths they always were, so nothing the exe or the handbook reaches for
-moved with it. The music did move, but later and for its own reasons — see the table.
-
-Inside the exe the game is `index.html` again, because Neutralino opens the resource root;
-`desktop/tools/build.py` is where those two facts are reconciled.
+the domain existed, which is the whole of why the rename happened; the handbook and `version.txt`
+are at the paths they always were, so nothing an installed copy or the handbook reaches for moved
+with it. The music did move, but later and for its own reasons — see the table.
 
 | | |
 |---|---|
-| `index.html` | the download page — `tools/site.py` stamps its build and sizes, `tools/site-drive.js` drives it |
-| `music/` | **the tunes are not here any more.** 54MB of mp3 was ninety-seven per cent of this site's bandwidth against a 1.4MB download, so they live in Cloudflare R2; `MUSIC_HOME` in the game is the one line that says where, and `tools/music-check.py` asks whether all 18 are still there and still the right size. What is left is `sizes.json`, which is what it checks against, the split manifest, and `city-cue.mp3` — the one piece of audio that is *not* streamed. It is the seven seconds under the establishing card, and it is carried inside `play.html` as a data URI by `tools/city-cue.py`, because a cue that has to sound in the frame the card appears cannot wait for a cold fetch, and because inside the exe it then plays with no connection at all. 55KB against 54MB is not what the bandwidth argument was about. The mp3 stays here so it can be re-encoded; `--check` fails if it and the embedded copy have drifted |
-| `play.html` | the game, one file. Served, but not offered on the download page — the page is for the Windows build, and a free browser copy beside the button is an argument against pressing it. The handbook still links back to it |
-| `handbook.html` | the handbook, built by `tools/handbook/`. Served, but not offered on the download page either — the game reaches it on key 5, and a copy ships inside the exe |
+| `index.html` | the front page — `tools/site.py` stamps its build, hashes its pictures and writes `version.txt`, `tools/site-drive.js` drives it |
+| `music/` | **the tunes are not here any more.** 54MB of mp3 was ninety-seven per cent of this site's bandwidth against a 1.4MB page, so they live in Cloudflare R2; `MUSIC_HOME` in the game is the one line that says where, and `tools/music-check.py` asks whether all 18 are still there and still the right size. What is left is `sizes.json`, which is what it checks against, the split manifest, and `city-cue.mp3` — the one piece of audio that is *not* streamed. It is the seven seconds under the establishing card, and it is carried inside `play.html` as a data URI by `tools/city-cue.py`, because a cue that has to sound in the frame the card appears cannot wait for a cold fetch, and because inside the exe it then plays with no connection at all. 55KB against 54MB is not what the bandwidth argument was about. The mp3 stays here so it can be re-encoded; `--check` fails if it and the embedded copy have drifted |
+| `play.html` | the game, one file. What the front page's PLAY NOW opens |
+| `handbook.html` | the handbook, built by `tools/handbook/`. The game reaches it on key 5, from the office's bookshelf, and from the footer of every screen |
 | `shots/*.png` | the four screenshots on the page, taken from the running game by `tools/shots.js` |
-| `poster/hero.webp` | the drawing the download page opens with — wordmark, five faces, the world, and a PLAY NOW that is a painted button with a real link laid over it. `tools/site.py` hashes it into the `src`, `tests/browser88.js` checks the link is still on it |
+| `poster/hero.webp` | the drawing the front page opens with — wordmark, five faces, the world, and a PLAY NOW that is a painted button with a real link laid over it. `tools/site.py` hashes it into the `src`, `tests/browser88.js` checks the link is still on it |
 | `CNAME` | `playthecrew.com`. Written by GitHub, not by hand — setting the custom domain in Settings → Pages commits it for you, and writing it yourself is the same act, so doing it before the DNS resolves points the live site at an address that answers nothing |
-| `desktop/` | the Windows exe and the zip it ships in |
 
 The working foundation for the design is `CONCEPT.md`, kept as written, with a dated log of
 decisions at the end.

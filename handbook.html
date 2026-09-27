@@ -806,8 +806,9 @@ function wire(){
    no game next to it — so it carried an absolute fallback and a host test for when to use it.
    That test is what sent readers to claude.ai the day the site moved to playthecrew.com. The
    artifacts are finished, so the rule is gone rather than fixed: the button is the static
-   href="play.html" in the markup, which desktop/tools/build.py rewrites to index.html on the way
-   into the app, and nothing decides anything at runtime. */
+   href="play.html" in the markup, and nothing decides anything at runtime. (It used to be
+   rewritten to index.html on the way into the Windows app, where the game was the resource
+   root. There is no Windows app now, so there is nothing to rewrite it.) */
 
 /* Every page here is measured, so wait for the faces the book is set in. */
 function boot(){

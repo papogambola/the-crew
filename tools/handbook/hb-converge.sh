@@ -20,8 +20,9 @@ node hb-build.js
 node hb-pdf.js
 python3 hb-pages.py
 # And publish it. hb-build.js writes its output next to itself, but the handbook players open —
-# the one the site serves and the one desktop/tools/build.py reads on its way into the zip — is
-# ../../handbook.html at the top of the tree, and nothing connected the two. It was a copy
+# the one the site serves — is ../../handbook.html at the top of the tree, and nothing connected
+# the two. (There was a second reader once: the Windows build pulled it into the zip. That build
+# is gone, and one fewer copy of a file is one fewer place for this to go wrong.) It was a copy
 # somebody remembered to make, so the published book sat a build behind the built one and the
 # title page went out reading 97 from a tree on 98. Three copies of a file is fine; three copies
 # and a manual step is not.
