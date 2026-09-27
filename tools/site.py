@@ -14,8 +14,9 @@ So they are read rather than typed: the build stamp, the icon out of play.html's
 content hash over the screenshots and another over the poster. Same argument, and the same shape,
 as the icon in tools/favicon.js. --check runs in the test suite.
 
-It also writes version.txt, which is not about this page at all — see the note where it is
-written. That job used to belong to desktop/tools/pack.py, which is gone with the Windows build.
+It briefly wrote a version line too, for the copies of the Windows build already installed. One
+person ever installed one, and it was the person who made it, so that line and everything that
+read it are gone.
 
 Each value is marked in the page with an HTML comment and replaced up to the next tag:
 
@@ -27,7 +28,6 @@ import glob, hashlib, os, re, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PAGE = os.path.join(ROOT, "index.html")
 GAME = os.path.join(ROOT, "play.html")
-VERSION = os.path.join(ROOT, "version.txt")
 
 check = "--check" in sys.argv[1:]
 
@@ -130,24 +130,6 @@ if m.group(0) != m.group(1) + icon:
     stale.append("favicon is not the one in play.html")
 out = pat.sub(lambda _m: _m.group(1) + icon.replace("\\", "\\\\"), out, count=1)
 
-# VERSION.TXT IS FOR THE COPIES THAT CANNOT BE REPLACED.
-#
-# It is not about this page. It is one line of text that an already-installed exe fetches on
-# startup and compares with the build it was packed with; when they differ it prints "build N is
-# out — it plays in your browser at playthecrew.com". That note is the only way those players
-# ever hear that the game has moved, and now that the download is gone it is the only way they
-# ever will.
-#
-# desktop/tools/pack.py used to write it, out of the zip it had just packed, because the claim
-# "a newer build exists" only became true at the moment one was published. There is no pack.py
-# now, and the file it left behind said BUILD 107 over a game on 132 — twenty-five builds of
-# silence, because a stale line that happens to match nothing still reads as an answer. So it is
-# written here instead, from the same stamp the page gets, and every deploy keeps it true.
-version = build + "\n"
-was = open(VERSION, encoding="utf-8").read() if os.path.exists(VERSION) else None
-if was != version:
-    stale.append("version %r -> %r" % ((was or "").strip(), version.strip()))
-
 if check:
     if stale:
         print("index.html is out of date:")
@@ -156,9 +138,6 @@ if check:
         sys.exit(1)
     print("index.html is current — %s" % build)
     sys.exit(0)
-
-if was != version:
-    open(VERSION, "w", encoding="utf-8").write(version)
 
 if out == page:
     print("index.html already current — %s" % build)

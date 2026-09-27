@@ -113,15 +113,11 @@ const server=http.createServer((rq,rs)=>{
   const gameSrc=fs.readFileSync(path.join(ROOT,"play.html"),"utf8");
   ok(!/The-Crew-Windows\.zip/.test(gameSrc),"and the game itself no longer offers it either");
 
-  /* VERSION.TXT OUTLIVES THE DOWNLOAD, and is the whole reason removing it needed care. It is
-     one line an already-installed exe fetches to learn it is behind; with no way to re-download,
-     that note pointing at playthecrew.com is the only way those players ever hear the game moved.
-     It named the zip's build before and named build 107 over a game on 132 — so tools/site.py
-     writes it from play.html now, and this is what fails if the two drift apart again. */
-  const vtxt=fs.readFileSync(path.join(ROOT,"version.txt"),"utf8").trim();
-  const gameBuild=(gameSrc.match(/const BUILD="([^"]+)"/)||[])[1];
-  ok(vtxt===gameBuild,"version.txt names the build actually being served ('"+vtxt+"')");
-  ok(/playthecrew\.com/.test(gameSrc),"and a stale copy is still told where the game lives");
+  /* And nothing is left running for its sake. version.txt, the fetch that read it, the constant
+     that said where the site was and the footer note they fed are all gone: one person ever
+     downloaded the Windows build, and it was the person who made it. */
+  ok(!fs.existsSync(path.join(ROOT,"version.txt")),"and no version line left for it to check");
+  ok(!/MEDIA_BASE|THE_CREW_MEDIA/.test(gameSrc),"and no constant left pointing at the site");
 
   const icoPage=await page.$eval('link[rel="icon"]',l=>l.getAttribute("href"));
   const icoGame=(fs.readFileSync(path.join(ROOT,"play.html"),"utf8").match(/<link rel="icon" href="([^"]+)">/)||[])[1];
@@ -264,14 +260,13 @@ const server=http.createServer((rq,rs)=>{
      players on the music, against sixty-six thousand on the game. So the tunes go to object
      storage and the site keeps serving what is small.
 
-     The thing that can go wrong is doing it by moving MEDIA_BASE, which would take version.txt
-     and the zip link with it and point the "a newer build is out" check at a bucket. So: two
-     bases, and this checks they actually come apart. */
+     There were two bases once, because moving the music risked taking the download link and the
+     version check with it. Those are gone and the music's address is the only one left — which is
+     the simplification, and this is what checks it still resolves. */
   console.log("\n— the music and the site are two addresses —");
   {
     const ctx=await browser.newContext({viewport:{width:1100,height:800}});
     await ctx.addInitScript(()=>{
-      window.THE_CREW_MEDIA="https://site.example/";
       window.THE_CREW_MUSIC="https://tunes.example/";});
     const pg=await ctx.newPage();
     await pg.goto("file://"+path.join(ROOT,"play.html"));
@@ -279,14 +274,12 @@ const server=http.createServer((rq,rs)=>{
     const w=await pg.evaluate(()=>({
       siren:musicURL("music/siren.mp3"), amb:musicURL(TRACKS.ambient),
       already:musicURL("https://elsewhere.example/x.mp3"),
-      media:MEDIA_BASE, music:MUSIC_BASE, key:TRACKS.ambient}));
+      music:MUSIC_BASE, key:TRACKS.ambient}));
     ok(w.siren==="https://tunes.example/music/siren.mp3","a tune resolves to the music address ('"+w.siren+"')");
     ok(w.amb.indexOf("https://tunes.example/")===0,"and so does every track in the pools ('"+w.amb+"')");
     ok(w.key==="music/ambient.mp3","while the stored path stays relative — it is the key the "
       +"music system compares against, not an address ('"+w.key+"')");
     ok(w.already==="https://elsewhere.example/x.mp3","an address that is already an address is left alone");
-    ok(w.media==="https://site.example/","version.txt and the zip stay on the site's address, "
-      +"which is the whole reason this is a second constant");
     await ctx.close();
   }
   {

@@ -10789,17 +10789,12 @@ function modalNews(){
 // verdict, one runs under a recruitment trip and one under the week's news. The hour of
 // suspense loops under everything else. Browsers allow audio only after the first click, and
 // the radio in the office reports its state.
-/* Where the media actually lives. The web build serves its music from beside itself, so the
-   default is a relative path and nothing about it changes. The desktop build carries the whole
-   game but not the 54MB of mp3 behind it: bundling those would make a fifty-seven megabyte
-   download out of a two megabyte one, and — because the download is committed and served from
-   the repository — would add fifty-seven megabytes to its history on every release, for ever. So
-   the desktop build points this at the site. The game is whole either way; the music is the part
-   that wants a connection, and the game already plays without it.
+/* A constant saying where the SITE was used to be declared here, for a bundled copy that had to
+   reach back to it. It fed exactly two things — the download and the version check — and both are
+   gone, so it went too rather than sit here unread.
 
    The paths below stay relative because they are also the keys the music system compares against
    (musicWant.src===TRACKS.ambient). They are turned into addresses only where one is needed. */
-const MEDIA_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_MEDIA==="string")?window.THE_CREW_MEDIA:"";
 
 /* Music has its own address, separate from the site's, and this is the one line that says where.
    Empty means beside the game, which is where it started and is still a working answer.
@@ -10811,8 +10806,8 @@ const MEDIA_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_MEDIA==="s
    is pure object storage: nineteen files that never change and are never read by anything but a
    browser asking for them by name.
 
-   Only the tunes move. version.txt and the zip stay on the site and stay on MEDIA_BASE, which is
-   why this is a second constant and not a wider one. */
+   It is a constant of its own because it is the one address in the game that points somewhere
+   other than beside the game. */
 const MUSIC_HOME="https://pub-9011c74a2e45458392a39484d36e4f48.r2.dev/";
 const MUSIC_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_MUSIC==="string")
   ?window.THE_CREW_MUSIC:MUSIC_HOME;
@@ -11764,7 +11759,7 @@ function titleFoot(){
     +'<div class="year">2026 · Shhh Games</div>'
     +'<div class="foot-note" style="margin-top:14px">THE CREW · a work of fiction. Every operative, client and job is invented.<br>'
     +'Black ink, white paper, and a great deal of nerve. · '
-    +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+newerNote()+'</div></div>';
+    +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD+'</div></div>';
 }
 function savedSummary(){
   try{const r=localStorage.getItem(SAVE_KEY);if(!r)return null;const d=JSON.parse(r);if(!d||!d.player||d.over)return null;return {n:d.player.n,crew:d.crewName||null,week:d.week,rep:d.rep||0,money:d.money||0};}catch(e){return null;}
@@ -11844,52 +11839,15 @@ function screenOver(){
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
 const BUILD="build 132 · September 2026";
-/* A copy served from the site is current by definition — you just fetched it. A copy inside the
-   desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
-   ability to run with no connection at all. That trade costs the old promise that there is never a
-   new exe to download, so the least a bundled copy can do is know when it is behind and say so.
+/* There was a version check here. A bundled copy fetched one line of text from the site, compared
+   it with the build it was packed with, and printed a note in the footer when it was behind. It
+   went with the download it was for, and so did the line of text and the constant that said where
+   the site was.
 
-   It asks the site for one line of text and compares it with its own stamp. It does not fetch
-   code and it does not replace itself: an app that quietly swaps its own guts for whatever an
-   address served that morning is a different and much larger promise than this one. */
-let NEWER=false;
-function updateCheck(){
-  if(!MEDIA_BASE||typeof window.THE_CREW_BUILD!=="string")return;   // the web build is always current
-  try{
-    fetch(MEDIA_BASE+"version.txt",{cache:"no-store"})
-      .then(r=>r.ok?r.text():null)
-      .then(t=>{if(!t)return;
-        const out=t.trim();
-        if(out&&out!==window.THE_CREW_BUILD){NEWER=out;render();}})
-      .catch(()=>{});                                               // no line out, nothing to say
-  }catch(e){}
-}
+   A copy served from the site is current by definition. You just fetched it. */
 function footNote(){return '<div class="foot-note">THE CREW · a work of fiction. Every operative, client and job is invented.<br>Black ink, white paper, and a great deal of nerve. · '
   +'<a href="#" data-act="off-handbook">The player\'s handbook</a> · '+BUILD
-  +newerNote()
   +'</div>';}
-/* THERE IS NO DOWNLOAD ANY MORE. The game runs in a browser; the Windows build is gone, zip and
-   toolchain both, and so is the link that used to sit at the end of this line.
-
-   This note matters more without it, not less. Only a PACKAGED copy ever sees it — updateCheck()
-   returns immediately unless window.THE_CREW_BUILD is set, and nothing but the old exe sets it —
-   so everyone reading it is holding a copy that can no longer be replaced. It is the only way
-   those players will ever hear the game moved.
-
-   Which is why it is a function now rather than a line inside footNote(). The TITLE screen has a
-   footer of its own, titleFoot(), and it never carried this: a packaged copy was told it was
-   behind only once it had started or continued a game, never on the screen it actually opens on.
-   That was survivable while the site still offered a download to find by other means. It is not
-   survivable as the only channel, so both footers say it, from here.
-
-   The address is TEXT and not a link, on purpose: this is a WebView with no address bar and no
-   back button, so a plain <a> navigates the game away with no way home. An address somebody types
-   is slower and cannot strand them — and a link to a zip that has been deleted would strand them
-   somewhere worse still. */
-function newerNote(){
-  return NEWER?' · <span style="color:var(--stamp)">'+esc(NEWER)+' is out — it plays in your browser at '
-    +'<b>playthecrew.com</b></span>':'';
-}
 
 /* ------------------------------ ACTIONS ------------------------------- */
 function bind(){
@@ -13314,11 +13272,6 @@ function pcOnlyDoor(){
   if(mobileDevice()){pcOnlyDoor();return;}
   loadSettings();applySettings();
   licLoad();licRecheck();   // the key this browser was paid for with, and a weekly word with the till about it
-  // Once, on the way up, and only in a bundled copy. It has to be here rather than beside the
-  // other startup lines further up the file: MEDIA_BASE is a const declared with the music, and
-  // reading it from above its own declaration throws — which a try/catch then hides, so the check
-  // did nothing at all and did it silently.
-  updateCheck();
   // a play is a sitting: a return after half an hour away counts as the next one
   try{const now=Date.now();if(!SET.lastSeen||now-SET.lastSeen>PLAY_GAP_MS)SET.plays=(SET.plays||0)+1;SET.lastSeen=now;saveSettings();}catch(e){}
   try{

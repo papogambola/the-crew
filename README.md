@@ -18,13 +18,12 @@ zip, toolchain, `desktop/` and all. It had been shipping without a single one of
 since build 124, so anyone who paid and installed it got a strictly worse game than the free one
 in their browser, and nothing on the page had pointed at it for months anyway.
 
-The copies already installed keep working; they are self-contained. What they get is
-`version.txt`, which `tools/site.py` now writes from `play.html`'s own stamp — one line those
-copies fetch on startup, so a stale one still prints *"build N is out — it plays in your browser
-at playthecrew.com"* in its footer. That note is the only way those players ever hear the game
-moved, which is why it outlived the thing it used to sit beside. `recover.html` stays for the
-same reason: it lifts a save out of the old app's storage, and it is the one page those players
-may still need.
+Nothing survives it. There was an update check — a bundled copy fetched a version line from the
+site, compared it with the build it was packed with, and printed *"a newer build is out"* in its
+footer — and it is gone along with the version line, the constant that said where the site was,
+and the note itself. One person ever installed the Windows build, and it was the person who made
+it, so there was no audience for any of it. `recover.html` stays: it lifts a save out of the old
+app's storage, it is noindex and unlinked, and it costs nothing to leave where it is.
 
 The rules, in full: **https://playthecrew.com/handbook.html** — a player's handbook of nineteen
 chapters with a pinned search bar and a clickable index, and the same thing as a
@@ -35,13 +34,13 @@ Handbook button under it, the controls book, and the footer of every screen.
 
 `index.html` at the root is **the front page**, not the game — that is what a stranger who
 types the domain should be handed. The game is `play.html` beside it. It was `index.html` until
-the domain existed, which is the whole of why the rename happened; the handbook and `version.txt`
-are at the paths they always were, so nothing an installed copy or the handbook reaches for moved
-with it. The music did move, but later and for its own reasons — see the table.
+the domain existed, which is the whole of why the rename happened; the handbook is at the path it
+always was, so nothing reaching for it moved with it. The music did move, but later and for its
+own reasons — see the table.
 
 | | |
 |---|---|
-| `index.html` | the front page — `tools/site.py` stamps its build, hashes its pictures and writes `version.txt`, `tools/site-drive.js` drives it |
+| `index.html` | the front page — `tools/site.py` stamps its build and hashes its pictures, `tools/site-drive.js` drives it |
 | `music/` | **the tunes are not here any more.** 54MB of mp3 was ninety-seven per cent of this site's bandwidth against a 1.4MB page, so they live in Cloudflare R2; `MUSIC_HOME` in the game is the one line that says where, and `tools/music-check.py` asks whether all 18 are still there and still the right size. What is left is `sizes.json`, which is what it checks against, the split manifest, and `city-cue.mp3` — the one piece of audio that is *not* streamed. It is the seven seconds under the establishing card, and it is carried inside `play.html` as a data URI by `tools/city-cue.py`, because a cue that has to sound in the frame the card appears cannot wait for a cold fetch, and because inside the exe it then plays with no connection at all. 55KB against 54MB is not what the bandwidth argument was about. The mp3 stays here so it can be re-encoded; `--check` fails if it and the embedded copy have drifted |
 | `play.html` | the game, one file. What the front page's PLAY NOW opens |
 | `handbook.html` | the handbook, built by `tools/handbook/`. The game reaches it on key 5, from the office's bookshelf, and from the footer of every screen |
