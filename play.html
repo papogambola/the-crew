@@ -40,21 +40,7 @@
   .flag{display:inline-block;width:18px;height:12px;vertical-align:-1px;border:1px solid rgba(17,16,16,.4);background:#fff;box-sizing:content-box}
   /* The city, for the length of the card. Near things solid, far things outlined — the whole legibility
      of the drawing is that one distinction, so it lives here rather than on every shape. */
-  .sky{display:block;width:100%;height:auto}
-  /* Outline, not fill. Every near shape is drawn in paper with an ink edge, which is what makes
-     a landmark legible at all: a solid black Eiffel Tower in front of solid black buildings is
-     one black shape, and the whole reason for drawing the tower goes with it. The paper fill is
-     what does the occluding — take it out for `fill:none` and the city becomes a tangle of
-     lines through each other.
-     non-scaling-stroke because a landmark rides in on a group transform scaled by about 1:1
-     down to 1:3; without it the edge on a small landmark is a hairline and on a big one a slab. */
-  .sky-near>*,.sky-lm>*{fill:var(--card);stroke:var(--ink);stroke-width:1.5;
-    stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
-  /* The pure lines: water, guy wires, a crane's rigging. Filling a two-unit-wide rule with
-     paper and drawing an edge round it makes a smear, so these carry no fill at all. */
-  .sky-line>*{fill:none;stroke:var(--ink);stroke-width:1.5;stroke-linecap:round;vector-effect:non-scaling-stroke}
-  .sky-far>*{fill:none;stroke:var(--ink);stroke-width:1.3;stroke-linejoin:round;stroke-linecap:round;opacity:.4}
-  .sky-ground{fill:var(--ink);stroke:none}
+  .sky{display:block;width:100%;height:auto}   /* the city, drawn: 80:33, one per city */
   /* The three-second card. Paper, a lot of air, and the city set as large as the logo — it is
      a cut to a place, and a cut to a place that needs reading twice has not cut anywhere. */
   /* Three classes, and every one of them is load-bearing. The card rides in on the feed's own
@@ -8339,168 +8325,35 @@ const SKY_W=320, SKY_H=132, SKY_GY=110;      // ground line, with room for water
    in the game has a comma in it, which tests/browser76 checks, so the first comma is the seam. */
 function cityName(s){const i=String(s||"").indexOf(",");return i<0?String(s||""):String(s).slice(0,i);}
 function citySeed(city,country){return fmHash("sky|"+cityName(city)+"|"+(country||""));}
+/* THE CITY, AS A DRAWING.
+
+   It was generated until build 130: 168 lines that built a skyline out of the city's name and its
+   country's terrain — ridgelines, water, cranes, palms or firs, and a landmark where a city had
+   one, with the buildings dropping to make room for it. That was the right answer while there was
+   nothing to show; 129 drawings is a better one, and it is the same argument the feed's pictures
+   won: a finite set, drawn once, beats a generator that is nobody's hand.
+
+   The name is the only link — skyline-<country>-<city>.webp — and the slug folds accents into
+   their base letter rather than dropping them, so Zürich is zurich and São Paulo is sao-paulo.
+   Dropping the letter instead gives z-rich, which matches no file anybody would name.
+
+   80:33, which is the shape the card has always drawn into, and nothing like the 4:3 the feed's
+   pictures use: this sits across the top of a card, not in a panel beside a line. */
+const SKY_HOME="skylines/";
+const SKY_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_SKY==="string")?window.THE_CREW_SKY:SKY_HOME;
+/* skyline-import.py:have */const SKY_HAVE=["skyline-argentina-buenos-aires","skyline-argentina-rosario","skyline-australia-melbourne","skyline-australia-perth","skyline-australia-sydney","skyline-brazil-manaus","skyline-brazil-rio-de-janeiro","skyline-brazil-sao-paulo","skyline-canada-montreal","skyline-canada-toronto","skyline-canada-vancouver","skyline-chile-santiago","skyline-chile-valparaiso","skyline-china-beijing","skyline-china-hong-kong","skyline-china-shanghai","skyline-china-shenzhen","skyline-colombia-bogota","skyline-colombia-cartagena","skyline-colombia-medellin","skyline-czechia-brno","skyline-czechia-prague","skyline-denmark-aarhus","skyline-denmark-copenhagen","skyline-egypt-alexandria","skyline-egypt-cairo","skyline-finland-helsinki","skyline-finland-tampere","skyline-france-lyon","skyline-france-marseille","skyline-france-paris","skyline-germany-berlin","skyline-germany-frankfurt","skyline-germany-hamburg","skyline-ghana-accra","skyline-ghana-kumasi","skyline-greece-athens","skyline-greece-piraeus","skyline-greece-thessaloniki","skyline-india-chennai","skyline-india-delhi","skyline-india-mumbai","skyline-indonesia-jakarta","skyline-indonesia-medan","skyline-indonesia-surabaya","skyline-ireland-cork","skyline-ireland-dublin","skyline-israel-haifa","skyline-israel-jerusalem","skyline-israel-tel-aviv","skyline-italy-milan","skyline-italy-naples","skyline-italy-rome","skyline-japan-osaka","skyline-japan-tokyo","skyline-japan-yokohama","skyline-kenya-mombasa","skyline-kenya-nairobi","skyline-lebanon-beirut","skyline-lebanon-tripoli","skyline-mexico-mexico-city","skyline-mexico-monterrey","skyline-mexico-tijuana","skyline-morocco-casablanca","skyline-morocco-marrakesh","skyline-morocco-tangier","skyline-netherlands-amsterdam","skyline-netherlands-rotterdam","skyline-nigeria-abuja","skyline-nigeria-lagos","skyline-nigeria-port-harcourt","skyline-norway-bergen","skyline-norway-oslo","skyline-pakistan-islamabad","skyline-pakistan-karachi","skyline-pakistan-lahore","skyline-panama-colon","skyline-panama-panama-city","skyline-philippines-cebu","skyline-philippines-davao","skyline-philippines-manila","skyline-poland-gdansk","skyline-poland-krakow","skyline-poland-warsaw","skyline-portugal-lisbon","skyline-portugal-porto","skyline-russia-moscow","skyline-russia-st-petersburg","skyline-russia-vladivostok","skyline-saudi-arabia-jeddah","skyline-saudi-arabia-riyadh","skyline-serbia-belgrade","skyline-serbia-novi-sad","skyline-singapore-singapore","skyline-south-africa-cape-town","skyline-south-africa-durban","skyline-south-africa-johannesburg","skyline-south-korea-busan","skyline-south-korea-seoul","skyline-spain-barcelona","skyline-spain-madrid","skyline-spain-valencia","skyline-sweden-gothenburg","skyline-sweden-malmo","skyline-sweden-stockholm","skyline-switzerland-basel","skyline-switzerland-geneva","skyline-switzerland-zurich","skyline-thailand-bangkok","skyline-thailand-chiang-mai","skyline-thailand-phuket","skyline-turkey-ankara","skyline-turkey-istanbul","skyline-turkey-izmir","skyline-u-a-e-abu-dhabi","skyline-u-a-e-dubai","skyline-ukraine-kyiv","skyline-ukraine-lviv","skyline-ukraine-odesa","skyline-united-kingdom-glasgow","skyline-united-kingdom-london","skyline-united-kingdom-manchester","skyline-united-states-chicago","skyline-united-states-los-angeles","skyline-united-states-miami","skyline-united-states-new-york","skyline-vietnam-da-nang","skyline-vietnam-hanoi","skyline-vietnam-ho-chi-minh-city"];
+const SKY_SET=(typeof Set!=="undefined")?new Set(SKY_HAVE):null;
+function skySlug(s){
+  return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+}
+function skyName(city,country){return "skyline-"+skySlug(country)+"-"+skySlug(city);}
+function skyHas(city,country){const n=skyName(city,country);return SKY_SET?SKY_SET.has(n):SKY_HAVE.indexOf(n)>=0;}
 function citySkyline(city,country){
-  const co=COUNTRY_BY_NAME[country]||{terrain:[],eco:2};
-  const T=co.terrain||[];
-  const has=k=>T.indexOf(k)>=0;
-  const r=mulberry32(citySeed(city,country));
-  const ri_=(a,b)=>a+Math.floor(r()*(b-a+1));
-  const pick_=a=>a[Math.floor(r()*a.length)];
-  const far=[],near=[],line=[];               // distant outline · paper-filled with an edge · pure stroke
-  const water=has("coast")||has("port")||has("islands")||has("fjords")||has("delta")
-    ||has("canal")||has("river")||has("rivers")||has("lakes");
-  const hilly=has("mountains")||has("hills")||has("highlands")||has("fjords");
-  const big=has("megacity");
-  const green=has("jungle")||has("forest");
-  const flatland=has("desert")||has("savanna")||has("plains")||has("tundra");
-  const eco=co.eco||2;
-
-  /* ---- the far layer: what is behind the city ---- */
-  if(hilly){
-    // A ridge, in outline, drawn as one polyline so the peaks share a skyline rather than
-    // stacking as separate triangles. Two passes when the country is properly mountainous.
-    const ridge=n=>{
-      const pts=[];let x=-6;
-      const top=SKY_GY-(n===0?54:38), floor=SKY_GY-(n===0?14:8);
-      pts.push(x+","+SKY_GY);
-      while(x<SKY_W+6){
-        const w=ri_(26,54);
-        pts.push((x+w/2)+","+(floor-r()*(floor-top)));
-        x+=w;
-      }
-      pts.push((SKY_W+6)+","+SKY_GY);
-      return '<polyline points="'+pts.join(" ")+'"/>';
-    };
-    if(has("mountains"))far.push(ridge(0));
-    far.push(ridge(1));
-  } else if(flatland){
-    // Nothing behind a plain but the distance itself — two low dunes, or a flat line.
-    const y=SKY_GY-ri_(6,12);
-    far.push('<polyline points="-6,'+SKY_GY+' '+ri_(40,90)+','+y+' '+ri_(150,210)+','+(y+ri_(2,6))+' '+(SKY_W+6)+','+SKY_GY+'"/>');
-  }
-
-  /* ---- the city itself ---- */
-  // How tall the money is. A megacity goes up, a poor country stays down, and a mountain town
-  // is lower than the same money on a plain because there is nowhere to put a tower.
-  // And a city with a landmark keeps its skyline down, so the thing you came to see is the
-  // tallest thing on the card rather than one more rectangle in a row of them.
-  const LM=landmarkFor(city);
-  const tall=(big?86:eco===3?70:eco===1?42:56)*(hilly&&!big?0.82:1)*(LM?0.62:1);
-  const lo=Math.round(tall*0.26);
-  const N=big?ri_(13,17):eco===1?ri_(7,10):ri_(9,13);
-  let x=4;
-  const step=(SKY_W-8)/N;
-  const mid=SKY_W/2;
-  for(let i=0;i<N&&x<SKY_W-6;i++){
-    const w=Math.max(9,Math.round(step*(0.62+r()*0.8)));
-    // A skyline has a middle. Height falls away from it, or the row reads as a fence.
-    const bell=1-Math.pow(Math.abs((x+w/2)-mid)/mid,1.7)*0.62;
-    const h=Math.max(lo,Math.round((lo+r()*(tall-lo))*bell));
-    const y=SKY_GY-h;
-    const top=pick_(h>tall*0.62?["flat","flat","step","spire","mast"]
-                   :h>tall*0.36?["flat","flat","flat","step","dome"]
-                   :["flat","flat","pitch","dome"]);
-    if(top==="step"){
-      const in1=Math.round(w*0.18), h2=Math.round(h*ri_(18,34)/100);
-      near.push('<path d="M'+x+' '+SKY_GY+' L'+x+' '+(y+h2)+' L'+(x+in1)+' '+(y+h2)+' L'+(x+in1)+' '+y
-        +' L'+(x+w-in1)+' '+y+' L'+(x+w-in1)+' '+(y+h2)+' L'+(x+w)+' '+(y+h2)+' L'+(x+w)+' '+SKY_GY+' Z"/>');
-    } else if(top==="pitch"){
-      near.push('<path d="M'+x+' '+SKY_GY+' L'+x+' '+(y+6)+' L'+(x+w/2)+' '+y+' L'+(x+w)+' '+(y+6)+' L'+(x+w)+' '+SKY_GY+' Z"/>');
-    } else if(top==="dome"){
-      const rr=w/2;
-      near.push('<path d="M'+x+' '+SKY_GY+' L'+x+' '+y+' A'+rr+' '+rr+' 0 0 1 '+(x+w)+' '+y+' L'+(x+w)+' '+SKY_GY+' Z"/>');
-    } else {
-      near.push('<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'"/>');
-      if(top==="spire"){
-        const cx=x+w/2;
-        near.push('<path d="M'+(cx-2)+' '+y+' L'+cx+' '+(y-ri_(10,20))+' L'+(cx+2)+' '+y+' Z"/>');
-      } else if(top==="mast"){
-        /* A GUYED mast: a needle with two stays running down to the roof. No horizontal bar,
-           anywhere, ever.
-
-           This took two goes to get right and both wrong ones shipped to a contact sheet. One
-           arm across a mast is a crucifix, and the first sheet had one standing over New York,
-           Rome, Athens and St Petersburg. Two arms is worse, not better — it is a patriarchal
-           cross, and the second sheet had that one over Riyadh, Jerusalem and Abu Dhabi. At
-           this size ANY bar across a vertical reads as a cross, so there is no bar. Stays run
-           diagonally, which no religious symbol does, and they say "radio mast" outright.
-
-           Do not add a crossbar back to make it "read better". It reads fine. */
-        const cx=x+w/2, mh=ri_(12,20), sp=Math.min(w*0.42,5.5);
-        line.push('<path d="M'+cx+' '+y+' L'+cx+' '+(y-mh)+'"/>');
-        line.push('<path d="M'+cx+' '+(y-mh)+' L'+(cx-sp)+' '+y+'"/>');
-        line.push('<path d="M'+cx+' '+(y-mh)+' L'+(cx+sp)+' '+y+'"/>');
-      }
-    }
-    x+=w+ri_(1,4);
-  }
-
-  /* ---- what the place is made of ---- */
-  if(water){
-    // Water is three or four short rules under the ground line. Anything more elaborate at this
-    // size turns into a smudge, and a smudge under a skyline reads as a mistake.
-    for(let i=0;i<4;i++){
-      const wl=ri_(26,86), wx=ri_(6,SKY_W-wl-6), wy=SKY_GY+5+i*5;
-      line.push('<path d="M'+wx+' '+wy+' L'+(wx+wl)+' '+wy+'"/>');
-    }
-    if(has("port")||has("islands")||(has("coast")&&r()<0.5)){
-      // A gantry crane on the quay: the one shape that says this is a working harbour.
-      const gx=r()<0.5?ri_(14,54):ri_(SKY_W-84,SKY_W-40), gh=ri_(26,38), gy=SKY_GY-gh;
-      line.push('<path d="M'+(gx+1.2)+' '+SKY_GY+' L'+(gx+1.2)+' '+gy+'"/>');
-      line.push('<path d="M'+(gx+17.2)+' '+SKY_GY+' L'+(gx+17.2)+' '+gy+'"/>');
-      line.push('<path d="M'+(gx-9)+' '+gy+' L'+(gx+33)+' '+gy+'"/>');
-      line.push('<path d="M'+(gx-8)+' '+gy+' L'+(gx-8)+' '+(gy+9)+'"/>');
-    }
-    if(r()<0.55){
-      const bx=ri_(10,SKY_W-60), by=SKY_GY+ri_(8,16);
-      near.push('<path d="M'+bx+' '+by+' L'+(bx+26)+' '+by+' L'+(bx+22)+' '+(by+4)+' L'+(bx+3)+' '+(by+4)+' Z"/>');
-      line.push('<path d="M'+(bx+11.8)+' '+by+' L'+(bx+11.8)+' '+(by-8)+'"/>');
-    }
-  }
-  if(has("delta")||has("canal")||has("river")||has("rivers")){
-    // A bridge, low and to one side, over the water rather than through the city.
-    const bx=r()<0.5?8:SKY_W-116, by=SKY_GY+7;
-    line.push('<path d="M'+bx+' '+by+' Q'+(bx+54)+' '+(by-13)+' '+(bx+108)+' '+by+'"/>');
-    for(let i=1;i<4;i++){const px=bx+i*27,py=by-(i===2?10:7);
-      line.push('<path d="M'+px+' '+(by-1)+' L'+px+' '+py+'"/>');}
-  }
-  if(green){
-    // Trees at the edge, where they do not eat the skyline. Jungle gets palms, forest gets firs.
-    const side=r()<0.5?-1:1;
-    for(let i=0;i<ri_(2,4);i++){
-      const tx=side<0?ri_(4,40):ri_(SKY_W-44,SKY_W-6), ty=SKY_GY, th=ri_(14,26);
-      if(has("jungle")){
-        line.push('<path d="M'+tx+' '+ty+' L'+tx+' '+(ty-th)+'"/>');
-        for(let f=0;f<5;f++){
-          const a=-150+f*30, rad=a*Math.PI/180, L=ri_(7,11);
-          near.push('<path d="M'+tx+' '+(ty-th)+' q'+(Math.cos(rad)*L*0.6)+' '+(Math.sin(rad)*L*0.6-2)+' '
-            +(Math.cos(rad)*L)+' '+(Math.sin(rad)*L+3)+' q'+(-Math.cos(rad)*L*0.5)+' '+(-Math.sin(rad)*L*0.5-3)+' '
-            +(-Math.cos(rad)*L)+' '+(-Math.sin(rad)*L)+' Z"/>');
-        }
-      } else {
-        near.push('<path d="M'+tx+' '+(ty-th)+' L'+(tx+6)+' '+ty+' L'+(tx-6)+' '+ty+' Z"/>');
-        line.push('<path d="M'+tx+' '+ty+' L'+tx+' '+(ty-4)+'"/>');
-      }
-    }
-  }
-
-  /* The landmark goes on last, so it stands in front of the city rather than among it. Its own
-     box is 100 tall with the origin on the ground and +y up; the group flips and scales it. It
-     is placed a little off centre, by seed, because dead centre reads as a logo. */
-  let lmName="";
-  if(LM){
-    const k=(SKY_GY-14)/100*(LM.tallScale||1);
-    const halfW=LM.w/2*k;
-    const cx=clamp(SKY_W/2+(r()*2-1)*28,halfW+6,SKY_W-halfW-6);
-    near.push('<g class="sky-lm" transform="translate('+f1(cx)+' '+SKY_GY+') scale('+f1(k)+' '+f1(-k)+')">'+LM.d+'</g>');
-    lmName=LM.name;
-  }
-  return '<svg class="sky" viewBox="0 0 '+SKY_W+' '+SKY_H+'" role="img" aria-label="'+esc(cityName(city))+(lmName?", with "+esc(lmName):"")+'">'
-    +'<g class="sky-far">'+far.join("")+'</g>'
-    +'<g class="sky-near">'+near.join("")+'</g>'
-    +'<g class="sky-line">'+line.join("")+'</g>'
-    +'<rect class="sky-ground" x="0" y="'+SKY_GY+'" width="'+SKY_W+'" height="2"/>'
-    +'</svg>';
+  if(!skyHas(city,country))return "";        // nothing rather than an empty frame, as everywhere else
+  const lm=landmarkFor(city);
+  return '<img class="sky" src="'+esc(SKY_BASE+skyName(city,country)+".webp")+'" width="960" height="396" '
+    +'alt="'+esc(city+(lm?", with "+lm.name:""))+'" decoding="async">';
 }
 /* The card itself: where you are, for ESTAB_MS, before the first line of the night.
 
@@ -12015,7 +11868,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 129 · September 2026";
+const BUILD="build 130 · September 2026";
 /* A copy served from the site is current by definition — you just fetched it. A copy inside the
    desktop app is not: it is whatever build was packed, and bundling the game is what bought it the
    ability to run with no connection at all. That trade costs the old promise that there is never a

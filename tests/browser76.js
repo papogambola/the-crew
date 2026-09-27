@@ -5,12 +5,14 @@
 
    Two things to prove, and they are different kinds of thing.
 
-   The DRAWING: one hundred and twenty-nine of them, generated, so the failure mode is not
-   "ugly" — it is "the same picture 129 times", or "a picture that changes every time you look
-   at it", or "a shape that means something nobody intended". The first sheet of all 129 put a
-   Christian cross on New York, Rome and St Petersburg; the second, trying to fix it, put a
-   patriarchal cross on Riyadh and Jerusalem. So there is a check here for horizontal bars in
-   the sky, and it is not a style note.
+   The DRAWING. These were GENERATED until build 130 — 168 lines that built a skyline out of the
+   city's name and its country's terrain — and most of this file used to read that SVG from the
+   inside: counting outlined ridges behind mountain cities, rules under ports, and horizontal bars
+   in the sky, because the first generated sheet put a Christian cross on New York, Rome and
+   St Petersburg and the second put a patriarchal cross on Riyadh and Jerusalem. None of that
+   applies to a picture somebody drew. What replaces it is the question a drawn set actually raises:
+   is there one for every city, does it load, is it the shape the card wants, and do two cities show
+   two different pictures. The rest was a test of a generator that no longer exists.
 
    The TIMING: however long ESTAB_MS says — three seconds when this was written, seven now —
    and the night must not start underneath it. */
@@ -50,188 +52,52 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   });
   await drain();
 
-  console.log("— one drawing per city, and the same one every time —");
+  console.log("— one drawing per city, and it is that city's —");
   const all=await page.evaluate(()=>{
     const out=[];
-    COUNTRIES.forEach(co=>co.cities.forEach(c=>out.push({city:c,country:co.name,svg:citySkyline(c,co.name)})));
+    COUNTRIES.forEach(co=>co.cities.forEach(c=>out.push({
+      city:c,country:co.name,name:skyName(c,co.name),has:skyHas(c,co.name),html:citySkyline(c,co.name)})));
     return out;
   });
-  check(all.length===129,"all "+all.length+" cities draw");
-  const seen={},dupes=[];
-  all.forEach(d=>{if(seen[d.svg])dupes.push(d.city+" = "+seen[d.svg]);else seen[d.svg]=d.city;});
-  check(!dupes.length,"and no two are the same picture"+(dupes.length?" ("+dupes.slice(0,3).join(", ")+")":""));
-  const stable=await page.evaluate(()=>{
-    // Called twice, and after a reload of the module's own RNG state: a drawing that moves
-    // between two looks at the same city is not a place, it is noise.
-    const a=citySkyline("Cairo","Egypt");
-    for(let i=0;i<50;i++)freshRng()();          // churn the game's stream
-    const b=citySkyline("Cairo","Egypt");
-    return a===b;
-  });
-  check(stable,"Cairo is the same Cairo on the second look, whatever else has drawn since");
-  const seamed=await page.evaluate(()=>{
-    // The rival's yard comes through as "Cairo, and a yard they think nobody knows about".
-    return {same:citySkyline("Cairo, and a yard they think nobody knows about","Egypt")===citySkyline("Cairo","Egypt"),
-      name:cityName("Cairo, and a yard they think nobody knows about"),
-      commas:COUNTRIES.some(co=>co.cities.some(c=>c.indexOf(",")>=0))};
-  });
-  check(seamed.same&&seamed.name==="Cairo",
-    "the rival's yard draws its own city, not a sentence: \""+seamed.name+"\"");
-  check(!seamed.commas,"and no real city name has a comma in it, so the seam is safe");
+  check(all.length===129,"the game has "+all.length+" cities");
+  const noPic=all.filter(x=>!x.has);
+  check(noPic.length===0,"every one of them has a skyline"
+    +(noPic.length?" — except "+noPic.slice(0,5).map(x=>x.city).join(", "):""));
 
-  console.log("\n— nothing in the sky is a cross —");
-  /* The one assertion in this file that is about meaning rather than mechanics. A thin vertical
-     with a horizontal bar across it reads as a crucifix at this size, and this generator deals
-     its shapes out to cities all over the world. So: no wide-flat rectangle may sit high in the
-     sky. Water rules are below the ground line; a crane's boom is 42 wide with legs under it
-     and is excluded by width, not by hope.
+  // Two cities must not be handed the same picture. With a generator the risk was a seed collision;
+  // with files it is a slug collision — two names that flatten to one — which is the same bug
+  // wearing a different coat, and worth the same check.
+  const byName={},dupes=[];
+  all.forEach(x=>{ if(byName[x.name])dupes.push(x.name+": "+byName[x.name]+" and "+x.city); byName[x.name]=x.city; });
+  check(dupes.length===0,"and no two cities are handed the same file"+(dupes.length?" — "+dupes.slice(0,3).join("; "):""));
 
-     Direct children of .sky-near only, which is the GENERATED city. The landmarks hanging below
-     it in .sky-lm are hand-drawn, named, and each is the specific building the specific city is
-     known for — the Elizabeth Tower's clock stage and the Fernsehturm's collar are horizontal
-     because those buildings are, and they are not dealt out to anybody at random. They are also
-     drawn in a flipped box where +y is UP, so reading their y against SKY_GY compares two
-     different worlds and calls the Statue of Liberty's plinth a crossbar. */
-  const bars=await page.evaluate(()=>{
-    const out=[];
-    const box=document.createElement("div");document.body.appendChild(box);
-    COUNTRIES.forEach(co=>co.cities.forEach(c=>{
-      box.innerHTML=citySkyline(c,co.name);
-      box.querySelectorAll(".sky-near>rect").forEach(r=>{
-        const w=+r.getAttribute("width"),h=+r.getAttribute("height"),y=+r.getAttribute("y");
-        // wide, flat, and up in the air: that is a crossbar and nothing else
-        if(h<=2.5&&w>=3&&w<=20&&y<SKY_GY-6)out.push(c+" w"+w+" h"+h+" y"+y);
-      });
-    }));
-    box.remove();
+  /* ACCENTS FOLD, THEY DO NOT DISAPPEAR. Zürich must be zurich and not z-rich; Kraków krakow;
+     São Paulo sao-paulo. Getting this wrong made nine of the 129 look missing and nine more look
+     unclaimed on the first pass — the same file failing to recognise itself from both ends. */
+  const accented=all.filter(x=>/[^\x00-\x7f]/.test(x.city));
+  check(accented.length>0,accented.length+" cities have an accent in the name");
+  const badSlug=accented.filter(x=>!/^skyline-[a-z0-9-]+$/.test(x.name)||/--/.test(x.name));
+  check(badSlug.length===0,"and each folds to a clean name"
+    +(badSlug.length?" — "+badSlug.slice(0,4).map(x=>x.city+" -> "+x.name).join(", ")
+      :": "+accented.slice(0,3).map(x=>x.city+" -> "+x.name.replace(/^skyline-[a-z-]*?-/,"")).join(", ")));
+
+  // And the file behind the name actually loads, at the shape the card draws into.
+  const loaded=await page.evaluate(async names=>{
+    const out={ok:0,failed:[],odd:[]};
+    for(const n of names){
+      const r=await new Promise(done=>{const im=new Image();
+        im.onload=()=>done({w:im.naturalWidth,h:im.naturalHeight});im.onerror=()=>done(null);
+        im.src=SKY_BASE+n+".webp";});
+      if(!r){out.failed.push(n);continue;}
+      if(Math.abs(r.w/r.h-960/396)>0.02){out.odd.push(n+" "+r.w+"x"+r.h);continue;}
+      out.ok++;
+    }
     return out;
-  });
-  check(bars.length===0,"no horizontal bar anywhere in the sky over any of the 129"
-    +(bars.length?" — found "+bars.length+", e.g. "+bars.slice(0,3).join(" · "):""));
-
-  console.log("\n— the terrain is in the drawing —");
-  const reads=await page.evaluate(()=>{
-    const box=document.createElement("div");document.body.appendChild(box);
-    // Water is a rule in the pure-stroke layer, not a filled shape: a short horizontal path
-    // whose whole length lies under the ground line.
-    const rules=()=>[...box.querySelectorAll(".sky-line>path")].filter(p=>{
-      const m=/^M([\d.-]+) ([\d.-]+) L([\d.-]+) ([\d.-]+)$/.exec(p.getAttribute("d"));
-      return m&&+m[2]===+m[4]&&+m[2]>SKY_GY;}).length;
-    const of_=(c,n)=>{box.innerHTML=citySkyline(c,n);
-      return {far:box.querySelectorAll(".sky-far>*").length,
-        near:box.querySelectorAll(".sky-near>*").length,
-        water:rules()};};
-    // a landlocked mountain country against a flat coastal one
-    const r={mountain:of_("Zürich","Switzerland"),coast:of_("Rotterdam","Netherlands")};
-    box.remove();return r;
-  });
-  check(reads.mountain.far>0,"a mountain city has a ridge behind it ("+reads.mountain.far+" outlined parts)");
-  check(reads.coast.water>0,"a port city has water under it ("+reads.coast.water+" rules below the line)");
-
-  console.log("\n— and the cities that have a landmark get the real one —");
-  /* Paz: "But what about the specific landmarks of each city ... and more to distinct each city."
-     Eighty-seven have one. The other forty-two do not, and that is the answer rather than the
-     unfinished part of it — a made-up landmark is the one thing on the card that would be a lie.
-     What is testable is: a table with nothing dead in it, a drawing that actually contains the
-     landmark, a skyline that gets out of its way, and the blind saying what is there. */
-  const LMs=await page.evaluate(()=>{
-    const cities=[];COUNTRIES.forEach(co=>co.cities.forEach(c=>cities.push({c,co:co.name})));
-    const box=document.createElement("div");document.body.appendChild(box);
-    const named=[],missing=[],unnamed=[],noLift=[];
-    cities.forEach(({c,co})=>{
-      const lm=landmarkFor(c);if(!lm)return;
-      named.push(c);
-      box.innerHTML=citySkyline(c,co);
-      const g=box.querySelector(".sky-lm");
-      if(!g)missing.push(c);
-      else if(!g.children.length)missing.push(c+" (empty)");
-      // A name, not a label: something you could say out loud, and not just the city again.
-      if(!lm.name||lm.name.length<5||lm.name===c)unnamed.push(c+": "+JSON.stringify(lm.name));
-      const label=box.querySelector("svg").getAttribute("aria-label")||"";
-      if(label.indexOf(lm.name)<0)noLift.push(c);
-    });
-    // the table must not name a city the game does not have
-    const orphans=Object.keys(LANDMARKS).filter(k=>!cities.some(x=>x.c===k));
-    // and the same drawing must not be handed to two cities
-    const dup=[],seen={};
-    Object.keys(LANDMARKS).forEach(k=>{const d=LANDMARKS[k].d;if(seen[d])dup.push(k+" = "+seen[d]);else seen[d]=k;});
-    box.remove();
-    return {n:named.length,total:cities.length,missing,unnamed,noLift,orphans,dup};
-  });
-  check(LMs.n>=80,LMs.n+" of "+LMs.total+" cities have a landmark drawn by hand");
-  check(!LMs.orphans.length,"and the table names no city the game does not have"
-    +(LMs.orphans.length?" ("+LMs.orphans.join(", ")+")":""));
-  check(!LMs.dup.length,"and no two cities are handed the same drawing"
-    +(LMs.dup.length?" ("+LMs.dup.slice(0,3).join(", ")+")":""));
-  check(!LMs.missing.length,"every one of them actually draws it"
-    +(LMs.missing.length?" — missing on "+LMs.missing.slice(0,4).join(", "):""));
-  check(!LMs.unnamed.length,"and every one is named in words, for the blind and for me"
-    +(LMs.unnamed.length?" ("+LMs.unnamed.slice(0,3).join(" · ")+")":""));
-  check(!LMs.noLift.length,"and that name is on the picture itself"
-    +(LMs.noLift.length?" — not on "+LMs.noLift.slice(0,3).join(", "):""));
-  const lift=await page.evaluate(()=>{
-    // A landmark city keeps its skyline down, so the thing you came to see is the tallest thing
-    // on the card. Compare the same city with and without: the generated buildings must shrink.
-    const box=document.createElement("div");document.body.appendChild(box);
-    const topOf=svg=>{box.innerHTML=svg;let t=SKY_GY;
-      box.querySelectorAll(".sky-near>rect,.sky-near>path").forEach(e=>{
-        const b=e.getBBox?null:null;
-        const y=e.tagName==="rect"?+e.getAttribute("y"):null;
-        if(y!=null&&y<t)t=y;});
-      return t;};
-    const withLm=topOf(citySkyline("Paris","France"));
-    const real=LANDMARKS["Paris"];delete LANDMARKS["Paris"];
-    const without=topOf(citySkyline("Paris","France"));
-    LANDMARKS["Paris"]=real;
-    box.remove();
-    return {withLm,without};
-  });
-  check(lift.withLm>lift.without,
-    "a city with a landmark keeps its own skyline low ("+lift.withLm+" vs "+lift.without+", lower y is taller)");
-
-  /* The hand-drawn landmarks are exempt from the generated layer's no-bar rule above, because
-     each one is a specific named building and some genuinely have a horizontal member. Exempt is
-     not the same as unwatched: the shape that went wrong twice in the generator can walk back in
-     through a drawing. So the ones that put a bar across a thin vertical are listed by name, and
-     a new one is a failure until somebody has looked at it and decided it reads as the building.
-
-       Istanbul — the minarets' gallery rings. The shaft carries on above the ring and ends in a
-                  cone; that is a minaret and nothing else.
-       Medan    — the same ring, on the Great Mosque's two minarets. Same shape, same reason.
-       Cebu     — Magellan's Cross, which is a cross, and is meant to be. It is the actual
-                  named monument Cebu is known for — the one planted in 1521 — and it sits in
-                  the same category as Jerusalem's Dome of the Rock, Moscow's St Basil's and the
-                  two Christs over Rio and Lisbon: the specific thing that is specifically there.
-                  Which is exactly the distinction this check is drawn around. The masts were a
-                  religious symbol dealt at RANDOM to cities with no connection to it; this is
-                  one city's own monument, named on the card and named in the aria-label.
-
-     Cebu and Medan arrived in somebody else's work, in the forty-two landmarks added between
-     build 102 and 107, and this check is the reason anybody looked at them at all. Both were
-     rendered and read before being written down here. That is the whole procedure: a new one is
-     a failure until a person has looked, and then it is a line in this list saying who looked
-     and why it stays.
-
-     Lisbon's Cristo Rei was on this list and is not any more: its body was one unit wide under a
-     twelve-unit bar, which is a crucifix on a pillar rather than a figure with its arms out. It
-     is drawn the way Rio's is now — a body with width, and the head clear above the arms. */
-  const ALLOWED=["Istanbul","Medan","Cebu"];
-  const crossed=await page.evaluate(()=>{
-    const hits={};
-    const box=document.createElement("div");document.body.appendChild(box);
-    Object.keys(LANDMARKS).forEach(city=>{
-      box.innerHTML='<svg>'+LANDMARKS[city].d+'</svg>';
-      const rs=[...box.querySelectorAll("rect")].map(r=>({x:+r.getAttribute("x"),y:+r.getAttribute("y"),
-        w:+r.getAttribute("width"),h:+r.getAttribute("height")}));
-      rs.filter(r=>r.w<=4&&r.h>=5).forEach(m=>rs.filter(r=>r.h<=3&&r.w>=4).forEach(b=>{
-        if(b.y>m.y&&b.y<m.y+m.h&&b.x<m.x-0.4&&b.x+b.w>m.x+m.w+0.4)hits[city]=true;
-      }));
-    });
-    box.remove();return Object.keys(hits);
-  });
-  const surprise=crossed.filter(c=>ALLOWED.indexOf(c)<0);
-  check(!surprise.length,"no landmark has grown a bar across a thin vertical that nobody has looked at"
-    +(surprise.length?" — "+surprise.join(", "):" (the "+crossed.length+" that do are the minaret galleries and Magellan's Cross, all looked at)"));
+  },all.map(x=>x.name));
+  check(loaded.failed.length===0,loaded.ok+" of "+all.length+" load"
+    +(loaded.failed.length?" — "+loaded.failed.slice(0,4).join(", ")+" did not":""));
+  check(loaded.odd.length===0,"and every one is 80:33, the shape the card draws into"
+    +(loaded.odd.length?" — except "+loaded.odd.slice(0,4).join(", "):""));
 
   console.log("\n— three seconds, and the night waits —");
   const t0=Date.now();

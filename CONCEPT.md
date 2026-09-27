@@ -587,6 +587,20 @@ The text above is kept as written. Decisions that close one of its open details 
 
   `art/README.md` was two builds stale and said a line with no drawing "falls back to the plan". The plan went in 121. It also put the move to R2 at six hundred files; at 456 now and 577 once the trip set lands, that threshold is about to arrive rather than being hypothetical, and the README says so with the numbers.
 
+- **27 September 2026 — The cities are drawn.** From the creator, having asked for the dimensions first: *"just get me dimensions so i can redo them nicer as drawings."* 129 of them, one per city, delivered at exactly the 1280x528 asked for and filed at 960x396 — 80:33, which is the shape the card has always drawn into and nothing like the 4:3 the feed's pictures use, because these sit across the top of a card rather than in a panel beside a line.
+
+  **168 lines of generator went.** It built a skyline out of a hash of the city's name and a list of its country's ground: ridgelines behind mountain towns, water and a gantry crane at a port, palms on a jungle coast, a hand-drawn landmark in front with the buildings held down to two thirds of their height to make room for it. It was the right answer while there was nothing to show, and it lost to the same argument the feed's pictures won — a finite set, drawn once, beats a generator that is nobody's hand. 14 lines of SVG-only CSS went with it.
+
+  **They live in skylines/, not art/.** `tools/art.py` calls anything in `art/` that no line template asks for an orphan, so filing 129 correct skylines there would have produced 129 orphans. Different question, different shape, its own manifest.
+
+  **ACCENTS FOLD, THEY DO NOT DISAPPEAR**, and getting that wrong is one mistake that reads as two. The first slug kept only `[a-z0-9]`, which turns Zürich into `z-rich` — so nine of the 129 looked like cities with no drawing AND nine files looked like drawings for no city, the same nine seen from both ends. `skySlug()` normalises NFD and drops the combining marks, so Zürich is zurich, Kraków krakow, São Paulo sao-paulo, and all 129 match exactly.
+
+  **Every city must have one, and that is a different rule from the feed's.** A line with no drawing shows nothing and is no worse for it; a card with no city on it is a card with a hole in it. `tests/browser76.js` fails if a city has no skyline, if two cities are handed the same file, if one does not load, or if one is not 80:33.
+
+  **Most of browser76 was a test of the generator**, and it is worth saying what it was watching for, because the failure mode it caught does not exist any more: it counted outlined ridges behind mountain cities, rules under ports, and horizontal bars in the sky — that last one because the first generated sheet put a Christian cross over New York, Rome and St Petersburg, and the second, fixing it, put a patriarchal cross over Riyadh and Jerusalem. None of that applies to a picture somebody drew. The timing half — seven seconds, the night not starting underneath, reduced motion, and what a screen reader is told — is untouched.
+
+  `tools/skyline-sheet.js` needed no change beyond one sentence in its header, because it asks the GAME for each skyline rather than listing a directory, and had never known which of the two it was getting.
+
 - **27 September 2026 — The anthem is gone, and every city keeps the cue.** From the creator, a few hours after the recordings shipped: *"Remove the anthems completely and keep the city cue for all your cities."*
 
   Three versions over six builds, each broken differently, and the last one broken for a reason that was not in the code. Mixed under the cue, it was inaudible. Synthesised, it was a ringtone. Recorded, it was right — public domain, correctly mastered, seven seconds, and **23 of 49 countries**, because Wikimedia rate-limits this address to about one file a minute and would not give up the rest.

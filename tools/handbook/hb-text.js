@@ -662,21 +662,16 @@ ch("night","The night itself","The live report",[
       +"The same sound in every country. The report\u2019s own track is held under it and comes in with the first line of the "
       +"night, so the seven seconds belong to the city. Going straight on cuts it short, and the music switch in the office "
       +"silences it like everything else.")
-    +p("Every one of the "+m(D.CITY_COUNT||129)+" cities has its own, and the skyline behind it is <b>generated</b> rather than "
-      +"collected — from a hash of the city's own name, so it is the same place every time on every machine, and from the "
-      +"country's ground, so a mountain town has a ridge behind it, a port has water and a gantry crane under it, a delta has a "
-      +"bridge, and a jungle coast has palms at the edge. It is drawn in outline: black line on white paper, the far things "
-      +"thinner and fainter than the near ones, which is the whole of why it reads at that size.")
-    +p("<b>Every one of them has the real landmark standing in front of it</b>, drawn by hand — the Eiffel Tower, the CN Tower, "
-      +"the Opera House with the Harbour Bridge behind it, the Statue of Liberty, Fuji behind Tokyo Tower. The generated skyline "
-      +"is held down to about two thirds of its usual height behind it, so the thing you came to see is the tallest thing on the "
-      +"card rather than one more rectangle in the row.")
-    +(D.LANDMARKS&&D.LANDMARKS.length?p("The whole list, in the order the game keeps it, which runs by region:")+G.landmarks():"")
-    +note("Forty-two of them had only a skyline to begin with, on the argument that a made-up landmark is worse than none. They "
-      +"were drawn rather than invented: where the famous thing about a city is not a building it is drawn as what it actually is "
-      +"— Mount Apo over Davao the way Fuji stands over Tokyo, the sea stacks at Raouché, the cable cars over the hillside at "
-      +"Medellín. A made-up one would be the one thing on the card that was a lie, and a player who knows the city would catch it "
-      +"inside the seconds it is up.")),
+    +p("Every one of the "+m(D.CITY_COUNT||129)+" cities has its own, <b>drawn</b> — black ink on the same paper the rest "
+      +"of the game is printed on, wide across the top of the card. One per city, so Chicago is Chicago and Perth is Perth, "
+      +"and the landmark is simply in the picture where a city has one: the Eiffel Tower over the Seine, the Statue of "
+      +"Liberty with the Brooklyn Bridge behind it, the Opera House under the Harbour Bridge, the Finnieston Crane on the "
+      +"Clyde.")
+    +note("They were GENERATED until build 130, out of a hash of the city's name and a list of its country's ground — a ridge "
+      +"behind a mountain town, water and a gantry crane at a port, palms on a jungle coast — with a hand-drawn landmark "
+      +"standing in front and the buildings held down to two thirds of their height to make room for it. It was the right "
+      +"answer while there was nothing to show, and 129 drawings is a better one. The same argument settled the pictures "
+      +"beside the feed: a finite set, drawn once, beats a generator that is nobody's hand.")),
   S("live","Reading the report",
     p("A job does not resolve into a number. It plays out: a clock beside every line, a line at a time, with the crew named and what each of them is doing named with them. "
       +"You can run it at five speeds, hold it where it is with Pause, or press through it as fast as you can read.")
