@@ -302,22 +302,46 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
       heatUp:S.heat-heat0,
       youKeep:sp.you,youKeepWithout:spNoHand.you,
       line:(d.events||[]).map(falloutText).filter(e=>e.indexOf(c.first)>=0)[0]||"",
-      /* Which of the fifty-two it is. There used to be ONE sentence a quiet hand could leave —
-         "takes $X and is not heard from again" — and this asked for that string, which stopped
-         being true the day there were fifty-two of them. Asked of the pool instead: strip the
-         money back out of the line and see whether any entry fills to exactly it. That stays
-         true however many get written. */
-      fromPool:(function(){
+      /* WHICH POOL THE LINE CAME OUT OF, AND WHETHER THE CARD AGREES WITH IT.
+
+         There used to be ONE sentence a quiet hand could leave — "takes $X and is not heard from
+         again" — and this asked for that exact string, which stopped being true the day there were
+         fifty-two of them. Asked of the pool instead: strip the money back out and see whether any
+         entry fills to exactly the line. That survived fifty-two.
+
+         It did not survive the third pool. Since build 137 a night that came off can end with the
+         hand ASKING TO STAY, and that is a different set of sentences — so this read "not one of
+         the fifty-two" about a line that was perfectly correct, about one run in three.
+
+         Both pools now, and the claim is stronger than it was: whichever one the line came from
+         has to MATCH WHETHER AN OFFER WAS MADE. A going-home line with a card behind it, or an
+         asking-to-stay line with nothing behind it, is the report and the card telling the player
+         two different things about the same minute — which is the only way this can actually be
+         wrong, and it was not being checked at all.
+
+         WHICH BRANCH THIS TAKES IS THE BOARD'S CHOICE, and in eight runs out of eight it was the
+         going-home one — an offer needs a night that came off, a hand who was paid, and a name
+         within a rung of theirs, and this block arranges none of those because it is about the
+         split. So do not read the line below as the coverage: browser91 arranges all three and
+         drives the card itself. This is the cheap check that the two never contradict each other,
+         on whichever night the board happens to deal. */
+      offer:!!S.stay,
+      pool:(function(){
         const L=(d.events||[]).map(falloutText).filter(e=>e.indexOf(c.first)>=0)[0]||"";
         const m=(L.match(/\$[\d.,]+[KM]?/)||[""])[0];
-        return HIRED_GONE.concat(HIRED_GONE_NOPAY).some(t=>hiredFill(t,c,m)===L);})(),
+        const from=p=>p.some(t=>hiredFill(t,c,m)===L);
+        return from(HIRED_STAY)?"stay":from(HIRED_GONE.concat(HIRED_GONE_NOPAY))?"gone":"none";})(),
       tier:d.tier};
   });
   if(!quiet)console.log("ok  (no candidate on the fresh board — skipped)");
   else{
     check(!quiet.talked,quiet.name+" kept it to themselves, and carries no mark");
-    check(quiet.fromPool,
-      "and the report says so, in one of the fifty-two: \""+quiet.line.slice(0,88)+"\"");
+    check(quiet.pool!=="none",
+      "and the report says so, in one of the written lines: \""+quiet.line.slice(0,88)+"\"");
+    check(quiet.pool==="stay"?quiet.offer:!quiet.offer,
+      "and the line and the card agree — "+(quiet.pool==="stay"
+        ? "they asked to stay, and there is a card asking whether to keep them"
+        : "they went home, and no card came up"));
     check(quiet.youKeep<quiet.youKeepWithout,
       "and the share came out of yours either way: you keep "+quiet.youKeep
       +" of the fee instead of "+quiet.youKeepWithout);

@@ -44,13 +44,16 @@ import urllib.request
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app import invites
 from app.config import settings
 from app.database import get_db
 from app.deps import current_player
-from app.entitlement import state
+from app.entitlement import live_licence, state
 from app.models import Licence, Player
 
 router = APIRouter(prefix="/licence", tags=["licence"])
@@ -64,6 +67,11 @@ WEBHOOK_TOLERANCE = 300
 # important half of it is "nothing was charged" — somebody who has just pressed Buy needs to know
 # that before they need to know anything else.
 TILL_DOWN = "The till did not answer. Nothing was charged — try again in a minute."
+
+# What a code that will not open anything is told, whatever is wrong with it. One sentence for
+# invented, altered, out of date and already spent alike: the difference between those is of use
+# to nobody except somebody working through codes one at a time.
+NO_CODE = "That code is not open. Check it against the message it came in."
 
 # The API version every call to Stripe is made on. See the header block in _stripe() for why it
 # cannot go below this one.
@@ -114,9 +122,11 @@ def read(p: Player = Depends(current_player), db: Session = Depends(get_db)):
     `shop_open` is here rather than in the game because whether there is a way to pay is a fact
     about the server's configuration, and a copy of it in play.html is a copy that goes stale. The
     game gates nobody while it is false."""
-    lic = db.scalar(select(Licence).where(Licence.player_id == p.id, Licence.active.is_(True)))
+    lic = live_licence(db, p.id)
     return {**state(db, p.id),
             "shop_open": settings.shop_open,
+            "invites_open": settings.invites_open,
+            "kind": (lic.kind if lic else None),
             "price": (lic.amount if lic else None),
             "currency": (lic.currency if lic else None),
             "bought_at": (lic.activated_at.isoformat() if lic else None)}
@@ -195,6 +205,62 @@ def checkout(p: Player = Depends(current_player), db: Session = Depends(get_db))
     if not url:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "The till gave no way in. Nothing was charged.")
     return {"already": False, "url": url}
+
+
+class Redeem(BaseModel):
+    code: str = Field(min_length=1, max_length=64)
+
+
+@router.post("/redeem")
+def redeem(body: Redeem, p: Player = Depends(current_player), db: Session = Depends(get_db)):
+    """A press pass, spent.
+
+    WHAT THE CLIENT IS TRUSTED WITH HERE IS THE SAME AS EVERYWHERE ELSE: nothing. It sends the
+    string somebody typed. It does not say how long the code is worth — that is inside the
+    signature — and it does not say whose account, which comes off the bearer token. There is no
+    request a player can make that opens their own door.
+
+    ONE CODE, ONE ACCOUNT, AND THE DATABASE IS WHAT SAYS SO. The code becomes the licence's `key`,
+    which is unique, so a second redemption loses the race rather than being caught by a check —
+    including two arriving at the same instant, which a read-then-write could not have handled and
+    which is exactly what happens when somebody double-clicks.
+
+    ALREADY OPEN IS NOT AN ERROR. Somebody who has bought the game and then types a code they were
+    also sent should not be told off, and should certainly not have a week's expiry written over a
+    licence that does not expire: they are told they are already in, and the code stays unspent for
+    whoever it was meant for.
+
+    EVERY REFUSAL IS THE SAME REFUSAL. Invented, altered, out of date, or already spent all answer
+    "that code is not open", because the difference between them is only useful to somebody trying
+    codes one after another."""
+    if not settings.invites_open:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, NO_CODE)
+    if live_licence(db, p.id) is not None:
+        return {"already": True, "over": False}
+
+    try:
+        got = invites.read(settings.invite_secret, body.code)
+    except invites.BadCode:
+        log.info("invite refused for player %s", p.id)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, NO_CODE)
+
+    until = invites.expiry(got["days"])
+    db.add(Licence(player_id=p.id, key=got["key"], kind="pass", active=True,
+                   expires_at=until, checked_at=datetime.now(timezone.utc)))
+    try:
+        db.commit()
+    except IntegrityError:
+        # The unique index on `key`. Somebody has already spent this one — possibly this same
+        # player a moment ago, on a second click, which is why the answer is the state rather than
+        # a complaint.
+        db.rollback()
+        if live_licence(db, p.id) is not None:
+            return {"already": True, "over": False}
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, NO_CODE)
+
+    log.info("invite redeemed by player %s for %s days", p.id, got["days"])
+    return {"already": False, "over": False, "days": got["days"],
+            "pass_until": until.isoformat()}
 
 
 def _verify(raw: bytes, header: str) -> dict:

@@ -82,8 +82,10 @@ class Licence(Base):
     replacement after a refund — and the history of what was bought is worth more than the
     latest value of a field. `active` is what the game asks about.
 
-    `key` is Stripe's checkout session id (cs_...), and it is unique for the reason it always
-    was: one order opens one account. It held a Lemon Squeezy licence key before, which the
+    `key` is Stripe's checkout session id (cs_...) — or, for a press pass, the invite code itself,
+    normalised — and it is unique for the reason it always was: one order opens one account, and
+    one code does too. That the database enforces it rather than a check somebody remembers to
+    write is the whole point of putting the code in this column. It held a Lemon Squeezy licence key before, which the
     player had to copy out of an email and paste into the game. Nobody pastes anything now — the
     webhook writes this row — so the column keeps its name and its job and loses its typing.
 
@@ -108,6 +110,14 @@ class Licence(Base):
     amount: Mapped[int | None] = mapped_column(Integer, nullable=True)
     currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # WHAT THIS ROW IS. "purchase" is somebody who paid and keeps it; "pass" is a code handed to a
+    # reviewer. Written down rather than worked out from whether `amount` is null, because a
+    # heuristic is a thing that is right until the day somebody is comped a refund.
+    kind: Mapped[str] = mapped_column(String(16), default="purchase", nullable=False)
+    # WHEN IT RUNS OUT, and null is the ordinary case: what you buy does not expire. A pass carries
+    # a date, counted in real days from the moment the code was redeemed — see invites.expiry. The
+    # game asks entitlement.has_licence, which is the one place that compares this to the clock.
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     activated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
     checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

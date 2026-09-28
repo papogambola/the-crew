@@ -10667,6 +10667,59 @@ function walled(){return shopOpen()&&!licensed();}
    turned off. Nobody reaches a first week unpaid now, so this is only ever those, and it is kept
    because those are exactly the cases where the game must not simply carry on. */
 function paywallDue(){return walled()&&!!S&&!S.over;}
+/* A PRESS PASS: a week, given to somebody who is never going to pay for it.
+
+   This is the one string in the game that opens a door without money, and build 135 took a key out
+   of here on purpose, so it is worth saying why this is not one coming back. A licence key went to
+   somebody who HAD paid, and was a thing for them to lose, retype and write in about. An invite
+   code goes to somebody who has NOT — a reviewer, somebody with an audience — and it has to travel
+   the only way that reaches them: in a message, before they have an account or a reason to make
+   one. There is nothing to attach it to until they turn up, so it is a string.
+
+   What this file does with it: sends it. Nothing here knows what a code is worth, whether it is
+   real, or when it runs out. It types the string into an endpoint and re-reads the account, and
+   every one of those answers comes back from the server — which is the same rule as everywhere
+   else on this screen, and the reason a player who invents a plausible code gets nowhere. */
+function onPass(){return !!(ACC&&ACC.pass_until);}
+/* How long is left on one, in whole days, rounded UP — somebody with an hour to go has a day left
+   rather than none, and "0 days left" on a game that still opens is a screen arguing with itself.
+   Null unless there is a pass, so every caller can print it or not without asking twice. */
+function passDaysLeft(){
+  if(!onPass())return null;
+  const t=Date.parse(ACC.pass_until);
+  if(!isFinite(t))return null;
+  return Math.max(0,Math.ceil((t-Date.now())/86400000));
+}
+function passLeftWords(){
+  const d=passDaysLeft();
+  if(d===null)return "";
+  return d<=0?"the last of it today":d===1?"one day left":d+" days left";
+}
+function redeemCode(){
+  if(UI.codeBusy)return;
+  const box=document.getElementById("codebox");
+  const code=((box&&box.value)||UI.codeVal||"").trim();
+  if(!code){UI.codeMsg="Paste the code from the message.";render();return;}
+  if(!signedIn()){UI.codeVal=code;UI.codeMsg="";UI.till=false;UI.account=true;render();return;}
+  UI.codeBusy=true;UI.codeMsg="Checking it…";UI.codeVal=code;render();
+  api("POST","/licence/redeem",{code:code}).then(r=>{
+    UI.codeBusy=false;
+    if(r&&r.ok){
+      UI.codeMsg="";UI.codeVal="";UI.code=false;
+      sfx("stamp");
+      accRefresh().then(()=>{
+        if(S&&S.modal&&S.modal.type==="paywall")S.modal=null;
+        render();
+      });
+      return;
+    }
+    // The server says the same thing about every kind of bad code, deliberately, and this prints
+    // whatever it said rather than guessing — a guess here would be the one place in the game that
+    // told somebody which way their code was wrong.
+    UI.codeMsg=(r&&r.body&&r.body.detail)||"That code is not open. Check it against the message it came in.";
+    render();
+  }).catch(()=>{UI.codeBusy=false;UI.codeMsg="The server did not answer. Nothing is spent — try again in a minute.";render();});
+}
 /* Somewhere to pay, made by the server, tied to this account before the player sees it.
    The game asks for a checkout and is told where to go; it never says which price or whose
    account, because both of those come off the bearer token at the other end. */
@@ -10788,7 +10841,9 @@ function modalAccount(){
     +err+conf
     +'<div class="evfacts" style="margin-bottom:12px">'
       +'<span class="k">The game</span><span>'
-        +(a.paid?'<span style="color:var(--good)">paid for — lifetime access, any machine</span>'
+        +(a.paid&&onPass()?'<span style="color:var(--good)">a press pass</span> — '+esc(passLeftWords())
+            +', then '+esc(SHOP.price)+' <a href="#" data-act="till-open">at the till</a>'
+          :a.paid?'<span style="color:var(--good)">paid for — lifetime access, any machine</span>'
           :shopOpen()?'<span style="color:var(--stamp)">not paid for</span> — '+esc(SHOP.price)+', once '
             +'<a href="#" data-act="till-open">at the till</a>'
           :'nothing to pay — this server has no till open')
@@ -10815,12 +10870,24 @@ function modalTill(mode){
      stops being active: a refund, a chargeback, a row turned off. So it does not say "that's the
      free run", which would be a lie about what just happened; it says the account is not paid for,
      which is the fact, and leaves the save alone. */
+  /* WHICH KIND OF SHUT, because there are two now and they are not the same news. A refund is a
+     thing that happened TO somebody; a week ending is a thing that was always going to happen on a
+     day they were told about. Telling a reviewer their payment was refunded, when they never paid,
+     would be the game being wrong about the one fact that person holds about it. The server says
+     which — see entitlement.ended_pass — and this is the only place that asks. */
+  const ended=!!(ACC&&ACC.pass_ended);
   const head=wall
-    ?'<div class="kicker" style="color:var(--stamp)">The till · week '+S.week+'</div><h2 style="font-size:28px;margin-top:4px">This account is not paid for.</h2>'
-    :'<div class="kicker" style="color:var(--stamp)">The till</div><h2 style="font-size:28px;margin-top:4px">'+(lic?"Paid for.":"Lifetime access")+'</h2>';
+    ?'<div class="kicker" style="color:var(--stamp)">The till · week '+S.week+'</div><h2 style="font-size:28px;margin-top:4px">'
+      +(ended?"That is the week.":"This account is not paid for.")+'</h2>'
+    :'<div class="kicker" style="color:var(--stamp)">The till</div>'
+      +'<h2 style="font-size:28px;margin-top:4px">'+(lic?(onPass()?"A week on the house.":"Paid for."):"Lifetime access")+'</h2>';
   const text=lic
-    ?"Paid for. Lifetime access: every build, and any machine you sign in on. The crew goes with the account, not with this browser."
-    :wall?"The game was open on this account and is not now — a payment refunded, or a licence turned off. <b>Nothing has happened to your crew:</b> the save is where it was and week "+S.week+" is waiting. Lifetime access is <b>"+esc(SHOP.price)+", once</b>."
+    ?(onPass()
+      ?"A press pass, and <b>"+esc(passLeftWords())+"</b>. Everything is here — nothing is held back and no screen is shut — and when it runs out the crew stays exactly where it is. Buying it is <b>"+esc(SHOP.price)+", once</b>, and it stops counting."
+      :"Paid for. Lifetime access: every build, and any machine you sign in on. The crew goes with the account, not with this browser.")
+    :wall?(ended
+      ?"The pass was for a set number of days and they are up. <b>Nothing has happened to your crew:</b> the save is where it was and week "+S.week+" is waiting for whenever the game is paid for. Lifetime access is <b>"+esc(SHOP.price)+", once</b>."
+      :"The game was open on this account and is not now — a payment refunded, or a licence turned off. <b>Nothing has happened to your crew:</b> the save is where it was and week "+S.week+" is waiting. Lifetime access is <b>"+esc(SHOP.price)+", once</b>.")
     :"Lifetime access is <b>"+esc(SHOP.price)+", once</b>. It is the account that is paid for, so it opens the game on any machine you sign in on — every build after this one, with nothing else to buy inside it.";
   /* ONE BUTTON, AND IT SAYS WHAT IT IS. There is no key box any more: nothing is pasted, nothing
      is emailed, and the row that opens the door is written by Stripe telling the server. Signed
@@ -10834,6 +10901,10 @@ function modalTill(mode){
       +(inn?"Stripe takes the payment and the receipt. You come back here and the game is open."
            :"What is paid for is the account, which is why this needs one first.")+'</div>';
   const said=msg?'<div class="mono" style="font-size:12px;margin-top:10px;color:'+(busy?"var(--muted)":"var(--stamp)")+'">'+esc(msg)+'</div>':'';
+  // Somebody stopped mid-game by a week ending has the same two ways out as anybody at the door,
+  // and one of them is a second code. Not offered to somebody already paid for: there is nothing
+  // a code could add to a licence that does not expire.
+  const codeBit=lic?"":codeHTML();
   const foot='<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px">'
     +(wall?'<span class="mono" style="font-size:11px;color:var(--muted);align-self:center;margin-right:auto">Esc opens the office; the door out is in there.</span>'
           :'<button class="btn ghost" data-act="till-close">Close</button>')
@@ -10842,7 +10913,7 @@ function modalTill(mode){
   return '<div class="scrim center"'+(wall?'':' data-act="till-close" style="background:rgba(17,16,16,.84)"')+'><div class="modal notice" role="dialog" aria-modal="true">'
     +'<div class="modal-h"><div>'+head+'</div>'+(wall?'':'<button class="x" data-act="till-close" aria-label="Close">✕</button>')+'</div>'
     +'<div class="modal-b"><p style="margin:0 0 14px;font-size:15px;line-height:1.6">'+text+'</p>'
-    +(cta?'<div style="display:flex;gap:8px;flex-wrap:wrap">'+cta+'</div>':'')+note+said+foot+'</div></div></div>';
+    +(cta?'<div style="display:flex;gap:8px;flex-wrap:wrap">'+cta+'</div>':'')+note+said+codeBit+foot+'</div></div></div>';
 }
 /* --------------------------- YOUR OWN FILE ----------------------------
    One sheet that answers "how big am I", in the only voice this game has: the file. Not a
@@ -10931,6 +11002,14 @@ function accountLine(){
    and this would be a second sentence about the same twelve dollars directly above it. */
 function tillLine(){
   if(!licensed())return "";
+  /* A WEEK SAYS SO, AND SAYS HOW MUCH OF IT IS LEFT. Somebody on a press pass who is not told is
+     somebody who finds out by being stopped in the middle of a game — which is exactly the thing
+     the free run was taken out for. It is on the title screen rather than the top bar because it
+     is a fact about the account, not about the night, and the top bar is the night. */
+  if(onPass())
+    return '<div class="mono" style="font-size:12px;margin-bottom:10px;color:var(--ink-2)">'
+      +'<span style="color:var(--good)">✓ Press pass</span> — '+esc(passLeftWords())
+      +'. Buy it and it stops counting: <a href="#" data-act="till-open">'+esc(SHOP.price)+', once</a></div>';
   return '<div class="mono" style="font-size:12px;margin-bottom:10px;color:var(--ink-2)">'
     +'<span style="color:var(--good)">✓ Paid for — lifetime access.</span> '
     +'<a href="#" data-act="till-open">The receipt</a></div>';
@@ -11605,6 +11684,11 @@ const INFO={
     "<b>A full crew is not a refusal.</b> <b>Make a place</b> lists everyone on the crew, and whoever you pick is cut loose the ordinary way — back on the roster, six loyalty lighter, and it is on their file that you did it. The list says which of them is the only one who does what they do.",
     "<b>What they ask sits under a walk-in\'s</b>, because you have just paid them a night\'s cut and they have seen how the crew works. Saying no costs nothing and is not a refusal they hold against you: they are on the roster in the morning at the price they always were — and going to fetch them later is a week on the ground and the full fee.",
     "Offered only after a <b>SUCCESS</b> or <b>CLEAN</b> night, only to somebody who was actually paid, never to anybody who has been to the police — and never to a <b>local</b>, who goes back to living on that street, which is the whole of what a local is."]},
+  code:{h:"A press pass",t:[
+    "A code somebody was sent — a reviewer, somebody with an audience — that opens the whole game for a set number of days. It is not a demo and nothing is held back: every screen, every job, the last score. What it has is a clock.",
+    "<b>The clock starts when the code is redeemed</b>, not when it was written, so one that sat in an inbox for a fortnight has cost nobody anything. The title screen and the account screen both say how many days are left, because finding out by being stopped in the middle of a game is the thing this game took a free run out of itself to avoid.",
+    "<b>One code opens one account.</b> Passed round, it works once. And when the days are up the game stops on the till, exactly as it would for a payment that went away — with one difference, which is that it says the week is up rather than inventing a refund. <b>Nothing happens to the crew</b>: the save is where it was, waiting for whenever the game is paid for.",
+    "Buying it at any point stops the counting. What you buy does not expire, so a week that turns into a purchase is a purchase — the day the pass would have ended goes by and nothing happens."]},
   clash:{h:"Two of the same trade",t:[
     "Two people who do the same job on a crew of five is a question about who is <i>the</i> one, and it is asked the day the second one signs rather than eventually. It has to be answered before anything else.",
     "Ten ways it comes up — two plans for one door, kit bought on the float, one posting that wants the trade, a percentage, an apprentice who is not one, a client who asked by name, two schools, a sentence one served for the other, a safe house with one room, a favour called in — and five answers to each.",
@@ -12127,9 +12211,41 @@ function doorHTML(sv){
     +'<button class="btn ghost" data-act="off-handbook" title="Every rule and number in the game, with a search bar over it — opens in a new tab">The player\'s handbook →</button>'
     +'</div>'
     +(UI.tillMsg?'<div class="mono" style="font-size:12px;margin-top:10px;color:'+(UI.tillBusy?"var(--muted)":"var(--stamp)")+'">'+esc(UI.tillMsg)+'</div>':'')
+    +codeHTML()
     +'<div class="sel-help" style="margin-top:12px">'
     +(inn?'Stripe takes the payment. You come back here and the game is open.'
          :'The game is bought onto an account, so that is the first step — an email and a password, and the crew stops living in one browser.')
+    +'</div>';
+}
+/* THE CODE BOX, SHUT UNTIL IT IS ASKED FOR.
+
+   A line, not a field, because of who is on this screen. Almost everybody here is somebody who
+   came to buy a game, and a box saying "enter your code" in front of them is a question they
+   cannot answer — it reads as a thing they are missing, and a shop that opens by asking for a
+   password you were never sent is a shop people leave. The handful who DO have one were sent it in
+   a message and are looking for exactly this, and a link is enough to be found by.
+
+   It is not drawn at all unless the server says codes are being taken, the same way the price is
+   not drawn unless there is a till: an offer nobody can accept is worse than no offer. */
+function codeHTML(){
+  if(!(ACC&&ACC.invites_open)&&!UI.code)return "";
+  if(!UI.code)
+    return '<div class="mono" style="font-size:12px;margin-top:10px;color:var(--ink-2)">'
+      +'<a href="#" data-act="code-open">Have a code?</a></div>';
+  return '<div class="brief" style="margin-top:12px">'
+    +'<div class="kicker" style="color:var(--stamp)">A press pass</div>'
+    +'<p style="margin:6px 0 10px;font-size:14px;line-height:1.55">Paste the code you were sent. '
+    +'It opens the game for the time it is worth, and the clock starts now rather than when it was '
+    +'written — so one that sat in an inbox for a fortnight has not cost you anything.</p>'
+    +'<div class="field"><label for="codebox">The code</label>'
+    +'<input type="text" id="codebox" value="'+esc(UI.codeVal||"")+'" placeholder="CREW-0000-0000-0000-0000" '
+    +'autocomplete="off" spellcheck="false" autocapitalize="characters"></div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+    +'<button class="btn stamp" data-act="code-go"'+(UI.codeBusy?" disabled":"")+'>'
+      +(UI.codeBusy?"…":(signedIn()?"Open it →":"Open an account →"))+'</button>'
+    +'<button class="btn ghost" data-act="code-close">Not that</button></div>'
+    +(UI.codeMsg?'<div class="mono" style="font-size:12px;margin-top:10px;color:'
+      +(UI.codeBusy?"var(--muted)":"var(--stamp)")+'">'+esc(UI.codeMsg)+'</div>':'')
     +'</div>';
 }
 function screenTitle(){
@@ -12250,7 +12366,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 137 · September 2026";
+const BUILD="build 138 · September 2026";
 /* There was a version check here. A bundled copy fetched one line of text from the site, compared
    it with the build it was packed with, and printed a note in the footer when it was behind. It
    went with the download it was for, and so did the line of text and the constant that said where
@@ -12545,6 +12661,13 @@ document.addEventListener("click",e=>{
     case "till-open": e.preventDefault(); UI.till=true; UI.tillMsg=""; render(); break;
     case "till-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){UI.till=false;UI.tillMsg="";render();} break;
     case "till-buy": e.preventDefault(); tillBuy(); break;
+    // The box keeps what was typed across a render, because a render happens between pressing the
+    // button and the answer coming back, and losing a pasted code at that moment is the one thing
+    // this screen must not do to somebody who has been given something.
+    case "code-open": e.preventDefault(); UI.code=true; UI.codeMsg=""; render();
+      setTimeout(()=>{const b=document.getElementById("codebox");if(b)b.focus();},30); break;
+    case "code-close": e.preventDefault(); UI.code=false; UI.codeMsg=""; render(); break;
+    case "code-go": e.preventDefault(); redeemCode(); break;
     case "crewname-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){S.modal=null;UI.cname=null;render();} break;
     case "notice-go": noticeDone(); if(k==="found"){UI.found={lead:null,ids:[]};S.modal={type:"found"};} else if(k){S.tab=k;S.jobOpen=null;} render(); window.scrollTo(0,0); break;
     case "found-lead": if(UI.found){UI.found.lead=UI.found.lead===id?null:id;UI.found.ids=UI.found.ids.filter(x=>x!==id);} render(); break;
@@ -12609,6 +12732,9 @@ document.addEventListener("keydown",e=>{
   }
   if(e.key==="Enter"||e.key===" "){
     const el=document.activeElement;if(!el||!el.closest)return;
+    // Paste, return. Anything else would make somebody who has just been given something hunt for
+    // a button. Enter only — a space belongs in neither a code nor this.
+    if(e.key==="Enter"&&el.id==="codebox"){e.preventDefault();redeemCode();return;}
     // Anything that says it is a button and is reachable by tab has to answer the keys a button
     // answers — the board notice is one, and a notice you can only open with a mouse explains
     // itself to half the people it is for.

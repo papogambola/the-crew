@@ -713,6 +713,20 @@ told you whether the night had anything in it before you had read a line of it. 
   that can reach it — a refund or a chargeback under a game in progress — and it does not touch the
   save. `tests/browser89.js` drives all of it against a fake server; `server/tests/test_the_door.py`
   and `test_licence.py` hold the other end.
+- **A press pass: a week, given away.** A code for somebody who is never going to pay — a
+  reviewer, somebody with an audience — that opens the whole game for seven days. Not a demo:
+  nothing is held back, it just has a clock on it. Written by `tools/invite.py`, which runs on a
+  laptop rather than on the server, so there is no endpoint that mints codes and therefore none
+  anybody can find and press; the server only ever reads them. A code is a signature over how many
+  days it is worth and when it stops being redeemable (`server/app/invites.py`), which means the
+  days cannot be edited — they are inside the signature — and **one code opens one account**,
+  enforced by the unique index on `licences.key` rather than by a check, because a check loses to
+  two requests at the same instant. **The clock starts at redemption**, so one that sat unread for
+  a fortnight costs nobody anything; and buying at any point stops the counting, because a purchase
+  does not expire and `live_licence()` prefers the row without a date. When it runs out the game
+  stops on the till and says *the week is up* rather than inventing a refund — a reviewer told
+  their payment was refunded, having never paid, is the game being wrong about the one fact that
+  person holds about it. `server/tests/test_invites.py` and `tests/browser92.js`.
 - **Crossing a rung is announced.** The ranking ladder is the biggest thing that happens to you and
   it used to arrive as a grey line in the log. A rung crossed now brings a card in the middle of the
   screen: the rung left behind, the one reached, what it buys and what is next. It comes the other

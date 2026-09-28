@@ -79,6 +79,20 @@ class Settings:
     # private preview, your own PayPal business account, an adapter you host, fees by arrangement —
     # which is a service to run for a twelve dollar game. The copy in play.html stopped promising
     # it; this note is here so the next person does not go looking for the switch.
+    # THE INVITE SECRET, which is what signs a press pass and nothing else.
+    #
+    # Its own variable rather than a derivation of JWT_SECRET, for two reasons that pull the same
+    # way: rotating the sign-in secret would silently kill every code already handed out, and a
+    # leak of one should not be a leak of the other. Unset means no code can be redeemed, which is
+    # the right way for this to fail — an invite is a favour, and a favour that cannot be granted
+    # costs nobody anything, while an invite system that opens on a missing variable gives the
+    # game away.
+    invite_secret: str = os.environ.get("INVITE_SECRET", "")
+
+    @property
+    def invites_open(self) -> bool:
+        return bool(self.invite_secret)
+
     stripe_api: str = os.environ.get("STRIPE_API", "https://api.stripe.com/v1/")
     stripe_secret: str = os.environ.get("STRIPE_SECRET_KEY", "")
     stripe_webhook_secret: str = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
