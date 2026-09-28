@@ -344,8 +344,27 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
     S.money=5000000;
     bringInLocal(mine);
     const held={job:S.hiredJob,fee:S.hiredFee,money:S.money};
-    // some OTHER job finishes — the elimination is the real case, any other job is the same shape
-    const P={hiredId:null,pre:[],clock:0,twistAt:[],bridges:[]};
+    /* AND IT FINISHES WELL, ARRANGED RATHER THAN HOPED FOR.
+
+       This block failed about one run in twenty-five and the reason was not in the code it tests.
+       A night that goes badly makes its client take it personally — grudgeAdd() — and a client who
+       has taken it personally pulls every posting they had on the board AND has a word with one or
+       two clients they drink with, whose postings come down too. So a DISASTER on `other` could
+       take `mine` off the board with it, at which point hiredSweep() tearing up the local's
+       contract and refunding the fee is the RIGHT answer, and the three claims below failed with
+       nothing wrong.
+
+       Measured, over two hundred worlds run through this exact scenario: eight failures, every one
+       of them a night that went badly and a client who pulled postings. Arranged so the night
+       cannot go badly: nought. The verdict on `other` is not what this block is about — what it is
+       about is whether the contract on `mine` survives ANOTHER job's finishJob — so the night is
+       made a certainty and the claims below become facts about the code.
+
+       (Two other explanations were measured and ruled out. finishJob does not throw on this stub:
+       it completed in all two hundred. And the posting cannot expire: an ordinary one is written
+       with expires = week + 3 to 6, and this rolls the week exactly once.) */
+    other.diff=1;other.need=1;other.techs=[];other.know=[];other.tags=[];
+    const P={hiredId:null,pre:[],clock:0,twistAt:[],bridges:[],roll:0};
     const a=assessJob(other,jobPool(other));
     try{ finishJob(Object.assign(P,{job:other,team:a.team,a}),null,{}); }catch(e){ /* the report may not
       build in a stub, but what this asks is whether the contract survived the call */ }
@@ -353,9 +372,8 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
       fee:held.fee, onBoard:S.jobs.some(x=>x.id===mine.id), forJob:held.job, otherJob:other.id};
   });
   check(!L.tooFew,"there are two postings on the board to tell apart");
-  // finishJob rolls the week, and a week can legitimately expire the posting underneath the
-  // contract — at which point hiredSweep tearing it up and refunding is the RIGHT answer, not
-  // the bug. So the claim is only made while the posting is still standing.
+  // Arranged above: the other night cannot go badly, so no client pulls postings off the board and
+  // this is a fact about the code rather than about the world the run happened to get.
   check(L.onBoard,"and the one with the local on it is still standing after the other finishes");
   check(L.stillMine&&L.kind==="local","ANOTHER job finishing does not tear up a local hired for a different posting"
     +" — which is the whole of the bug: the fee had gone and the arrangement had not survived to be worth anything");

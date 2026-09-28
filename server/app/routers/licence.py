@@ -19,10 +19,14 @@ money, Stripe tells us, and the row appears. They come back to a game that is al
     POST /licence/stripe-hook  Stripe, signed, writes the row
     GET  /licence            what the game asks
 
-THE CARD AND PAYPAL ARE THE SAME INTEGRATION. Nothing here names a payment method, deliberately:
-naming one excludes the rest. Stripe Checkout offers whatever the dashboard has enabled and the
-buyer is eligible for, so PayPal is a switch Paz flips there and not a second integration here —
-which also keeps it under the merchant-of-record umbrella that choosing Stripe was for.
+NOTHING HERE NAMES A PAYMENT METHOD, deliberately: naming one excludes the rest. Stripe Checkout
+offers whatever the dashboard has enabled and the buyer is eligible for, and which methods those
+are is Stripe's answer for that buyer on that day rather than a thing this file decides.
+
+Written expecting PayPal to be among them, and it is not — Stripe's PayPal reaches accounts in
+thirty European countries and this account is not in one. The policy is unchanged and the promise
+is: the game now says the price and stops, because a list of methods written into a page is a
+promise about somebody else's product.
 
 WHAT THE CLIENT IS TRUSTED WITH: nothing. It asks for a checkout and is told where to go. It
 cannot say which price, cannot say which account, and cannot say that it paid. The player id goes
@@ -142,8 +146,8 @@ def checkout(p: Player = Depends(current_player), db: Session = Depends(get_db))
             "customer_email": p.email,
             "success_url": settings.site_url + "/play.html?paid=1",
             "cancel_url": settings.site_url + "/play.html?paid=0",
-            # Nothing names card or PayPal. Stripe shows what the dashboard has enabled and the
-            # buyer can use; naming one here would quietly turn the others off.
+            # No payment_method_types. Stripe shows what the dashboard has enabled and the buyer
+            # can use; naming any of them here would quietly turn the rest off.
         })
     except urllib.error.HTTPError as e:
         # WHAT STRIPE SAID, WHICH IS THE WHOLE OF WHAT IS WRONG.

@@ -386,6 +386,15 @@ told you whether the night had anything in it before you had read a line of it. 
   options are shuffled every time. The decision cannot be clicked away, survives a reload, and
   the verdict screen — and the recap on file — shows what you chose, what would have set you
   free, and why.
+- **And the feed says what went wrong, on its own minute.** It did not. It printed the cue —
+  "And then it doesn't go to plan." — and then, once the call was made, what the call turned out
+  to be; the sentence naming the road and the barrier and the wrong name on the manifest lived
+  only in the decision panel, which is gone the moment the decision is made. A report read back
+  an hour later was a night with a hole in it: something happened, you did something, it worked.
+  Two lines now, two minutes apart, and **the feed stops on the second** — being halted by "and
+  then it doesn't go to plan" and handed six answers is being asked a question you have not been
+  told. `twistFeed()` builds both and `feedHalts()` says which one puts the question; four places
+  used to build that one line by hand and they all go through the helper.
 - **A job paying over $150K goes wrong at least twice.** `BIG_MONEY` — two of them, sometimes
   three (`BIG_THIRD`), never the same one twice. **The player is never told how many**: no count
   on the twist screen, none on the job file, none in the handbook. Nobody in that room would know,
@@ -649,6 +658,21 @@ told you whether the night had anything in it before you had read a line of it. 
   are entitled to hold and do; and **no** costing nothing at all — no week, no money, no place.
   Somebody who asked to be here starts a few points of loyalty ahead of somebody who had to be
   persuaded. They only turn up when there is a place free.
+- **And a night can turn into a hire.** You bring somebody in for one night because the posting
+  wants a trade nobody on the crew has. When that night comes off, they are paid, and they do not
+  talk, the report used to print "takes his cut, says the crew was better than most, and goes" —
+  and that was the end of the best thing that can happen to a night. Now they ask, and the card
+  that follows carries the two things that make it a decision. **A night in the room is worth one
+  rung**: a Legend does not sign with a Small time crew, and that gate is most of what the ladder
+  is for, but it is a gate about a *stranger* — this one has just watched you work. Exactly one
+  rung (`STAY.rungs`), said out loud on the card, and without it the offer would be legal about
+  twice a game, since the trade you had to go outside for is almost by definition the trade above
+  your name. And **a full crew is not a refusal**: *Make a place* lists the seven and whoever you
+  pick is cut loose the ordinary way — six loyalty, back on the roster, and it is on their file
+  that you did it. The ask sits under a walk-in's, because you have just paid them for the night.
+  It is a **SUCCESS or CLEAN** night only, they must have been paid, and they must not have talked
+  — and **never a local**, who goes back to living on that street, which is the whole of what a
+  local is. `tests/browser91.js` drives all of it.
 - **Two ways out of a long screen.** A job file is taller than a laptop window, so the **← Back to
   job postings** button is pinned under the tabs and stays there however far down the file you are
   — the way out used to scroll off the top with everything else. And on any screen longer than the
@@ -683,7 +707,7 @@ told you whether the night had anything in it before you had read a line of it. 
   which carries `shop` for exactly that reason. **It fails open, deliberately**: no till configured,
   a server that does not answer, or a copy opened off the disk, and nobody is walled at all — a
   wall with no way through it locks out the people who have already paid. Stripe takes the money
-  (card or PayPal, whichever the dashboard has switched on) and the licence is a row against the
+  (whichever methods Stripe can offer that buyer) and the licence is a row against the
   account, written by a signed webhook: there is no key to paste, lose or write in about, and
   signing in on another machine opens the game there. `paywallDue()` still exists for the one case
   that can reach it — a refund or a chargeback under a game in progress — and it does not touch the

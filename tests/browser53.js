@@ -100,13 +100,21 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   const mid=await page.evaluate(()=>({pending:!!S.pendingJob,answers:(S.pendingJob&&S.pendingJob.answers||[]).length,
     resolved:S.modal.data.resolved,done:S.modal.data.done,no:S.modal.data.twistNo,
     lines:S.modal.data.narrative.length,
-    tail:S.modal.data.narrative.slice(-3).map(l=>l.x)}));
+    tail:S.modal.data.narrative.slice(-4).map(l=>l.x)}));
   check(mid.pending,"the job is still in the air");
   check(mid.answers===1,"one answer on file");
   check(!mid.resolved&&!mid.done,"and nothing is settled");
   check(mid.no===2,"the screen has moved to "+mid.no);
-  check(mid.lines===linesBefore+3,"three lines were added: what that call was, a beat, and the next thing");
-  check(mid.tail.length===3,"→ "+mid.tail.map(t=>'"'+t+'"').join("  "));
+  /* Four now, not three. The first three are what that call turned out to be, the beat that
+     carries the crew to the next one, and the cue that announces it — and the fourth is the thing
+     itself, the sentence saying what has gone wrong this time, which the feed did not carry at all
+     until build 137 and which is the line the report now stops on. */
+  check(mid.lines===linesBefore+4,
+    "four lines were added: what that call was, a beat, the next cue, and what the next thing IS");
+  check(mid.tail.length===4&&mid.tail[3]!==mid.tail[2],
+    "and the last two are a cue and its own sentence, not one line twice");
+  // Printed, because what these four lines actually say is the thing a person reads this file for.
+  check(mid.tail.length===4,"→ "+mid.tail.map(t=>'"'+t+'"').join("  "));
   /* Both lists, day and night. Every one of these has a _NIGHT variant that twistLines() swaps in
      for a job that happens after dark, and this asked only about the daytime one — so a night job
      drew a perfectly correct "Then the night finds something else." and was reported as a failure,

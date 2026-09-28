@@ -93,7 +93,20 @@ async function putDownPaper(page){
 }
 
 (async()=>{
-  const browser=await chromium.launch({executablePath:CHROME});
+  /* PIN THE PROXY'S CA RATHER THAN TURNING VERIFICATION OFF.
+
+     In a sandbox where outbound HTTPS is re-terminated by a proxy, the font CDN cannot be reached
+     because the browser does not trust that proxy's certificate — and this tool then refuses to
+     write anything, correctly, because every shot would come out in Liberation Serif. The way out
+     is NOT CREW_SHOTS_INSECURE_TLS, which accepts any certificate from anybody. It is to trust
+     that one proxy, by its public key, exactly as tests/env.js has done since browser16:
+
+       CHROME_ARGS="--ignore-certificate-errors-spki-list=<base64 sha256 of the CA's SPKI>" node tools/shots.js
+
+     The flag is per-container and not a fact about this project, so it lives in the environment
+     rather than in here. With the variable unset nothing changes at all. */
+  const ARGS=(process.env.CHROME_ARGS||"").split(/\s+/).filter(Boolean);
+  const browser=await chromium.launch({executablePath:CHROME,args:ARGS});
   /* Strict TLS by default. A machine that re-terminates TLS in front of the browser — an agent
      sandbox, a corporate proxy — cannot fetch fonts.gstatic.com without its CA installed, and
      the failure it produces is the silent one above. The opt-out is explicit and named so that

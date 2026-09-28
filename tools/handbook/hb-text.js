@@ -378,6 +378,16 @@ ch("crew","The crew","Places, who goes, and a second crew",[
     +p("When one talks it is "+m("+"+(D.HIRED?D.HIRED.talkHeat:11))+" heat, a thicker file on <a href=\"#det\">the detective's</a> desk, "
       +"and a <b>Talked</b> stamp on theirs. They are never brought in again. Hiring them properly is a different question — a place, wages, "
       +"and a stake in the next one — and it is still yours to decide.")
+    +p("<b>And a night that goes well is worth something afterwards.</b> When the job comes off, they are paid, and they keep it "
+      +"to themselves, they ask what it would take to stay — a card, with the figure on it, straight after the report. What they ask "
+      +"sits under a walk-in\'s, because you have just paid them a night\'s cut and they have seen how the crew works; and a full crew is "
+      +"not a refusal, because <b>Make a place</b> lists the seven and whoever you pick is cut loose the ordinary way.")
+    +p("<b>A night in the room is worth one rung.</b> A Legend does not sign with a Small time crew, and that gate is most of what "
+      +"<a href=\"#rank\">the ladder</a> is for — but it is a rule about a <i>stranger</i>, and this one has just watched you work. "
+      +"You may sign somebody <b>"+m(D.STAY?D.STAY.rungs:1)+"</b> experience level above your name, and no further. Without it the trade you had to go "
+      +"outside for would be out of reach for exactly as long as your name was, which would make the whole arrangement a dead end rather than a door.")
+    +note("Offered only after a night that came off, only to somebody who was actually paid, and never to a local — who goes back to "
+      +"living on that street, which is the whole of what a local is.")
     +note("The contract is for one posting. Open a different one and it is torn up, the same as benching. "
       +"The offer only ever appears against a trade the field is missing — it is an answer to a gap, not a way to buy a better crew by the week — "
       +"and it never appears on <a href=\"#ops\">an operation</a> or on the final score, which are the two screens that ask whether the crew you built is broad.")),
@@ -691,6 +701,10 @@ ch("night","The night itself","The live report",[
       +"One of them is always something your crew can actually do.")
     +p("The options are gated on what you brought: a trade, an attribute above a threshold, the language, or a long enough record. "
       +"Choosing the option that fits your crew is worth a great deal; choosing the impressive one you cannot back up is how a good job becomes a blown one.")
+    +p("<b>The feed says what it is, on its own minute.</b> Two lines: the one announcing that the night has turned, and then the thing "
+      +"itself — the road with a barrier on it that had none this morning, the manifest in the wrong name. The report stops on the "
+      +"<i>second</i>, because being stopped by \"and then it doesn\'t go to plan\" and handed six answers is being asked a question you have "
+      +"not been told. It stays on screen above the options while you decide, and it stays in the report afterwards.")
     +note("A twist you walk away from mid-decision is not lost. Close the game in the middle of it and it resumes exactly there — the report so far, then the options.")),
   S("twicewrong","When it keeps going wrong",
     p("<b>A job paying over "+money(D.BIG_MONEY)+" does not go wrong once.</b> It goes wrong again, and each time it is a different thing — never the same one twice.")
@@ -947,7 +961,7 @@ ch("final","The last score","Three operations against the Committee",[
 /* ---------------- 18 -------------------------------- */
 ch("controls","Controls and the file cabinet","Keys, saving, settings",[
   S("till","Paying for it",
-    p("The game is <b>$12, once, for life</b> — card or PayPal — and it is paid at the front, on the title screen, rather than after a stretch of free play. There is no trial: what you buy is the whole game, this build and every build after it, and there is nothing else to buy inside it.")
+    p("The game is <b>$12, once, for life</b>, and it is paid at the front, on the title screen, rather than after a stretch of free play. There is no trial: what you buy is the whole game, this build and every build after it, and there is nothing else to buy inside it.")
     +p("What is paid for is an <b>account</b>, not this browser. So it goes: open an account with an email and a password, press Buy, pay, and come back to a game that is already open. Sign in on another machine and it is open there too, with your dossiers on the account beside it. Nothing is emailed to you but the receipt — there is no key to keep, paste or lose.")
     +p("If the game was open on this account and is not now, that is a payment refunded or a licence withdrawn, and it takes nothing with it: the crew, the float and the file stay exactly where they stand. Esc opens the office over that card, with the door out in it.")),
   S("keys","The keys",

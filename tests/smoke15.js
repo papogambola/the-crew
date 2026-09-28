@@ -101,7 +101,15 @@ assert(S.pendingJob&&pendingTwists(S.pendingJob).length,"a twist arrived after "
 assert(pendingTwists(S.pendingJob).length===1,"and one of them, because this job is under the line at "+money(job.payout));
 const tw=pendingTwists(S.pendingJob)[0];
 assert(tw.opts.length===6&&d.twist.opts.length===6,"six options: "+d.twist.opts.join(" | "));
-assert(d.narrative[d.narrative.length-1].twist===true&&d.done===false&&d.awaiting===false&&d.resolved===false,"marker line at the end of the pre report");
+/* The pre-report ends parked on the thing that stops it, with nothing settled. That used to be
+   ONE line — the cue, "and then it doesn't go to plan" — and it is two now: the cue, and then the
+   sentence saying what has actually gone wrong. The feed stops on the SECOND, because being halted
+   by the cue and handed six answers is being asked a question you have not been told. So this
+   checks both, in order, which is more than it checked when there was only one of them. */
+const last_=d.narrative[d.narrative.length-1], cue_=d.narrative[d.narrative.length-2];
+assert(feedHalts(last_)&&last_.x===tw.s,"the pre report ends on what went wrong — "+String(last_.x).slice(0,60)+"…");
+assert(cue_&&cue_.twist===true&&cue_.x===tw.cue&&cue_.halt===false,"with the cue directly above it, and the stop is not on the cue");
+assert(d.done===false&&d.awaiting===false&&d.resolved===false,"and nothing is settled yet");
 assert((S.reports||[]).length===0&&S.jobs.some(j=>j.id===job.id),"nothing settled yet: no report, job still posted");
 const team=assessJob(job).team;
 const correct=twistCorrect(tw,team);

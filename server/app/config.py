@@ -69,10 +69,16 @@ class Settings:
     # a thing to lose, mistype, and write in about. Now the player presses Buy while signed in, and
     # what comes back is a row against their account.
     #
-    # The card and PayPal are the same integration. Stripe Checkout offers whatever payment methods
-    # the dashboard has enabled and the buyer is eligible for, which is why nothing here names a
-    # method: naming one would EXCLUDE the others, and PayPal-through-Stripe is what keeps the tax
-    # cover that choosing Stripe was for in the first place.
+    # NOTHING HERE NAMES A PAYMENT METHOD, and that is the whole policy. Stripe Checkout offers
+    # whatever the dashboard has enabled and the buyer is eligible for; naming one would EXCLUDE
+    # the others, and which ones exist is not ours to decide or to promise.
+    #
+    # It was written expecting PayPal to be one of them. It is not: Stripe's PayPal is available to
+    # Stripe accounts in thirty European countries and this account is not in one, so the checkout
+    # offers cards and wallets and no PayPal. The other route is a custom payment method — a
+    # private preview, your own PayPal business account, an adapter you host, fees by arrangement —
+    # which is a service to run for a twelve dollar game. The copy in play.html stopped promising
+    # it; this note is here so the next person does not go looking for the switch.
     stripe_api: str = os.environ.get("STRIPE_API", "https://api.stripe.com/v1/")
     stripe_secret: str = os.environ.get("STRIPE_SECRET_KEY", "")
     stripe_webhook_secret: str = os.environ.get("STRIPE_WEBHOOK_SECRET", "")

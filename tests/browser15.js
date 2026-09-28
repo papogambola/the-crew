@@ -169,8 +169,17 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   // ---- reload mid-decision
   await page.evaluate(()=>{
     const snap=JSON.stringify(packState());let tries=0,d=null;
-    while(!S.pendingJob&&tries++<400){localStorage.setItem(SAVE_KEY,snap);load();const r=S.jobs.filter(j=>!j.final&&assessJob(j).canRun&&assessJob(j).team.length>=2);if(!r.length){S.jobs=[];refreshJobs(true);continue;}d=startJob(r[tries%r.length]);}
+    /* THE SAME FIX THE LOOP AT THE TOP OF THIS FILE ALREADY CARRIES, and it was missing here.
+       Since build 88 the game is a function of its seed and the number of draws made, so putting
+       the same save back and starting the same job gives back the same night, by design — which
+       is what stops a save being reloaded until the dice are kind. A loop that does not move the
+       draw counter on therefore asks four hundred times and gets one answer, and when that answer
+       is a night with no twist in it the wait below times out and this file DIES rather than
+       failing. About one run in three, measured. */
+    while(!S.pendingJob&&tries++<400){localStorage.setItem(SAVE_KEY,snap);load();S.rngN=(S.rngN||0)+tries;const r=S.jobs.filter(j=>!j.final&&assessJob(j).canRun&&assessJob(j).team.length>=2);if(!r.length){S.jobs=[];refreshJobs(true);continue;}d=startJob(r[tries%r.length]);}
+    if(!S.pendingJob)return {none:true};
     S.modal={type:"result",data:d};render();
+    return {none:false};
   });
   await page.reload();
   await click('[data-act="continue"]');
