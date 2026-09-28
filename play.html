@@ -1646,6 +1646,12 @@ let ACC_ERR="";   // what went wrong last, in words, for the account screen to p
    way of failing to ask — offline, a dead server, a copy off the disk — fails towards letting
    somebody play. */
 let SHOPEN=false;
+/* AND WHETHER PRESS-PASS CODES ARE BEING TAKEN, remembered the same way and for a sharper version
+   of the same reason. It was read off ACC.invites_open — which is null until somebody signs in — so
+   the line offering the code box could not be drawn for anybody who had not already got an account.
+   The one person in the world who arrives holding a press pass is a reviewer who has never been
+   here before: exactly the audience it was invisible to. /health carries it now, signed out. */
+let CODESON=false;
 
 function tokenGet(){try{return localStorage.getItem(TOKEN_KEY)||"";}catch(e){return "";}}
 function tokenSet(t){try{if(t)localStorage.setItem(TOKEN_KEY,t);else localStorage.removeItem(TOKEN_KEY);}catch(e){}}
@@ -1714,6 +1720,7 @@ async function accRefresh(){
   // Whether there is a till comes back with everything else, and is remembered separately: a
   // signing-out player must not take the shop's existence with them.
   if(ACC&&typeof ACC.shop_open==="boolean")SHOPEN=ACC.shop_open;
+  if(ACC&&typeof ACC.invites_open==="boolean")CODESON=ACC.invites_open;
   if(!r.ok&&r.offline)ACC_ERR="The server did not answer.";
   return ACC;
 }
@@ -1734,7 +1741,9 @@ function shopAsk(){
   if(!API_LIVE)return Promise.resolve();
   if(signedIn())return accRefresh().then(()=>{}).catch(()=>{});
   return api("GET","/health").then(r=>{
-    if(r&&r.ok&&r.body&&typeof r.body.shop==="boolean")SHOPEN=r.body.shop;
+    if(!(r&&r.ok&&r.body))return;
+    if(typeof r.body.shop==="boolean")SHOPEN=r.body.shop;
+    if(typeof r.body.invites==="boolean")CODESON=r.body.invites;
   }).catch(()=>{});
 }
 
@@ -10647,6 +10656,9 @@ const SHOP={
 // because a signed-out player is precisely who the door is shut to and they must not be shut out
 // by a server that has nothing to sell them.
 function shopOpen(){return !!SHOPEN;}
+// Whether this server takes press-pass codes at all. Remembered separately from the account for
+// the same reason the till is: somebody signing out must not take the answer with them.
+function codesOpen(){return !!CODESON;}
 /* PAID IS THE SERVER'S WORD. Not a value in this browser — that was the first way's mistake and it
    is the one worth not repeating. Signed out there is no answer, so nobody is paid. */
 function licensed(){return !!(ACC&&ACC.paid);}
@@ -10719,6 +10731,78 @@ function redeemCode(){
     UI.codeMsg=(r&&r.body&&r.body.detail)||"That code is not open. Check it against the message it came in.";
     render();
   }).catch(()=>{UI.codeBusy=false;UI.codeMsg="The server did not answer. Nothing is spent — try again in a minute.";render();});
+}
+/* WRITING them, which is the other end of the same string and a much smaller audience: one account.
+
+   There is a tool for this in the repository — tools/invite.py — and it is not enough, which is
+   worth writing down because it looked like it was. It needs Python installed and a clone of the
+   repository, and the person who hands out review copies has neither on the machine they are
+   holding. A tool that cannot be run is not a way of doing something: the consequence is not that
+   passes get written some harder way, it is that they never get written at all, and the codes exist
+   for nothing.
+
+   NOTHING HERE MINTS ANYTHING. The secret that signs a code lives in the server's environment and
+   never leaves it — which is strictly better than the tool, where it has to be on a laptop. This
+   asks for n of them and is handed strings. It cannot ask for a longer pass than the server allows,
+   cannot ask on another account's behalf, and is told there is nothing here at all unless the
+   account it is signed in as is the one address in ADMIN_EMAIL. Whether that is this account is
+   also the server's answer: ACC.admin, off /auth/me, which is why the panel is not drawn where it
+   would only refuse.
+
+   AND THEY ARE NOT KEPT ANYWHERE. Not here, and not there either: a code is a signature over a
+   secret, so writing one is arithmetic and there is no list of what was written. That is the reason
+   the panel says to copy them before closing it, and the reason the copied block carries the days
+   and the date — nothing else records either. What stops one being spent twice is the row that
+   appears when it is redeemed, not a ledger of what was handed out. */
+function mintPasses(){
+  if(UI.mintBusy)return;
+  UI.mintBusy=true;UI.mintMsg="Writing them…";UI.mintOut=null;UI.mintCopied="";render();
+  api("POST","/licence/invites",{count:UI.mintN,days:UI.mintD}).then(r=>{
+    UI.mintBusy=false;
+    if(r&&r.ok&&r.body&&r.body.codes){UI.mintMsg="";UI.mintOut=r.body;sfx("stamp");render();return;}
+    // 404 is what a non-admin gets, and it is the one answer worth translating: the endpoint says
+    // "nothing here" on purpose, which is not a sentence to put in front of the one person who is
+    // allowed to press this.
+    UI.mintMsg=(r&&r.status===404)?"This account cannot write them. ADMIN_EMAIL on the server is a different address."
+      :(r&&r.body&&r.body.detail)||"The server would not write them.";
+    render();
+  }).catch(()=>{UI.mintBusy=false;UI.mintMsg="The server did not answer. Nothing was written.";render();});
+}
+/* The block to keep, rather than a column of codes on their own. A code says nothing about what it
+   is worth or how long it stays redeemable — both are inside the signature, unreadable — so a batch
+   pasted into a note without those two facts is a batch nobody can write a covering message for in
+   a month's time. The last line is the message itself, because the words have to match what the
+   door actually says ("Have a code?") or somebody is hunting for a button that is not there. */
+function mintText(){
+  const o=UI.mintOut;if(!o||!o.codes)return "";
+  const n=o.codes.length,d=o.days;
+  const site=(location.protocol==="http:"||location.protocol==="https:")?location.origin:"https://playthecrew.com";
+  return "The Crew — "+n+" press pass"+(n===1?"":"es")+", "+d+" day"+(d===1?"":"s")+" of play each.\n"
+    +"Redeem by "+o.redeem_by+". Each one opens ONE account, and the days start when it is redeemed\n"
+    +"rather than now, so one sitting in an unread inbox is not costing anybody anything.\n\n"
+    +o.codes.join("\n")+"\n\n"
+    +"What to send: open "+site+", press \"Have a code?\", open an account, paste the code.\n";
+}
+/* One button for the one thing to do with them. It tries the clipboard, and where that is refused —
+   an insecure context, a browser that asks first and was told no — it selects the box instead and
+   says so, because "Copied" when nothing was copied is how a batch of codes gets lost. */
+function mintCopy(){
+  const t=mintText();if(!t)return;
+  const grab=()=>{const b=document.getElementById("mintbox");
+    if(b&&b.select){b.focus();b.select();}return b;};
+  const sel=()=>{
+    let ok=false;
+    if(grab())try{ok=document.execCommand("copy");}catch(e){}
+    UI.mintCopied=ok?"copied":"selected";render();
+    /* AND SELECT IT AGAIN, because the render that just printed "press Ctrl-C" built a new box and
+       threw the old one away, selection and all. Without this, the sentence is about a selection the
+       act of saying so destroyed — which is the fallback path failing in exactly the case it exists
+       for: a phone, a webview, a browser that refused the clipboard. */
+    if(!ok)grab();
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText)
+    navigator.clipboard.writeText(t).then(()=>{UI.mintCopied="copied";render();}).catch(sel);
+  else sel();
 }
 /* Somewhere to pay, made by the server, tied to this account before the player sees it.
    The game asks for a checkout and is told where to go; it never says which price or whose
@@ -10858,6 +10942,7 @@ function modalAccount(){
     +'</div>'
     +'<div class="sel-help" style="margin-top:12px">Fetching a dossier replaces what is on this machine '
     +'with what is on the account. It is the only thing here that does, and it never happens on its own.</div>'
+    +mintHTML()
     +'</div></div></div>';
 }
 function modalTill(mode){
@@ -11897,7 +11982,11 @@ function repSignWord(exp){
 
 /* ------------------------------ THE OFFICE ---------------------------- */
 // Pause and settings, drawn as the boss's office. Every object on the desk does something.
-const UI={office:false,hold:false,panel:null,confirmNew:false,info:false,qrh:false,crew:false,found:null,confirmDissolve:null,confirmDrop:null,scrollBack:null,impInfo:null,impRaw:""};
+const UI={office:false,hold:false,panel:null,confirmNew:false,info:false,qrh:false,crew:false,found:null,confirmDissolve:null,confirmDrop:null,scrollBack:null,impInfo:null,impRaw:"",
+  // The press-pass panel. Ten and seven are here rather than in the form because a batch of ten
+  // weekly passes is the ask, and a form whose defaults are already right is a form nobody reads.
+  // mintOut holds the only copy of whatever was last written: it is not saved, deliberately.
+  mint:false,mintN:10,mintD:7,mintBusy:false,mintMsg:"",mintOut:null,mintCopied:""};
 function chrome(){
   return '<div id="tipbox" role="tooltip" hidden></div>'
     +'<button class="totop" data-act="to-top" aria-label="Back to the top" title="Back to the top">↑</button>'
@@ -12228,7 +12317,7 @@ function doorHTML(sv){
    It is not drawn at all unless the server says codes are being taken, the same way the price is
    not drawn unless there is a till: an offer nobody can accept is worse than no offer. */
 function codeHTML(){
-  if(!(ACC&&ACC.invites_open)&&!UI.code)return "";
+  if(!codesOpen()&&!UI.code)return "";
   if(!UI.code)
     return '<div class="mono" style="font-size:12px;margin-top:10px;color:var(--ink-2)">'
       +'<a href="#" data-act="code-open">Have a code?</a></div>';
@@ -12247,6 +12336,71 @@ function codeHTML(){
     +(UI.codeMsg?'<div class="mono" style="font-size:12px;margin-top:10px;color:'
       +(UI.codeBusy?"var(--muted)":"var(--stamp)")+'">'+esc(UI.codeMsg)+'</div>':'')
     +'</div>';
+}
+/* THE OTHER END OF THE CODE BOX: where they are written, which is one account and one screen.
+
+   In the account screen rather than a page of its own, because that is where the one person who can
+   use it already goes and a screen nobody else can see does not need to be findable. Shut until it
+   is asked for, like the code box on the door, for the opposite reason: this account is also a
+   playing account, and somebody who came to fetch a dossier should not have to scroll past a form
+   for handing out review copies to reach it.
+
+   IT IS DRAWN ON THE SERVER'S WORD AND NOT THE GAME'S GUESS. ACC.admin comes off /auth/me. Forcing
+   it open in a console is allowed and worthless — the endpoint tells every other account there is
+   nothing there — and that is the only place the question is settled. The reason the game is told at
+   all is the smaller one: a panel that appears and then refuses is worse than one that never
+   appeared.
+
+   Three things it must say, because nothing else records any of them: how long each pass is worth,
+   the day they stop being redeemable, and that this box is the only copy. */
+function mintHTML(){
+  if(!(ACC&&ACC.admin))return "";
+  const head='<hr class="rule"><div class="kicker">Press passes</div>';
+  // Admin, and no secret on the server. Said rather than hidden: this is the one reader in the
+  // world who can fix it, and a missing variable that shows as an absent panel reads as a bug.
+  if(!ACC.invites_open)
+    return head+'<div class="sel-help">No <b>INVITE_SECRET</b> is set on this server, so there is '
+      +'nothing to sign a code with and nothing to check one against. One variable in the API\'s '
+      +'environment; nothing else here changes when it is set.</div>';
+  if(!UI.mint)
+    return head+'<div class="mono" style="font-size:12px;margin-top:6px;color:var(--ink-2)">'
+      +'<a href="#" data-act="mint-open">Write some →</a></div>';
+  /* Chips, not number fields. One tap on a phone, no parsing, and no way to send a nought or a
+     thousand — the server refuses both, but a form that cannot ask for them never has to explain
+     itself. Somebody who wants three presses 5 and uses three: codes cost nothing to write and
+     an unspent one is not a loss, which is the whole reason this can be a row of buttons. */
+  const chip=(act,val,now,lab)=>'<button class="btn '+(val===now?"stamp":"ghost")+' sm" data-act="'+act
+    +'" data-v="'+val+'">'+lab+'</button>';
+  const row=(lab,act,vals,now,fmt)=>'<div style="margin-top:10px"><div class="kicker">'+lab+'</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'
+    +vals.map(v=>chip(act,v,now,fmt(v))).join("")+'</div></div>';
+  const out=UI.mintOut;
+  const said=UI.mintCopied==="copied"?'<span style="color:var(--good)">Copied.</span>'
+    :UI.mintCopied==="selected"?'Selected — press Ctrl-C (⌘-C) to copy it.':'';
+  return head
+    +'<div class="mono" style="font-size:12.5px;line-height:1.7;color:var(--ink-2);margin-top:6px">'
+    +'A pass opens the whole game for a set number of real days, counted from when it is redeemed. '
+    +'Nothing records what is written here — not this browser and not the server — so what comes '
+    +'out of this box is the only copy of it.</div>'
+    +row("How many","mint-n",[1,5,10,25],UI.mintN,v=>String(v))
+    +row("Days of play each","mint-d",[7,14,30],UI.mintD,v=>v+" days")
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
+    +'<button class="btn stamp sm" data-act="mint-go"'+(UI.mintBusy?" disabled":"")+'>'
+      +(UI.mintBusy?"…":"Write "+UI.mintN+" →")+'</button>'
+    +'<button class="btn ghost sm" data-act="mint-close">Done</button></div>'
+    +(UI.mintMsg?'<div class="mono" style="font-size:12px;margin-top:10px;color:'
+      +(UI.mintBusy?"var(--muted)":"var(--stamp)")+'">'+esc(UI.mintMsg)+'</div>':'')
+    +(out&&out.codes?'<div class="sel-help" style="margin-top:12px"><b>Copy this before you close it.</b> '
+      +out.codes.length+' pass'+(out.codes.length===1?"":"es")+', '+out.days+' day'+(out.days===1?"":"s")
+      +' each, redeemable until '+esc(String(out.redeem_by))+'. Keep a note of who gets which one — '
+      +'nothing in a code says.</div>'
+      +'<textarea id="mintbox" readonly rows="7" style="width:100%;font-family:var(--f-mono);'
+      +'font-size:11px;border:1px solid var(--line-2);background:var(--card);color:var(--ink);'
+      +'padding:8px;resize:vertical;margin-top:6px">'+esc(mintText())+'</textarea>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">'
+      +'<button class="btn sm" data-act="mint-copy">Copy them</button>'
+      +'<span class="mono" style="font-size:11px;color:var(--muted);align-self:center">'+said+'</span>'
+      +'</div>':'');
 }
 function screenTitle(){
   const has=hasSave();
@@ -12366,7 +12520,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 138 · September 2026";
+const BUILD="build 139 · September 2026";
 /* There was a version check here. A bundled copy fetched one line of text from the site, compared
    it with the build it was packed with, and printed a note in the footer when it was behind. It
    went with the download it was for, and so did the line of text and the constant that said where
@@ -12639,6 +12793,13 @@ document.addEventListener("click",e=>{
         // Signing in does NOT pull anything down. The crew on this machine stays exactly where
         // it is until somebody presses Fetch on a named dossier.
         if(ok)UI.accGames=null;
+        /* EXCEPT A CODE THEY WERE ALREADY HOLDING. Somebody sent a press pass types it into the
+           box, is told an account is needed first, and makes one — and the thing they asked for
+           then has to happen, rather than leaving them on an account screen to go and find the
+           same box and press the same button a second time. Not for an account that is already
+           paid for: there is nothing a week could add to a licence that does not expire, and the
+           code stays unspent for whoever it was meant for. */
+        if(ok&&UI.codeVal&&!licensed()){UI.account=false;UI.code=true;render();redeemCode();return;}
         render();
       });
       break; }
@@ -12667,6 +12828,15 @@ document.addEventListener("click",e=>{
     case "code-open": e.preventDefault(); UI.code=true; UI.codeMsg=""; render();
       setTimeout(()=>{const b=document.getElementById("codebox");if(b)b.focus();},30); break;
     case "code-close": e.preventDefault(); UI.code=false; UI.codeMsg=""; render(); break;
+    // Writing them. Nothing is kept across closing the panel except the batch itself, which is
+    // cleared on the way in rather than on the way out — coming back to a column of codes from
+    // twenty minutes ago, with no way to tell whether they were ever copied, is worse than none.
+    case "mint-open": e.preventDefault(); UI.mint=true; UI.mintMsg=""; UI.mintOut=null; UI.mintCopied=""; render(); break;
+    case "mint-close": e.preventDefault(); UI.mint=false; UI.mintMsg=""; UI.mintOut=null; UI.mintCopied=""; render(); break;
+    case "mint-n": e.preventDefault(); UI.mintN=Math.max(1,Math.min(100,parseInt(v,10)||10)); render(); break;
+    case "mint-d": e.preventDefault(); UI.mintD=Math.max(1,Math.min(90,parseInt(v,10)||7)); render(); break;
+    case "mint-go": e.preventDefault(); mintPasses(); break;
+    case "mint-copy": e.preventDefault(); mintCopy(); break;
     case "code-go": e.preventDefault(); redeemCode(); break;
     case "crewname-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){S.modal=null;UI.cname=null;render();} break;
     case "notice-go": noticeDone(); if(k==="found"){UI.found={lead:null,ids:[]};S.modal={type:"found"};} else if(k){S.tab=k;S.jobOpen=null;} render(); window.scrollTo(0,0); break;

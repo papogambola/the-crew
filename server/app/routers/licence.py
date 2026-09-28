@@ -41,7 +41,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field
@@ -52,7 +52,7 @@ from sqlalchemy.orm import Session
 from app import invites
 from app.config import settings
 from app.database import get_db
-from app.deps import current_player
+from app.deps import current_admin, current_player
 from app.entitlement import live_licence, state
 from app.models import Licence, Player
 
@@ -205,6 +205,41 @@ def checkout(p: Player = Depends(current_player), db: Session = Depends(get_db))
     if not url:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "The till gave no way in. Nothing was charged.")
     return {"already": False, "url": url}
+
+
+class Mint(BaseModel):
+    count: int = Field(default=10, ge=1, le=100)
+    days: int = Field(default=7, ge=1, le=90)
+
+
+@router.post("/invites")
+def write_invites(body: Mint, p: Player = Depends(current_admin)):
+    """Press passes, written from inside the game.
+
+    THERE IS A TOOL FOR THIS (tools/invite.py) AND IT IS NOT ENOUGH. It needs Python and a clone of
+    the repository, and the person who gives away review copies has neither on the machine they are
+    holding. A tool that cannot be run is not a way of doing something, and the consequence is not
+    that passes get written some harder way — it is that they never get written.
+
+    So: signed in as the one admin address, ask for ten, get ten. The secret stays in the server's
+    environment and is never sent anywhere, which is strictly better than the tool, where it has to
+    be on a laptop.
+
+    WHAT KEEPS THIS FROM BEING A BUTTON THAT PRINTS MONEY: current_admin, which needs both the
+    address in ADMIN_EMAIL and that account's password. Anybody else asking is told the endpoint
+    does not exist — see deps.current_admin for why that is a 404 rather than a 403.
+
+    Nothing is written to the database here. A code is a signature, so minting is arithmetic, and
+    the row appears when somebody redeems one. That is also why there is no list of codes to show:
+    what was written is not recorded anywhere, deliberately, and the note of who got which one is
+    whatever the person handing them out keeps."""
+    if not settings.invites_open:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
+                            "No INVITE_SECRET is set on the server, so there is nothing to sign with.")
+    codes = [invites.mint(settings.invite_secret, days=body.days) for _ in range(body.count)]
+    log.info("admin %s wrote %d passes of %d days", p.email, body.count, body.days)
+    return {"codes": codes, "days": body.days,
+            "redeem_by": (date.today() + timedelta(days=90)).isoformat()}
 
 
 class Redeem(BaseModel):

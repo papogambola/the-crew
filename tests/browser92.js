@@ -38,8 +38,14 @@ const srv=http.createServer((q,r)=>{
   const bad=(code,detail)=>{r.writeHead(code,{"content-type":"application/json"});r.end(JSON.stringify({detail}));};
   const acc=()=>({email:"press@example.com",paid:PAID,over:!PAID,shop_open:SHOP,
                   invites_open:INVITES,pass_until:UNTIL,pass_ended:ENDED,kind:PAID&&UNTIL?"pass":PAID?"purchase":null});
-  if(url==="/health")return json({ok:true,mail:{configured:false},shop:SHOP});
+  // `invites` on /health, which is the only thing a stranger can ask. See main.py: it is there so
+  // the code box can be offered to somebody who has no account, which is everybody who has a code.
+  if(url==="/health")return json({ok:true,mail:{configured:false},shop:SHOP,invites:INVITES});
   if(url==="/auth/me")return json(acc());
+  if(url==="/auth/signup"||url==="/auth/login"){
+    let body="";q.on("data",d=>body+=d);
+    return q.on("end",()=>json({token:"t",email:"reviewer@example.com"}));
+  }
   if(url==="/licence")return json(Object.assign({price:null,currency:null,bought_at:null},acc()));
   if(url==="/licence/redeem"){
     let body="";q.on("data",d=>body+=d);
@@ -86,6 +92,41 @@ const srv=http.createServer((q,r)=>{
     codeLink:!!document.querySelector('[data-act="code-open"]'),
     box:!!document.querySelector("#codebox"),
     body:document.body.innerText}));
+
+  /* THE FIRST THING TO CHECK IS THE ONE THAT WAS BROKEN, and it was broken here: every assertion
+     below this used to run signed in, so nothing ever asked what a stranger sees. Whether codes are
+     taken was read off the account, which is null until somebody has one — so the line offering the
+     box was invisible to the only people who arrive holding a code. It comes off /health now. */
+  console.log("— somebody arriving with a code has no account yet —");
+  SHOP=true;PAID=false;UNTIL=null;ENDED=false;INVITES=true;
+  await open();
+  let cold=await page.evaluate(()=>({inn:signedIn(),acc:!!ACC,
+    link:!!document.querySelector('[data-act="code-open"]'),body:document.body.innerText}));
+  check(cold.inn===false&&cold.acc===false,"nobody is signed in, and there is no account to ask");
+  check(cold.link===true,"and the line is there anyway — this is the only audience a code box has");
+  check(/have a code/i.test(cold.body),"in the words somebody sent one would look for");
+  await page.screenshot({path:OUT+"/00-a-stranger-with-a-code.png"});
+
+  console.log("— and typing it takes them through an account and straight on —");
+  await page.click('[data-act="code-open"]');
+  await page.waitForSelector("#codebox");
+  await page.fill("#codebox",GOOD);
+  await page.click('[data-act="code-go"]');
+  await page.waitForSelector("#acmail",{timeout:5000});
+  check(true,"the code box sends them to open an account rather than refusing them");
+  await page.click('[data-act="acc-mode"]');      // they have not got one — this is their first visit
+  await page.waitForTimeout(80);
+  await page.fill("#acmail","reviewer@example.com");
+  await page.fill("#acpass","a long enough password");
+  await page.click('[data-act="acc-go"]');
+  await page.waitForTimeout(900);
+  const through=await page.evaluate(()=>({paid:licensed(),walled:walled(),
+    begin:!!document.querySelector('[data-act="begin"]'),held:UI.codeVal||""}));
+  check(through.paid===true&&through.walled===false,
+    "and the code they were already holding is spent the moment the account exists");
+  check(through.begin===true,"the game is open, with no second box to find and no button to press twice");
+  check(through.held==="","and nothing is left held over");
+  await page.screenshot({path:OUT+"/00b-straight-through.png"});
 
   console.log("— the box is shut until it is asked for —");
   SHOP=true;PAID=false;UNTIL=null;ENDED=false;INVITES=true;

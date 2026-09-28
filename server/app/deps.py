@@ -4,6 +4,7 @@ from datetime import timezone
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.models import Player
 from app.security import read_token
@@ -23,6 +24,21 @@ def current_player(request: Request, db: Session = Depends(get_db)) -> Player:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sign in again.")
     if _minted_before_the_password_changed(claims, p):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sign in again.")
+    return p
+
+
+def current_admin(p: Player = Depends(current_player)) -> Player:
+    """The one account that may write press passes.
+
+    Signed in AND on the address in ADMIN_EMAIL — the token alone is not enough, and the address
+    alone is not either, because getting a token means knowing that account's password.
+
+    404, not 403. A 403 tells somebody who found the endpoint that it exists and that they are
+    simply not the right person, which is an invitation to work out who is; a 404 says there is
+    nothing here. It is the same reasoning as the sign-in screen refusing to say which half of a
+    wrong pair was wrong."""
+    if not settings.is_admin(p.email):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found.")
     return p
 
 

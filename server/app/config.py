@@ -89,9 +89,24 @@ class Settings:
     # game away.
     invite_secret: str = os.environ.get("INVITE_SECRET", "")
 
+    # WHO MAY WRITE THEM. One address, and the account on it mints passes from inside the game.
+    #
+    # An address rather than a column on the player row, because the alternative was reaching into
+    # the database to set a flag — and somebody who has to open a database console to give away a
+    # review copy will not give away review copies. Unset means nobody is admin, which is the state
+    # every deploy starts in and the state a leaked variable cannot create.
+    #
+    # It is not a second password. The account on this address still signs in with its own, and a
+    # stranger who learns the address gains exactly nothing.
+    admin_email: str = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+
     @property
     def invites_open(self) -> bool:
         return bool(self.invite_secret)
+
+    def is_admin(self, email: str) -> bool:
+        """Both halves have to exist. An empty ADMIN_EMAIL must never match an empty anything."""
+        return bool(self.admin_email) and (email or "").strip().lower() == self.admin_email
 
     stripe_api: str = os.environ.get("STRIPE_API", "https://api.stripe.com/v1/")
     stripe_secret: str = os.environ.get("STRIPE_SECRET_KEY", "")

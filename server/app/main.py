@@ -51,5 +51,13 @@ def health():
     so the title screen of a signed-out copy has to decide between two completely different
     screens — a door with a price on it, or the game — and the only thing that can tell it which
     is this. Putting it behind /licence instead would mean only signed-in players could learn it,
-    and a wall would then appear for exactly the people with no way through it."""
-    return {"ok": True, "mail": email_status(), "shop": settings.shop_open}
+    and a wall would then appear for exactly the people with no way through it.
+
+    `invites` is here for the same reason and was missed for exactly that reason. Whether codes are
+    being taken was answered only on /auth/me and /licence, which is to say only to people who
+    already have an account — and the one person who arrives at this door holding a press pass is a
+    reviewer who has never been here before. So the line offering the code box could not be drawn
+    for the only audience it exists for. It says nothing about the secret itself, any more than
+    `shop` says anything about the Stripe key."""
+    return {"ok": True, "mail": email_status(), "shop": settings.shop_open,
+            "invites": settings.invites_open}

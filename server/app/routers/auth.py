@@ -47,7 +47,12 @@ def _me(db: Session, p: Player) -> dict:
     # shop_open rides along because the game asks this on every sign-in and after coming back from
     # Stripe. /health says the same thing to somebody with no account; this is the same fact,
     # answered fresh, for somebody who has one.
-    return {"email": p.email, "shop_open": settings.shop_open, **state(db, p.id)}
+    # `admin` rides along too, for one reason: the office draws a panel that writes press passes,
+    # and a panel that appears and then refuses is worse than one that never appeared. The server
+    # decides who is admin; this is the game being told, not the game deciding.
+    return {"email": p.email, "shop_open": settings.shop_open,
+            "invites_open": settings.invites_open, "admin": settings.is_admin(p.email),
+            **state(db, p.id)}
 
 
 @router.post("/signup", response_model=Signed, status_code=status.HTTP_201_CREATED)
