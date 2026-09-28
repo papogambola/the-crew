@@ -239,9 +239,36 @@ def test_a_refused_checkout_says_which_fault_it_was(client, signed_up, shop, mon
     monkeypatch.setattr(lic, "_stripe", boom)
     r = client.post("/licence/checkout", headers=signed_up["h"])
     assert r.status_code == 502
-    assert "[resource_missing]" in r.json()["detail"]
+    assert "[400 resource_missing]" in r.json()["detail"], r.json()["detail"]
     assert "price_wrong" not in r.json()["detail"], "their message can name a price; the code cannot"
     assert "Nothing was charged" in r.json()["detail"], "the half that matters is still first"
+
+
+def test_a_key_that_is_refused_says_so_by_its_status(client, signed_up, shop, monkeypatch):
+    """Stripe answers 401 for a key it does not know and 403 for one that is real and not allowed
+    to do this. Neither carries a code, and the type on both is the generic invalid_request_error
+    — so without the status the answer is "something was wrong with the request", which is not an
+    answer. This is the exact shape that fired the first time a live checkout refused."""
+    from app.routers import licence as lic
+
+    def boom(path, fields):
+        raise _http_error(403, {"error": {"type": "invalid_request_error",
+                                          "message": "The provided key does not have the required permissions."}})
+    monkeypatch.setattr(lic, "_stripe", boom)
+    d = client.post("/licence/checkout", headers=signed_up["h"]).json()["detail"]
+    assert "[403 invalid_request_error]" in d, d
+    assert "permissions" not in d, "their message is for the log; the status and the type are for here"
+
+
+def test_the_field_stripe_objected_to_is_named(client, signed_up, shop, monkeypatch):
+    from app.routers import licence as lic
+
+    def boom(path, fields):
+        raise _http_error(400, {"error": {"type": "invalid_request_error",
+                                          "param": "line_items[0][price]"}})
+    monkeypatch.setattr(lic, "_stripe", boom)
+    d = client.post("/licence/checkout", headers=signed_up["h"]).json()["detail"]
+    assert "param=line_items[0][price]" in d, d
 
 
 def test_stripes_own_bad_weather_is_not_reported_as_a_fault_here(client, signed_up, shop, monkeypatch):

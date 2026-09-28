@@ -152,9 +152,20 @@ def checkout(p: Player = Depends(current_player), db: Session = Depends(get_db))
         # Only a fault in what this service was configured with — a 5xx from Stripe is their
         # weather, and a player told "resource_missing" about it learns nothing.
         if 400 <= e.code < 500:
-            slug = str(body.get("code") or body.get("type") or "")[:64]
-            if slug:
-                detail = TILL_DOWN + " [" + slug + "]"
+            # The status and the parameter go in beside the code, because between them they name
+            # the fault on their own: Stripe answers 401 for a key it does not recognise and 403
+            # for a key that is real and not allowed to do this, and `param` names the field it
+            # objected to when it objected to a field at all. The first time this fired in
+            # production the code was empty and the type was the generic `invalid_request_error`,
+            # which said only "you asked for something wrong" — the status would have said which.
+            bits = [str(e.code)]
+            for k in ("code", "type"):
+                if body.get(k):
+                    bits.append(str(body[k])[:48])
+                    break
+            if body.get("param"):
+                bits.append("param=" + str(body["param"])[:48])
+            detail = TILL_DOWN + " [" + " ".join(bits) + "]"
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail)
     except Exception as e:
         log.exception("checkout: could not reach Stripe: %s", e)
