@@ -32,6 +32,7 @@ is the one that asked for it.
 import hashlib
 import hmac
 import json
+import logging
 import time
 import urllib.error
 import urllib.parse
@@ -49,10 +50,16 @@ from app.entitlement import state
 from app.models import Licence, Player
 
 router = APIRouter(prefix="/licence", tags=["licence"])
+log = logging.getLogger("thecrew.licence")
 
 # How far out of step with Stripe's clock a webhook may be and still be believed. Five minutes is
 # Stripe's own default. It is what stops a signature captured once from being replayed for ever.
 WEBHOOK_TOLERANCE = 300
+
+# What a player is told when the till cannot be opened. One sentence, in two places, and the
+# important half of it is "nothing was charged" — somebody who has just pressed Buy needs to know
+# that before they need to know anything else.
+TILL_DOWN = "The till did not answer. Nothing was charged — try again in a minute."
 
 
 def _stripe(path: str, fields: dict) -> dict:
@@ -123,13 +130,35 @@ def checkout(p: Player = Depends(current_player), db: Session = Depends(get_db))
             # buyer can use; naming one here would quietly turn the others off.
         })
     except urllib.error.HTTPError as e:
-        # Their body says what is wrong — a dead price id, a key from the other mode — and it is
-        # worth having in the log, but not worth showing a player.
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY,
-                            "The till did not answer. Nothing was charged — try again in a minute.")
-    except Exception:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY,
-                            "The till did not answer. Nothing was charged — try again in a minute.")
+        # WHAT STRIPE SAID, WHICH IS THE WHOLE OF WHAT IS WRONG.
+        #
+        # This used to say, in a comment, that their body "is worth having in the log" — and then
+        # drop it on the floor. So the first time a live checkout refused, all anybody had was a
+        # 502 and a sentence written for a player, and the fault — a key, a price, the wrong mode
+        # — could not be told from the outside at all.
+        #
+        # Two things now. The message goes to the log in full, for whoever can read the service's
+        # logs. And the SLUG — Stripe's own error.code, a short machine string like
+        # `resource_missing` or `api_key_expired` — goes back in the response, because the person
+        # who has to fix a misconfigured till is usually the person standing at it, and a slug
+        # names the fault without putting a key, a customer or a price in front of a stranger.
+        detail = TILL_DOWN
+        try:
+            body = json.loads(e.read().decode("utf-8")).get("error") or {}
+        except Exception:
+            body = {}
+        log.error("checkout refused by Stripe (HTTP %s): %s / %s / %s",
+                  e.code, body.get("type"), body.get("code"), body.get("message"))
+        # Only a fault in what this service was configured with — a 5xx from Stripe is their
+        # weather, and a player told "resource_missing" about it learns nothing.
+        if 400 <= e.code < 500:
+            slug = str(body.get("code") or body.get("type") or "")[:64]
+            if slug:
+                detail = TILL_DOWN + " [" + slug + "]"
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail)
+    except Exception as e:
+        log.exception("checkout: could not reach Stripe: %s", e)
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, TILL_DOWN)
 
     url = sess.get("url")
     if not url:

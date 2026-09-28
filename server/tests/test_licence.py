@@ -214,6 +214,59 @@ def test_paying_is_the_only_thing_that_opens_the_door(client, signed_up, shop):
     assert body["over"] is False and body["paid"] is True
 
 
+# --------------------------------------------- when the till itself is broken
+
+def _http_error(code, payload):
+    import io
+    import urllib.error
+    return urllib.error.HTTPError("https://api.stripe.com/v1/checkout/sessions", code, "err", {},
+                                  io.BytesIO(json.dumps(payload).encode()))
+
+
+def test_a_refused_checkout_says_which_fault_it_was(client, signed_up, shop, monkeypatch):
+    """The one that cost an afternoon. A live checkout refused and all anybody had was a 502 and a
+    sentence written for a player — the fault could not be told from outside the service at all.
+
+    So Stripe's own error CODE comes back on the end of it. Not their message, which can carry a
+    price, a customer or a masked key: the code, which is a short machine string naming the fault
+    and nothing else."""
+    from app.routers import licence as lic
+
+    def boom(path, fields):
+        raise _http_error(400, {"error": {"type": "invalid_request_error",
+                                          "code": "resource_missing",
+                                          "message": "No such price: 'price_wrong'"}})
+    monkeypatch.setattr(lic, "_stripe", boom)
+    r = client.post("/licence/checkout", headers=signed_up["h"])
+    assert r.status_code == 502
+    assert "[resource_missing]" in r.json()["detail"]
+    assert "price_wrong" not in r.json()["detail"], "their message can name a price; the code cannot"
+    assert "Nothing was charged" in r.json()["detail"], "the half that matters is still first"
+
+
+def test_stripes_own_bad_weather_is_not_reported_as_a_fault_here(client, signed_up, shop, monkeypatch):
+    """A 5xx from Stripe is not something anybody can configure their way out of, and a player
+    told `api_error` about it has been handed a word instead of an answer."""
+    from app.routers import licence as lic
+
+    def boom(path, fields):
+        raise _http_error(503, {"error": {"type": "api_error", "code": "lock_timeout"}})
+    monkeypatch.setattr(lic, "_stripe", boom)
+    r = client.post("/licence/checkout", headers=signed_up["h"])
+    assert r.status_code == 502
+    assert "[" not in r.json()["detail"]
+
+
+def test_a_till_that_cannot_be_reached_at_all_still_says_nothing_was_charged(client, signed_up, shop, monkeypatch):
+    from app.routers import licence as lic
+
+    def boom(path, fields):
+        raise OSError("no route to host")
+    monkeypatch.setattr(lic, "_stripe", boom)
+    r = client.post("/licence/checkout", headers=signed_up["h"])
+    assert r.status_code == 502 and "Nothing was charged" in r.json()["detail"]
+
+
 def test_buying_twice_is_answered_rather_than_charged(client, signed_up, shop):
     _post(client, _event(_player_id(signed_up["email"])))
     r = client.post("/licence/checkout", headers=signed_up["h"])
