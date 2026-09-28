@@ -61,11 +61,11 @@ S.week=EXTRA_CREW_WEEKS[0];S.rep=70;render();
 const yearMark=cap(yearsIn(EXTRA_CREW_WEEKS[0]))+" in";
 while(S.notices&&S.notices[0]&&S.notices[0].h!==yearMark)noticeDone();
 render();
-// The year mark is read off EXTRA_CREW_WEEKS, and said the way somebody would say it — a
-// threshold of 52 announces "A year in", not "1 years in".
+// The mark is read off EXTRA_CREW_WEEKS, and said the way somebody would say it — a threshold
+// of 52 announces "A year in", not "1 years in", and one of 26 "Half a year in", not "A year in".
 assert(S.modal&&S.modal.type==="notice"&&S.notices[0].h===yearMark,
-  "week "+EXTRA_CREW_WEEKS[0]+" announces the year mark as: "+S.notices[0].h);
-assert(S.notices[0].text.indexOf("a Feared name (ranking 80, now 70)")>=0&&S.notices[0].text.indexOf("seven on your crew (now 5)")>=0,"and lists what is missing: "+S.notices[0].text.slice(0,160));
+  "week "+EXTRA_CREW_WEEKS[0]+" announces the mark as: "+S.notices[0].h);
+assert(S.notices[0].text.indexOf("a name worth ranking "+EXTRA_CREW_REP+" (now 70)")>=0&&S.notices[0].text.indexOf("seven on your crew (now 5)")>=0,"and lists what is missing: "+S.notices[0].text.slice(0,160));
 noticeDone();render();
 // The week's news queues behind the milestone boxes and comes up once they are done with, which
 // is the order the game means: your own house first, then the paper. So "closed" is: nothing is

@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.emailer import email_status
-from app.routers import auth, licence, run, saves
+from app.routers import auth, licence, saves
 
 app = FastAPI(title="The Crew", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -25,7 +25,6 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
-app.include_router(run.router)
 app.include_router(licence.router)
 app.include_router(saves.router)
 
@@ -48,8 +47,9 @@ def health():
     a locked-out player to write in and say the link never arrived.
 
     `shop` is here because it is the one fact about this server that somebody with NO ACCOUNT
-    needs. The free run ends for everybody, signed in or not, and the game must not put a wall in
-    front of a player it cannot sell anything to — so it asks this once on the way up. Putting it
-    behind /licence instead would mean only signed-in players could learn it, and then the wall
-    would appear for exactly the people who have no way through it."""
+    needs, and it matters more now than when it was added. The game is bought before it is played,
+    so the title screen of a signed-out copy has to decide between two completely different
+    screens — a door with a price on it, or the game — and the only thing that can tell it which
+    is this. Putting it behind /licence instead would mean only signed-in players could learn it,
+    and a wall would then appear for exactly the people with no way through it."""
     return {"ok": True, "mail": email_status(), "shop": settings.shop_open}

@@ -11,7 +11,7 @@ from app.database import get_db
 from app.deps import current_player
 from app.emailer import send_email
 from app.entitlement import state
-from app.models import FreeRun, PasswordReset, Player
+from app.models import PasswordReset, Player
 from app.config import settings
 from app.security import (check_password, hash_password, hash_reset_token,
                           mint_token, new_reset_token, normalize_email,
@@ -64,9 +64,8 @@ def signup(body: Credentials, db: Session = Depends(get_db)):
     p = Player(email=email, password_hash=hash_password(body.password))
     db.add(p)
     db.flush()
-    # No free-run row is created here. There is one per GAME now, written the first time a week
-    # of that game is reported — an account with no games has played no weeks, and the sum of an
-    # empty set is nought without anybody having to store it.
+    # Nothing else is written. An account is the player and nothing more until they buy the game,
+    # and what they bought is a row of its own — see models.Licence.
     db.commit()
     return Signed(token=mint_token(p.id), email=p.email)
 

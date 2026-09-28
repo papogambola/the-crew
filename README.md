@@ -487,12 +487,15 @@ told you whether the night had anything in it before you had read a line of it. 
   adds a point to the attributes the job leaned on, but **getting better gets harder**: a 40
   climbs quickly, an 85 barely moves. A crew of Legends is a career's work, not ten jobs'.
 - **Places, and other crews.** Four soldiers' places to start; a Respected name (ranking 65)
-  opens two more, for six soldiers and you. From week 52 (a year in), Feared, with seven on
-  your crew, you can **found a second crew**: a commander-type and four soldiers out of your
+  opens two more, for six soldiers and you. From week 26 (half a year in), at ranking 80, with seven
+  on your crew, you can **found a second crew**: a commander-type and four soldiers out of your
   seven, named after its commander, which takes a job of its own each week from the same board
   without you — its own reckoning (its commander's score instead of yours, no twists because
   you are not there to decide), its own live report, and its take, heat and ranking are
-  yours, as is its payroll. A third crew at three years, a fourth at four, no more. People
+  yours, as is its payroll. A third crew at three years, a fourth at four, no more. (The second was
+  a year, and a year is most of a game: somebody who reaches the name with seven people at week 30
+  was being told to keep doing what they had just finished learning for another five months before
+  the game would show them its second half.) People
   move between crews from their cards; dissolving a crew brings them back as far as your
   places allow.
 - **The 500 operations.** The same Respected name that opens the last two places opens the work
@@ -518,7 +521,7 @@ told you whether the night had anything in it before you had read a line of it. 
   unaffected — the roster is rebuilt from its seed, and the first 5,000 files come out exactly as
   they did.
 - **Milestones, announced.** A box in the middle of the screen, once each: the two places a
-  Respected name opens; the operations those places open; each year mark (weeks 52, 156, 208 — `EXTRA_CREW_WEEKS`) when another crew is within reach,
+  Respected name opens; the operations those places open; each mark (weeks 26, 156, 208 — `EXTRA_CREW_WEEKS`) when another crew is within reach,
   with what is still missing; and the moment a second, third or fourth crew can actually be
   founded, with a button straight into founding it. Later closes it; the Crew tab and the case
   log keep the record.
@@ -671,14 +674,21 @@ told you whether the night had anything in it before you had read a line of it. 
   outright in three moves: heat falls 7, then 9, then 11 a week, and the best one keeps most of
   the float through a raid. And a **desk** that will lose a file: heat −20, priced by how hot
   you are.
-- **The till.** Free to a point, then $12 once for life. The free run is twelve weeks of play in
-  this browser or a Known name, whichever comes first, counted across every game the browser
-  opens; then the game stops on a card that does not close, with the checkout and a box for the
-  key. The money and the keys are Lemon Squeezy's: `SHOP` at the top of the till section holds the
-  checkout link, the store and product ids, the price and the two limits, and while `checkout` is
-  empty the till is shut and nobody is stopped. A key that activates is kept in the browser and
-  asked about weekly; only an explicit "not valid" locks the door again. There is no server, so
-  clearing the browser's storage restarts the count — the accepted price of not having one.
+- **The till: $12 once, paid before you play.** Not a trial with a wall in the middle of it — a
+  door on the title screen. There were twelve free weeks and they were withdrawn: this is a game,
+  not a tool somebody evaluates, and twelve weeks was the whole first act given away in return for
+  the game stopping on a card about money at the moment somebody had started to care.
+  `walled()` is the one question — `shopOpen() && !licensed()` — and both halves are the server's
+  word, never a value in this browser. Signed in it comes off `/auth/me`; signed out, off `/health`,
+  which carries `shop` for exactly that reason. **It fails open, deliberately**: no till configured,
+  a server that does not answer, or a copy opened off the disk, and nobody is walled at all — a
+  wall with no way through it locks out the people who have already paid. Stripe takes the money
+  (card or PayPal, whichever the dashboard has switched on) and the licence is a row against the
+  account, written by a signed webhook: there is no key to paste, lose or write in about, and
+  signing in on another machine opens the game there. `paywallDue()` still exists for the one case
+  that can reach it — a refund or a chargeback under a game in progress — and it does not touch the
+  save. `tests/browser89.js` drives all of it against a fake server; `server/tests/test_the_door.py`
+  and `test_licence.py` hold the other end.
 - **Crossing a rung is announced.** The ranking ladder is the biggest thing that happens to you and
   it used to arrive as a grey line in the log. A rung crossed now brings a card in the middle of the
   screen: the rung left behind, the one reached, what it buys and what is next. It comes the other

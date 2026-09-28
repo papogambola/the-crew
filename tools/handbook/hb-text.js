@@ -412,7 +412,7 @@ ch("crew","The crew","Places, who goes, and a second crew",[
     p("A bad night puts people in hospital or in a cell. A doctor on retainer halves the weeks of an injury; a lawyer on retainer halves the weeks of a sentence. "
       +"Somebody who comes out of a cell is back on the roster rather than on your crew, a year older, with that year on their record — and a record is what borders read.")),
   S("second","A second crew",
-    p("From a year in, with a big enough name and a full crew, you can found a second crew that works without you.")
+    p("From half a year in, with a big enough name and a full crew, you can found a second crew that works without you.")
     +G.T(["Needed","Value"],[
       ["Week",D.EXTRA_CREW_WEEKS[0]+" for the second, "+D.EXTRA_CREW_WEEKS[1]+" for the third, "+D.EXTRA_CREW_WEEKS[2]+" for the fourth — and no more"],
       ["Ranking","at least "+m(D.EXTRA_CREW_REP)],
@@ -947,8 +947,9 @@ ch("final","The last score","Three operations against the Committee",[
 /* ---------------- 18 -------------------------------- */
 ch("controls","Controls and the file cabinet","Keys, saving, settings",[
   S("till","Paying for it",
-    p("The game is free to a point and then <b>$12, once, for life</b>. The free run is <b>twelve weeks of play in this browser, or a Known name</b>, whichever comes first — counted across every game the browser opens, so a new dossier is not a new run. When it is up the game stops on a card that does not close: the crew, the float and the file stay saved where they stand, and pick up the moment the door is paid for.")
-    +p("The button on the card opens the checkout in a new tab. The key is on the receipt and in the email; paste it in the box, press <b>Unlock</b>, and the game goes on. The key opens the game on any machine — <b>Have a key?</b> on the title screen is where it goes in on another one — and every build after this one. Esc opens the office over the wall, with the door out in it.")),
+    p("The game is <b>$12, once, for life</b> — card or PayPal — and it is paid at the front, on the title screen, rather than after a stretch of free play. There is no trial: what you buy is the whole game, this build and every build after it, and there is nothing else to buy inside it.")
+    +p("What is paid for is an <b>account</b>, not this browser. So it goes: open an account with an email and a password, press Buy, pay, and come back to a game that is already open. Sign in on another machine and it is open there too, with your dossiers on the account beside it. Nothing is emailed to you but the receipt — there is no key to keep, paste or lose.")
+    +p("If the game was open on this account and is not now, that is a payment refunded or a licence withdrawn, and it takes nothing with it: the crew, the float and the file stay exactly where they stand. Esc opens the office over that card, with the door out in it.")),
   S("keys","The keys",
     G.T(["Key","What it does"],[
       [m("Esc"),"The office — pause and settings. Also closes whatever is open."],

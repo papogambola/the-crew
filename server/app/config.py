@@ -56,8 +56,10 @@ class Settings:
     # link that always points at production is a reset flow nobody can test anywhere else.
     site_url: str = os.environ.get("SITE_URL", "https://playthecrew.com").rstrip("/")
 
-    # The free run, in the GAME'S weeks — the number in the top bar, not weeks of anybody's life.
-    free_weeks: int = 12
+    # There was a free run here — twelve weeks on the game's calendar — and there is no longer one.
+    # The game is bought before it is played. It is a game, not a tool somebody evaluates: the
+    # twelve weeks were the whole of the first act given away, and what they bought was a wall in
+    # the middle of the one story the game has to tell.
 
     # STRIPE, which takes the money and carries the tax.
     #
@@ -83,7 +85,11 @@ class Settings:
         A wall with no way to pay is worse than no wall, so the game asks this and simply does not
         gate anybody when it is false. Half-configured counts as shut: a secret with no price would
         let Buy be pressed and then fail at Stripe, which is the same as being shut except that it
-        wastes the one moment somebody had decided to pay."""
+        wastes the one moment somebody had decided to pay.
+
+        This carries more weight than it did. It used to decide whether a wall appeared at week
+        thirteen; it now decides whether the game opens at all, so a deploy that loses one of the
+        three does not lock everybody out — it gives the game away. That is the right way round."""
         return bool(self.stripe_secret and self.stripe_webhook_secret and self.stripe_price)
 
     # Where the game is served from, for CORS. The site is on GitHub Pages and the API is here,

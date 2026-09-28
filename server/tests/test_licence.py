@@ -205,12 +205,12 @@ def test_one_order_opens_one_account(client, signed_up, shop):
 
 # ------------------------------------------------- what being paid is worth
 
-def test_paying_ends_the_free_run_whatever_the_count(client, signed_up, shop):
-    for w in range(1, 13):
-        client.post("/run/week", headers=signed_up["h"], json={"game_id": "g", "game_week": w})
-    assert client.get("/run", headers=signed_up["h"]).json()["over"] is True
+def test_paying_is_the_only_thing_that_opens_the_door(client, signed_up, shop):
+    """There is no free run to end any more: the account is shut from the moment it exists, and a
+    signed webhook is the one event in the whole service that changes that."""
+    assert client.get("/licence", headers=signed_up["h"]).json()["over"] is True
     _post(client, _event(_player_id(signed_up["email"])))
-    body = client.get("/run", headers=signed_up["h"]).json()
+    body = client.get("/licence", headers=signed_up["h"]).json()
     assert body["over"] is False and body["paid"] is True
 
 

@@ -1,8 +1,10 @@
 /* THE ACCOUNT — the game talking to a real server.
 
-   Slice 2 of the migration. The crew, the twelve free weeks and the licence have all lived in
-   one browser since the game was written, which is why clearing browsing data took all three and
-   none of them followed anybody to a second machine.
+   Slice 2 of the migration. The crew and the licence both lived in one browser since the game was
+   written, which is why clearing browsing data took both and neither followed anybody to a second
+   machine. (There were twelve free weeks in here too, counted on the account so they could not be
+   reset. The game is bought before it is played now, so there is no run to count and those
+   assertions have become assertions about the door instead.)
 
    This drives the real thing: a real FastAPI server on a real port, a real browser, a real
    sign-up. Nothing here is stubbed, because what is being tested is whether two pieces of
@@ -16,9 +18,15 @@
      cd server && DATABASE_URL=sqlite:///./dev.db JWT_SECRET=$(python3 -c "import secrets;print(secrets.token_urlsafe(48))") \
        alembic upgrade head && uvicorn app.main:app --port 8931
    API=http://127.0.0.1:8931 node tests/browser80.js
+
+   To drive the DOOR as well, give the server a shop. Nothing here reaches Stripe — the three
+   variables only have to be non-empty for settings.shop_open to be true:
+     STRIPE_SECRET_KEY=sk_test_x STRIPE_PRICE_ID=price_x STRIPE_WEBHOOK_SECRET=whsec_test_x uvicorn …
+   Without them the server has no till, the door is open, and this file says so and moves on — which
+   is itself the assertion that matters most, because that is how a lost variable must fail.
 */
 const {chromium,CHROME,ROOT,GAME}=require("./env.js");
-const path=require("path"),http=require("http"),fs=require("fs");
+const path=require("path"),http=require("http"),fs=require("fs"),crypto=require("crypto");
 const FILE=path.resolve(__dirname,process.argv[2]||GAME);
 const API=process.env.API||"http://127.0.0.1:8931";
 const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else console.log("ok  "+m);};
@@ -39,8 +47,11 @@ const srv=http.createServer((q,r)=>{
      where a real failure goes to hide. That argument was made about browser16 earlier in this
      repository's history and it applies to the test being written, not only to the ones already
      there. Exit 0 and say how to get one. */
-  const alive=await fetch(API+"/health",{signal:AbortSignal.timeout(2500)})
-    .then(r=>r.ok).catch(()=>false);
+  const health=await fetch(API+"/health",{signal:AbortSignal.timeout(2500)})
+    .then(r=>r.ok?r.json():null).catch(()=>null);
+  const alive=!!health;
+  // Whether this server has a till decides which half of the door can be driven here.
+  const TILL=!!(health&&health.shop), HOOK=process.env.STRIPE_WEBHOOK_SECRET||"";
   if(!alive){
     console.log("skip  no server at "+API+" — this file drives the real one.");
     console.log("      cd server && DATABASE_URL=sqlite:///./dev.db \\");
@@ -83,8 +94,9 @@ const srv=http.createServer((q,r)=>{
     const r=await fetch(API_BASE+"/health");return {status:r.status,body:await r.json()};});
   check(reach.status===200&&reach.body.ok===true,"the game's own API_BASE reaches /health");
 
-  console.log("— signing up, from inside the game —");
-  await newGame();
+  console.log("— signing up, from the title screen —");
+  // No game is started first. With a till open there is not one to start yet, which is the point:
+  // an account comes before a dossier now, not after eleven weeks of one.
   const EMAIL=mail();
   const up=await page.evaluate(async([e,p])=>{
     const ok=await accSignUp(e,p);
@@ -92,41 +104,91 @@ const srv=http.createServer((q,r)=>{
   },[EMAIL,PASS]);
   check(up.ok&&up.signedIn,"an account is opened and the token kept"+(up.err?" — "+up.err:""));
   check(up.acc&&up.acc.email===EMAIL,"and the game knows whose it is");
-  check(up.acc&&up.acc.weeks_played===0&&up.acc.weeks_left===12,"a fresh account has all twelve weeks");
+  check(up.acc&&up.acc.paid===false&&up.acc.over===true,
+    "a fresh account has not bought the game — shut, rather than open for twelve weeks");
+  check(up.acc&&!("weeks_played" in up.acc)&&!("weeks_left" in up.acc),
+    "and the answer carries no free run to read: "+Object.keys(up.acc||{}).sort().join(", "));
+  check(up.acc&&up.acc.shop_open===TILL,
+    "the game is told whether this server can sell it anything (shop_open "+(up.acc||{}).shop_open+")");
 
-  console.log("— the free run is counted on the account, not in the browser —");
-  const ran=await page.evaluate(async()=>{
-    for(let i=0;i<5;i++){S.week++;weekReport();await new Promise(r=>setTimeout(r,120));}
-    await accRefresh();
-    return {weeks:ACC.weeks_played,left:ACC.weeks_left,over:ACC.over,week:S.week};
+  console.log("— the endpoint that counted the free run is gone —");
+  const dead=await page.evaluate(async()=>{
+    const a=await api("POST","/run/week",{game_id:"g",game_week:1});
+    const b=await api("GET","/run");
+    return {a:a.status,b:b.status};
   });
-  check(ran.weeks===ran.week,"five weeks played, "+ran.weeks+" counted on the account");
-  check(ran.left===12-ran.weeks&&ran.over===false,"and "+ran.left+" left");
+  check(dead.a===404&&dead.b===404,"an old build reporting its weeks finds nothing there ("+dead.a+", "+dead.b+")");
 
-  console.log("— and clearing this browser does not give them back —");
+  console.log("— the door, and which side of it this server puts you on —");
   const token=await page.evaluate(()=>tokenGet());
-  await page.evaluate(()=>{try{localStorage.clear();}catch(e){}});
-  await page.reload();
+  await open();
   await page.evaluate(t=>{localStorage.setItem("thecrew_token_v1",t);},token);
-  await page.reload();
-  const after=await page.evaluate(async()=>{await accRefresh();return ACC;});
-  check(after&&after.weeks_played===ran.weeks,
-    "a cleared browser signs back in on "+after.weeks_played+" weeks, not on nought — which is the whole complaint");
+  await page.reload();await page.waitForTimeout(500);
+  const door=await page.evaluate(()=>({walled:walled(),shop:shopOpen(),
+    begin:!!document.querySelector('[data-act="begin"]'),buy:!!document.querySelector('[data-act="till-buy"]')}));
+  if(TILL){
+    check(door.walled===true&&door.buy===true&&door.begin===false,
+      "a till is open and an unpaid account is shut out of the game");
+  } else {
+    check(door.walled===false&&door.begin===true,
+      "this server has no till, so nobody is walled — which is the way round it must fail");
+    console.log("      (start the server with STRIPE_SECRET_KEY, STRIPE_PRICE_ID and");
+    console.log("       STRIPE_WEBHOOK_SECRET to drive the paid half as well)");
+  }
 
-  console.log("— a NEW dossier is not a new free run —");
-  const fresh=await page.evaluate(async()=>{
-    // a different game: a different seed, and its weeks start at one again
-    const out=[];
-    for(const seed of [111111,222222]){
-      S=S||{};S.seed=seed;
-      for(let w=1;w<=4;w++){S.week=w;weekReport();await new Promise(r=>setTimeout(r,110));}
-      await accRefresh();out.push({seed,weeks:ACC.weeks_played});
-    }
-    return out;
-  });
-  check(fresh[1].weeks>fresh[0].weeks,
-    "week one of a second dossier adds to the run rather than restarting it ("
-      +fresh[0].weeks+" → "+fresh[1].weeks+")");
+  if(TILL){
+    /* THE WEBHOOK, AGAINST THE REAL SERVICE. Only the half that needs no player id.
+
+       Opening the door for real from here would mean forging a paid checkout.session.completed,
+       and the only thing in one that says WHOSE order it is — client_reference_id — is a player id
+       the game is never told, deliberately: it comes off the bearer token inside
+       POST /licence/checkout and goes nowhere near the browser. So that half is tested where the id
+       is knowable (server/tests/test_licence.py, eighteen tests weighted on exactly this) and the
+       client's side of it against a fake server (browser89).
+
+       What IS worth doing here, because it is the one thing neither of those proves about the
+       running service: post an unsigned body at the live endpoint and watch it refused. That is the
+       button on the internet that would otherwise read "give me the game". */
+    const unsigned=await fetch(API+"/licence/stripe-hook",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({type:"checkout.session.completed",data:{object:{
+        id:"cs_forged_"+crypto.randomBytes(8).toString("hex"),payment_status:"paid",
+        client_reference_id:"1",amount_total:1200,currency:"usd"}}})}).then(r=>r.status);
+    check(unsigned===400,"an unsigned webhook is refused by the running service ("+unsigned+")");
+    const stale=await (async()=>{
+      const raw=JSON.stringify({type:"checkout.session.completed",data:{object:{id:"cs_stale",payment_status:"paid",client_reference_id:"1"}}});
+      const t=Math.floor(Date.now()/1000)-3600;
+      const sig=crypto.createHmac("sha256",HOOK||"whsec_not_the_secret").update(t+"."+raw).digest("hex");
+      return fetch(API+"/licence/stripe-hook",{method:"POST",
+        headers:{"Content-Type":"application/json","Stripe-Signature":"t="+t+",v1="+sig},body:raw}).then(r=>r.status);
+    })();
+    check(stale===400,"and so is an hour-old signature, however well formed ("+stale+")");
+  }
+
+  /* EVERYTHING BELOW NEEDS A GAME, AND A GAME NEEDS THE DOOR OPEN.
+
+     Opening it from here would mean forging a paid webhook, and the only field in one that says
+     whose order it is — client_reference_id — is a player id the game is never told: it comes off
+     the bearer token inside POST /licence/checkout and goes nowhere near the browser. That is the
+     right shape and it is not being loosened for a test, so the save-sync drive runs against a
+     server with NO till, which is also how a laptop is normally run. */
+  if(TILL){
+    console.log("— the crew is not held hostage by the door —");
+    // An unpaid account can still put a dossier up and take it down. Somebody who played before the
+    // door existed, or whose payment lapsed, must not find their crew locked inside an API.
+    const hostage=await page.evaluate(async()=>{
+      const put=await api("PUT","/saves",{game_id:"door-test",rev:1,week:7,label:"A crew",blob:JSON.stringify({v:2,money:5})});
+      const got=await api("GET","/saves/door-test");
+      return {put:put.status,got:got.status,week:got.ok?got.body.week:null};
+    });
+    check(hostage.put===200&&hostage.got===200&&hostage.week===7,
+      "an unpaid account can still save its crew up and fetch it back ("+hostage.put+", "+hostage.got+")");
+    console.log("");
+    console.log("      The save-sync drive below needs a game, and a game needs the door open.");
+    console.log("      Start the server WITHOUT the three STRIPE_ variables to run it.");
+    await browser.close();srv.close();
+    return;
+  }
 
   console.log("— the crew goes up, and comes back on another machine —");
   await open();
@@ -190,7 +252,6 @@ const srv=http.createServer((q,r)=>{
     save();                                   // local write, then a mirror that cannot connect
     await savePushNow();
     const stored=JSON.parse(localStorage.getItem("thecrew_save_v2")||"{}");
-    weekReport();
     await new Promise(r=>setTimeout(r,400));
     return {sync:SYNC.state,stored:stored.money,live:S.money,stillPlaying:!!S&&!S.over};
   });

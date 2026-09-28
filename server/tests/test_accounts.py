@@ -67,12 +67,13 @@ def test_a_forged_token_opens_nothing(client, signed_up):
     assert client.get("/auth/me", headers=signed_up["h"]).status_code == 200
 
 
-def test_me_says_where_the_free_run_stands(client, signed_up):
-    for w in (1, 2, 3):
-        client.post("/run/week", headers=signed_up["h"], json={"game_id": "g", "game_week": w})
+def test_me_says_who_it_is_and_whether_the_door_is_open(client, signed_up):
+    """This asked where the free run stood. There is no free run: the game is bought before it is
+    played, so what /auth/me carries is the door's state and whether there is a way through it."""
     me = client.get("/auth/me", headers=signed_up["h"]).json()
     assert me["email"] == signed_up["email"]
-    assert me["weeks_played"] == 3 and me["weeks_left"] == 9 and me["paid"] is False
+    assert me["paid"] is False and me["over"] is True
+    assert "shop_open" in me, "the game cannot decide what to show without knowing if there is a till"
 
 
 def test_health_is_open(client):

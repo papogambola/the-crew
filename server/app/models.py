@@ -2,13 +2,17 @@
 
     Player         who they are. The thing a save can belong to and a licence can be bought by.
     PasswordReset  one way back in, good once — because otherwise forgetting is permanent.
-    FreeRun        the twelve weeks, a row per game, summed — see the class and routers/run.py.
     Save           the crew itself, so it stops living in one browser.
     Licence        what they paid for, attached to the person rather than to a browser.
 
+There was a FreeRun here — the twelve weeks, a row per game, summed — and the game is bought
+before it is played now, so nothing asks how many weeks anybody has had. The table is dropped in
+the migration that removed it rather than left to sit there answering a question nobody puts.
+
 Kept apart rather than as columns on Player because they have different lifetimes: a player is
-forever, a free run is spent once, and a licence is a receipt. Also because the day the save
-moves here, Player is what it hangs off, and a wide Player row is the thing that gets in the way."""
+forever, a save is rewritten every week, and a licence is a receipt. Also because the day the
+save moves here, Player is what it hangs off, and a wide Player row is the thing that gets in the
+way."""
 from datetime import datetime, timezone
 
 from sqlalchemy import (Boolean, DateTime, ForeignKey, Integer, String, Text,
@@ -27,7 +31,7 @@ class Player(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     # Stored lower-cased and stripped; see security.normalize_email. Unique, so "Paz@x.com" and
-    # "paz@x.com" cannot become two accounts with two free runs between them.
+    # "paz@x.com" cannot become two accounts, one of them paid and the other locked out.
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
@@ -42,7 +46,6 @@ class Player(Base):
     # token predating this column carry on working.
     pw_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    free_runs: Mapped[list["FreeRun"]] = relationship(back_populates="player")
     licences: Mapped[list["Licence"]] = relationship(back_populates="player")
     saves: Mapped[list["Save"]] = relationship(back_populates="player")
     resets: Mapped[list["PasswordReset"]] = relationship(back_populates="player")
@@ -70,35 +73,6 @@ class PasswordReset(Base):
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     player: Mapped[Player] = relationship(back_populates="resets")
-
-
-class FreeRun(Base):
-    """The twelve weeks, counted where the player cannot reach them — ONE ROW PER GAME.
-
-    The first shape of this was a single weeks_played on the account, advanced when the client
-    reported a higher week than it had seen. That is wrong, and wrong in exactly the way the
-    whole feature exists to prevent: finish twelve weeks, start a new dossier, and every week of
-    the new game is week 1, 2, 3 — none of them higher than 12, so nothing advances and the free
-    run never ends. Which is the "stop at week 11 and restart" exploit, rebuilt on the server.
-
-    So a row per game. Each row holds the highest week that game has reached, and the free run is
-    the SUM across the player's games. Game A twelve weeks plus game B three is fifteen, and the
-    run is spent. Idempotent too: the same week reported twice is one row updated to the same
-    number, so a retry after a dropped connection costs nobody anything."""
-    __tablename__ = "free_runs"
-    __table_args__ = (UniqueConstraint("player_id", "game_id", name="uq_free_runs_player_game"),)
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    player_id: Mapped[int] = mapped_column(ForeignKey("players.id", ondelete="CASCADE"),
-                                           nullable=False, index=True)
-    # The game's own identity. The client sends its save seed, which is stable for the life of a
-    # dossier and different for every new one — exactly the property needed here.
-    game_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    weeks: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    first_week_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    last_week_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-
-    player: Mapped[Player] = relationship(back_populates="free_runs")
 
 
 class Licence(Base):

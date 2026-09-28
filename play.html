@@ -1583,9 +1583,9 @@ let S=null;
 const SAVE_KEY="thecrew_save_v2";
 /* ========================= THE ACCOUNT, AND THE SERVER =========================
 
-   Slice 2 of ARCHITECTURE_AUDIT.md §19. The game has kept everything on the player's machine
-   since it was written — the save, the twelve free weeks, the licence key — and all three of
-   those turned out to be the same problem wearing three hats: clear your browsing data and your
+   Slice 2 of ARCHITECTURE_AUDIT.md §19. The game kept everything on the player's machine from the
+   day it was written — the save, the twelve free weeks it then had, and the licence key — and all
+   three turned out to be the same problem wearing three hats: clear your browsing data and your
    crew is gone, your free run is back, and the thing you paid for is not yours any more.
 
    So there is a server now, and signing in is how you reach it.
@@ -1604,9 +1604,48 @@ const API_HOME="https://api.playthecrew.com";
 const API_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_API==="string")
   ?window.THE_CREW_API:API_HOME;
 const TOKEN_KEY="thecrew_token_v1";
+/* DOES THE API BELONG TO THE SITE THIS COPY WAS SERVED FROM.
 
-let ACC=null;     // {email, paid, weeks_played, free_weeks, weeks_left, over} — the last answer
+   The game only talks to an API on its own site: the same host, a subdomain of it, or a sibling
+   subdomain — playthecrew.com and www.playthecrew.com to api.playthecrew.com, or a test's own
+   127.0.0.1 to its own 127.0.0.1. Anywhere else it asks nothing at all.
+
+   That is a rule about what this copy is, and it earns its place three times over.
+
+   It decides the DOOR. The game is bought before it is played, and a copy that cannot reach a till
+   must not put one in front of anybody — a wall with no way through it is a locked door with the
+   key on the other side. A copy that is not on the site has no till, so it has no door.
+
+   It keeps the CONSOLE clean. A cross-origin call to an origin the API has not been told about is
+   refused at the preflight, and the browser prints that refusal whatever the code does with the
+   promise — try/catch cannot swallow it. So the call is not made. Every copy opened off a disk
+   (origin `null`, and the suite is sixty of them) and every copy served from an ad-hoc local port
+   is quiet, because neither is on the site.
+
+   And it is the honest half of a rule CORS already enforces: a copy of this file rehosted on
+   somebody else's domain does not send anybody's token to our server, and does not need to be told
+   no by the server to find that out.
+
+   Setting THE_CREW_API is how a local server opts in, and it points at itself, so it passes. */
+const sameSite=(a,b)=>!!a&&!!b&&(a===b||a.endsWith("."+b)||b.endsWith("."+a)
+  ||a.split(".").slice(-2).join(".")===b.split(".").slice(-2).join("."));
+const API_LIVE=(()=>{
+  if(typeof location==="undefined")return false;
+  try{return sameSite(location.hostname,new URL(API_BASE,location.href).hostname);}
+  catch(e){return false;}
+})();
+
+let ACC=null;     // {email, paid, over, shop_open} — the last answer the server gave
 let ACC_ERR="";   // what went wrong last, in words, for the account screen to print
+/* IS THERE A TILL. The server's answer, asked once on the way up and by nothing else.
+
+   Separate from ACC because a SIGNED-OUT player needs it: they are the ones the door is shut to,
+   and what it should offer them — sign in, or nothing at all — depends entirely on whether this
+   server sells the game. Signed in it comes off /auth/me with everything else; signed out it comes
+   off /health, which carries it for exactly this reason. False until something answers, so every
+   way of failing to ask — offline, a dead server, a copy off the disk — fails towards letting
+   somebody play. */
+let SHOPEN=false;
 
 function tokenGet(){try{return localStorage.getItem(TOKEN_KEY)||"";}catch(e){return "";}}
 function tokenSet(t){try{if(t)localStorage.setItem(TOKEN_KEY,t);else localStorage.removeItem(TOKEN_KEY);}catch(e){}}
@@ -1672,30 +1711,31 @@ async function accRefresh(){
   if(!signedIn()){ACC=null;return null;}
   const r=await api("GET","/auth/me");
   ACC=r.ok?r.body:null;
+  // Whether there is a till comes back with everything else, and is remembered separately: a
+  // signing-out player must not take the shop's existence with them.
+  if(ACC&&typeof ACC.shop_open==="boolean")SHOPEN=ACC.shop_open;
   if(!r.ok&&r.offline)ACC_ERR="The server did not answer.";
   return ACC;
 }
 
-/* THE FREE RUN, REPORTED RATHER THAN COUNTED.
+/* THE ONE QUESTION ASKED ON THE WAY UP, AND THE ONLY REASON ANYTHING IS ASKED ON THE WAY UP.
 
-   weekTick still increments SET.weeksPlayed, because a signed-out player has to be counted
-   somehow and because that number is what the game reads while the server is unreachable. What
-   is new is that the week is also reported, with the GAME it belongs to — the save's seed — so
-   the server can tell a second dossier from a second week. Sending only a count would have
-   rebuilt the "start again for twelve more" hole on the server; see server/app/routers/run.py.
+   The game is bought before it is played, so the title screen has to choose between two entirely
+   different screens — the game, or a door with a price on it — and it cannot choose until the
+   server has answered. Signed in, /auth/me answers all of it at once: who they are, whether they
+   paid, and whether there is a till. Signed out there is nothing to ask about an account, but the
+   till still has to be established, and /health carries it.
 
-   Nothing waits for it. The reply updates ACC when it arrives and the game does not pause. */
-function weekReport(){
-  if(!signedIn()||!S||!S.seed)return;
-  api("POST","/run/week",{game_id:String(S.seed),game_week:S.week}).then(r=>{
-    if(r.ok){ACC=Object.assign(ACC||{},r.body);renderIfAccountShowing();}
-  });
-}
-// The till asks this. Signed in, the server's answer wins — it is the one that cannot be edited
-// in a console. Signed out, the old local count stands, which is honest about what it is.
-function freeOverServer(){
-  if(ACC&&typeof ACC.over==="boolean")return ACC.over;
-  return null;
+   Everything fails towards playing. No answer, a timeout, a copy off the disk: no wall.
+
+   There WAS a /run/week call here, reporting each week of the game's calendar so the server could
+   count a free run that could not be reset. There is no free run, so there is nothing to count. */
+function shopAsk(){
+  if(!API_LIVE)return Promise.resolve();
+  if(signedIn())return accRefresh().then(()=>{}).catch(()=>{});
+  return api("GET","/health").then(r=>{
+    if(r&&r.ok&&r.body&&typeof r.body.shop==="boolean")SHOPEN=r.body.shop;
+  }).catch(()=>{});
 }
 
 /* THE SAVE, MIRRORED UP.
@@ -1824,18 +1864,34 @@ function field(){return crewAll().filter(c=>c.status==="crew");}
 // Places on your crew come with the name; other crews come with the years.
 const CREW_MAX_SEATS=6;                 // six soldiers, plus you
 const EXTRA_CREW_SIZE=5;                // a commander and four soldiers
-/* When each further crew becomes possible: a year in for the second, then year three and year
-   four — and no more. One list, and every screen that says it out loud reads it from here rather
-   than printing the number again, because it has been written out by hand in six places before
-   now and those copies are what go stale. */
-const EXTRA_CREW_WEEKS=[52,156,208];
-// "a year in" / "two years in" — a week count said the way somebody would say it, so a threshold
-// of 52 does not come out as "1 years in".
+/* When each further crew becomes possible: half a year in for the second, then year three and
+   year four — and no more. One list, and every screen that says it out loud reads it from here
+   rather than printing the number again, because it has been written out by hand in six places
+   before now and those copies are what go stale.
+
+   The second was a year, and a year is most of a game. Somebody who reaches Feared with seven
+   people at week 30 was being told to keep doing the thing they had just finished learning for
+   another five months before the game would show them its second half. Half a year is still long
+   enough that a crew has to survive to get there. */
+const EXTRA_CREW_WEEKS=[26,156,208];
+/* "half a year in" / "two years in" — a week count said the way somebody would say it, so a
+   threshold of 52 does not come out as "1 years in" and 26 does not come out as "a year".
+   Counted in HALF-years, because the first mark is one. */
 function yearsIn(week){
-  const y=Math.round(week/52);
-  return y===1?"a year":(["","one","two","three","four","five","six"][y]||y)+" years";
+  const h=Math.round(week/26);
+  const say=n=>["","one","two","three","four","five","six","seven","eight"][n]||n;
+  if(h<=0)return week+" week"+(week===1?"":"s");
+  if(h===1)return "half a year";
+  if(h===2)return "a year";
+  if(h%2)return say((h-1)/2)+" and a half years";
+  return say(h/2)+" years";
 }
-const EXTRA_CREW_REP=80;                // Feared
+/* The name a second crew needs. NOT a rung: 80 sits inside Respected (65–109), and the rung called
+   Feared starts at 110 — so every screen states the NUMBER rather than a rung's name, which six of
+   them used to get wrong in the same direction. The career mark called "Feared" is also at 80, which
+   is where the word came from. Left at 80 rather than moved to 110, because the week came DOWN to 26
+   and raising the name at the same moment would take back what that was for. */
+const EXTRA_CREW_REP=80;
 function crewSeats(){return rankInfo(S.rep).seats;}
 
 /* --------------------------- THE JOKER: REASSEMBLE --------------------------- */
@@ -3374,14 +3430,14 @@ function foundingRules(){
 }
 function canFound(){const r=foundingRules();return r.more&&r.weekOk&&r.repOk&&r.full&&r.cmdr&&r.ready;}
 // Milestones are announced once, in a box in the middle of the screen: the places a name opens,
-// each year mark when another crew is within reach, and the moment one can be founded.
+// each mark when another crew is within reach, and the moment one can be founded.
 function checkMilestones(){
   if(!S||S.over)return;
   S.milestones=S.milestones||{};S.notices=S.notices||[];
   const M=S.milestones;
   const push=(k,n)=>{if(M[k])return;M[k]=true;S.notices.push(n);logMsg(n.h+" — "+n.text,"good",true);};
   if(crewSeats()>=CREW_MAX_SEATS)push("seats6",{k:"Milestone · "+rankName(S.rep),h:"Two more seats",
-    text:"The name is "+rankName(S.rep)+". Places six and seven are open: six soldiers, and you. Fill them from the roster — and from week "+EXTRA_CREW_WEEKS[0]+", Feared, with all seven on the crew, you can found a second crew that works without you.",go:"roster",goText:"To the roster →"});
+    text:"The name is "+rankName(S.rep)+". Places six and seven are open: six soldiers, and you. Fill them from the roster — and from week "+EXTRA_CREW_WEEKS[0]+", at ranking "+EXTRA_CREW_REP+", with all seven on the crew, you can found a second crew that works without you.",go:"roster",goText:"To the roster →"});
   if(crewSeats()>=CREW_MAX_SEATS)push("bigops",{k:"Milestone · "+rankName(S.rep),h:"Work that needs seven",
     // No stock counts. How many of these exist and how many specialists are on the roster is the
     // size of a table, not a thing the player does anything with — and a number that large reads
@@ -3396,7 +3452,7 @@ function checkMilestones(){
         text:cap(years)+" in, "+rankName(S.rep)+", seven on the crew. You can found a "+ord+" crew: a commander-type and four soldiers out of your seven, named after its commander, taking a job of its own each week without you. Its take, its heat and its ranking are yours — and so is its payroll.",go:"found",goText:"Found a crew →"});
     } else if(fr.weekOk){
       const need=[];
-      if(!fr.repOk)need.push("a Feared name (ranking "+fr.rep+", now "+S.rep+")");
+      if(!fr.repOk)need.push("a name worth ranking "+fr.rep+" (now "+S.rep+")");
       if(!fr.full)need.push("seven on your crew (now "+(1+recruits().length)+")");
       if(!fr.cmdr)need.push("a commander-type among them");
       if(!fr.ready)need.push("five ready to go");
@@ -4224,8 +4280,8 @@ const RANKS=[
   [420,"The Crew",{pay:1.5,maxTier:4,hireExp:5,loyDrift:2,heatMul:1.22,seats:6,note:"Top of the board, and the last score is on it. Jobs pay +50%, anyone will sign, loyalty holds by itself (+2 a week), six soldiers' seats — and every police force on the board knows the name (heat +22%)."}],
   [300,"Untouchable",{pay:1.38,maxTier:4,hireExp:5,loyDrift:2,heatMul:1.18,seats:6,note:"Jobs pay +38%. Loyalty +2 a week. Nobody turns you down. Every room you are given is defended against you, and the police look harder than they look at anybody (heat +18%)."}],
   [190,"Notorious",{pay:1.28,maxTier:4,hireExp:5,loyDrift:1,heatMul:1.14,seats:6,note:"Jobs pay +28%. Legends sign without asking twice. The name is worth money and it costs heat (+14%)."}],
-  [110,"Feared",{pay:1.2,maxTier:4,hireExp:5,loyDrift:1,heatMul:1.1,seats:6,note:"Jobs pay +20%. Legends will sign. Loyalty +1 a week. Six soldiers' seats, and from the second year a full crew can found another. The police look harder (heat +10%)."}],
-  [65,"Respected",{pay:1.1,maxTier:4,hireExp:5,loyDrift:1,heatMul:1.05,seats:6,note:"Tier-4 jobs open. Jobs pay +10%. Legends will sign. Loyalty +1 a week. Two more seats: six soldiers. Heat +5%."}],
+  [110,"Feared",{pay:1.2,maxTier:4,hireExp:5,loyDrift:1,heatMul:1.1,seats:6,note:"Jobs pay +20%. Legends will sign. Loyalty +1 a week. Six soldiers' seats. The police look harder (heat +10%)."}],
+  [65,"Respected",{pay:1.1,maxTier:4,hireExp:5,loyDrift:1,heatMul:1.05,seats:6,note:"Tier-4 jobs open. Jobs pay +10%. Legends will sign. Loyalty +1 a week. Two more seats: six soldiers. And at ranking "+EXTRA_CREW_REP+", from week "+EXTRA_CREW_WEEKS[0]+", with all seven on the crew — a second crew of your own. Heat +5%."}],
   [35,"Known",{pay:1.0,maxTier:3,hireExp:4,loyDrift:0,heatMul:1.0,seats:5,note:"Tier-3 jobs open. Full pay. Veterans will sign. Five soldiers' seats."}],
   [15,"Small time",{pay:0.9,maxTier:2,hireExp:3,loyDrift:0,heatMul:1.0,seats:4,note:"Jobs pay −10%. Tier 1–2 only. Nobody above Professional will sign. Four soldiers' seats."}],
   [0,"Nobody",{pay:0.8,maxTier:2,hireExp:3,loyDrift:-1,heatMul:1.0,seats:4,note:"Jobs pay −20%. Tier 1–2 only. Nobody above Professional will sign, and loyalty slips a point a week — nobody stays loyal to a nobody. Four soldiers' seats."}],
@@ -5511,10 +5567,9 @@ function weekTick(rng){
   // so "go back to last week" means the board as it stood, not as it stood after payroll.
   slotCarbon();
   S.week++;
-  SET.weeksPlayed=(SET.weeksPlayed||0)+1;saveSettings();   // the free run is counted here, across every game this browser opens; going back a week does not give one back
-  // and reported, with the game it belongs to, so the account's count is the one that decides.
-  // Nothing waits for the answer; see weekReport.
-  try{weekReport();}catch(e){}
+  // The free run was counted here — a number in the settings key, and the same week reported to
+  // the server with the game it belonged to. The game is bought before it is played, so there is
+  // nothing to count and nothing to report, and a week is just a week again.
   const rc=payroll().filter(c=>c.status==="crew");   // every crew's people are on the books
   let up=retainerCost();rc.forEach(c=>up+=c.upkeep);
   if(up>0){
@@ -5947,7 +6002,8 @@ function render(){
   if(S&&!S.clash&&!S.over)clashCheck();
   newsSync();
   if(!TUT.on){   // nothing pops up under a tutorial; it all waits for the last card
-    // the free run over: the till, over everything but a report still being watched
+    // the licence gone from under a game in progress: the till, over everything but a report
+    // still being watched. Nobody reaches a first week unpaid, so this is a refund or a chargeback.
     if(paywallDue()&&!(S.modal&&isFeed(S.modal.type))&&!(S.modal&&S.modal.type==="paywall")){S.modal={type:"paywall"};UI.tillMsg="";sfx("stamp");}
     if(S.notices&&S.notices.length&&S.notices[0].siren&&!S.modal&&!S.over){S.modal={type:"notice"};if(!S.notices[0].sirened){S.notices[0].sirened=true;sirenFx();}}
     if(S.news&&S.newsRead!==S.week&&!S.modal&&!S.over){S.modal={type:"news"};sfx("open");}
@@ -6351,7 +6407,7 @@ function tabCrew(){
     const lk=canFound();
     out+='<div class="panel'+(lk?'':' locked')+'" style="margin-top:20px"><div class="panel-h"><h2>'+(fr.n?"Another crew":"A second crew")+(lk?'':' — locked')+'</h2><span class="kicker">crew '+(fr.n+2)+' of 4 at most</span></div><div class="panel-b">'
       +'<p class="mono" style="font-size:12.5px;line-height:1.65;margin:0 0 10px">A crew of your own people — a commander and four soldiers out of your seven — that takes a job of its own each week, anywhere, without you. Its take, its heat and its ranking are yours. So is its payroll. '+cap(yearsIn(EXTRA_CREW_WEEKS[0]))+' in, a second; then '+EXTRA_CREW_WEEKS.slice(1).map(w=>yearsIn(w)).join('; then ')+' — four crews, and no more.</p>'
-      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+ok(fr.weekOk,'week '+fr.week+' ('+yearsIn(fr.week)+') — now week '+S.week)+ok(fr.repOk,'Feared (ranking '+fr.rep+') — now '+S.rep)+ok(fr.full,'seven on your crew — now '+(1+recruits().length))+ok(fr.cmdr,'a commander-type among them')+ok(fr.ready,'five ready to go')+'</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+ok(fr.weekOk,'week '+fr.week+' ('+yearsIn(fr.week)+') — now week '+S.week)+ok(fr.repOk,'ranking '+fr.rep+' — now '+S.rep)+ok(fr.full,'seven on your crew — now '+(1+recruits().length))+ok(fr.cmdr,'a commander-type among them')+ok(fr.ready,'five ready to go')+'</div>'
       +'<button class="btn" data-act="found-open" '+(canFound()?"":"disabled")+'>Found a crew →</button></div></div>';
   } else out+='<div class="mono" style="font-size:11.5px;color:var(--muted);margin-top:16px">Four crews. No more.</div>';
   return out;
@@ -10302,10 +10358,18 @@ function loadSettings(){try{const r=localStorage.getItem(SET_KEY);if(r)Object.as
 function saveSettings(){try{localStorage.setItem(SET_KEY,JSON.stringify(SET));}catch(e){}}
 
 /* ------------------------------ THE TILL ------------------------------ */
-// Free to a point, then one payment for life. The free run is twelve weeks on the GAME'S calendar
-// — the number in the top bar, not twelve weeks of anybody's life — or a name that reaches Known,
-// whichever comes first. Signed in it is counted per game and summed on the account, so a new
-// dossier is not a new free run and a cleared cache is not either.
+// ONE PAYMENT, BEFORE THE FIRST WEEK. Not a trial with a wall in it: a door.
+//
+// There were twelve free weeks on the game's calendar, and a name that reached Known ended them
+// early. They are gone, and what they cost is worth writing down. This is a GAME, not a tool
+// somebody evaluates against a competitor: the twelve weeks were the whole first act — choose a
+// face, fill four places, learn what a tier-1 errand is, take the first real room — given away, and
+// what they bought in return was the game stopping in the middle of the one story it has to tell,
+// on a card about money, at the exact moment somebody had started to care. A demo that ends where
+// the game gets good is an argument against buying it.
+//
+// So the price is asked at the front, where a price belongs, and everything behind it is the game.
+// Nothing is withheld once it is paid for: one payment, every build, any machine.
 //
 // THERE IS NO KEY. It went like this and stopped:
 //
@@ -10329,44 +10393,31 @@ function saveSettings(){try{localStorage.setItem(SET_KEY,JSON.stringify(SET));}c
 // difference from the first way.
 const SHOP={
   price:"$12",
-  freeWeeks:12,                // weeks ON THE GAME'S CALENDAR. Counted in weekTick across every game
-                               // this browser opens, and kept in SET rather than in the save — so
-                               // starting a new game at week 11 does not hand back the 11.
-  freeRep:35,                  // or the name reaching this — Known — whichever comes first
 };
-/* IS THERE A WAY TO PAY — the server's answer, and only to somebody signed in.
-
-   This briefly asked /health on the way up so a SIGNED-OUT player could be walled too. It is gone,
-   and the reasoning is worth keeping because its absence looks like a hole and mostly is not.
-
-   A signed-out player cannot buy: the licence hangs off a player id, so the only action a wall
-   could offer them is "sign in". And their free run is counted in this browser's storage, which
-   they can clear, as it always could be. So walling them bought a sentence they could dismiss by
-   signing out, and cost a cross-origin call on every boot of the game — which on any origin the
-   API does not allow is a console error in front of every player.
-
-   Signing out IS a way round the wall. Closing it means requiring an account to play at all, which
-   is a decision about what this game is rather than a flag to fudge in here. The invitation is
-   already on the title screen anyway, for the better reason: the crew stops living in one
-   browser. */
-function shopOpen(){return !!(ACC&&ACC.shop_open);}
-/* PAID IS THE SERVER'S WORD. Not a value in this browser — that was the first way's mistake and
-   it is the one worth not repeating. Signed out there is no answer, so nobody is paid and nobody
-   is walled either: paywallDue() needs a shop, and the wall's way through is to sign in. */
+// IS THERE A TILL. Asked once, on the way up — see shopAsk(). Signed out it comes off /health,
+// because a signed-out player is precisely who the door is shut to and they must not be shut out
+// by a server that has nothing to sell them.
+function shopOpen(){return !!SHOPEN;}
+/* PAID IS THE SERVER'S WORD. Not a value in this browser — that was the first way's mistake and it
+   is the one worth not repeating. Signed out there is no answer, so nobody is paid. */
 function licensed(){return !!(ACC&&ACC.paid);}
-/* Is the free run up? Two answers, and the server's wins when there is one.
+/* THE DOOR. One question, asked before anything is played rather than after twelve weeks of it.
 
-   Signed in, ACC.over is the truth: it is counted per game and summed on the account, so a
-   cleared cache or a second browser arrives at the same number and a new dossier is not a new
-   run. Signed out — or with the server unreachable — the old local count stands, which is the
-   honest fallback and exactly as weak as it always was. */
-function freeOver(){
-  const srv=freeOverServer();
-  if(srv!==null)return srv||!!(S&&S.rep>=SHOP.freeRep);
-  return (SET.weeksPlayed||0)>=SHOP.freeWeeks||!!(S&&S.rep>=SHOP.freeRep);
-}
-function freeRepName(){return rankNameAt(SHOP.freeRep);}
-function paywallDue(){return shopOpen()&&!licensed()&&!!S&&!S.over&&freeOver();}
+   Two ways through besides paying, and both are the same principle: never wall somebody who cannot
+   buy. No till on this server — half-configured Stripe, a local build, a deploy that lost a
+   variable — and the game is simply open; the failure that costs nothing is the one to fail with.
+   And a copy that cannot reach the server at all never learns there is a till, so it is open too.
+
+   What it does NOT do is check whether anybody is signed in. Signed out, shopOpen() is still the
+   server's answer — it came off /health, which needs no account — so the door is shut and what it
+   offers is the way in: open an account, then buy. That used to be the hole in this, and the reason
+   given for leaving it was that closing it "means requiring an account to play at all". It does.
+   That is now the decision: the thing you pay for is an account with the game on it. */
+function walled(){return shopOpen()&&!licensed();}
+/* A game already running, and the door has shut behind it — a refund, a chargeback, a licence
+   turned off. Nobody reaches a first week unpaid now, so this is only ever those, and it is kept
+   because those are exactly the cases where the game must not simply carry on. */
+function paywallDue(){return walled()&&!!S&&!S.over;}
 /* Somewhere to pay, made by the server, tied to this account before the player sees it.
    The game asks for a checkout and is told where to go; it never says which price or whose
    account, because both of those come off the bearer token at the other end. */
@@ -10409,14 +10460,14 @@ function tillReturn(){
   };
   ask();
 }
-// One card, two moods: the wall — the free run is over and it does not close — and the till on
-// the title screen, where a key bought elsewhere goes in, or a paid-for browser says so.
+// One card, two moods: the wall — a game whose licence has gone, and it does not close — and the
+// till on the title screen, where a paid-for account says so and prints what it paid.
 /* ---------------------------- THE ACCOUNT SCREEN ----------------------------
-   One screen for the whole of it: sign in, what the free run stands at, whether it is paid for,
-   and the dossiers on the account. Deliberately one screen rather than three — a player who has
-   just found out their free run is up should be able to sign in, pay and carry on without
-   hunting, and a player who has just changed machines should find their crew in the same place
-   they found the sign-in box. */
+   One screen for the whole of it: sign in, whether the game is paid for, and the dossiers on the
+   account. Deliberately one screen rather than three — somebody who has just arrived at a door with
+   a price on it should be able to open an account, pay and start playing without hunting, and
+   somebody who has just changed machines should find their crew in the same place they found the
+   sign-in box. */
 function modalAccount(){
   const err=ACC_ERR?'<div class="brief" style="border-left-color:var(--stamp)">'+esc(ACC_ERR)+'</div>':'';
   const mode=UI.accMode==="up"?"up":"in";
@@ -10426,10 +10477,12 @@ function modalAccount(){
       +'<h2 style="font-size:26px;margin-top:4px">'+(mode==="up"?"Open an account":"Sign in")+'</h2></div>'
       +'<button class="x" data-act="modal-close" aria-label="Close">✕</button></div>'
       +'<div class="modal-b">'
-      +'<p style="margin:0 0 12px;font-size:14px;line-height:1.6">Until now the crew, the twelve free '
-      +'weeks and the key you paid with all lived in this browser and nowhere else — so clearing your '
-      +'browsing data took all three, and none of them followed you to another machine. An account '
-      +'is where they live instead.</p>'
+      +'<p style="margin:0 0 12px;font-size:14px;line-height:1.6">'
+      +(shopOpen()?'The game is bought onto an account, and so is the crew. One email and one '
+        +'password: what you pay for opens the game on any machine you sign in on, and the dossier '
+        +'goes up with it, so a cleared cache is no longer the end of a crew.'
+        :'The crew lives in this browser and nowhere else, so clearing your browsing data takes it '
+        +'and it does not follow you to another machine. An account is where it lives instead.')+'</p>'
       +err
       +'<div class="field"><label for="acmail">Email</label>'
       +'<input type="email" id="acmail" value="'+esc(UI.accMail||"")+'" autocomplete="username" spellcheck="false"></div>'
@@ -10450,8 +10503,11 @@ function modalAccount(){
       +(mode==="in"?'<button class="btn ghost" data-act="acc-forgot" '+(UI.accBusy?"disabled":"")
         +'>Forgotten it?</button>':'')
       +'</div>'
-      +'<div class="sel-help" style="margin-top:14px">You can keep playing without one. The game saves '
-      +'on this machine as it always has — an account is what makes it not <i>only</i> on this machine.</div>'
+      +'<div class="sel-help" style="margin-top:14px">'
+      +(shopOpen()?'Forgotten which address you used? Whatever you paid with is on the Stripe receipt '
+        +'in your email — the account is that address.'
+        :'You can keep playing without one. The game saves on this machine as it always has — an '
+        +'account is what makes it not <i>only</i> on this machine.')+'</div>'
       +'</div></div></div>';
   }
   const a=ACC||{};
@@ -10482,10 +10538,11 @@ function modalAccount(){
     +'<div class="modal-b">'
     +err+conf
     +'<div class="evfacts" style="margin-bottom:12px">'
-      +'<span class="k">The free run</span><span>'
-        +(a.paid?'<span style="color:var(--good)">paid for — it does not apply</span>'
-          :esc(String(a.weeks_played==null?"—":a.weeks_played))+' of '+esc(String(a.free_weeks||SHOP.freeWeeks))
-           +' weeks on the game\'s calendar used'+(a.over?' — <span style="color:var(--stamp)">and that is the run</span>':''))
+      +'<span class="k">The game</span><span>'
+        +(a.paid?'<span style="color:var(--good)">paid for — lifetime access, any machine</span>'
+          :shopOpen()?'<span style="color:var(--stamp)">not paid for</span> — '+esc(SHOP.price)+', once '
+            +'<a href="#" data-act="till-open">at the till</a>'
+          :'nothing to pay — this server has no till open')
       +'</span>'
       +'<span class="k">This game</span><span>'+sync+'</span>'
     +'</div>'
@@ -10504,15 +10561,18 @@ function modalTill(mode){
   const lic=licensed();
   const inn=signedIn();
   const msg=UI.tillMsg||"";const busy=!!UI.tillBusy;
+  /* THE WALL MOOD IS NOT A PAYWALL ANY MORE — it cannot be reached by playing, because nobody
+     reaches a first week unpaid. It is what a game already open does when the licence behind it
+     stops being active: a refund, a chargeback, a row turned off. So it does not say "that's the
+     free run", which would be a lie about what just happened; it says the account is not paid for,
+     which is the fact, and leaves the save alone. */
   const head=wall
-    ?'<div class="kicker" style="color:var(--stamp)">The till · week '+S.week+'</div><h2 style="font-size:28px;margin-top:4px">That\'s the free run.</h2>'
+    ?'<div class="kicker" style="color:var(--stamp)">The till · week '+S.week+'</div><h2 style="font-size:28px;margin-top:4px">This account is not paid for.</h2>'
     :'<div class="kicker" style="color:var(--stamp)">The till</div><h2 style="font-size:28px;margin-top:4px">'+(lic?"Paid for.":"Lifetime access")+'</h2>';
-  const free=SHOP.freeWeeks+" weeks on the game's calendar — the number in the top bar, not "+SHOP.freeWeeks
-    +" weeks of your life — or a "+esc(freeRepName())+" name, whichever comes first.";
   const text=lic
     ?"Paid for. Lifetime access: every build, and any machine you sign in on. The crew goes with the account, not with this browser."
-    :wall?free+" Lifetime access is <b>"+esc(SHOP.price)+", once</b> — card or PayPal — and it is the account that is paid for, so it follows you to any machine you sign in on."
-    :"Lifetime access is <b>"+esc(SHOP.price)+", once</b>, paid by card or PayPal. It is the account that is paid for, so it opens the game on any machine you sign in on. The free run is "+free;
+    :wall?"The game was open on this account and is not now — a payment refunded, or a licence turned off. <b>Nothing has happened to your crew:</b> the save is where it was and week "+S.week+" is waiting. Lifetime access is <b>"+esc(SHOP.price)+", once</b>, card or PayPal."
+    :"Lifetime access is <b>"+esc(SHOP.price)+", once</b>, paid by card or PayPal. It is the account that is paid for, so it opens the game on any machine you sign in on — every build after this one, with nothing else to buy inside it.";
   /* ONE BUTTON, AND IT SAYS WHAT IT IS. There is no key box any more: nothing is pasted, nothing
      is emailed, and the row that opens the door is written by Stripe telling the server. Signed
      out the same button goes to the account screen instead, because the licence hangs off a
@@ -10523,7 +10583,7 @@ function modalTill(mode){
   const note=lic?""
     :'<div class="mono" style="font-size:11.5px;color:var(--muted);margin-top:10px">'
       +(inn?"Stripe takes the payment and the receipt. You come back here and the game is open."
-           :"The free run and the payment both live on the account, which is why this needs one first.")+'</div>';
+           :"What is paid for is the account, which is why this needs one first.")+'</div>';
   const said=msg?'<div class="mono" style="font-size:12px;margin-top:10px;color:'+(busy?"var(--muted)":"var(--stamp)")+'">'+esc(msg)+'</div>':'';
   const foot='<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px">'
     +(wall?'<span class="mono" style="font-size:11px;color:var(--muted);align-self:center;margin-right:auto">Esc opens the office; the door out is in there.</span>'
@@ -10618,12 +10678,13 @@ function accountLine(){
         +'and carries it to any machine you sign in on. ')
     +'<a href="#" data-act="acc-open">'+(on?'The account':'Sign in or open one')+'</a></div>';
 }
+/* Only ever the paid line now. Unpaid, the title screen draws the door instead — see doorHTML —
+   and this would be a second sentence about the same twelve dollars directly above it. */
 function tillLine(){
-  if(!shopOpen())return "";
+  if(!licensed())return "";
   return '<div class="mono" style="font-size:12px;margin-bottom:10px;color:var(--ink-2)">'
-    +(licensed()?'<span style="color:var(--good)">✓ Paid for — lifetime access.</span>'
-      :'On the house for '+SHOP.freeWeeks+' weeks on the calendar, or a '+esc(freeRepName())+' name. Then '+esc(SHOP.price)+', once, for life. ')
-    +'<a href="#" data-act="till-open">'+(licensed()?'The key':'Have a key?')+'</a></div>';
+    +'<span style="color:var(--good)">✓ Paid for — lifetime access.</span> '
+    +'<a href="#" data-act="till-open">The receipt</a></div>';
 }
 function applySettings(){
   const b=clamp(SET.bright,55,100)/100;
@@ -11111,7 +11172,7 @@ const TUT_STEPS=[
   {tab:"crew",sel:".topbar",h:"The top line",t:"Balance is your money — hires, upkeep, bonuses and vetting come out of it. Week counts time: every job or lay-low is a week. Ranking is your name — eight of them, Nobody up to The Crew — and the name decides what clients post, what they pay, who will sign with you, how many places you have, whether your crew stays, and how hard every room you are given is defended. The last score is three operations and it asks for a great deal more than a number. Heat is how hard the police are looking: every job adds some, and at 100 there is a raid."},
   {tab:"crew",sel:".id.you",h:"This is you",t:"The commander. Your file goes on every job: five attributes, a trade, education, time in jail and on the streets, knowledge, languages, and anything you won't do. If a border keeps you out, the crew goes without you — a commander-type recruit runs it, well or badly."},
   {tab:"crew",sel:".id.slot",h:"The empty places",t:"Fill them from the Roster. Everyone you hire goes on every job, takes a cut of every score, and costs upkeep each week. Four places to start; a Respected name opens two more. Every member has a price: a cut under two weeks of their own upkeep is small money — three small jobs in a row and they grumble, five and they may walk. A bonus settles it and keeps them sharp for three weeks."},
-  {tab:"crew",sel:"[data-act=found-open]",h:"Other crews, later",t:cap(yearsIn(EXTRA_CREW_WEEKS[0]))+" in, Feared, with seven on your crew, you can found a second crew out of your own people — a commander and four soldiers, named after its commander — that takes a job of its own each week without you. A third at three years, a fourth at four, no more. The game announces each milestone in a box when you reach it."},
+  {tab:"crew",sel:"[data-act=found-open]",h:"Other crews, later",t:cap(yearsIn(EXTRA_CREW_WEEKS[0]))+" in, at ranking "+EXTRA_CREW_REP+", with seven on your crew, you can found a second crew out of your own people — a commander and four soldiers, named after its commander — that takes a job of its own each week without you. A third at "+yearsIn(EXTRA_CREW_WEEKS[1])+", a fourth at "+yearsIn(EXTRA_CREW_WEEKS[2])+", no more. The game announces each milestone in a box when you reach it."},
   {tab:"roster",sel:".rosterbar",h:"Everybody for hire",t:"Search by name, country, language or knowledge. Filter by trade, role and nationality. Sort by fee, experience or raw skill."},
   {tab:"roster",sel:".cards .id",h:"A file",t:"Flag and passport tier (P1 strong, P4 weak), trade and rank, the five attributes, then education, jail, streets, knowledge, languages — and in red, what this one will not do. Hover the trade, or MUS, BRN, TCH, CHM, NRV, for a brief. File opens the whole thing and lets you vet for informants. Hire pays the fee — if the file will sign with a crew of your name: Veterans want a Known crew, Legends a Respected one."},
   {tab:"jobs",sel:".jobrow",h:"Jobs",t:"Clients post jobs by country; the map beside them lights every country with a posting. The verdict is first on the row — Good fit, Risky, Long odds, or how many of your crew can even go. Under it, the trades and knowledge it wants, green if you hold it and red if not, each with what it is worth on this job: a bare +9 is being counted for you now, a bracketed (+9) is what somebody who had it would be worth, and a −6 is being charged. Then the city, the crew it needs, the fee, the heat and when it expires. Open one."},
@@ -11122,7 +11183,7 @@ const TUT_STEPS=[
 ];
 const TUT_REMIND=[
   {tab:"crew",sel:".topbar",h:"Welcome back",t:"A short reminder, then the game is yours. Balance, week, ranking, heat. The ranking is your name, and the name decides what clients post, what they pay, who will sign, how many places you have and whether the crew stays. Heat at 100 is a raid; a week laid low cools it by 15 and costs a point of ranking."},
-  {tab:"crew",sel:".cards",h:"The crew",t:"Loyalty on every card. A bonus buys +14 loyalty and three weeks paid up. Small jobs in a row make a member grumble, then walk — the job file says who calls a posting small money. Cut loose frees a place. A Respected name opens places six and seven; from the second year a full crew can found another crew that works without you."},
+  {tab:"crew",sel:".cards",h:"The crew",t:"Loyalty on every card. A bonus buys +14 loyalty and three weeks paid up. Small jobs in a row make a member grumble, then walk — the job file says who calls a posting small money. Cut loose frees a place. A Respected name opens places six and seven; from week "+EXTRA_CREW_WEEKS[0]+" a full crew can found another crew that works without you."},
   {tab:"jobs",sel:".jobrow",h:"The board",t:"The verdict leads each row; green tags you hold, red you don't, and the number on each is what it is worth here — bracketed means you would have to go and get it. The map lights the countries. Open a posting for who can go and the reckoning. Mid-report, a twist can stop everything for your call — one of six options sets the crew free, the one your crew can actually do."},
   {tab:"log",sel:".log",h:"The log",t:"Recaps of every job, the case log by week, and on the right what the name buys and what the next one costs. Between jobs, something can happen that asks for a decision with a price."},
   {tab:"log",sel:".burger",h:"Help is one key away",t:"Esc opens the office; i explains whatever is on screen, and the full tutorial can be run again from there. Good luck."},
@@ -11193,7 +11254,7 @@ const INFO={
     "<b>Two of the same trade</b> on one crew start arguing the day the second one signs, and it has to be answered before anything else. Ten ways it comes up and five answers to each, every one stating what it needs, what it costs and the odds. One of them is to have one of the two learn something else, which is the only answer that removes the reason for it.",
     "<b>Bonus</b> (three weeks' upkeep, $4K at least) buys +14 loyalty and three weeks <b>paid up</b>: +2 on every reckoning that member goes on, deaf to another crew's drinks, never the one who skims the split, and not the one trouble picks on. One at a time; the card says until when. It also settles any grumbling about small jobs.",
     "<b>Small money.</b> Every member has a price: a cut under two weeks of their own upkeep is a job done for you, not for them. The job file says who calls a posting small money before you take it. Three small jobs in a row and they <b>grumble</b> (−5 loyalty a job, −2 on the reckoning, a chip on the card); five, and they may walk out at the split — back on the roster, wanting more. A proper score, or a bonus, resets the count.",
-    "<b>Places.</b> Four to start. A <b>Respected</b> name opens places six and seven. <b>Other crews.</b> From week "+EXTRA_CREW_WEEKS[0]+" ("+yearsIn(EXTRA_CREW_WEEKS[0])+"), Feared, with seven on your crew, you can found a second crew — a commander-type and four soldiers out of your seven, named after its commander — that takes a job of its own each week without you, from the same board, with its own reckoning and report; its take, heat and ranking are yours, and so is its payroll. A third crew at three years, a fourth at four, no more. Send and recall people between crews from their cards; dissolve a crew and its people come back as far as your places allow."]},
+    "<b>Places.</b> Four to start. A <b>Respected</b> name opens places six and seven. <b>Other crews.</b> From week "+EXTRA_CREW_WEEKS[0]+" ("+yearsIn(EXTRA_CREW_WEEKS[0])+"), at ranking "+EXTRA_CREW_REP+", with seven on your crew, you can found a second crew — a commander-type and four soldiers out of your seven, named after its commander — that takes a job of its own each week without you, from the same board, with its own reckoning and report; its take, heat and ranking are yours, and so is its payroll. A third crew at "+yearsIn(EXTRA_CREW_WEEKS[1])+", a fourth at "+yearsIn(EXTRA_CREW_WEEKS[2])+", no more. Send and recall people between crews from their cards; dissolve a crew and its people come back as far as your places allow."]},
   file:{h:"Your career",t:[
     "One sheet for how far you have come. <b>The name</b> and what it buys, with the whole ladder beside it: the rungs behind you, the one you are on, and what is left above.",
     "<b>What you have done</b> — weeks, jobs, countries, the biggest single score, everything earned, and the longest run without a failure. The bar under it is every verdict you have ever been given, in proportion.",
@@ -11203,11 +11264,11 @@ const INFO={
     "The competition has a name from the day it appears; yours is asked for from week "+CREW_NAME_ASK_WEEK+". Type one, or <b>↻ Random</b> takes one off the shelf — a list in the game's voice, and names built from your file: your surname the way the rival's outfit is built, a city the crew has worked, your first name.",
     "<b>Later</b> puts it off "+CREW_NAME_AGAIN+" weeks. <b>✎ Rename</b> on the Crew tab opens the same card whenever you like; the log keeps what it was. The name heads the Crew tab, sits on the Dashboard, the reports and the saved-game line, and the rival's standing is measured against it."]},
   paywall:{h:"The till",t:[
-    "The free run is <b>"+SHOP.freeWeeks+" weeks on this game's calendar in this browser, or a "+rankNameAt(SHOP.freeRep)+" name</b>, whichever comes first — the week counter in the top bar, not "+SHOP.freeWeeks+" weeks of your life. It runs across every game this browser opens, so a new dossier is not a new run, and stopping at week 11 to start again does not hand the eleven back. When it is up the game stops on this card, and the card does not close.",
-    "<b>"+SHOP.price+", once</b>, for lifetime access: this build, every build after it, and any other machine you bring the key to. The button opens the checkout in a new tab; the key is on the receipt and in the email. Paste it in the box and press <b>Unlock</b> — the game picks up exactly where it stopped. Nothing is lost while you decide.",
-    "<b>Esc</b> opens the office over the wall — sound, brightness, the handbook, the door out. On the title screen, <b>Have a key?</b> is where a key bought on another machine goes in."]},
+    "<b>"+SHOP.price+", once, for life</b> — card or PayPal — and it is paid before the first week rather than after twelve of them. There is no free run and no trial: what you buy is the whole game, this build and every build after it, with nothing else to buy inside it. There was a twelve-week run and it was withdrawn, because a demo that ends where a game gets good is an argument against the game.",
+    "<b>The account is what is paid for</b>, not this browser. So the order of things is: open an account with an email and a password, press Buy, pay at Stripe, come back to a game that is already open. Sign in on another machine and it is open there too, and your dossiers are on the account with it. There is no key to keep, paste, lose or write in about — nothing is emailed to you but the receipt.",
+    "If the game was open on this account and is not now, that is a payment refunded or a licence turned off, and it takes nothing with it: the save is untouched and the week you were on is waiting. <b>Esc</b> opens the office over that card — sound, brightness, the handbook, the door out."]},
   notice:{h:"A milestone",t:[
-    "Announced once, in the middle of the screen, when the game reaches it: the two places a Respected name opens; each year mark (weeks "+EXTRA_CREW_WEEKS.join(", ")+") when another crew is within reach, with what is still missing; and the moment a second, third or fourth crew can actually be founded, with a button straight into founding it.",
+    "Announced once, in the middle of the screen, when the game reaches it: the two places a Respected name opens; each mark (weeks "+EXTRA_CREW_WEEKS.join(", ")+") when another crew is within reach, with what is still missing; and the moment a second, third or fourth crew can actually be founded, with a button straight into founding it.",
     "<b>Later</b> closes it; nothing is lost — the Crew tab keeps the places and the founding panel, and the case log keeps the record."]},
   joker:{h:"Reassemble",t:[
     "<b>One card, once a game.</b> It is on the Crew screen from the first week, and it can only be played out of the one position this game can otherwise leave you in with nothing to press: a name under "+JOKER.rep+", "+JOKER.crew+" on the crew or none, and more than "+money(JOKER.cost)+" in the float. The money is the point — it says you can afford a crew and still cannot get one, because nobody signs with a name worth nothing.",
@@ -11641,7 +11702,7 @@ function officeHTML(){
     +'<button class="btn ghost sm" data-act="off-handbook" title="Every rule and number in the game, with a search bar — opens in a new tab">Handbook</button>'
     +'<button class="btn ghost sm" data-act="off-tutor" title="The tutorial, any card, whenever you want">Tutorial</button>'
     +'<button class="btn ghost sm" data-act="off-cabinet" title="Carry the game to another browser, or keep a copy">Files</button>'
-    +'<button class="btn ghost sm" data-act="acc-open" title="'+(signedIn()?"Your account — the crew, the free run and the key it was bought with":"Sign in, or open an account: the crew stops living in one browser")+'">'
+    +'<button class="btn ghost sm" data-act="acc-open" title="'+(signedIn()?"Your account — the crew, and what the game was paid for with":"Sign in, or open an account: the crew stops living in one browser")+'">'
       +(signedIn()?"Account ✓":"Account")+'</button>'
     +(S?'<button class="btn ghost sm" data-act="off-hat">Your file</button>':'')
     +'<button class="btn sm" data-act="off-close">'+(S?"Back to the game":"Back")+'</button>'
@@ -11771,28 +11832,81 @@ function lineupHTML(){
     +'<div class="lineup-cap">Build your crew · Choose your jobs · Live with the consequences</div>';
 }
 
+/* THE DOOR, DRAWN ON THE TITLE SCREEN — which is where a price belongs.
+
+   It takes the place of New game and Continue rather than sitting above them, because a price with
+   a way past it is not a price. The handbook stays: somebody deciding whether to spend twelve
+   dollars should be able to read every rule and number in the game first, and a game confident
+   enough to hand over its own manual before being paid is making an argument for itself.
+
+   A saved game is named if there is one. Somebody who played before this door existed needs to know
+   in the first sentence that their crew has not been taken away — it is behind the door, whole. */
+function doorHTML(sv){
+  const inn=signedIn();
+  /* A browser keeping nothing cannot hold a sign-in, and the game is bought onto an account — so
+     there is no way through this door in a private window with site data blocked. Say that, rather
+     than leave somebody pressing a button that appears to do nothing. It is the one state where the
+     answer is "not here", and it is worth the four lines because the alternative reads as broken. */
+  if(!STORAGE_OK)return '<div class="brief" style="border-left-color:var(--stamp);margin-bottom:12px">'
+    +'<b>This browser is not keeping anything.</b> A private window, or site data blocked for this '
+    +'site. The Crew is '+esc(SHOP.price)+' once and what is paid for is an account, so a browser '
+    +'that cannot keep a sign-in cannot open the game. Allow site data here, or use an ordinary '
+    +'window, and this page will offer the game instead.</div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
+    +'<button class="btn ghost" data-act="off-handbook" title="Every rule and number in the game, with a search bar over it — opens in a new tab">The player\'s handbook →</button>'
+    +'</div>';
+  return '<div class="brief" style="border-left-color:var(--stamp);margin-bottom:12px">'
+    +'<b>The Crew is '+esc(SHOP.price)+', once, for life.</b> Card or PayPal. Every build after this '
+    +'one, and any machine you sign in on — what is paid for is the account, not this browser. '
+    +'No subscription, and nothing else to buy inside the game.'
+    // The line above this one already names the crew, the week, the ranking and the float. What it
+    // does not say — and what somebody who played before this door existed needs first — is that
+    // none of it has been taken away.
+    +(sv?' <b>Your game is where you left it</b>, exactly as it stands, and it opens the moment this does.':'')
+    +'</div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
+    +'<button class="btn stamp" data-act="till-buy"'+(UI.tillBusy?" disabled":"")+'>'
+      +(inn?'Buy it · '+esc(SHOP.price)+' →':'Open an account and buy · '+esc(SHOP.price)+' →')+'</button>'
+    +'<button class="btn ghost" data-act="acc-open">'+(inn?'The account':'I have an account')+'</button>'
+    +'<button class="btn ghost" data-act="off-handbook" title="Every rule and number in the game, with a search bar over it — opens in a new tab">The player\'s handbook →</button>'
+    +'</div>'
+    +(UI.tillMsg?'<div class="mono" style="font-size:12px;margin-top:10px;color:'+(UI.tillBusy?"var(--muted)":"var(--stamp)")+'">'+esc(UI.tillMsg)+'</div>':'')
+    +'<div class="sel-help" style="margin-top:12px">'
+    +(inn?'Stripe takes the payment. You come back here and the game is open.'
+         :'The game is bought onto an account, so that is the first step — an email and a password, and the crew stops living in one browser.')
+    +'</div>';
+}
 function screenTitle(){
   const has=hasSave();
   const sv=savedSummary();
+  const shut=walled();
   const redact=w=>'<span class="redacted">'+"█".repeat(w)+'</span>';
   return '<div class="wrap"><div class="hero title">'
     +'<div class="eyebrow">Case file · Classified</div><h1>The Crew</h1>'
     +lineupHTML()
     +'<p class="tagline">We are the criminals — the clients online are worse. A job in every country, a border in front of each one. Know your crew, or the job will teach you.</p></div>'
-    +'<div class="filecard panel"><div class="panel-h"><h2>Open a Dossier</h2><span class="kicker">A name, a face, a passport, a trade</span></div>'
+    // The card's heading is what the card offers. Shut, it does not offer a dossier — it offers the
+    // way in — and a price under "Open a Dossier" reads as a bait.
+    +'<div class="filecard panel"><div class="panel-h">'
+      +(shut?'<h2>The way in</h2><span class="kicker">One payment, once, for life</span>'
+            :'<h2>Open a Dossier</h2><span class="kicker">A name, a face, a passport, a trade</span>')+'</div>'
     +'<div class="panel-b"><div class="mono" style="font-size:13px;line-height:1.7;color:var(--ink-2)">'
       +'You are the name at the top of the police\'s chart. Everyone below is '+redact(6)+' — a passport, a set of hands, a record, a price, and a secret. '
       +'Some of them are '+redact(9)+'. Your job is to know which, before the border does.</div>'
     +'<hr class="rule">'
     +(sv?'<div class="mono" style="font-size:12px;margin-bottom:10px">Saved game: <b>'+esc(sv.n)+'</b>'+(sv.crew?' of '+esc(cap(sv.crew)):'')+' · week '+sv.week+' · ranking '+sv.rep+' ('+esc(rankName(sv.rep))+') · '+money(sv.money)+'</div>':'')
-    +(STORAGE_OK?'':'<div class="warnbox">This browser is not keeping saves — a private window, or site data blocked. You can play, but progress is lost when you leave.</div>')
-    +accountLine()
-    +tillLine()
-    +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
-    +(sv?'<button class="btn stamp" data-act="continue">Continue →</button><button class="btn ghost" data-act="begin">New game</button>'
-        :'<button class="btn stamp" data-act="begin">New game →</button>'+(has?'<button class="btn ghost" data-act="continue">Continue last game</button>':''))
-    +'<button class="btn ghost" data-act="off-handbook" title="Every rule and number in the game, with a search bar over it — opens in a new tab">The player\'s handbook →</button>'
-    +'</div></div></div>'
+    // Not while the door is shut: "you can play" is untrue then, and doorHTML says the true thing.
+    +(STORAGE_OK||shut?'':'<div class="warnbox">This browser is not keeping saves — a private window, or site data blocked. You can play, but progress is lost when you leave.</div>')
+    // Not while the door is shut. doorHTML says the same thing better and one line lower — and
+    // "the crew is saved on this machine only" is not even true yet for somebody with no game.
+    +(shut?'':accountLine())
+    +(shut?doorHTML(sv):tillLine()
+      +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
+      +(sv?'<button class="btn stamp" data-act="continue">Continue →</button><button class="btn ghost" data-act="begin">New game</button>'
+          :'<button class="btn stamp" data-act="begin">New game →</button>'+(has?'<button class="btn ghost" data-act="continue">Continue last game</button>':''))
+      +'<button class="btn ghost" data-act="off-handbook" title="Every rule and number in the game, with a search bar over it — opens in a new tab">The player\'s handbook →</button>'
+      +'</div>')
+    +'</div></div>'
     +titleFoot()+'</div>';
 }
 // The foot of the title screen: whose game it is, and the year on it.
@@ -11880,7 +11994,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 135 · September 2026";
+const BUILD="build 136 · September 2026";
 /* There was a version check here. A bundled copy fetched one line of text from the site, compared
    it with the build it was packed with, and printed a note in the footer when it was behind. It
    went with the download it was for, and so did the line of text and the constant that said where
@@ -11989,9 +12103,12 @@ document.addEventListener("click",e=>{
     case "off-panel-close": if(e.target===t||cl.contains("x")){UI.panel=null;render();} break;
     case "off-burn": UI.confirmNew=true; render(); break;
     case "off-burn-yes": wipe(); S=null; draft=null; UI.office=false; UI.panel=null; UI.confirmNew=false; rollTitleFaces(); render(); window.scrollTo(0,0); break;
-    case "begin": draft=null; showCreate(); break;
+    // Both ways in go through the door. The title screen does not draw these buttons while it is
+    // shut, so this is the second lock rather than the first: a stale render, a keyboard route, or
+    // a licence that lapsed between the render and the click all arrive here.
+    case "begin": if(walled()){render();break;} draft=null; showCreate(); break;
     case "to-title": draft=null; rollTitleFaces(); render(); break;
-    case "continue": if(load()){if(tutOnEntry())tutGo(0);else render();} break;
+    case "continue": if(walled()){render();break;} if(load()){if(tutOnEntry())tutGo(0);else render();} break;
     case "draft-gender": draft.gender=v; draft.face=normFace(draft.face,draft.gender); showCreate(); break;
     case "fold": { foldToggle(t.getAttribute("data-k"),t.getAttribute("data-d")==="1"); render(); break; }
     case "reroll-av": { const r=freshRng(); draft.avseed=ri(r,1,1e9); draft.face=randomFace(r,draft.gender); showCreate(); break; }
@@ -12000,6 +12117,10 @@ document.addEventListener("click",e=>{
     case "reroll-name": { draft.name=nameFor(freshRng(),draft.nat,draft.gender); showCreate(); break; }
     case "reroll-profile": rollDraftProfile(); showCreate(); break;
     case "confirm-create": {
+      // The door, one last time. begin() checks it too, but the answer from the server can land
+      // while somebody is choosing a face — and being handed a price after filling in a dossier is
+      // the worst version of this. Back to the title screen, which draws the door.
+      if(walled()){draft=null;rollTitleFaces();render();window.scrollTo(0,0);break;}
       const nm=(draft.name||"").trim(); if(!nm)break;
       const player=Object.assign({id:"YOU",isPlayer:true,n:nm,first:nm.split(" ")[0],gender:draft.gender,nat:draft.nat,avseed:draft.avseed,face:normFace(draft.face,draft.gender),status:"crew",cut:0,upkeep:0,loyalty:100,greed:0,mole:false,vetted:true,vetFlag:false,limits:[]},draft.profile);
       newGame(player); draft=null; render(); break;
@@ -13309,16 +13430,20 @@ function pcOnlyDoor(){
 (function boot(){
   if(mobileDevice()){pcOnlyDoor();return;}
   loadSettings();applySettings();
-  /* Is there a way to pay at all, did somebody just come back from paying, and — if there is a
-     token in this browser — what does the account say.
+  /* ASK THE SERVER, ONCE, BEFORE THE TITLE SCREEN MEANS ANYTHING.
 
-     THE THIRD ONE IS NEW AND IT IS NOT OPTIONAL. Nothing asked the server on the way up before,
-     because being paid was a value in localStorage and localStorage is there the moment the page
-     is. It is the server's answer now, so a player who paid last week and opens the game today
-     has ACC null until something fetches it — and without this, that something was opening the
-     account screen. They would have been shown the wall by a game that had their receipt. */
+     The game is bought before it is played, so the first screen is either the game or a door with a
+     price on it, and only the server can say which: whether there is a till at all, and whether
+     this account has paid. Nothing here is guessed and nothing is read out of localStorage — that
+     was the first way's mistake, and a value in localStorage is whatever somebody typed into the
+     console.
+
+     render() runs immediately below without waiting. That is deliberate: the title screen draws in
+     the frame the page arrives in, unwalled, and the door appears a moment later if the answer says
+     so. The other way round — a spinner in front of everybody while a cross-origin call finishes —
+     makes every player pay for the wall, including the ones who already have. */
   tillReturn();
-  if(signedIn())accRefresh().then(()=>render()).catch(()=>{});
+  shopAsk().then(()=>render()).catch(()=>{});
   // a play is a sitting: a return after half an hour away counts as the next one
   try{const now=Date.now();if(!SET.lastSeen||now-SET.lastSeen>PLAY_GAP_MS)SET.plays=(SET.plays||0)+1;SET.lastSeen=now;saveSettings();}catch(e){}
   try{
