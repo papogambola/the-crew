@@ -214,6 +214,43 @@ def test_paying_is_the_only_thing_that_opens_the_door(client, signed_up, shop):
     assert body["over"] is False and body["paid"] is True
 
 
+def test_the_api_version_is_new_enough_for_a_managed_payments_account():
+    """The one that stopped the first real sale.
+
+    Stripe's merchant-of-record product — Managed Payments, which is the whole reason for choosing
+    Stripe over taking the money directly, because it carries the sales tax — cannot open a
+    Checkout Session on a 2024 API at all. The pin was 2024-06-20 and every live checkout came back
+    400: "Managed Payments is not supported on API version 2024-06-20 ... set the API Version of
+    this request to 2025-03-31.basil or greater."
+
+    So this is a floor, and it is Stripe's floor rather than ours. Anybody tempted to pin further
+    back to make something else work has to read this first."""
+    from app.routers.licence import STRIPE_VERSION
+    assert STRIPE_VERSION >= "2025-03-31", STRIPE_VERSION
+
+
+def test_every_call_to_stripe_carries_that_version(monkeypatch):
+    """Pinned in one place and sent on the wire — the version being right in a constant and absent
+    from the request is the same outage with a longer search."""
+    import urllib.request
+
+    from app.routers import licence as lic
+    seen = {}
+
+    class _Resp:
+        def read(self): return b'{"url":"https://checkout.example/x","id":"cs_x"}'
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def fake_open(req, timeout=None):
+        seen["v"] = req.headers.get("Stripe-version") or req.headers.get("Stripe-Version")
+        return _Resp()
+    monkeypatch.setattr(urllib.request, "urlopen", fake_open)
+    monkeypatch.setattr(lic.settings, "stripe_secret", "sk_test_x", raising=False)
+    lic._stripe("checkout/sessions", {"mode": "payment"})
+    assert seen["v"] == lic.STRIPE_VERSION
+
+
 # --------------------------------------------- when the till itself is broken
 
 def _http_error(code, payload):

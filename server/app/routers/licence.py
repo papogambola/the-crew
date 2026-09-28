@@ -61,6 +61,10 @@ WEBHOOK_TOLERANCE = 300
 # that before they need to know anything else.
 TILL_DOWN = "The till did not answer. Nothing was charged — try again in a minute."
 
+# The API version every call to Stripe is made on. See the header block in _stripe() for why it
+# cannot go below this one.
+STRIPE_VERSION = "2025-03-31.basil"
+
 
 def _stripe(path: str, fields: dict) -> dict:
     """One call to Stripe, over urllib.
@@ -80,7 +84,19 @@ def _stripe(path: str, fields: dict) -> dict:
             "Content-Type": "application/x-www-form-urlencoded",
             # Stripe versions its API by account, and an account's default version moves when
             # Stripe upgrades it. Pinning means a change to their API is a change we choose.
-            "Stripe-Version": "2024-06-20",
+            #
+            # WHY THIS VERSION AND NOT AN OLDER ONE. It was 2024-06-20, and the first live checkout
+            # was refused with: "Managed Payments is not supported on API version 2024-06-20.
+            # Update your API version, or set the API Version of this request to 2025-03-31.basil
+            # or greater." Managed Payments is Stripe's merchant-of-record product — it is the
+            # thing that carries the sales tax, which is the reason Stripe was chosen over doing
+            # this directly — and an account on it cannot open a Checkout Session on a 2024 API at
+            # all. So the floor is theirs, not ours, and this is the version they named.
+            #
+            # It moves only the call BELOW it. The webhook's payload shape is set by the version on
+            # the endpoint in Stripe's dashboard, not by this header, so nothing about how a
+            # receipt is read changes with it.
+            "Stripe-Version": STRIPE_VERSION,
         },
     )
     with urllib.request.urlopen(req, timeout=15) as r:
