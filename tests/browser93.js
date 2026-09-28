@@ -156,7 +156,15 @@ const srv=http.createServer((q,r)=>{
   s=await at();
   check(s.chips.join(",")==="1,5,10,25","how many: "+s.chips.join(", ")+" — one tap, and nothing to mistype");
   check(s.picked==="10"&&/7 days/.test(s.days),"ten of them, a week each, with nothing chosen yet");
-  check(/Write 10/.test(s.btn),"and the button says what it will do: \""+s.btn.trim()+"\"");
+  check(/Write 10 passes/.test(s.btn),"and the button names what comes out: \""+s.btn.trim()+"\"");
+  /* THE CANCEL BUTTON MUST NOT READ AS THE CONFIRM, which is not a style note — it is the first
+     thing that went wrong in front of somebody. It said "Done", one button along from the one that
+     writes, on a form that ends in two rows of choices: choose, choose, Done. So it was pressed,
+     nothing was written, and the panel vanished. Any word that finishes a form is banned here. */
+  const shut=await page.evaluate(()=>(document.querySelector('[data-act="mint-close"]')||{}).textContent||"");
+  check(!/done|finish|ok\b|confirm|save|go\b/i.test(shut),
+    "the way out is not a word that finishes a form — it says \""+shut.trim()+"\"");
+  check(/close|cancel|not now|not that/i.test(shut),"it says what it does: \""+shut.trim()+"\"");
   await page.screenshot({path:OUT+"/03-the-form.png"});
 
   console.log("— the chips are what is sent —");
@@ -183,6 +191,20 @@ const srv=http.createServer((q,r)=>{
   check(/Copy this before you close it/i.test(s.text),
     "and the panel says to keep it, because nothing else has a copy");
   await page.screenshot({path:OUT+"/04-twenty-five-passes.png"});
+
+  console.log("— and shutting the panel does not take the codes with it —");
+  /* The other half of the same mistake. Closing used to throw the batch away, so one stray press of
+     a button called "Done" would have destroyed the only copy of twenty-five passes — silently, and
+     with nothing anywhere to write them again from. Shutting a panel is not a decision to discard. */
+  const before=(await at()).box;
+  await page.click('[data-act="mint-close"]');
+  await page.waitForTimeout(150);
+  check((await at()).go===false,"it closes");
+  await page.click('[data-act="mint-open"]');
+  await page.waitForTimeout(150);
+  const after=(await at()).box;
+  check(after===before&&/CREW-/.test(after||""),
+    "and opening it again hands back the same batch, character for character");
 
   console.log("— what they are worth is the SERVER'S answer, never the chip —");
   SAY_DAYS=3;

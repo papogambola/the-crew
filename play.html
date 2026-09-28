@@ -12384,10 +12384,16 @@ function mintHTML(){
     +'out of this box is the only copy of it.</div>'
     +row("How many","mint-n",[1,5,10,25],UI.mintN,v=>String(v))
     +row("Days of play each","mint-d",[7,14,30],UI.mintD,v=>v+" days")
+    /* THE CANCEL BUTTON SAYS "CLOSE" AND NOTHING ELSE, because it said "Done" and that is the
+       single worst word available for it. A form that ends in Done reads as choose, choose, Done —
+       so the first person to use this panel picked one pass and seven days, pressed the button that
+       finishes a form, and got nothing but a panel disappearing. It was the cancel. And if a batch
+       had been on screen it would have taken the only copy with it, which is why closing keeps
+       them now: shutting a panel is not a decision to throw anything away. */
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
     +'<button class="btn stamp sm" data-act="mint-go"'+(UI.mintBusy?" disabled":"")+'>'
-      +(UI.mintBusy?"…":"Write "+UI.mintN+" →")+'</button>'
-    +'<button class="btn ghost sm" data-act="mint-close">Done</button></div>'
+      +(UI.mintBusy?"…":"Write "+UI.mintN+" pass"+(UI.mintN===1?"":"es")+" →")+'</button>'
+    +'<button class="btn ghost sm" data-act="mint-close">Close</button></div>'
     +(UI.mintMsg?'<div class="mono" style="font-size:12px;margin-top:10px;color:'
       +(UI.mintBusy?"var(--muted)":"var(--stamp)")+'">'+esc(UI.mintMsg)+'</div>':'')
     +(out&&out.codes?'<div class="sel-help" style="margin-top:12px"><b>Copy this before you close it.</b> '
@@ -12520,7 +12526,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 139 · September 2026";
+const BUILD="build 140 · September 2026";
 /* There was a version check here. A bundled copy fetched one line of text from the site, compared
    it with the build it was packed with, and printed a note in the footer when it was behind. It
    went with the download it was for, and so did the line of text and the constant that said where
@@ -12828,11 +12834,15 @@ document.addEventListener("click",e=>{
     case "code-open": e.preventDefault(); UI.code=true; UI.codeMsg=""; render();
       setTimeout(()=>{const b=document.getElementById("codebox");if(b)b.focus();},30); break;
     case "code-close": e.preventDefault(); UI.code=false; UI.codeMsg=""; render(); break;
-    // Writing them. Nothing is kept across closing the panel except the batch itself, which is
-    // cleared on the way in rather than on the way out — coming back to a column of codes from
-    // twenty minutes ago, with no way to tell whether they were ever copied, is worse than none.
-    case "mint-open": e.preventDefault(); UI.mint=true; UI.mintMsg=""; UI.mintOut=null; UI.mintCopied=""; render(); break;
-    case "mint-close": e.preventDefault(); UI.mint=false; UI.mintMsg=""; UI.mintOut=null; UI.mintCopied=""; render(); break;
+    /* Writing them. NEITHER OPENING NOR CLOSING THE PANEL DESTROYS A BATCH, and that is a
+       correction: they both used to, on the reasoning that coming back to codes from twenty
+       minutes ago is worse than coming back to nothing. It is not. Closing was reachable by
+       accident — it is one button along from the one that writes, and it was called "Done" — and
+       a stray press that silently takes the only copy of something is a worse screen than a stale
+       one that says on its face how many it holds and until when. Only a fresh Write replaces a
+       batch, and a reload ends it, which is still the whole of "nothing is kept". */
+    case "mint-open": e.preventDefault(); UI.mint=true; UI.mintMsg=""; render(); break;
+    case "mint-close": e.preventDefault(); UI.mint=false; UI.mintMsg=""; render(); break;
     case "mint-n": e.preventDefault(); UI.mintN=Math.max(1,Math.min(100,parseInt(v,10)||10)); render(); break;
     case "mint-d": e.preventDefault(); UI.mintD=Math.max(1,Math.min(90,parseInt(v,10)||7)); render(); break;
     case "mint-go": e.preventDefault(); mintPasses(); break;
