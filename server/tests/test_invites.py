@@ -306,6 +306,67 @@ def test_a_client_that_says_it_is_admin_is_not(client, signed_up, admin):
     assert r.status_code == 404
 
 
+# --------------------------------------------- and whether anybody used one
+
+def test_a_spent_pass_can_be_found_again(client, admin, signed_up):
+    """The question that had no answer: how do you know if somebody used their code?
+
+    Nothing records what was MINTED — that is the design and it does not change. But a spend writes
+    a licence row, and the row carries the code itself, so the batch note kept by whoever handed
+    them out can be matched against what came back."""
+    code = client.post("/licence/invites", headers=admin["h"],
+                       json={"count": 1, "days": 14}).json()["codes"][0]
+    seen = lambda: [x for x in client.get("/licence/invites", headers=admin["h"]).json()["passes"]
+                    if invites.normalise(x["code"]) == invites.normalise(code)]
+    assert seen() == [], \
+        "nothing shows until somebody spends one — a code nobody typed leaves no trace at all"
+
+    client.post("/licence/redeem", headers=signed_up["h"], json={"code": code})
+    rows = seen()
+    assert len(rows) == 1
+    r = rows[0]
+    assert invites.normalise(r["code"]) == invites.normalise(code), "which code it was"
+    assert r["email"] == signed_up["email"], "and who is holding it"
+    assert r["days"] == 14, "worked back out of the dates rather than stored twice"
+    assert r["running"] is True and r["bought"] is False
+    assert r["redeemed_at"] and r["expires_at"]
+
+
+def test_the_list_says_when_one_ran_out(client, admin, signed_up):
+    code = client.post("/licence/invites", headers=admin["h"], json={"count": 1}).json()["codes"][0]
+    client.post("/licence/redeem", headers=signed_up["h"], json={"code": code})
+    pid = _player_id(signed_up["email"])
+    with SessionLocal() as db:
+        lic = db.scalar(select(Licence).where(Licence.player_id == pid, Licence.kind == "pass"))
+        lic.expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+        db.commit()
+    r = [x for x in client.get("/licence/invites", headers=admin["h"]).json()["passes"]
+         if x["email"] == signed_up["email"]][0]
+    assert r["running"] is False and r["bought"] is False
+
+
+def test_the_list_says_WHO_WENT_ON_TO_BUY(client, admin, signed_up):
+    """Which is the only outcome that says the whole thing worked. A pass exists to become a
+    purchase; a list that cannot tell a reviewer who paid from one who drifted off measures
+    nothing worth measuring."""
+    code = client.post("/licence/invites", headers=admin["h"], json={"count": 1}).json()["codes"][0]
+    client.post("/licence/redeem", headers=signed_up["h"], json={"code": code})
+    pid = _player_id(signed_up["email"])
+    with SessionLocal() as db:
+        db.add(Licence(player_id=pid, key="cs_after_the_week_" + uuid.uuid4().hex,
+                       kind="purchase", amount=1200, currency="USD", active=True))
+        db.commit()
+    r = [x for x in client.get("/licence/invites", headers=admin["h"]).json()["passes"]
+         if x["email"] == signed_up["email"]][0]
+    assert r["bought"] is True
+
+
+def test_nobody_else_sees_the_list(client, signed_up, admin):
+    """It carries other people's addresses, so it is behind the same 404 as writing them."""
+    assert client.get("/licence/invites", headers=signed_up["h"]).status_code == 404
+    assert client.get("/licence/invites").status_code in (401, 403)
+
+
 # --------------------------------------------------------- when it lapses
 
 def test_when_the_week_is_up_the_door_is_shut_again(client, signed_up, invites_on):

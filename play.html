@@ -10759,7 +10759,7 @@ function mintPasses(){
   UI.mintBusy=true;UI.mintMsg="Writing them…";UI.mintOut=null;UI.mintCopied="";render();
   api("POST","/licence/invites",{count:UI.mintN,days:UI.mintD}).then(r=>{
     UI.mintBusy=false;
-    if(r&&r.ok&&r.body&&r.body.codes){UI.mintMsg="";UI.mintOut=r.body;sfx("stamp");render();return;}
+    if(r&&r.ok&&r.body&&r.body.codes){UI.mintMsg="";UI.mintOut=r.body;sfx("stamp");render();mintList();return;}
     // 404 is what a non-admin gets, and it is the one answer worth translating: the endpoint says
     // "nothing here" on purpose, which is not a sentence to put in front of the one person who is
     // allowed to press this.
@@ -10767,6 +10767,19 @@ function mintPasses(){
       :(r&&r.body&&r.body.detail)||"The server would not write them.";
     render();
   }).catch(()=>{UI.mintBusy=false;UI.mintMsg="The server did not answer. Nothing was written.";render();});
+}
+/* WHETHER ANYBODY USED ONE, which is the question the panel could not answer at all.
+   The information was in the database the whole time and reachable only by opening a console on
+   it, which is the same as not existing. Read on opening the panel, because somebody who comes
+   here to write more passes is usually here BECAUSE they wondered about the last lot. */
+function mintList(){
+  if(UI.mintSeenBusy)return;
+  UI.mintSeenBusy=true;render();
+  api("GET","/licence/invites").then(r=>{
+    UI.mintSeenBusy=false;
+    UI.mintSeen=(r&&r.ok&&r.body&&r.body.passes)?r.body.passes:null;
+    render();
+  }).catch(()=>{UI.mintSeenBusy=false;UI.mintSeen=null;render();});
 }
 /* The block to keep, rather than a column of codes on their own. A code says nothing about what it
    is worth or how long it stays redeemable — both are inside the signature, unreadable — so a batch
@@ -11986,7 +11999,10 @@ const UI={office:false,hold:false,panel:null,confirmNew:false,info:false,qrh:fal
   // The press-pass panel. Ten and seven are here rather than in the form because a batch of ten
   // weekly passes is the ask, and a form whose defaults are already right is a form nobody reads.
   // mintOut holds the only copy of whatever was last written: it is not saved, deliberately.
-  mint:false,mintN:10,mintD:7,mintBusy:false,mintMsg:"",mintOut:null,mintCopied:""};
+  mint:false,mintN:10,mintD:7,mintBusy:false,mintMsg:"",mintOut:null,mintCopied:"",
+  // Who has actually used one. undefined until the panel has ever asked; null means the
+  // asking failed, which is not the same as nobody having used one and must not read as it.
+  mintSeen:undefined,mintSeenBusy:false};
 function chrome(){
   return '<div id="tipbox" role="tooltip" hidden></div>'
     +'<button class="totop" data-act="to-top" aria-label="Back to the top" title="Back to the top">↑</button>'
@@ -12406,7 +12422,56 @@ function mintHTML(){
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">'
       +'<button class="btn sm" data-act="mint-copy">Copy them</button>'
       +'<span class="mono" style="font-size:11px;color:var(--muted);align-self:center">'+said+'</span>'
-      +'</div>':'');
+      +'</div>':'')
+    +seenHTML();
+}
+/* WHO USED ONE. Not a list of codes — there is none, and there is deliberately never going to be
+   one — but a list of SPENDS, which is a different thing and is recorded, because redeeming writes
+   a licence. A code nobody ever typed in is absent here and absent everywhere, which is also the
+   honest answer to "did they ignore it": silence, and no way to tell ignored from lost.
+
+   The code is printed because it is the only thing that ties a row to a person. Nothing in a code
+   says who was sent it; the note kept when they were handed out says, and this is what that note
+   gets read against — which is why the panel asks for one to be kept.
+
+   AND WHETHER THEY BOUGHT IT, which is the only line here that measures anything. A press pass
+   exists to turn into a purchase. Without that column this is a list of people who were given
+   something, which is a thing to feel good about rather than a thing to learn from. */
+function seenHTML(){
+  const rows=UI.mintSeen;
+  const head='<hr class="rule" style="margin-top:16px"><div class="kicker">Passes that were used</div>';
+  const again='<button class="btn ghost sm" data-act="mint-seen">'
+    +(UI.mintSeenBusy?"…":"Look again")+'</button>';
+  if(UI.mintSeenBusy&&!rows)return head+'<div class="empty">Asking…</div>';
+  if(!rows)return head+'<div class="empty">Nothing came back. '+again+'</div>';
+  if(!rows.length)return head
+    +'<div class="empty">None yet. A code that has not been typed in leaves no trace anywhere, '
+    +'so this stays empty whether it is sitting in an inbox or was thrown away.</div>'
+    +'<div style="margin-top:8px">'+again+'</div>';
+  const bought=rows.filter(r=>r.bought).length, live=rows.filter(r=>r.running&&!r.bought).length;
+  const day=s=>String(s||"").slice(0,10);
+  const list=rows.map(r=>{
+    const state=r.bought?'<span style="color:var(--good)">bought the game</span>'
+      :r.running?'still running':'ran out';
+    // The marker column is four characters wide in every other list in this game, so the code goes
+    // in the row rather than in it: sixteen characters in a slot built for "wk 12" lands on top of
+    // the address beside it. The first four are enough to scan a column by; the whole thing is
+    // printed underneath, because matching a note needs all of it.
+    const body=String(r.code||"").replace(/^CREW-/,"");
+    return '<div class="jobrow" style="cursor:default">'
+      +'<div class="code">'+esc(body.slice(0,4))+'</div>'
+      +'<div><div class="t" style="font-size:14px">'+esc(r.email||"—")+'</div>'
+      +'<div class="loc">'+state+' · '+(r.days||"?")+' days, from '+esc(day(r.redeemed_at))
+      +(r.expires_at?' to '+esc(day(r.expires_at)):'')+'</div>'
+      +'<div class="mono" style="font-size:10.5px;color:var(--muted);margin-top:3px;word-break:break-all">'
+      +esc(r.code||"")+'</div></div></div>';
+  }).join("");
+  return head
+    +'<div class="sel-help">'+rows.length+' spent · '+live+' still running · <b>'+bought
+    +' went on to buy it</b>. Match a code against your own note of who it went to — nothing in '
+    +'a code says.</div>'
+    +'<div style="margin-top:6px">'+list+'</div>'
+    +'<div style="margin-top:8px">'+again+'</div>';
 }
 function screenTitle(){
   const has=hasSave();
@@ -12526,7 +12591,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 140 · September 2026";
+const BUILD="build 141 · September 2026";
 /* There was a version check here. A bundled copy fetched one line of text from the site, compared
    it with the build it was packed with, and printed a note in the footer when it was behind. It
    went with the download it was for, and so did the line of text and the constant that said where
@@ -12841,12 +12906,13 @@ document.addEventListener("click",e=>{
        a stray press that silently takes the only copy of something is a worse screen than a stale
        one that says on its face how many it holds and until when. Only a fresh Write replaces a
        batch, and a reload ends it, which is still the whole of "nothing is kept". */
-    case "mint-open": e.preventDefault(); UI.mint=true; UI.mintMsg=""; render(); break;
+    case "mint-open": e.preventDefault(); UI.mint=true; UI.mintMsg=""; render(); mintList(); break;
     case "mint-close": e.preventDefault(); UI.mint=false; UI.mintMsg=""; render(); break;
     case "mint-n": e.preventDefault(); UI.mintN=Math.max(1,Math.min(100,parseInt(v,10)||10)); render(); break;
     case "mint-d": e.preventDefault(); UI.mintD=Math.max(1,Math.min(90,parseInt(v,10)||7)); render(); break;
     case "mint-go": e.preventDefault(); mintPasses(); break;
     case "mint-copy": e.preventDefault(); mintCopy(); break;
+    case "mint-seen": e.preventDefault(); mintList(); break;
     case "code-go": e.preventDefault(); redeemCode(); break;
     case "crewname-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){S.modal=null;UI.cname=null;render();} break;
     case "notice-go": noticeDone(); if(k==="found"){UI.found={lead:null,ids:[]};S.modal={type:"found"};} else if(k){S.tab=k;S.jobOpen=null;} render(); window.scrollTo(0,0); break;

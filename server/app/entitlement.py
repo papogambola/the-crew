@@ -30,7 +30,7 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _utc(dt: datetime | None) -> str | None:
+def utc(dt: datetime | None) -> str | None:
     """A datetime on the wire, always with its offset on it.
 
     SQLite hands back naive datetimes whatever the column says and Postgres hands back aware ones —
@@ -40,7 +40,10 @@ def _utc(dt: datetime | None) -> str | None:
     player nine hours east of UTC would have been told a different number of days from the one the
     server was counting, and told it wrongly.
 
-    Stored in UTC either way, so a naive one is a UTC one that has lost its label. Give it back."""
+    Stored in UTC either way, so a naive one is a UTC one that has lost its label. Give it back.
+
+    Public because the admin's list of spent passes prints two of these and must not grow a
+    second copy of this reasoning to get them wrong differently."""
     if dt is None:
         return None
     return (dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)).isoformat()
@@ -100,7 +103,7 @@ def state(db: Session, player_id: int) -> dict:
     return {
         "paid": paid,
         "over": not paid,
-        "pass_until": _utc(lic.expires_at if lic is not None else None),
+        "pass_until": utc(lic.expires_at if lic is not None else None),
         # Only ever asked on a shut door, and only so the wall can say which kind of shut.
         "pass_ended": (not paid) and ended_pass(db, player_id),
     }

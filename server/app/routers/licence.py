@@ -53,7 +53,7 @@ from app import invites
 from app.config import settings
 from app.database import get_db
 from app.deps import current_admin, current_player
-from app.entitlement import live_licence, state
+from app.entitlement import live_licence, state, utc
 from app.models import Licence, Player
 
 router = APIRouter(prefix="/licence", tags=["licence"])
@@ -240,6 +240,62 @@ def write_invites(body: Mint, p: Player = Depends(current_admin)):
     log.info("admin %s wrote %d passes of %d days", p.email, body.count, body.days)
     return {"codes": codes, "days": body.days,
             "redeem_by": (date.today() + timedelta(days=90)).isoformat()}
+
+
+@router.get("/invites")
+def read_invites(p: Player = Depends(current_admin), db: Session = Depends(get_db)):
+    """WHICH ONES WERE SPENT, AND WHAT CAME OF THEM.
+
+    The half that was missing. Passes could be written and there was no way on earth to find out
+    whether anybody had used one — the information was in the database the whole time, and a fact
+    that can only be reached by opening a database console is a fact nobody has.
+
+    THIS IS NOT A LIST OF CODES, and cannot be. Nothing records what was minted, by design, so the
+    only passes that exist here are the ones somebody redeemed: a spend writes a row, and this reads
+    the rows. A code that is never typed in leaves no trace anywhere, which is also the honest answer
+    to "did they ignore it" — silence.
+
+    `bought` is the point of the whole feature. A press pass exists to become a purchase, and a
+    reviewer who paid afterwards is the only outcome that says the thing worked. It is a second
+    licence on the same account that does not expire, so it is read here rather than inferred from
+    a pass that happens to have ended.
+
+    The code comes back because it is the only thing that ties a row to the person it was sent to.
+    Nothing in a code says who had it; the note kept by whoever handed it out says, and this is what
+    that note is matched against."""
+    rows = db.scalars(
+        select(Licence).where(Licence.kind == "pass")
+        .order_by(Licence.activated_at.desc()).limit(200)
+    ).all()
+    if not rows:
+        return {"passes": []}
+
+    ids = {r.player_id for r in rows}
+    who = {q.id: q.email for q in db.scalars(select(Player).where(Player.id.in_(ids))).all()}
+    # Anything on these accounts that is not a pass and is still on: a purchase, and the one
+    # outcome worth knowing about.
+    bought = {r.player_id for r in db.scalars(
+        select(Licence).where(Licence.player_id.in_(ids), Licence.kind != "pass",
+                              Licence.active.is_(True)))}
+
+    now = datetime.now(timezone.utc)
+    out = []
+    for r in rows:
+        at = r.activated_at if r.activated_at.tzinfo else r.activated_at.replace(tzinfo=timezone.utc)
+        until = r.expires_at
+        if until is not None and until.tzinfo is None:
+            until = until.replace(tzinfo=timezone.utc)
+        out.append({
+            "code": r.key,
+            "email": who.get(r.player_id) or "an account that has since gone",
+            "redeemed_at": utc(r.activated_at),
+            "expires_at": utc(r.expires_at),
+            # What it was worth, worked back out of the two dates rather than stored twice.
+            "days": (round((until - at).total_seconds() / 86400) if until else None),
+            "running": bool(r.active and until and until > now),
+            "bought": r.player_id in bought,
+        })
+    return {"passes": out}
 
 
 class Redeem(BaseModel):

@@ -35,6 +35,9 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
 const PORT=8939;
 // The fake server, which decides everything — the same as the real one, and for the same reason.
 let ADMIN=true, INVITES=true, SAY_DAYS=null, ASKED=[], MADE=0;
+// What the server says has been SPENT. Nothing records what was minted, so this is the only list
+// there is, and it is a list of redemptions rather than of codes.
+let SPENT=[];
 const B32="0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const oneCode=()=>{                       // the shape, not the arithmetic: 16 of the alphabet
   let s="";for(let i=0;i<16;i++)s+=B32[(MADE*7+i*11+3)%32];MADE++;
@@ -49,6 +52,10 @@ const srv=http.createServer((q,r)=>{
   if(url==="/health")return json({ok:true,mail:{configured:false},shop:true});
   if(url==="/auth/me")return json(acc());
   if(url==="/licence")return json(Object.assign({price:1200,currency:"USD",bought_at:null},acc()));
+  if(url==="/licence/invites"&&q.method==="GET"){
+    if(!ADMIN)return bad(404,"Not found.");
+    return json({passes:SPENT});
+  }
   if(url==="/licence/invites"){
     let body="";q.on("data",d=>body+=d);
     return q.on("end",()=>{
@@ -191,6 +198,56 @@ const srv=http.createServer((q,r)=>{
   check(/Copy this before you close it/i.test(s.text),
     "and the panel says to keep it, because nothing else has a copy");
   await page.screenshot({path:OUT+"/04-twenty-five-passes.png"});
+
+  console.log("— and the panel answers \"did anybody use one?\" —");
+  /* The question that had no answer at all: passes could be written and there was no way on earth
+     to find out whether one had been used. The rows were in the database the whole time, which is
+     the same as nowhere for anybody who is not going to open a console on it. */
+  SPENT=[];
+  await page.click('[data-act="mint-seen"]');
+  await page.waitForTimeout(400);
+  let seen=(await at()).text;
+  check(/passes that were used/i.test(seen),"there is a section for it");
+  check(/none yet/i.test(seen),"empty, it says none yet");
+  check(/leaves no trace/i.test(seen),
+    "and why it stays empty for a code sitting in an inbox — ignored and lost look identical, so it says so");
+
+  SPENT=[
+    {code:"CREW-3ES4FT5GV6HW7JX8",email:"critic@example.com",days:7,
+     redeemed_at:"2026-09-20T10:00:00+00:00",expires_at:"2026-09-27T10:00:00+00:00",
+     running:false,bought:true},
+    {code:"CREW-AN0BP1CQ2DR3ES4F",email:"streamer@example.com",days:14,
+     redeemed_at:"2026-09-26T09:00:00+00:00",expires_at:"2026-10-10T09:00:00+00:00",
+     running:true,bought:false},
+  ];
+  await page.click('[data-act="mint-seen"]');
+  await page.waitForTimeout(400);
+  seen=(await at()).text;
+  check(/critic@example\.com/.test(seen)&&/streamer@example\.com/.test(seen),
+    "spent, it names the accounts holding them");
+  check(/3ES4FT5GV6HW7JX8/.test(seen),
+    "with the code beside each, which is the only thing that ties a row to who it was sent to");
+  check(/bought the game/i.test(seen),
+    "and says who went on to BUY it — the one outcome that says the whole thing worked");
+  check(/still running/i.test(seen),"and who is mid-week");
+  check(/2 spent/.test(seen)&&/1 went on to buy it/.test(seen),
+    "counted at the top: \""+(seen.match(/\d+ spent[^\n]*/)||[""])[0]+"\"");
+  check(/2026-09-20/.test(seen),"with the dates, so a week can be told from a fortnight ago");
+  await page.screenshot({path:OUT+"/06-who-used-one.png"});
+
+  console.log("— a list that could not be fetched does not read as an empty one —");
+  /* The distinction that matters: "nobody has used one" and "I could not find out" are different
+     news, and printing the first when the second is true is the panel lying about the thing it
+     exists to report. */
+  ADMIN=false;
+  await page.click('[data-act="mint-seen"]');
+  await page.waitForTimeout(400);
+  seen=(await at()).text;
+  check(!/none yet/i.test(seen),"a refusal is not reported as nobody having used one");
+  check(/nothing came back/i.test(seen),"it says the asking failed, and offers to try again");
+  ADMIN=true;
+  await page.click('[data-act="mint-seen"]');
+  await page.waitForTimeout(400);
 
   console.log("— and shutting the panel does not take the codes with it —");
   /* The other half of the same mistake. Closing used to throw the batch away, so one stray press of
