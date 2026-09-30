@@ -87,12 +87,15 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
     let t=two();
     rivalBuyout(t[1].id);
     out.bought={left:rivals().map(r=>r.id),closed:(S.beat||[]).map(b=>b.name),aimedAt:t[1].name};
-    // GIVE TO THE LAW — the bigger one this time.
+    /* GIVE TO THE LAW — the bigger one this time. Since build 148 this opens a CASE rather than
+       making an arrest, so what "aimed at the right one" means here is that the case lands on the
+       outfit that was named and the other one has none. The point of this test is the aiming. */
     t=two();
     const file0=detFile();
     rivalBurn(t[0].id);
-    out.burned={left:rivals().map(r=>r.id),closed:(S.beat||[]).map(b=>b.name),aimedAt:t[0].name,
-      fileUp:detFile()-file0,cost:RIVAL.burnFile};
+    out.burned={left:rivals().map(r=>r.id),aimedAt:t[0].name,
+      onAimed:!!rivalById(t[0].id).case,onOther:!!rivalById(t[1].id).case,
+      fileUp:detFile()-file0,cost:BURN.file};
     // TAKE THE BOARD — hold clear of one only, and only that one should go.
     t=two();
     S.rep=rivals()[1].standing+RIVAL.leadGap+2;      // clear of the smaller, not the bigger
@@ -103,8 +106,8 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   });
   check(aimed.bought.left.length===1&&aimed.bought.closed.length===1&&aimed.bought.closed[0]===aimed.bought.aimedAt,
     "bought out "+aimed.bought.aimedAt+" — and the other one is still standing");
-  check(aimed.burned.left.length===1&&aimed.burned.closed[0]===aimed.burned.aimedAt,
-    "gave "+aimed.burned.aimedAt+" to the law — the other one is still standing");
+  check(aimed.burned.onAimed===true&&aimed.burned.onOther===false&&aimed.burned.left.length===2,
+    "filed on "+aimed.burned.aimedAt+" — the case is on them and not on the other one, and neither is arrested yet");
   check(aimed.burned.fileUp===aimed.burned.cost,
     "  and it cost your own file the "+aimed.burned.cost+" it says: +"+aimed.burned.fileUp);
   check(aimed.outworked.left.length===1&&aimed.outworked.closed[0]===aimed.outworked.aimedAt,

@@ -2692,9 +2692,12 @@ function detWatch(rng){
                     come looking for work — beating somebody is how you meet their Forger.
      TAKE THE BOARD hold a standing clear of theirs for six straight weeks and the clients
                     stop calling them. Free, slow, and the only one that is pure skill.
-     BURN THEM      hand the detective what you know. Fast and nearly free, and your own file
-                    thickens by a third, because you had to be in the room to do it. The raid
-                    comes sooner. The cost is real and it arrives later, which is the point.
+     BURN THEM      hand the detective what you know, and a case opens. Not an arrest — a case,
+                    four to eight weeks of one, while they go on working the board. It falls
+                    apart if they get clear of you, because then it is your word against a
+                    bigger name than yours, and it cannot be filed twice. Your own file thickens
+                    the day you walk in and never reads below 20 again. See A CASE IS NOT AN
+                    ARREST, below.
      MOVE ON THEM   a posting on the board like any other: your crew, their people, twists,
                     heat, and somebody can get hurt. Run it well and they are finished.
      KILL THEM      the fifth, and the only one that ends a chapter by ending a person. Heavy
@@ -2710,7 +2713,6 @@ const RIVAL={
   leadWeeks:6,         // and how many such weeks finishes them
   buyoutMin:250000,    // what buying them out starts at
   buyoutPer:9000,      // and what each point of their standing adds
-  burnFile:34,         // what feeding the detective adds to the file on YOU
   backMin:6, backMax:12, // weeks before the next one turns up
   stepUp:8,            // and how much higher the next one starts
   /* And there can be two of them. One rival is a duel and the whole first act should be one —
@@ -2718,6 +2720,52 @@ const RIVAL={
      enough to be worth two people's trouble, which is the cause; the consequence is a board
      eaten from both ends, and the result is that the four ways out have to be aimed. */
   maxAt:2, secondRep:120,
+};
+/* ================== A CASE IS NOT AN ARREST ==================================================
+
+   WHAT WAS WRONG. "Give them to the law" was a free button that ended a rival instantly and with
+   certainty, and it needed nothing but a detective — who turns up at heat 30 or ranking 40, which
+   is to say almost immediately. Its one advertised cost was 34 on the detective's file, and from a
+   file of 0 that leaves raidAt() at 100, exactly where it was: it did not cross its own first
+   threshold, and then it decayed away at 0.9 a week. The cost was not "real and arriving later".
+   There was no cost.
+
+   So it did not merely make the elimination pointless — and the elimination costs a million
+   dollars, a permanent floor under your file, a locked-out buyout and a one-in-five chance of
+   burying somebody. It made ALL FOUR of the others pointless: the buyout's quarter of a million,
+   the six weeks of holding a lead, the night at the yard. Five ways out of a rival, four of them
+   priced, and a free one that always worked.
+
+   The elimination's own header claims three advantages: it does not care how far ahead of them you
+   are, it does not need six quiet weeks, and it cannot be outbid. Every one of those was also true
+   of the free button, which made all three of them lies.
+
+   WHAT IT IS NOW. Filing does not arrest anybody. It opens a case, and a case takes four to eight
+   weeks, during which they are still on the board taking postings off it. Two things can happen:
+
+     IT LANDS     the weeks run out and they are arrested. The same ending as before, later.
+     IT COLLAPSES they get collapseGap clear of your standing first. Then it is your word against
+                  a bigger name than yours, and nobody's word beats a bigger name. The case is
+                  gone, they learn who filed it, and it cannot be filed again — on them, ever.
+
+   Which restores all three of the elimination's advantages by making the cheap way lack them: the
+   case is the one ending in the game that CARES how far ahead of you they are. Getting clear of a
+   rival is now the thing that keeps a case alive as well as the thing that finishes them on its
+   own, and those are the same six weeks — so a player who files and then goes quiet is a player
+   who watches it fall apart.
+
+   AND THE FLOOR. You walked into a room with a detective and you talked. They know your face now,
+   whatever came of the case. The file thickens by BURN.file the same day and never reads below
+   floor again, the way a body's floor works, only lower: 20 is under the 50 that brings a raid
+   forward, so one case is not a punishment — it is a fact about you that does not go away, and the
+   second one puts you over. It is set whether the case lands or collapses, because it is about the
+   walking in, not about the outcome. */
+const BURN={
+  file:34,             // what walking in adds to the detective's file on YOU, the same day
+  floor:20,            // and what it never reads below again — you were in the room
+  weekMin:4, weekMax:8,// how long a case takes before anybody is arrested
+  collapseGap:15,      // get this far clear of you and it falls apart — RIVAL.leadGap, from the
+                       // other side: the gap that finishes them is the gap that saves them
 };
 /* ONE RIVAL, OR TWO. S.rivals is the truth and rival() is the one the game means when it says
    "the rival" without naming one — the biggest of them, because that is who a weekly event is
@@ -2793,15 +2841,58 @@ function rivalBuyout(id){
     +"and a receipt nobody will ever see.","good");
   render();
 }
+/* Filing is a thing you do in a room, and what comes of it is a thing that happens later or does
+   not happen at all. Everything this function does is immediate and permanent; the only part of it
+   that is uncertain is the part that matters. */
 function rivalBurn(id){
   const rv=rivalById(id)||rival(),dt=detective();
   if(!rv)return;
   if(!dt){note("There is nobody to tell yet.");return;}
-  dt.file=clamp(dt.file+RIVAL.burnFile,0,100);
-  rivalEnd(rv.id,"burned",rv.boss+" was arrested on a Tuesday on the strength of something nobody can "
-    +"trace to you. It worked. It also put you in a room with "+dt.name+", and "+dt.name
-    +"'s file on your alias is "+detFile()+" now — a raid comes at heat "+raidAt()+".","warn");
-  render();
+  if(rv.case){note(dt.name+" already has what you know about "+rv.boss+". It takes as long as it takes.");return;}
+  if(rv.caseGone){note(rv.boss+" beat the last one and knows who filed it. There is nothing left to tell.");return;}
+  const rng=freshRng();
+  const wks=ri(rng,BURN.weekMin,BURN.weekMax);
+  rv.case={filed:S.week,due:S.week+wks};
+  dt.file=clamp(dt.file+BURN.file,0,100);
+  S.fileFloor=Math.max(S.fileFloor||0,BURN.floor);
+  logMsg("You gave "+dt.name+" "+rv.boss+". Not an arrest — a case, and a case takes about "+wks
+    +" weeks. "+rv.boss+" is still working the board for every one of them, and if they get "
+    +BURN.collapseGap+" clear of your standing it is your word against a bigger name than yours. "
+    +dt.name+"'s file on your alias is "+detFile()+" and will not read below "+S.fileFloor
+    +" again — you were in the room.","warn",true);
+  save();render();
+}
+/* The case, week by week. Checked after rivalWorks() has run, so it is asked of the standing they
+   have AFTER this week's posting — the week they overtake you is the week it falls apart, not the
+   week after. */
+function rivalCaseTick(rng){
+  rivals().slice().forEach(rv=>{
+    const cs=rv.case;if(!cs)return;
+    const dt=detective();
+    if(rv.standing-S.rep>=BURN.collapseGap){
+      rv.case=null;rv.caseGone=true;rv.hostile=true;
+      logMsg("The case against "+rv.boss+" is dead. They are "+(rv.standing-S.rep)+" clear of you now, "
+        +"and a witness who is smaller than the man he is describing is a witness nobody puts in front "
+        +"of a jury. "+rv.boss+" knows exactly who walked in.","bad",true);
+      S.notices=(S.notices||[]).concat([{k:"The competition · week "+S.week,
+        h:"The case against "+rv.boss+" collapsed",
+        text:(dt?dt.name+" has":"The detective has")+" dropped it. "+cap(rv.name)+" got "
+          +(rv.standing-S.rep)+" clear of your standing while it was open, and past that it is your "
+          +"word against a bigger name than yours — which is no case at all. It cannot be filed "
+          +"again: "+rv.boss+" knows who walked into that room, and so does everybody they drink with. "
+          +"Your own file keeps what it cost — "+detFile()+", and it will not read below "+(S.fileFloor||0)+".",
+        go:"log",goText:"Where that leaves you →"}]);
+      return;
+    }
+    if(cs.due-S.week===1)
+      logMsg("One more week and they come for "+rv.boss+" — unless "+rv.boss+" gets clear of you first.","warn",true);
+    if(S.week>=cs.due)
+      rivalEnd(rv.id,"burned",rv.boss+" was arrested on a Tuesday, "+(S.week-cs.filed)+" weeks after you "
+        +"walked in, on the strength of something nobody can trace to you. It worked — and it worked "
+        +"because you stayed bigger than them the whole time it was open. "+(dt?dt.name+"'s file on your "
+        +"alias is "+detFile()+" and will not read below "+(S.fileFloor||0)+" again":"Your file keeps what "
+        +"it cost")+" — a raid comes at heat "+raidAt()+".","warn");
+  });
 }
 /* Six weeks clear of them and the clients stop calling. Counted at the turn of the week, and
    the streak breaks the moment they close the gap — this is the slow one, and it should feel
@@ -2906,6 +2997,12 @@ function rivalEnforce(id){
    somebody of yours who may not come home. A price you can pay out of the till is not a price.
    It is also the most EFFICIENT: it does not care how far ahead of you they are, it does not
    need six quiet weeks, and it cannot be outbid. That is the trade.
+
+   Those three lines were written before the law was a case, and for one build they were false:
+   the free button did all three as well, which made every word above it a lie and this whole
+   screen a thing nobody would ever open twice. A case cares about the gap — that is the whole of
+   BURN.collapseGap — and so the sentence is true again. When the rival is already clear of you
+   and climbing, the law is exactly what you cannot use, and this is what the money is for.
 
    "WHEN AND WHERE THEY LEAST EXPECT IT" is not flavour, it is the mechanic. There are a hundred
    openings and exactly ONE is on the table in any given week, drawn from the outfit and the week
@@ -5808,7 +5905,9 @@ function weekTick(rng){
       +(nRiv?" That makes two of them.":""),"warn",true);}
   if(!S.det&&(S.heat>=30||S.rep>=40)){S.det=makeDetective(rng);
     logMsg(S.det.name+" has your alias in a folder.","warn",true);}
-  rivalWorks(rng);rivalLeadTick();maybeUnlockRivalJob();detWatch(rng);looseTick(rng);grudgeTick(rng);
+  // rivalCaseTick after rivalWorks and rivalLeadTick: a case is judged on the standing they hold
+  // once this week's posting is off the board, and being outworked outright beats being charged.
+  rivalWorks(rng);rivalLeadTick();rivalCaseTick(rng);maybeUnlockRivalJob();detWatch(rng);looseTick(rng);grudgeTick(rng);
   if(S.heat>=raidAt()){
     const rc2=recruits().filter(c=>c.status==="crew");
     if(rc2.length){
@@ -7509,8 +7608,29 @@ function tabLog(){
       +'<div class="sel-help">Five ways out of this one. Three are on this screen, the fourth is a posting — their yard stands on the board when you are close enough to them to be worth the heat — and the fifth is underneath.</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">'
         +'<button class="btn sm" data-act="rival-buyout" data-id="'+rv.id+'" '+(rv.noBuy?'disabled title="They will not take your money now"':(S.money>=out?"":'disabled title="'+money(out)+' — you do not have it"'))+'>Buy them out · '+(rv.noBuy?'not for sale':money(out))+'</button>'
-        +'<button class="btn ghost sm" data-act="rival-burn" data-id="'+rv.id+'" '+(dt?"":'disabled title="Nobody to tell yet"')+' title="'+(dt?'Adds '+RIVAL.burnFile+' to '+esc(dt.name)+"'s file on YOU":"")+'">Give them to the law</button>'
+        +'<button class="btn ghost sm" data-act="rival-burn" data-id="'+rv.id+'" '
+          +(!dt?'disabled title="Nobody to tell yet"'
+            :rv.case?'disabled title="Already filed — it takes as long as it takes"'
+            :rv.caseGone?'disabled title="They beat the last one and know who filed it"':"")
+          +'>'+(rv.case?"Filed · week "+rv.case.filed:rv.caseGone?"The case is dead":"Give them to the law")+'</button>'
         +((S.jobs||[]).some(j=>j.rival&&j.rivalId===rv.id)?'<span class="tag ok" style="align-self:center">their yard is on the board</span>':'')
+      +'</div>'
+      /* WHAT IT COSTS, IN WORDS ON THE SCREEN, the way elimBlock does it — this was a tooltip, and
+         a tooltip is a thing that does not exist on a phone and that nobody reads on a mouse. The
+         cost is permanent and the arrest is not certain: both of those are the decision. */
+      +'<div class="sel-help" style="margin-top:6px">'
+        +(rv.case
+          ? 'Filed in week '+rv.case.filed+'. An arrest comes about week '+rv.case.due+' — <b>if</b> you are '
+            +'still within '+BURN.collapseGap+' of their standing when it does. They are '
+            +(rv.standing-S.rep>=0?'<span style="color:var(--stamp)">'+(rv.standing-S.rep)+' ahead of you</span>'
+                                  :(S.rep-rv.standing)+' behind you')+' this week.'
+          : rv.caseGone
+          ? 'The case collapsed. '+esc(rv.boss)+' got clear of you while it was open, and it cannot be filed twice.'
+          : 'Not an arrest — a case, '+BURN.weekMin+' to '+BURN.weekMax+' weeks of one, and they go on working '
+            +'the board for all of it. It collapses if they get '+BURN.collapseGap+' clear of your standing. '
+            +(dt?esc(dt.name)+"'s file on you goes to "+Math.min(100,detFile()+BURN.file)+' the same day and never '
+               +'reads below '+Math.max(S.fileFloor||0,BURN.floor)+' again, whichever way it ends.'
+              :''))
       +'</div>'
       +elimBlock(rv);
   };
@@ -12384,7 +12504,7 @@ const INFO={
     "<b>Job recaps</b>: every job you have run stays on file. Open one for the full report — the minute-by-minute, the verdict, the split, why the ranking moved, what they learned, who came back.",
     "<b>The case log</b>, week by week — every hire, job, injury, arrest, leak and betrayal. The <b>Week</b> dropdown narrows both the recaps and the log to one week; \"All weeks\" shows everything.",
     "The operation panel counts places, who is ready, who is hurt or held, weekly upkeep and open postings. Lay low from here too.",
-    "<b>The competition and the law</b> name the two things that used to be numbers. Once you are Small time, a rival outfit appears, run by somebody with a name: they work the same board, take the best posting left most weeks, and their standing climbs when they do. Past a ranking of "+RIVAL.secondRep+" a <b>second</b> one can arrive, and then there are two outfits taking the best of the board between them — each with its own card, its own price and its own five ways out, closed one at a time. When their standing passes your ranking they start buying your crew drinks. You can buy a name inside their operation, or send your enforcer — which works about two times in three, and is loud when it doesn't. A <b>detective</b> opens a file once the heat has been up or your name has grown; the file thickens with heat and thins when you lie low, pay a desk, or get raided — and past 50 the raid comes at heat 90 instead of 100, past 75 at 80.",
+    "<b>The competition and the law</b> name the two things that used to be numbers. Once you are Small time, a rival outfit appears, run by somebody with a name: they work the same board, take the best posting left most weeks, and their standing climbs when they do. Past a ranking of "+RIVAL.secondRep+" a <b>second</b> one can arrive, and then there are two outfits taking the best of the board between them — each with its own card, its own price and its own five ways out, closed one at a time. When their standing passes your ranking they start buying your crew drinks. You can buy a name inside their operation, or send your enforcer — which works about two times in three, and is loud when it doesn't. A <b>detective</b> opens a file once the heat has been up or your name has grown; the file thickens with heat and thins when you lie low, pay a desk, or get raided — and past 50 the raid comes at heat 90 instead of 100, past 75 at 80. Giving a rival to that detective does not arrest anybody: it opens a <b>case</b>, "+BURN.weekMin+" to "+BURN.weekMax+" weeks of one, and if they get "+BURN.collapseGap+" clear of your standing before it lands it collapses for good. Your own file takes "+BURN.file+" the day you walk in and never reads below "+BURN.floor+" again, whichever way it goes.",
     "<b>The fifth way out is a killing</b>, and it is the only thing in the game that closes a chapter by ending a person. Every week each outfit has <b>one opening</b> — a place, an hour and a method, drawn from that outfit and that week. It changes every Monday, so looking at a bad one and waiting is part of it. Taking it needs an <b>enforcer</b>, an <b>overwatch</b> and a <b>wheelman</b> who can all three actually go — a file that says no violence, or a border, and there is no night — plus a large sum paid before anybody moves, and a week. It runs as a live report like any other job, with <b>two</b> things going wrong in the middle of it rather than none. What it costs: heat on the night, a floor under the detective's file that nothing ever thins again, the other outfit hardened and no longer for sale — and it is the only way out of a chapter that can kill one of the three who go. What it buys: it does not care how far ahead of you they are, it does not need six quiet weeks, and it cannot be outbid. When it comes off, the outfit is brought up one last time — its name over its five people, every face stamped, and a shot. That card is for the killing alone: buying an outfit out is a receipt nobody will ever see, and it stays quiet.",
     "<b>The record</b> counts everything the crew has done — jobs, verdicts, money earned and paid out, the biggest score, countries worked, twists called right, who was hurt, taken or lost, and the current run of jobs without a scratch. Under it, <b>Next</b> shows the three nearest marks on the wall: eighteen career goals from the first job to the final score, each paying ranking, money or both when it lands, and announced in a box when it does.",
     "<b>Standing arrangements</b> is where money goes. Three people on a weekly retainer — a <b>lawyer</b> (anyone taken is held half as long), a <b>doctor</b> (a wound is one week, not two), a <b>fixer</b> (two more postings a week, and one written for the crew you actually have) — paid out of the same payroll as the crew, so a missed week loses them. A <b>safe house</b> is bought outright, in three moves: heat falls 7, then 9, then 11 a week, and the best one keeps most of the float through a raid. And a <b>desk</b> can be paid to lose a file: heat −20, priced by how hot you are.",
@@ -13250,7 +13370,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 147 · September 2026";
+const BUILD="build 148 · September 2026";
 /* There was a version check here. A bundled copy fetched one line of text from the site, compared
    it with the build it was packed with, and printed a note in the footer when it was behind. It
    went with the download it was for, and so did the line of text and the constant that said where

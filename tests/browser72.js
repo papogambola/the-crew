@@ -74,16 +74,27 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
   check(bought.high===90,"their high-water mark is remembered: "+bought.high);
 
   console.log("\n— giving them to the law —");
+  /* Since build 148 this opens a case rather than ending anybody: four to eight weeks, and the
+     arrest only comes if you are still within BURN.collapseGap of their standing when it lands.
+     The weeks are walked here with the player held clear, because what this test is about is the
+     law being a way out at all — browser98 is about the case itself. */
   const burned=await page.evaluate(s=>{
     eval(s);
     const f0=detFile(),raid0=raidAt();
-    rivalBurn();
-    return {gone:!rival(),file:detFile(),was:f0,raid:raidAt(),raidWas:raid0,
-      how:(S.beat||[]).slice(-1)[0].how,money:S.money};
+    const rv=rival();
+    rivalBurn(rv.id);
+    const opened=!!rivalById(rv.id).case, still=!!rival();
+    const due=rivalById(rv.id).case.due;
+    while(S.week<=due&&rivalById(rv.id)){S.rep=rv.standing+40;S.week++;rivalCaseTick(mulberry32(S.week));}
+    return {opened:opened,stillThereOnTheDay:still,gone:!rival(),
+      file:detFile(),was:f0,raid:raidAt(),raidWas:raid0,floor:S.fileFloor||0,wantFloor:BURN.floor,
+      how:((S.beat||[]).slice(-1)[0]||{}).how,money:S.money};
   },setup);
-  check(burned.gone,"the law ends it too");
+  check(burned.opened&&burned.stillThereOnTheDay,"filing opens a case and arrests nobody that day");
+  check(burned.gone&&burned.how==="burned","and when the weeks run out, the law ends it too");
   check(burned.money===5e7,"and costs no money at all");
   check(burned.file>burned.was,"but YOUR file thickens: "+burned.was+" -> "+burned.file);
+  check(burned.floor===burned.wantFloor,"and keeps a floor of "+burned.floor+" whatever happens after");
   /* The raid only moves when the file crosses 50 or 75, so burning a rival while the law has
      nothing on you costs you a thick file and no earlier raid — which is right, and is why the
      screen promises the FILE rather than the raid. What must always be true is the file. */
@@ -230,12 +241,15 @@ const check=(c,m)=>{if(!c){console.error("FAIL: "+m);process.exitCode=1;}else co
       // over one of two cards is a question rather than a heading.
       finish:new RegExp("Finish "+rival().name.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"i").test(t),
       lead:/clear of theirs|Clear of them/i.test(t),
-      burnTip:(document.querySelector('[data-act="rival-burn"]')||{}).title||""};
+      /* It was a tooltip, and a tooltip does not exist on a phone. Build 148 put what it costs
+         into text on the screen beside the button, so that is where this looks for it. */
+      burnSays:t};
   });
   check(ui.buyout&&ui.burn,"both buttons are on the dashboard");
   check(ui.finish,"under a heading that says which outfit they are for");
   check(ui.lead,"and the slow way is explained rather than hidden");
-  check(/file on YOU/i.test(ui.burnTip),"the law option says what it costs you: "+ui.burnTip);
+  check(/Not an arrest — a case/.test(ui.burnSays)&&/file on you goes to/i.test(ui.burnSays),
+    "the law option says on the screen that it is a case, and what it costs you");
 
   check(errs.length===0,"no page errors"+(errs[0]?" ("+errs[0]+")":""));
   await browser.close();
