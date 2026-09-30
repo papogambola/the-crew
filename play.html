@@ -11454,7 +11454,14 @@ function modalYourFile(){
 /* The account's own line, and it shows whether or not the shop is open — because what an account
    is FOR, before anybody is charged for anything, is that the crew stops living in one browser.
    Putting it inside tillLine would have hidden it entirely: the shop is shut today. */
+/* NOTHING TO SIGN INTO IS NOTHING TO OFFER. Served from anywhere that is not this game's own site
+   — an itch.io page, a mirror, a copy opened off a disk — API_LIVE is false, there is no server to
+   answer, and every one of these words is a promise the page cannot keep: no account keeps the crew
+   anywhere, and pressing the link reaches across to an API that will refuse the origin and report
+   "the server did not answer". So the whole line goes, and the game is what it already correctly is
+   off-site: a game that saves in this browser. On playthecrew.com nothing changes. */
 function accountLine(){
+  if(!API_LIVE)return "";
   const on=signedIn();
   return '<div class="mono" style="font-size:12px;margin-bottom:10px;color:var(--ink-2)">'
     +(on?'<span style="color:var(--good)">✓ Signed in'+(ACC&&ACC.email?' — '+esc(ACC.email):'')+'.</span> '
@@ -12520,8 +12527,10 @@ function officeHTML(){
     +'<button class="btn ghost sm" data-act="off-handbook" title="Every rule and number in the game, with a search bar — opens in a new tab">Handbook</button>'
     +'<button class="btn ghost sm" data-act="off-tutor" title="The tutorial, any card, whenever you want">Tutorial</button>'
     +'<button class="btn ghost sm" data-act="off-cabinet" title="Carry the game to another browser, or keep a copy">Files</button>'
-    +'<button class="btn ghost sm" data-act="acc-open" title="'+(signedIn()?"Your account — the crew, and what the game was paid for with":"Sign in, or open an account: the crew stops living in one browser")+'">'
-      +(signedIn()?"Account ✓":"Account")+'</button>'
+    // Hidden where there is no server to hold an account — see accountLine. The file cabinet two
+    // buttons along is the way a crew leaves this browser when there is no account to carry it.
+    +(API_LIVE?'<button class="btn ghost sm" data-act="acc-open" title="'+(signedIn()?"Your account — the crew, and what the game was paid for with":"Sign in, or open an account: the crew stops living in one browser")+'">'
+      +(signedIn()?"Account ✓":"Account")+'</button>':'')
     +(S?'<button class="btn ghost sm" data-act="off-hat">Your file</button>':'')
     +'<button class="btn sm" data-act="off-close">'+(S?"Back to the game":"Back")+'</button>'
     +'<button class="btn ghost sm" data-act="off-exit">Exit door</button>'
@@ -12964,7 +12973,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 142 · September 2026";
+const BUILD="build 143 · September 2026";
 /* There was a version check here. A bundled copy fetched one line of text from the site, compared
    it with the build it was packed with, and printed a note in the footer when it was behind. It
    went with the download it was for, and so did the line of text and the constant that said where
