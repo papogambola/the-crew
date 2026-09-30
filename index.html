@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>The Crew — build a crew, take jobs, live with it</title>
-<meta name="description" content="A PC game of global crime, in black ink on white paper. Recruit out of six thousand files, take jobs around the world, and decide what to do when they go wrong. $12 once, for life. Plays in your browser, on any computer.">
+<meta name="description" content="A PC game of global crime, in black ink on white paper. Recruit the people who will run them, take jobs around the world, and decide what to do when they go wrong. $12 once, for life. Plays in your browser, on any computer.">
 <link rel="canonical" href="https://playthecrew.com/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://playthecrew.com/">
@@ -116,8 +116,6 @@
   /* ---- prose ---- */
   .prose{max-width:38em}
   .prose p{margin:0 0 17px}
-  .prose p.first::first-letter{font-family:var(--f-disp);font-size:3.1em;line-height:.82;
-    float:left;padding:4px 9px 0 0;font-weight:600}
   .prose .after{font-family:var(--f-mono);font-size:13px;line-height:1.7;color:var(--muted);
     border-left:2px solid var(--line-2);padding-left:14px;margin-top:26px}
 
@@ -143,7 +141,6 @@
     .hero{padding-top:44px;padding-bottom:16px}
     section{padding-top:46px;padding-bottom:46px}
     .phoneonly{display:block}
-    .prose p.first::first-letter{font-size:2.6em}
     .topbar a.nav.hide-sm{display:none}
   }
 </style>
@@ -152,8 +149,8 @@
   <div class="topbar-in">
     <a class="brand" href="#top">The Crew</a>
     <span class="spacer"></span>
-    <a class="nav hide-sm" href="#shots">Screens</a>
     <a class="nav hide-sm" href="#what">What it is</a>
+    <a class="nav hide-sm" href="#shots">Screens</a>
     <a class="nav" href="play.html">Play</a>
   </div>
 </header>
@@ -207,7 +204,33 @@
       This is a game for a desk — 1280 across at the very least. Open this page on a computer.</p>
   </div>
 
-  <section class="wrap" id="shots">
+  <!-- Named for the game rather than for the question a visitor was supposed to be
+       asking. "What it is" is a label on a drawer; the drawer is the thing. -->
+  <section class="wrap" id="what">
+    <h2>The Crew</h2>
+    <div class="prose">
+      <p>You are the commander. You start with a name, a passport and four empty
+        places at the table.</p>
+      <p>People are looking for work, and every one of them has a trade, a history, a
+        country that will or will not have them, and a price. Some are lying about all four. You
+        read the files, you make offers, and you find out which was which later, usually at the
+        worst possible hour.</p>
+      <p>Jobs come in from clients around the world — a recovery in Piraeus, an escort over a
+        Polish pass, something in Osaka that nobody will put in writing. Each wants particular
+        trades, particular languages and a particular amount of nerve. Each one expires. Spend
+        three weeks thinking about it and a rival crew takes it while you think.</p>
+      <p>Then you send them, and it runs hour by hour, and something goes wrong. Something always
+        goes wrong. What you do about it is the whole game: six ways out, none of them right, and
+        the crew you spent a year building is the only thing standing between the plan and the
+        police.</p>
+      <p>Money, heat and a ranking that other crews are climbing too. Nothing resets at the end of
+        a week. People you cut loose remember that you cut them loose.</p>
+      <p class="after">Black ink, white paper and a great deal of nerve, and no tutorial you
+        can’t skip.</p>
+    </div>
+  </section>
+
+  <section class="wrap rule-top" id="shots">
     <!-- This said "What you are looking at / Nothing here is a mock-up — they are taken by driving
          a real campaign to week 58 and photographing it." Two faults, and the second is the worse
          one. It was about how the pictures were MADE, which is the maker's concern and nobody
@@ -248,30 +271,6 @@
         <figcaption>And then it goes wrong. Six ways out, no right answer, and a clock. Who you
           sent is the only thing that decides how it lands.</figcaption>
       </figure>
-    </div>
-  </section>
-
-  <section class="wrap rule-top" id="what">
-    <h2>What it is</h2>
-    <div class="prose">
-      <p class="first">You are the commander. You start with a name, a passport and four empty
-        places at the table.</p>
-      <p>Six thousand people are looking for work. Every one of them has a trade, a history, a
-        country that will or will not have them, and a price. Some are lying about all four. You
-        read the files, you make offers, and you find out which was which later, usually at the
-        worst possible hour.</p>
-      <p>Jobs come in from clients around the world — a recovery in Piraeus, an escort over a
-        Polish pass, something in Osaka that nobody will put in writing. Each wants particular
-        trades, particular languages and a particular amount of nerve. Each one expires. Spend
-        three weeks thinking about it and a rival crew takes it while you think.</p>
-      <p>Then you send them, and it runs hour by hour, and something goes wrong. Something always
-        goes wrong. What you do about it is the whole game: six ways out, none of them right, and
-        the crew you spent a year building is the only thing standing between the plan and the
-        police.</p>
-      <p>Money, heat and a ranking that other crews are climbing too. Nothing resets at the end of
-        a week. People you cut loose remember that you cut them loose.</p>
-      <p class="after">Black ink, white paper and a great deal of nerve, and no tutorial you
-        can’t skip.</p>
     </div>
   </section>
 
