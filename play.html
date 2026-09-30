@@ -25,6 +25,15 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0}
+  /* A FRAME THAT WILL NOT SCROLL. itch.io embeds the game in an iframe carrying
+     scrolling="no", so the PAGE cannot move: the wheel does nothing and everything below the
+     fold — which at an 800px embed is 378px of a 1178px page — is unreachable. Measured, not
+     guessed: with the attribute a wheel leaves scrollY at 0, without it the same wheel gives
+     378. The attribute is itch's and cannot be argued with, so the game scrolls inside itself
+     instead. Only when framed; on its own page nothing here applies and the window scrolls as
+     it always did. */
+  html.framed,html.framed body{height:100%;overflow:hidden}
+  html.framed #root{height:100%;overflow:auto;-webkit-overflow-scrolling:touch}
   /* A PC game has one layout. Below this the window scrolls; nothing rearranges. */
   body{min-width:960px;
     background:var(--paper);
@@ -5974,7 +5983,7 @@ function importCode(code){
   if(!load()){note("The file would not open.");return false;}
   UI.panel=null;UI.office=false;UI.impInfo=null;UI.impRaw="";
   logMsg("File read in from a code — "+r.n+", week "+r.week+".","good",true);
-  save();render();window.scrollTo(0,0);
+  save();render();scrollSet(0);
   return true;
 }
 function wipe(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}}
@@ -6054,7 +6063,7 @@ function slotOpen(id){
   if(!load()){note("The file would not open.");return false;}
   UI.panel=null;UI.office=false;
   logMsg("Opened a file from the drawer — "+((S.player&&S.player.n)||"—")+", week "+S.week+".","good",true);
-  save();render();window.scrollTo(0,0);
+  save();render();scrollSet(0);
   return true;
 }
 function slotDrop(id){
@@ -6224,14 +6233,39 @@ function fitQRH(){
 try{window.addEventListener("resize",fitQRH);}catch(e){}
 // Show the way up once there is a way up. Also hides it while a modal is open, because a floating
 // button over a question you have to answer is a button somebody will press by accident.
+/* WHAT SCROLLS, in one place, because fifteen call sites cannot each be trusted to remember.
+   Normally the window. Inside a frame that forbids it, #root — see the CSS above. Reading top from
+   the wrong one gives 0 for ever, which is how a "back to the top" button goes missing. */
+const FRAMED=(()=>{try{return window.self!==window.top;}catch(e){return true;}})();
+// The CSS above keys off this class and cannot ask the question itself. Set here, beside the
+// answer, rather than at boot: the page must not paint one frame with the window scrolling and
+// the next with it locked.
+try{if(FRAMED)document.documentElement.classList.add("framed");}catch(e){}
+function scrollBox(){return FRAMED?document.getElementById("root"):null;}
+function scrollGet(){
+  const b=scrollBox();
+  if(b)return b.scrollTop||0;
+  return window.scrollY||document.documentElement.scrollTop||0;
+}
+function scrollSet(y,smooth){
+  const b=scrollBox();
+  try{
+    if(b)b.scrollTo({top:y,behavior:smooth?"smooth":"auto"});
+    else window.scrollTo({top:y,behavior:smooth?"smooth":"auto"});
+  }catch(e){ if(b)b.scrollTop=y; else window.scrollTo(0,y); }
+}
 function syncScrolled(){
   try{
-    const y=window.scrollY||document.documentElement.scrollTop||0;
+    const y=scrollGet();
     document.body.classList.toggle("scrolled",y>260);
     document.body.classList.toggle("modalup",!!document.querySelector(".scrim"));
   }catch(e){}
 }
-try{window.addEventListener("scroll",syncScrolled,{passive:true});}catch(e){}
+try{(scrollBox()||window).addEventListener("scroll",syncScrolled,{passive:true});}catch(e){}
+// #root does not exist yet when the line above runs inside a frame, so it is asked again once
+// the document is up. Harmless twice: the same handler on the same target is added once.
+try{window.addEventListener("DOMContentLoaded",()=>{const b=scrollBox();
+  if(b)b.addEventListener("scroll",syncScrolled,{passive:true});});}catch(e){}
 try{window.addEventListener("resize",syncTopbarH);}catch(e){}
 function topbar(){
   const band=S.heat>80?"red":S.heat>60?"amber":"green";   // green to 60, amber 61 to 80, red above
@@ -6403,6 +6437,21 @@ function memberCard(c,cr,opts){
     btns='<button class="btn ghost sm" data-act="bonus" data-id="'+c.id+'" title="'+esc(paidUp(c)?c.first+" is paid up until week "+c.paidUntil:"+14 loyalty, and "+paidTip)+'" '+(S.money>=bonusCost&&!paidUp(c)?"":"disabled")+'>Bonus '+money(bonusCost)+'</button>';
     if(cr)btns+='<button class="btn ghost sm" data-act="crew-recall" data-id="'+c.id+'" title="'+(seatHome?"Back to your crew":"No place free in your crew")+'" '+(seatHome?"":"disabled")+'>← Recall</button>';
     else crews().forEach(x=>{if(x.memberIds.length<EXTRA_CREW_SIZE&&c.status==="crew")btns+='<button class="btn ghost sm" data-act="crew-send" data-id="'+c.id+'" data-crew="'+x.id+'" title="Send to '+esc(x.name)+'">→ '+esc(x.name)+'</button>';});
+    /* CHANGING PLACES, which is the move that works when every crew is full and Send and Recall
+       have nothing to offer. Two clicks: this one, then the person they trade with. While one is
+       picked every card that can take the trade says so and nothing else does, so the second click
+       is never a guess. */
+    if(crewCanTrade(c)){
+      const picked=UI.swap!=null?byId(UI.swap):null;
+      if(picked&&picked.id===c.id){
+        btns+='<button class="btn sm stamp" data-act="swap-off" title="Pick nobody, change nothing">⇄ Pick who — cancel</button>';
+      }else if(picked){
+        const can=crewSideOf(picked.id)!==crewSideOf(c.id);
+        if(can)btns+='<button class="btn sm" data-act="swap-with" data-id="'+c.id+'" title="'+esc(c.first+" changes places with "+picked.first)+'">⇄ Change places with '+esc(picked.first)+'</button>';
+      }else if(crewTradeable(c.id).length){
+        btns+='<button class="btn ghost sm" data-act="swap-pick" data-id="'+c.id+'" title="Trade '+esc(c.first)+' for somebody in another of your crews — neither crew changes size, so it works when both are full">⇄ Change places</button>';
+      }
+    }
     // Teaching somebody a new trade is a conversation, not a purchase, so the button opens one.
     const why=canLearn(c);
     const asked=(c.learnAskedUntil||0)>S.week;
@@ -6577,6 +6626,65 @@ function crewRecall(id){
   if(recruits().length>=crewSeats()){note("No seat free in your crew.");return;}
   cr.memberIds=cr.memberIds.filter(x=>x!==id);S.crewIds.push(id);
   logMsg(c.first+" recalled from "+cr.name+".","");save();render();
+}
+/* ================= TRADING PLACES BETWEEN YOUR OWN CREWS ==================
+
+   Send and Recall both need a SEAT: a place free where the person is going. Once every crew is
+   full there is no free place anywhere, so a launderer sitting in crew one and a medic sitting in
+   crew two stay exactly where they are — including on the week the board posts a job that wants a
+   medic and has no use at all for a launderer. Nothing was wrong with either crew; the only thing
+   in the way was arithmetic, and it is the wrong arithmetic, because a swap does not need a seat.
+   Two people change places and both crews are the size they were.
+
+   WHO CAN BE TRADED. Anybody on the books and fit to work — the same test Send already applies,
+   status "crew" — so an injured member, somebody in a cell and somebody who has walked stay where
+   they are, because a swap is two people agreeing to change cities and one of those cannot. Not
+   you: the commander is not a piece to be moved between crews.
+
+   WHAT IT COSTS: nothing, and that is deliberate rather than unconsidered. Send and Recall are
+   free, and this is those two done at once. A crew losing its named leader is not charged either;
+   it simply has no leader until a commander is in it, which crewLeader already works out for
+   itself — see there, it never trusts leadId without checking the person is still in the crew. */
+function crewCanTrade(c){
+  return !!c&&!c.isPlayer&&c.status==="crew";
+}
+// Which container a person is in: null for your own crew, otherwise the crew record. Null is a real
+// answer here rather than an absence, so the two are compared by id and never by truthiness.
+function crewSideOf(id){return crewOf(id)||null;}
+function crewTradeable(id){
+  const a=byId(id);
+  if(!crewCanTrade(a))return [];
+  const here=crewSideOf(id);
+  const out=[];
+  recruits().forEach(c=>{if(crewCanTrade(c)&&here!==null)out.push(c);});
+  crews().forEach(cr=>{
+    if(here&&here.id===cr.id)return;
+    crewMembers(cr).forEach(c=>{if(crewCanTrade(c))out.push(c);});
+  });
+  return out;
+}
+function crewTrade(aId,bId){
+  const a=byId(aId),b=byId(bId);
+  if(!crewCanTrade(a)||!crewCanTrade(b)||aId===bId){UI.swap=null;render();return;}
+  const ca=crewSideOf(aId),cb=crewSideOf(bId);
+  if((ca&&cb&&ca.id===cb.id)||(!ca&&!cb)){note("They are already in the same crew.");UI.swap=null;render();return;}
+  const put=(side,inId,outId)=>{
+    if(side){
+      side.memberIds=side.memberIds.filter(x=>x!==outId).concat([inId]);
+      // A leader who has left is a name pointing at nobody. Cleared rather than left to rot, so
+      // the crew reads as leaderless until a commander is in it — which is the truth.
+      if(side.leadId===outId)side.leadId=null;
+    }else{
+      S.crewIds=S.crewIds.filter(x=>x!==outId).concat([inId]);
+    }
+  };
+  put(ca,bId,aId);
+  put(cb,aId,bId);
+  a._touched=true;b._touched=true;
+  const nameOf=side=>side?side.name:(S.crewName?crewTitle():"your crew");
+  logMsg(a.first+" and "+b.first+" change places — "+a.first+" to "+nameOf(cb)+", "
+        +b.first+" to "+nameOf(ca)+".","",true);
+  UI.swap=null;save();render();
 }
 function crewDissolve(crewId){
   const cr=crewById(crewId);if(!cr)return;
@@ -12381,6 +12489,9 @@ const UI={office:false,hold:false,panel:null,confirmNew:false,info:false,qrh:fal
   mintSeen:undefined,mintSeenBusy:false,
   // The sheet a night gets shown on. Held in memory only: it is drawn from the save
   // that is already there, so there is nothing to keep and nothing to go stale.
+  // Who is waiting to change places with somebody in another crew. Null the rest of the time,
+  // and cleared by the trade itself so a stale pick cannot outlive the person it named.
+  swap:null,
   card:null};
 function chrome(){
   return '<div id="tipbox" role="tooltip" hidden></div>'
@@ -12416,8 +12527,27 @@ function chrome(){
    landed on rather than the one it was asked for. Inverting the rule fixed that. The artifacts
    being finished lets the whole branch go, which is better than a fixed rule: one link, no
    condition, and nothing left to be wrong the next time the address changes. */
-function handbookHref(){return "handbook.html";}
-function openHandbook(){try{window.open(handbookHref(),"_blank","noopener");}catch(e){location.href=handbookHref();}}
+/* THE HANDBOOK IS A SEPARATE PAGE, and the one asset reference that never got an override. On
+   itch.io the game is one uploaded file with no handbook beside it, so this opened a 404 — and the
+   tutorial now tells players to go there, which made a dead end out of the game's own advice.
+   Same shape as ART/MAP/OFFICE/SKY: a home, and a variable the build points at the site that has
+   it. tools/itch.py sets every one of these by reading them out of this file. */
+const HANDBOOK_HOME="handbook.html";
+const HANDBOOK_BASE=(typeof window!=="undefined"&&typeof window.THE_CREW_HANDBOOK==="string")?window.THE_CREW_HANDBOOK:HANDBOOK_HOME;
+function handbookHref(){return HANDBOOK_BASE;}
+function openHandbook(){
+  /* THE FALLBACK BELONGS IN THE CATCH, and briefly did not. window.open with "noopener" returns
+     NULL BY DESIGN — that is what noopener means — so a null return says nothing about whether the
+     tab opened. Testing it and falling through navigated the game away every single time, on the
+     ordinary site, while the handbook opened perfectly well in its new tab beside it. browser41
+     caught it: "and the game is still where it was".
+
+     Only a throw means the tab did not open. And inside a frame even that must not become
+     location.href: replacing itch's little window with the handbook would take the week in progress
+     with it and leave no way back. */
+  try{window.open(handbookHref(),"_blank","noopener");}
+  catch(e){ if(!FRAMED)location.href=handbookHref(); }
+}
 /* THE ROOM IS A DRAWING, AND ONLY WHAT MOVES IS DRAWN OVER IT.
 
    It used to be the whole office in SVG — window, chair, desk, lamp, door, cabinet, the radio's
@@ -12975,7 +13105,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 144 · September 2026";
+const BUILD="build 146 · September 2026";
 /* There was a version check here. A bundled copy fetched one line of text from the site, compared
    it with the build it was packed with, and printed a note in the footer when it was behind. It
    went with the download it was for, and so did the line of text and the constant that said where
@@ -13044,7 +13174,7 @@ document.addEventListener("click",e=>{
     case "loose": looseResolve(+t.getAttribute("data-i")); break;
     case "revenge": revengeResolve(+t.getAttribute("data-i")); break;
     case "event": if(S&&S.event&&!S.event.outcome)eventApply(S.event,+t.getAttribute("data-i")); render(); break;
-    case "event-close": if(S){S.event=null;S.modal=null;save();} render(); window.scrollTo(0,0); break;
+    case "event-close": if(S){S.event=null;S.modal=null;save();} render(); scrollSet(0); break;
     case "speed-down": SET.speed=clamp(speedIdx()-1,0,SPEEDS.length-1); saveSettings(); render(); break;
     case "speed-up": SET.speed=clamp(speedIdx()+1,0,SPEEDS.length-1); saveSettings(); render(); break;
     case "recap": {
@@ -13083,7 +13213,7 @@ document.addEventListener("click",e=>{
     case "off-hat": if(S){UI.panel="file";render();} break;
     case "off-panel-close": if(e.target===t||cl.contains("x")){UI.panel=null;render();} break;
     case "off-burn": UI.confirmNew=true; render(); break;
-    case "off-burn-yes": wipe(); S=null; draft=null; UI.office=false; UI.panel=null; UI.confirmNew=false; rollTitleFaces(); render(); window.scrollTo(0,0); break;
+    case "off-burn-yes": wipe(); S=null; draft=null; UI.office=false; UI.panel=null; UI.confirmNew=false; rollTitleFaces(); render(); scrollSet(0); break;
     // Both ways in go through the door. The title screen does not draw these buttons while it is
     // shut, so this is the second lock rather than the first: a stale render, a keyboard route, or
     // a licence that lapsed between the render and the click all arrive here.
@@ -13101,12 +13231,12 @@ document.addEventListener("click",e=>{
       // The door, one last time. begin() checks it too, but the answer from the server can land
       // while somebody is choosing a face — and being handed a price after filling in a dossier is
       // the worst version of this. Back to the title screen, which draws the door.
-      if(walled()){draft=null;rollTitleFaces();render();window.scrollTo(0,0);break;}
+      if(walled()){draft=null;rollTitleFaces();render();scrollSet(0);break;}
       const nm=(draft.name||"").trim(); if(!nm)break;
       const player=Object.assign({id:"YOU",isPlayer:true,n:nm,first:nm.split(" ")[0],gender:draft.gender,nat:draft.nat,avseed:draft.avseed,face:normFace(draft.face,draft.gender),status:"crew",cut:0,upkeep:0,loyalty:100,greed:0,mole:false,vetted:true,vetFlag:false,limits:[]},draft.profile);
       newGame(player); draft=null; render(); break;
     }
-    case "tab": S.tab=k; S.modal=null; UI.confirmDrop=null; UI.scrollBack=null; render(); window.scrollTo(0,0); break;
+    case "tab": S.tab=k; S.modal=null; UI.confirmDrop=null; UI.scrollBack=null; render(); scrollSet(0); break;
     case "scrim":
       if(e.target===t||cl.contains("x")||cl.contains("btn")){
         // The card of the city is up. Clicking the paper around it means "go on" — the same as
@@ -13116,17 +13246,17 @@ document.addEventListener("click",e=>{
         if(feedData()&&feedData().awaiting)break; // the decision cannot be clicked away
         if(feedData()&&!feedData().done){tickerFinish();break;}
         if(S)S.modal=null;UI.panel=null;render();
-        if(UI.scrollBack!=null){const y=UI.scrollBack;UI.scrollBack=null;window.scrollTo(0,y);}
-        else window.scrollTo(0,0);
+        if(UI.scrollBack!=null){const y=UI.scrollBack;UI.scrollBack=null;scrollSet(y);}
+        else scrollSet(0);
       }
       break;
     // A file opened from a list is a detour, not a destination: closing it puts you back where you
     // were standing. Without this, reading the seventh person on a job's "who can go" list threw
     // the page back to the top, and you had to scroll down to them again to read the eighth.
-    case "open-recruit": UI.scrollBack=window.scrollY||0; S.modal={type:"recruit",id}; render(); break;
+    case "open-recruit": UI.scrollBack=scrollGet(); S.modal={type:"recruit",id}; render(); break;
     // Who sits out and who was brought in are both agreed for ONE posting. Opening a different
     // one tears up both, the same way, rather than carrying a contract to a job nobody signed for.
-    case "open-job": S.tab="jobs"; S.jobOpen=id; S.modal=null; UI.scrollBack=null; if(S.benchJob!==id){S.benchJob=null;S.bench=[];} if(S.hiredJob!==id){hiredDrop();} render(); window.scrollTo(0,0); break;
+    case "open-job": S.tab="jobs"; S.jobOpen=id; S.modal=null; UI.scrollBack=null; if(S.benchJob!==id){S.benchJob=null;S.bench=[];} if(S.hiredJob!==id){hiredDrop();} render(); scrollSet(0); break;
     case "bench": { const j=S.jobs.find(x=>x.id===S.jobOpen); if(j)toggleBench(j,id); render(); break; }
     case "bench-clear": { const j=S.jobs.find(x=>x.id===S.jobOpen); if(j)benchClear(j); render(); break; }
     case "hire-night": { const j=S.jobs.find(x=>x.id===S.jobOpen); if(j)bringIn(j,id); render(); break; }
@@ -13140,8 +13270,8 @@ document.addEventListener("click",e=>{
     case "rival-buyout": rivalBuyout(id); break;
     case "elim-go": elimLaunch(id); break;
     case "rival-burn": rivalBurn(id); break;
-    case "close-job": S.jobOpen=null; render(); window.scrollTo(0,0); syncScrolled(); break;
-    case "to-top": try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){window.scrollTo(0,0);} syncScrolled(); break;
+    case "close-job": S.jobOpen=null; render(); scrollSet(0); syncScrolled(); break;
+    case "to-top": try{scrollSet(0,true);}catch(e){scrollSet(0);} syncScrolled(); break;
     case "map-country": S.jobOpen=null; S.jobCountry=(S.jobCountry===t.getAttribute("data-cn"))?null:t.getAttribute("data-cn"); render(); break;
     case "map-clear": S.jobOpen=null; S.jobCountry=null; render(); break;
     case "more": S.shown+=30; render(); break;
@@ -13156,6 +13286,9 @@ document.addEventListener("click",e=>{
     case "execute": doExecute(id); break;
     case "execute-crew": doExecute(id,+t.getAttribute("data-crew")); break;
     case "crew-send": crewSend(id,+t.getAttribute("data-crew")); break;
+    case "swap-pick": UI.swap=id; render(); break;
+    case "swap-off": UI.swap=null; render(); break;
+    case "swap-with": if(UI.swap!=null)crewTrade(UI.swap,id); break;
     case "crew-recall": crewRecall(id); break;
     case "crew-dissolve": { const cid=+t.getAttribute("data-crew"); if(UI.confirmDissolve===cid)crewDissolve(cid); else {UI.confirmDissolve=cid;render();} break; }
     case "found-open": UI.found={lead:null,ids:[]}; S.modal={type:"found"}; render(); break;
@@ -13215,7 +13348,7 @@ document.addEventListener("click",e=>{
     case "crewname-later": crewNameLater(); render(); break;
     case "file-open": if(S&&!S.modal){S.modal={type:"file"};sfx("open");render();} break;
     case "file-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){S.modal=null;render();} break;
-    case "file-go-log": S.modal=null; S.tab="log"; render(); window.scrollTo(0,0); break;
+    case "file-go-log": S.modal=null; S.tab="log"; render(); scrollSet(0); break;
     /* The account. Every one of these is a player pressing something — nothing on this screen
        happens on its own, and the only one that touches the local save is acc-pull, which is the
        one the copy under it warns about. */
@@ -13307,14 +13440,14 @@ document.addEventListener("click",e=>{
     case "card-go": e.preventDefault(); cardGo(k); break;
     case "code-go": e.preventDefault(); redeemCode(); break;
     case "crewname-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){S.modal=null;UI.cname=null;render();} break;
-    case "notice-go": noticeDone(); if(k==="found"){UI.found={lead:null,ids:[]};S.modal={type:"found"};} else if(k){S.tab=k;S.jobOpen=null;} render(); window.scrollTo(0,0); break;
+    case "notice-go": noticeDone(); if(k==="found"){UI.found={lead:null,ids:[]};S.modal={type:"found"};} else if(k){S.tab=k;S.jobOpen=null;} render(); scrollSet(0); break;
     case "found-lead": if(UI.found){UI.found.lead=UI.found.lead===id?null:id;UI.found.ids=UI.found.ids.filter(x=>x!==id);} render(); break;
     case "found-pick": if(UI.found){const f=UI.found;if(f.ids.includes(id))f.ids=f.ids.filter(x=>x!==id);else if(f.ids.length<4)f.ids.push(id);} render(); break;
     case "joker": if(S&&!S.over){S.modal={type:"joker"};sfx("open");render();} break;
     case "joker-play": jokerPlay(); break;
     case "found-go": if(UI.found)foundCrew(UI.found.lead,UI.found.ids); render(); break;
     case "laylow": layLow(); break;
-    case "newgame": wipe(); S=null; draft=null; rollTitleFaces(); render(); window.scrollTo(0,0); break;
+    case "newgame": wipe(); S=null; draft=null; rollTitleFaces(); render(); scrollSet(0); break;
   }
 });
 document.addEventListener("keydown",e=>{
@@ -13340,7 +13473,7 @@ document.addEventListener("keydown",e=>{
      nothing in the half of the game where you need it most. */
   if(!typing&&(e.key==="c"||e.key==="C")&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&S&&!S.over){UI.crew=!UI.crew;UI.info=false;UI.qrh=false;render();return;}
   if(!typing&&e.key==="1"&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&S&&!S.over&&S.modal){UI.crew=!UI.crew;UI.info=false;UI.qrh=false;render();return;}
-  if(!typing&&!UI.office&&!UI.info&&!UI.qrh&&!UI.crew&&S&&!S.over&&!S.modal&&"1234".includes(e.key)&&e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){S.tab=["crew","jobs","roster","log"][+e.key-1];render();window.scrollTo(0,0);return;}
+  if(!typing&&!UI.office&&!UI.info&&!UI.qrh&&!UI.crew&&S&&!S.over&&!S.modal&&"1234".includes(e.key)&&e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){S.tab=["crew","jobs","roster","log"][+e.key-1];render();scrollSet(0);return;}
   if(e.key==="Escape"){
     if(UI.qrh){UI.qrh=false;render();}
     else if(UI.crew){UI.crew=false;render();}

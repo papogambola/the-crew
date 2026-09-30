@@ -56,8 +56,10 @@ def bases(src: str):
         name, path = m.group(1), m.group(2)
         if path.startswith(("http:", "https:", "//")):
             continue                      # music already lives on a CDN; leave it where it is
-        if not path.endswith("/"):
-            continue                      # a file, not a folder of them
+        # A folder ("art/") or a single page ("handbook.html") — both are things that live beside
+        # play.html and are not there once play.html is uploaded on its own. The handbook was the
+        # one reference that had no override at all, which is how the tutorial ended up pointing
+        # players at a 404.
         if ("window.THE_CREW_" + name) in src:
             found[name] = path
     return found
@@ -120,6 +122,8 @@ def main() -> int:
         url = "%s/%s" % (SITE, path)
         probe = url + SAMPLE.get(name, "")
         mark = "?"
+        if not path.endswith("/"):
+            SAMPLE[name] = ""             # the page itself is what gets asked for
         if name in SAMPLE:
             try:
                 req = urllib.request.Request(probe, method="HEAD")

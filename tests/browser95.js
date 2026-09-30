@@ -45,7 +45,9 @@ const srv=http.createServer((q,r)=>{
      noise is the proof: it means the on-site branch really did reach for a server. Scoped to
      /health and 404, so a 500 there, or a 404 on anything else, still fails this file. */
   const noise=t=>/ERR_CERT|music\/|\.mp3|manifest\.json|r2\.dev|fonts\./.test(t)||/net::ERR_FAILED/.test(t)
-    ||/ERR_FILE_NOT_FOUND/.test(t)||(/status of 404/.test(t)&&/\/health/.test(t));
+    ||/ERR_FILE_NOT_FOUND/.test(t)||(/status of 404/.test(t)&&/\/health/.test(t))
+    // the throwaway host page below has no <link rel=icon>, so the browser asks for one
+    ||(/status of 404/.test(t)&&/favicon\.ico/.test(t));
   page.on("console",m=>{const w=(m.location()||{}).url||"";const t=m.text()+(w?" ["+w+"]":"");
     if(m.type()==="error"&&!noise(t))errs.push(t);});
   // Every request that leaves for somewhere that is not this host. The game must not reach for an
@@ -143,6 +145,16 @@ const srv=http.createServer((q,r)=>{
   assets.forEach(a=>check(a.status===200,
     a.n.toLowerCase()+" answers from "+(a.at||"?")+" ("+a.status+")"));
 
+  console.log("— and the handbook is somewhere a player can actually reach —");
+  /* handbook.html is a page that sits BESIDE play.html, and the itch upload is play.html on its
+     own. It was the one asset reference in the game with no override at all, so it opened a 404 —
+     and build 144's tutorial had just started telling players to go there, which turned the game's
+     own advice into a dead end. Unframed it stays relative; there is a handbook next door. */
+  const hb=await page.evaluate(()=>({href:handbookHref(),framed:FRAMED}));
+  check(!!hb.href,"there is somewhere to send them: "+hb.href);
+  check(hb.framed===false||/^https?:/.test(hb.href),
+      "and inside a frame it is an absolute address, because there is no handbook next door there");
+
   console.log("— and it never once reached for a server —");
   check(out.length===0,"not a single request left this host"+(out.length?": "+out.slice(0,3).join(" | "):""));
 
@@ -164,6 +176,53 @@ const srv=http.createServer((q,r)=>{
   await page.waitForTimeout(400);
   check(!!(await page.$('[data-act="acc-open"]')),"and the office has its Account button again");
   await page.screenshot({path:OUT+"/03-on-its-own-site.png"});
+
+  console.log("— A FRAME THAT FORBIDS SCROLLING, which is what itch.io uses —");
+  /* itch.io puts scrolling="no" on the iframe it embeds a game in. Measured: with that attribute a
+     wheel leaves the page at 0 and 378px of a 1178px page is simply unreachable — the office, the
+     buttons under it, the bottom of every long screen. The attribute is theirs and cannot be argued
+     with, so when the game is framed it scrolls inside itself instead.
+
+     Both halves are asserted, and the second is the one that matters: a scroll fix that quietly
+     changed how playthecrew.com scrolls would be a much worse bug than the one it fixed. */
+  const host=`<!doctype html><meta charset="utf-8">
+    <style>html,body{margin:0;height:100%}iframe{width:1000px;height:560px;border:0;display:block}</style>
+    <iframe src="${path.relative(ROOT,FILE)}" scrolling="no"></iframe>`;
+  fs.writeFileSync(path.join(ROOT,"_frametest.html"),host);
+  try{
+    await page.goto("http://127.0.0.1:"+PORT+"/_frametest.html");
+    await page.waitForTimeout(1400);
+    const f=page.frames().find(x=>x.url().includes(path.basename(FILE)));
+    const inside=await f.evaluate(()=>({framed:FRAMED,
+      cls:document.documentElement.classList.contains("framed"),
+      tall:document.getElementById("root").scrollHeight,win:innerHeight}));
+    check(inside.framed===true&&inside.cls===true,"the game knows it is in a frame and says so on <html>");
+    check(inside.tall>inside.win,
+      "and it is taller than the frame ("+inside.tall+" in "+inside.win+") — so there IS something below the fold");
+    await page.mouse.move(500,300);
+    await page.mouse.wheel(0,3000);
+    await page.waitForTimeout(500);
+    const got=await f.evaluate(()=>Math.round(scrollGet()));
+    check(got>0,"a wheel reaches the bottom of it anyway ("+got+") — which scrolling=\"no\" would otherwise forbid");
+    check(got>=inside.tall-inside.win-4,"all the way down, not part of it");
+    await page.screenshot({path:OUT+"/04-in-a-frame.png"});
+  } finally { try{fs.unlinkSync(path.join(ROOT,"_frametest.html"));}catch(e){} }
+
+  console.log("— and on an ordinary page the window still scrolls, exactly as before —");
+  await page.setViewportSize({width:1280,height:700});
+  await page.goto("http://127.0.0.1:"+PORT+"/"+rel);
+  await page.waitForTimeout(900);
+  const plain=await page.evaluate(()=>({framed:FRAMED,
+    cls:document.documentElement.classList.contains("framed"),
+    over:getComputedStyle(document.body).overflow}));
+  check(plain.framed===false&&plain.cls===false,"unframed, the game does not think it is framed");
+  check(plain.over!=="hidden","and nothing has been locked: body overflow is "+plain.over);
+  await page.mouse.move(640,400);
+  await page.mouse.wheel(0,500);
+  await page.waitForTimeout(400);
+  const win=await page.evaluate(()=>({y:Math.round(scrollY),get:Math.round(scrollGet())}));
+  check(win.y>0&&win.get===win.y,
+    "the WINDOW scrolls, and scrollGet reads it ("+win.y+") — the site is untouched");
 
   check(errs.length===0,"no page or console errors through any of it"+(errs.length?": "+errs.slice(0,3).join(" | "):""));
   await browser.close();srv.close();
