@@ -1831,6 +1831,41 @@ function renderIfAccountShowing(){
 }
 
 // How hot a country is on you: working one burns it, and it cools a point a week.
+/* ==================== A COUNTRY THAT IS YOURS ============================
+
+   Work a place three times and then be forgotten there, and nobody else works it. Not a purchase
+   and not a rank: the only way to hold a country is to have been in it, repeatedly, and then to
+   have left no trace — a job puts 14 on a country and the country sheds 1 a week, so three jobs is
+   42 points of memory and the forgetting takes the better part of a year. That is the whole price,
+   and it is paid in patience rather than money, which is the one currency this game had not asked
+   for yet.
+
+   WHAT IT BUYS is that rival outfits stop taking postings there. Not a bonus on the reckoning, not
+   a discount: a board in that country that is yours to read at your own speed, which is worth more
+   than either the week a rival takes the job you were casing.
+
+   AND ONE WEEK OF SOMEBODY'S TIME, on the house — the country teaches your crew its language. The
+   tutor's own floor is a fortnight and this is one week, deliberately: it is not a course anybody
+   bought, it is a place that has stopped treating you as a stranger. */
+const HOLD={
+  jobs:3,        // jobs run there before the place can be yours
+  weeks:1,       // the course it buys: a week, against the tutor's fortnight floor
+};
+function held(){return (S&&S.held)||{};}
+function isHeld(name){return !!held()[name];}
+function heldList(){return Object.keys(held());}
+// Three jobs there, and nothing left on the country. Checked at the turn of the week, after the
+// week's forgetting has been applied — the moment a place forgets you is the moment it is yours.
+function holdCheck(){
+  if(!S)return null;
+  const done=(stats().countries)||{};
+  const names=Object.keys(done).filter(nm=>done[nm]>=HOLD.jobs&&countryHeat(nm)<=0&&!isHeld(nm));
+  if(!names.length)return null;
+  // One at a time. Two countries going quiet in the same week is two cards, and the second waits.
+  const name=names.sort()[0];
+  S.held=S.held||{};S.held[name]={week:S.week};
+  return name;
+}
 function countryHeat(name){return (S&&S.coHeat&&S.coHeat[name])||0;}
 function countryHeatAdd(name,n){if(!S)return;S.coHeat=S.coHeat||{};S.coHeat[name]=clamp((S.coHeat[name]||0)+n,0,100);}
 // The world answers the name. Sub-linear, so the last hundred points of ranking do not make
@@ -2615,7 +2650,9 @@ function rivalWorks(rng){
 }
 function rivalWorksOne(rng,rv){
   if(!rv)return;
-  const open=S.jobs.filter(j=>!j.final&&!j.big&&!j.rival);   // they do not take the job against themselves
+  // Not the job against themselves, and not one in a country that is yours: that is what holding
+  // a place means, and it is the only thing it means.
+  const open=S.jobs.filter(j=>!j.final&&!j.big&&!j.rival&&!isHeld(j.country));
   if(open.length<5)return;
   if(!chance(rng,rv.standing>S.rep?0.5:0.38))return;
   const j=open.slice().sort((a,b)=>b.tier-a.tier||b.payout-a.payout)[0];
@@ -5712,6 +5749,15 @@ function weekTick(rng){
       if(dropped.length){dropped.forEach(r=>{S.retainers[r.k]=false;});logMsg("Couldn't make payroll ("+money(up)+"). Loyalty slipping, and "+dropped.map(r=>r.l.toLowerCase()).join(" and ")+" stopped answering.","bad",true);}
       else logMsg("Couldn't make payroll ("+money(up)+"). Loyalty slipping.","bad");
     }
+  }
+  /* A country that has forgotten you is a country that is yours — checked HERE, straight after the
+     week's forgetting above, because the moment the last point comes off is the moment it happens.
+     One card, and it waits its turn behind whatever else the week is announcing. */
+  const gotCountry=holdCheck();
+  if(gotCountry){
+    S.notices=S.notices||[];
+    S.notices.push({k:"held",co:gotCountry});
+    logMsg(gotCountry+" is yours — three jobs there and nothing left on the country. No other outfit takes a posting in it.","good",true);
   }
   // a mole on the books leaks a little heat every week, unexplained
   const moles=rc.filter(c=>c.mole).length;
@@ -9650,8 +9696,105 @@ function modalStreetDone(){
 }
 
 
+/* ---- the card a country gets when it becomes yours, and the week it hands over ----
+
+   WHICH LANGUAGE. The country's own, unless somebody on the crew already speaks it — in which case
+   the place has nothing left to teach you and the week is yours to spend on any language you like.
+   That is the request as it was made, and it is also the only version that is not an insult: being
+   handed a course in a language you already have is a prize that knows nothing about you.
+
+   ONE WEEK, against the tutor's own floor of a fortnight. Deliberate: this is not a course anybody
+   bought, it is a place that has stopped treating your crew as strangers. */
+function heldLang(name){
+  const co=COUNTRY_BY_NAME[name];
+  const want=(co&&co.langs&&co.langs[0])||null;
+  if(!want)return {free:true,want:null};
+  /* "Already have it in the crew" means somebody who can actually go — field(), the same reading
+     tutorWanted() uses when it decides which languages the board is asking for. A Norwegian
+     speaker with eight weeks of a broken arm ahead of them is not a Norwegian speaker you have. */
+  const has=field().some(c=>(c.langs||[]).indexOf(want)>=0);
+  return {free:has,want:want};
+}
+/* Who can take the week — asked of canTutor(), which is the one place that decides whether anybody
+   can be taught anything, rather than re-derived here. Written out longhand first, it came out
+   "on the books, fit, not at a school", which is three of the four rules: it missed the one that
+   says NOBODY TEACHES THE COMMANDER, and so the card offered "You" and the free week could be
+   spent on the one person the tutor screen refuses. A second copy of a rule is a copy that is
+   missing a clause.
+
+   The only thing added on top is the language: a course in something somebody already speaks is a
+   week spent on nothing. */
+function heldTakers(lang){
+  return crewAll().filter(c=>!canTutor(c)&&(!lang||(c.langs||[]).indexOf(lang)<0));
+}
+function holdGive(id,lang){
+  const c=byId(id)||(S.player&&S.player.id===id?S.player:null);
+  if(!c||!lang)return;
+  const no=canTutor(c);
+  if(no){note(cap(c.isPlayer?"you":c.first)+" cannot take it — "+no+".");return;}
+  if((c.langs||[]).indexOf(lang)>=0){note(c.first+" already speaks "+lang+".");return;}
+  // The tutor's own machinery, with the weeks and the money overwritten: one week, nothing to pay.
+  c.tutor={to:lang,until:S.week+HOLD.weeks,paid:0,weeks:HOLD.weeks,gift:true};
+  c.status="learning";c.out=c.tutor.until;c._touched=true;
+  logMsg(c.first+" takes the week — "+lang+", on the house, back week "+c.out+".","good",true);
+  UI.holdPick=null;noticeDone();render();
+}
+function heldCard(n){
+  const co=COUNTRY_BY_NAME[n.co];
+  const g=heldLang(n.co);
+  const pick=UI.holdPick||{};
+  const lang=g.free?(pick.lang||null):g.want;
+  const takers=heldTakers(lang);
+  const who=pick.id?takers.find(c=>c.id===pick.id):null;
+  const langs=g.free
+    ? allLangs().filter(l=>takers.some(c=>(c.langs||[]).indexOf(l)<0))
+    : [g.want];
+  const head='<div class="modal-h"><div><div class="kicker" style="color:var(--good)">A country of your own · week '+S.week+'</div>'
+    +'<h2 style="font-size:30px;margin-top:6px;display:flex;align-items:center;gap:12px">'
+    +(co?flagSvg(co,"big"):"")+esc(String(n.co).toUpperCase())+' IS YOURS</h2></div></div>';
+  const body='<div class="modal-b">'
+    +'<p style="margin:0 0 14px;font-size:15.5px;line-height:1.65">Three jobs there, and the country '
+    +'has nothing left on you — it has forgotten your crew was ever in it. <b>No other outfit takes a '
+    +'posting in '+esc(n.co)+' from now on.</b> The board there is yours to read at your own speed.</p>'
+    +'<hr class="rule"><div class="kicker">'+(g.free
+        ? 'And a week on the house — '+esc(n.co)+' has nothing left to teach you, so take any language you like'
+        : 'And a week on the house — somebody learns '+esc(g.want))+'</div>'
+    +(g.free?'<div class="sel-help">Somebody on the crew already speaks '+esc(g.want)+', so the week is yours to spend.</div>':'')
+    +(!takers.length
+      /* Says of each of them WHY, rather than one sentence covering all of them. Written flat as
+         "everybody is already at a school or out of the field" it was untrue for the commonest case
+         there is — a crew of one, where the only person not at a school is the one nobody teaches —
+         and a card that hands you nothing and is wrong about the reason is worse than no card. */
+      ? '<div class="empty">Nobody can take the week. The country is still yours.'
+        +'<div style="margin-top:8px;text-align:left">'+crewAll().map(c=>{
+            const why=canTutor(c)||(lang&&(c.langs||[]).indexOf(lang)>=0?"speaks "+lang+" already":"");
+            return why?'<div class="sel-help" style="margin:2px 0">'+esc(c.isPlayer?"You":c.first)+' — '+esc(why)+'</div>':"";
+          }).join("")+'</div></div>'
+      : '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">'
+        +takers.map(c=>'<button class="btn '+(pick.id===c.id?"stamp":"ghost")+' sm" data-act="hold-who" data-id="'+c.id+'">'
+          +esc(c.isPlayer?"You":c.first)+'<span class="mono" style="opacity:.6;font-size:10px"> · '+esc((c.langs||[]).join(", ")||"no languages")+'</span></button>').join("")
+        +'</div>'
+        +(g.free?'<div style="margin-top:12px"><div class="kicker">Which language</div>'
+          +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;max-height:140px;overflow:auto">'
+          +langs.filter(l=>!who||(who.langs||[]).indexOf(l)<0).map(l=>'<button class="btn '+(pick.lang===l?"stamp":"ghost")+' sm" data-act="hold-lang" data-k="'+esc(l)+'">'+esc(l)+'</button>').join("")
+          +'</div></div>':''))
+    /* THE WAY OUT SAYS WHAT IT COSTS. Closing this card drops the week — the notice is shifted off
+       the queue and there is nowhere to claim it from afterwards — and a button called "Not now"
+       would be a lie about that. The country itself is already yours either way: that was decided
+       at the turn of the week and is not in this card's gift. */
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px">'
+    +'<button class="btn ghost" data-act="notice-close" title="The country stays yours. The week does not keep.">'
+      +(takers.length?"Nobody can be spared":"Close")+'</button>'
+    +(takers.length?'<button class="btn" data-act="hold-go"'+((who&&lang)?"":" disabled")+'>'
+      +((who&&lang)?"Send "+esc(who.isPlayer?"yourself":who.first)+" for a week of "+esc(lang)+" →":"Pick who takes the week")+'</button>':'')
+    +'</div>'
+    +'<div class="sel-help" style="margin-top:10px">'+esc(n.co)+' is yours whatever you do here. The week is the part that does not keep.</div>'
+    +'</div>';
+  return '<div class="scrim center"><div class="modal notice" role="dialog" aria-modal="true">'+head+body+'</div></div>';
+}
 function modalNotice(){
   const n=S.notices&&S.notices[0];if(!n)return "";
+  if(n.co)return heldCard(n);
   return '<div class="scrim center" data-act="notice-close"><div class="modal notice'+(n.card?" gone-wrap":"")+'" role="dialog" aria-modal="true">'
     +'<div class="modal-h"><div><div class="kicker" style="color:var(--stamp)">'+esc(n.k||"Milestone")+'</div><h2 style="font-size:28px;margin-top:4px">'+esc(n.h)+'</h2></div><button class="x" data-act="notice-close" aria-label="Close">✕</button></div>'
     +'<div class="modal-b">'+(n.card?goneCard(n.card):"")
@@ -12492,6 +12635,8 @@ const UI={office:false,hold:false,panel:null,confirmNew:false,info:false,qrh:fal
   // Who is waiting to change places with somebody in another crew. Null the rest of the time,
   // and cleared by the trade itself so a stale pick cannot outlive the person it named.
   swap:null,
+  // Who is taking the week a country hands over, and which language, while the card is up.
+  holdPick:null,
   card:null};
 function chrome(){
   return '<div id="tipbox" role="tooltip" hidden></div>'
@@ -13105,7 +13250,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 146 · September 2026";
+const BUILD="build 147 · September 2026";
 /* There was a version check here. A bundled copy fetched one line of text from the site, compared
    it with the build it was packed with, and printed a note in the footer when it was behind. It
    went with the download it was for, and so did the line of text and the constant that said where
@@ -13334,7 +13479,10 @@ document.addEventListener("click",e=>{
       render(); break;
     }
     case "street-ok": S.modal=null; S.streetLast=null; render(); break;
-    case "notice-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){noticeDone();render();} break;
+    // UI.holdPick goes with the card. Two countries can go quiet a week apart, and a pick left
+    // behind by the first would arrive already made on the second, naming somebody for a language
+    // nobody chose.
+    case "notice-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){UI.holdPick=null;noticeDone();render();} break;
     case "news-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){newsClose();save();render();} break;
     case "news-open": if(S&&S.news&&!S.modal){S.modal={type:"news"};render();} break;
     case "crewname-open": if(S&&!S.modal){UI.cname=null;S.modal={type:"crewname",edit:!!S.crewName};render();const cn=document.getElementById("cname");if(cn)cn.focus();} break;
@@ -13440,6 +13588,11 @@ document.addEventListener("click",e=>{
     case "card-go": e.preventDefault(); cardGo(k); break;
     case "code-go": e.preventDefault(); redeemCode(); break;
     case "crewname-close": if(e.target===t||cl.contains("x")||cl.contains("btn")){S.modal=null;UI.cname=null;render();} break;
+    case "hold-who": UI.holdPick=Object.assign({},UI.holdPick||{},{id:id}); render(); break;
+    case "hold-lang": UI.holdPick=Object.assign({},UI.holdPick||{},{lang:k}); render(); break;
+    case "hold-go": { const p=UI.holdPick||{}; const nn=S.notices&&S.notices[0];
+      const g=nn&&nn.co?heldLang(nn.co):null;
+      if(p.id&&g)holdGive(p.id,g.free?p.lang:g.want); break; }
     case "notice-go": noticeDone(); if(k==="found"){UI.found={lead:null,ids:[]};S.modal={type:"found"};} else if(k){S.tab=k;S.jobOpen=null;} render(); scrollSet(0); break;
     case "found-lead": if(UI.found){UI.found.lead=UI.found.lead===id?null:id;UI.found.ids=UI.found.ids.filter(x=>x!==id);} render(); break;
     case "found-pick": if(UI.found){const f=UI.found;if(f.ids.includes(id))f.ids=f.ids.filter(x=>x!==id);else if(f.ids.length<4)f.ids.push(id);} render(); break;
