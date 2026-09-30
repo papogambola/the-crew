@@ -105,6 +105,44 @@ const srv=http.createServer((q,r)=>{
   check(ran.week>=1&&ran.crew>=1,"a dossier opens and a crew exists (week "+ran.week+", "+ran.crew+" on the books)");
   check(ran.saved===true,"and it saves, in this browser, which is the only place it can");
 
+  console.log("— EVERY FOLDER OF PICTURES THE GAME CAN ASK FOR ACTUALLY ANSWERS —");
+  /* Written because it was not, and the way it failed is the point. The first itch build set two
+     asset bases — art and map, the two anybody thinks of — and the game has four: office/ holds the
+     drawing of the office and skylines/ holds the city cards. So the office opened as an empty room
+     and nothing noticed, because the build and the test had been written from the same guess about
+     what the folders were.
+
+     So this does not name any of them. It asks the GAME which bases exist — the same X_BASE
+     constants tools/itch.py reads — and fetches one file from each. A fifth folder added tomorrow is
+     covered by this the day it is added, which a list of four would not be. */
+  /* The names come out of the game's own source, the same way tools/itch.py gets them: every
+     X_HOME that names a relative folder. A top-level `const` in a classic script does not hang off
+     window, so they cannot be swept off the global object — but they ARE reachable by bare name,
+     which is what the page-side half below uses. */
+  const src=fs.readFileSync(FILE,"utf8");
+  const names=[...src.matchAll(/const ([A-Z]+)_HOME\s*=\s*"([^"]+)"/g)]
+    .filter(m=>!/^https?:|^\/\//.test(m[2])&&m[2].endsWith("/"))
+    .map(m=>m[1]);
+  check(names.length>=4,
+    "the game names "+names.length+" folders of pictures ("+names.join(", ").toLowerCase()+")");
+  const assets=await page.evaluate(async ns=>{
+    const out=[];
+    for(const n of ns){
+      let base=null;
+      try{base=eval(n+"_BASE");}catch(e){}
+      if(typeof base!=="string"){out.push({n:n,status:"no "+n+"_BASE"});continue;}
+      // A real file from each, asked for by the game's own index where it keeps one.
+      const one={ART:(typeof ART_HAVE!=="undefined"&&ART_HAVE.length)?ART_HAVE[0]+".webp":null,
+                 SKY:(typeof SKY_HAVE!=="undefined"&&SKY_HAVE.length)?SKY_HAVE[0]+".webp":null,
+                 MAP:"world.webp", OFFICE:"room.webp"}[n];
+      if(!one){out.push({n:n,at:base,status:"no sample known — add one to browser95"});continue;}
+      let st="failed";try{const r=await fetch(base+one);st=r.status;}catch(e){}
+      out.push({n:n,at:base,file:one,status:st});
+    }
+    return out;},names);
+  assets.forEach(a=>check(a.status===200,
+    a.n.toLowerCase()+" answers from "+(a.at||"?")+" ("+a.status+")"));
+
   console.log("— and it never once reached for a server —");
   check(out.length===0,"not a single request left this host"+(out.length?": "+out.slice(0,3).join(" | "):""));
 
