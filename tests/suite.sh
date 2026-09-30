@@ -44,6 +44,17 @@ console.log("no name in the game is declared twice ("+Object.keys(at).length+" c
 if [ -f ../tools/favicon.js ]; then
   node ../tools/favicon.js --check || echo "  (the icon in play.html is stale)"
 fi
+# The front page names the build it is offering, and it is one file over from the build it is
+# actually offering. tools/site.py exists to keep the two in step and says in its own docstring
+# that --check runs in the test suite. It did not: nothing ran it, so index.html sat advertising
+# build 138 over a game on 141 for three builds, and the person who noticed was the person who
+# owns the site, reloading it and being told his own product was three versions behind. A tool
+# nobody runs is a tool that does nothing — which is the second time that sentence has been
+# earned this week.
+if [ -f ../tools/site.py ]; then
+  python3 ../tools/site.py --check \
+    || echo "  ^ run:  python3 tools/site.py   (the front page is advertising an older build)"
+fi
 # The five faces under the logo on the front page came out of the same builder and went stale the
 # same way, so tools/lineup.js kept them in step and this ran its check. The front page leads with
 # a drawing now — poster/hero.webp, faces and all — so there is nothing left to keep in step and
