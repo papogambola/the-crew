@@ -11979,14 +11979,16 @@ const TUT_STEPS=[
   {tab:"jobs",openJob:true,sel:".check",h:"Who can go",t:"Every crew member, ✓ or ✗, with the reason: the border and their passport, a conviction, a limit the job trips, an injury. A forger on the crew gets weak passports through. Above, every requirement carries a tick or a cross and what it is worth on this job — including the money: who calls this job small money."},
   {tab:"jobs",openJob:true,sel:".factors",h:"The reckoning",t:"Every factor with its number — crew size, who commands, language, a local national, knowledge, trades, heat — then the odds. Take the job and the report plays minute by minute; a week passes. On some jobs the report stops on a twist: six options, and one sets the crew free — the one the crew you brought can actually do. Choose badly and it costs blood, a place, heat and ranking."},
   {tab:"log",sel:".log",h:"The case log",t:"Everything that happened, week by week; the Week dropdown goes back to any past week, and every job you have run is on file above as a recap. Every few weeks something happens between jobs — a death, a disappearance, a resignation, a rival crew buying drinks, an old face, a detective — and asks for a decision with a price. The panel on the right says what your ranking buys and what the next name costs. Lay low a week here or on the Jobs board: −15 heat, ranking −1, upkeep still due."},
-  {tab:"log",sel:".burger",h:"The office",t:"Esc, or this button, on any screen: pause, sound, music, brightness, the controls book, the player's handbook, your file, and the door out. The handbook is every rule and number in the game with a search bar over it. The i button beside it explains whatever is on screen, and can run this tutorial again."},
+  {tab:"log",sel:".burger",h:"The office",t:"Esc, or this button, on any screen: pause, sound, music, brightness, the controls book, the player's handbook, your file, and the door out. The handbook is every rule and number in the game with a search bar over it. The i button beside it explains whatever is on screen, and can run this tutorial again. And anything you want looking up in the middle of a game: press 5 — or Q — and the Quick Reference Handbook opens over whatever screen you are on, every attribute, trade, verdict and number, a page each."},
 ];
 const TUT_REMIND=[
   {tab:"crew",sel:".topbar",h:"Welcome back",t:"A short reminder, then the game is yours. Balance, week, ranking, heat. The ranking is your name, and the name decides what clients post, what they pay, who will sign, how many places you have and whether the crew stays. Heat at 100 is a raid; a week laid low cools it by 15 and costs a point of ranking."},
   {tab:"crew",sel:".cards",h:"The crew",t:"Loyalty on every card. A bonus buys +14 loyalty and three weeks paid up. Small jobs in a row make a member grumble, then walk — the job file says who calls a posting small money. Cut loose frees a place. A Respected name opens places six and seven; from week "+EXTRA_CREW_WEEKS[0]+" a full crew can found another crew that works without you."},
   {tab:"jobs",sel:".jobrow",h:"The board",t:"The verdict leads each row; green tags you hold, red you don't, and the number on each is what it is worth here — bracketed means you would have to go and get it. The map lights the countries. Open a posting for who can go and the reckoning. Mid-report, a twist can stop everything for your call — one of six options sets the crew free, the one your crew can actually do."},
   {tab:"log",sel:".log",h:"The log",t:"Recaps of every job, the case log by week, and on the right what the name buys and what the next one costs. Between jobs, something can happen that asks for a decision with a price."},
-  {tab:"log",sel:".burger",h:"Help is one key away",t:"Esc opens the office; i explains whatever is on screen, and the full tutorial can be run again from there. Good luck."},
+  /* The card was called "Help is one key away" and then named no key, which is the sort of thing
+     that is funny once somebody points at it. 5 — or Q — is the key. */
+  {tab:"log",sel:".burger",h:"Help is one key away",t:"That key is 5 — or Q: the Quick Reference Handbook opens over whatever screen you are on, every attribute, trade, verdict and number. Esc opens the office, where the player's handbook is the long version of the same thing with a search bar over it; i explains whatever is in front of you, and can run this tutorial again. Good luck."},
 ];
 function tutSteps(){return TUT.mode==="reminder"?TUT_REMIND:TUT_STEPS;}
 function tutStart(mode){TUT.mode=mode||"full";TUT.on=true;tutGo(0);}
@@ -12973,7 +12975,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 143 · September 2026";
+const BUILD="build 144 · September 2026";
 /* There was a version check here. A bundled copy fetched one line of text from the site, compared
    it with the build it was packed with, and printed a note in the footer when it was behind. It
    went with the download it was for, and so did the line of text and the constant that said where
