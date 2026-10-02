@@ -259,3 +259,66 @@ class PlayMilestone(Base):
     reached_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
 
     session: Mapped[PlaySession] = relationship(back_populates="milestones")
+
+
+class PlayEvent(Base):
+    """One thing that happened in a game, in the game's own vocabulary.
+
+    WHAT THESE ARE NAMED AFTER. The Crew has postings on a board, a founding week, recruitment
+    trips, trades, verdicts in five bands and a reckoning. It does not have "levels", "quests" or
+    "characters", so neither does this table. Every name in NAMES (see analytics.py) is a thing the
+    game already does, found by reading the code rather than by picking from a list of events a
+    generic game might have.
+
+    WHY CATEGORY AND NOT JOB ID. A posting's id is minted per game from that game's own seed, and
+    its title is assembled from a verb pool and a noun pool — "Intercept the night ferry" is one of
+    thirty-six interceptions and no two players ever see the same id. So an id here would be a
+    column with one row per value, and "which assignment is too hard" would have no answer.
+    What IS the same for everybody is `cat`, one of twelve (interception, recovery, extraction,
+    escort, surveillance, infiltration, cyber, smuggling, forgery, negotiation, sabotage, vault)
+    crossed with `tier`, one to four. That pair is the unit the assignment dashboard groups by,
+    because it is the only unit that means the same thing in two different players' games.
+
+    NARROW ON PURPOSE. Nine typed columns and one short string, rather than a JSON blob of game
+    state. A blob is cheap to write and impossible to query, and it is also how an analytics table
+    quietly becomes a copy of the save file — which is the thing the privacy note on PlaySession
+    says this must never be.
+
+    `at` IS THE SERVER'S CLOCK. The browser sends `seq` for ordering and `dur_ms` for how long
+    something took; neither is trusted for when. A machine with its clock an hour out would
+    otherwise put its events in the middle of yesterday.
+
+    THE UNIQUE CONSTRAINT IS THE DEDUPLICATION. A batch is retried when a connection drops, and a
+    page restored from the back/forward cache can replay a queue it already sent. (session, seq) is
+    unique, so the second copy is refused by Postgres rather than by a flag somebody maintains."""
+    __tablename__ = "play_events"
+    __table_args__ = (
+        UniqueConstraint("session_id", "seq", name="uq_play_events_session_seq"),
+        Index("ix_play_events_anon_at", "anon_id", "at"),
+        Index("ix_play_events_name_at", "name", "at"),
+        Index("ix_play_events_cat_tier", "cat", "tier"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    anon_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    session_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    # The browser's own counter for this sitting, from 1. Orders a journey exactly, including two
+    # events inside the same millisecond, and is what makes a replayed batch harmless.
+    seq: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(String(32), nullable=False)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+    # The game's own week: how far into a campaign this happened. The one number that answers
+    # "how far do they get" without storing anything about what they did.
+    week: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # A posting's category, a trade's key, a reason somebody left. One short word from a fixed list.
+    cat: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    # A posting's tier 1–4, or a member's experience rank 1–5.
+    tier: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # The five bands a night ends in: 0 disaster, 1 botched, 2 messy, 3 success, 4 clean.
+    verdict: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    team: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    dur_ms: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    ok: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # The few things that are a list rather than a number — the trades a posting wanted, mostly.
+    # Capped hard at the door: it is a label, not a place to put state.
+    extra: Mapped[str | None] = mapped_column(String(120), nullable=True)

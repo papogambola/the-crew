@@ -14,7 +14,8 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from app.analytics import RANGES, summarise
+from app.analytics import (RANGES, busiest_players, journey_summary, player_journey,
+                           summarise)
 from app.database import get_db
 from app.deps import admin_page
 from app.models import Player
@@ -29,6 +30,41 @@ def analytics_data(window: str = Query("7d"), db: Session = Depends(get_db),
     erroring: the only caller is the page itself, and a dashboard that shows an error because a
     query string was fiddled with is a dashboard that looks broken when it is not."""
     return summarise(db, window if window in RANGES else "7d")
+
+
+@router.get("/analytics/journey")
+def analytics_journey(window: str = Query("7d"), cohort: str = Query("all"),
+                      cat: str = Query(""), outcome: str = Query("all"),
+                      db: Session = Depends(get_db),
+                      _: Player = Depends(admin_page)) -> dict:
+    """The funnel, the postings, the exits and the two cohorts. Same window vocabulary as the
+    playtime half, plus three filters of its own — all of them validated to a known value rather
+    than passed through, because this string arrives in a URL."""
+    return journey_summary(
+        db,
+        window if window in RANGES else "7d",
+        cohort=cohort if cohort in ("all", "new", "returning") else "all",
+        cat=cat if cat.isalpha() and len(cat) <= 24 else "",
+        outcome=outcome if outcome in ("all", "won", "lost") else "all",
+    )
+
+
+@router.get("/analytics/players")
+def analytics_players(window: str = Query("7d"), db: Session = Depends(get_db),
+                      _: Player = Depends(admin_page)) -> dict:
+    """Which anonymous ids are worth opening a journey for."""
+    return {"players": busiest_players(db, window if window in RANGES else "7d")}
+
+
+@router.get("/analytics/player/{anon}")
+def analytics_player(anon: str, db: Session = Depends(get_db),
+                     _: Player = Depends(admin_page)) -> dict:
+    """One anonymous player's sittings, in order. There is nothing here but the id the browser
+    made up and what it did in the game — no name, no address, no account, because none of those
+    was ever written down."""
+    if not (len(anon) == 32 and all(c in "0123456789abcdef" for c in anon)):
+        return {"anon": "", "found": False, "sessions": []}
+    return player_journey(db, anon)
 
 
 @router.get("/analytics", response_class=HTMLResponse)
@@ -123,6 +159,50 @@ PAGE = r"""<!doctype html>
   .foot{margin-top:40px;padding-top:14px;border-top:1px solid var(--rule);
         font-size:11px;color:var(--ink-3);line-height:1.7}
   .foot b{color:var(--ink-2);font-weight:400}
+  h3{font-size:16px;letter-spacing:.1em;text-transform:uppercase;margin:40px 0 4px;
+     padding-top:18px;border-top:2px solid var(--ink)}
+  .lede{color:var(--ink-3);font-size:11.5px;margin:0 0 18px;max-width:70ch;line-height:1.7}
+  .picks{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 18px}
+  .pick{display:flex;gap:4px;align-items:center}
+  .pick>span{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);
+             margin-right:4px}
+  .pick a{font-size:11px;padding:4px 9px;border:1px solid var(--rule);color:var(--ink-2);
+          text-decoration:none}
+  .pick a[aria-current]{background:var(--ink);border-color:var(--ink);color:#fff}
+  .pick select{font:11px ui-monospace,monospace;padding:4px 6px;border:1px solid var(--rule);
+               background:var(--paper);color:var(--ink-2)}
+  /* The funnel. A row per step, the bar's width the share of everybody who opened the game, and
+     the drop-off called out beside it — which is the number being looked for. */
+  .fn{border-collapse:collapse;width:100%}
+  .fn td{border:0;padding:3px 10px 3px 0;vertical-align:middle}
+  .fn .step{width:210px;color:var(--ink-2);font-size:12px}
+  .fn .track{width:100%;padding-right:0}
+  .fn .bar{height:22px;background:var(--hair);position:relative}
+  .fn .bar i{position:absolute;inset:0 auto 0 0;background:var(--ink);border-radius:0 2px 2px 0}
+  /* The count sits INSIDE the filled part of the bar, and hops just outside it when the bar is
+     too short to hold it — anchored to where the ink ends, not to the far edge of the track.
+     Anchored to the track it landed on top of the percentage column for every short bar, which
+     is every step at the bottom of a funnel, which is the part being read. */
+  .fn .bar b{position:absolute;top:3px;color:#fff;font-weight:400;font-size:12px;
+             font-variant-numeric:tabular-nums;transform:translateX(8px)}
+  .fn .bar b.out{color:var(--ink)}
+  .fn .pc{width:62px;text-align:right;font-size:12px;font-variant-numeric:tabular-nums;
+          padding-left:14px}
+  .fn .drop{width:150px;font-size:11px;color:var(--ink-3);padding-left:12px}
+  .fn .drop s{text-decoration:none;color:var(--ink)}
+  .fn .drop.big s{font-weight:400;border-bottom:2px solid var(--ink)}
+  .jr{margin-top:10px;border-left:2px solid var(--rule);padding-left:14px}
+  .jr .sess{margin-bottom:18px}
+  .jr .sh{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);
+          margin-bottom:5px}
+  .jr .ev{display:flex;gap:12px;font-size:12px;padding:2px 0}
+  .jr .ev time{color:var(--ink-3);min-width:62px;font-variant-numeric:tabular-nums}
+  .jr .ev em{font-style:normal;color:var(--ink-3);font-size:10.5px;letter-spacing:.06em;
+             text-transform:uppercase;min-width:124px}
+  .who{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .who a{font-size:11px;padding:3px 8px;border:1px solid var(--rule);color:var(--ink-2);
+         text-decoration:none;font-variant-numeric:tabular-nums}
+  .who a[aria-current]{background:var(--ink);border-color:var(--ink);color:#fff}
 </style>
 </head><body>
 <div class="wrap">
@@ -136,6 +216,7 @@ PAGE = r"""<!doctype html>
     </nav>
   </div>
   <div id="body"></div>
+  <div id="journey"></div>
   <div class="foot">
     <b>What this knows about anybody:</b> an anonymous id the browser made up, when a sitting
     started, when it last checked in, and how many milliseconds of it were play. No account, no
@@ -363,17 +444,213 @@ PAGE = r"""<!doctype html>
     document.getElementById("body").innerHTML=html;
   }
 
-  /* The browser is already holding the Basic credentials for this origin, so this call carries
+  /* ================= WHAT PLAYERS DO, AND WHERE THEY STOP ================= */
+
+  var Q=new URLSearchParams(location.search);
+  var COH=Q.get("cohort")||"all", CAT=Q.get("cat")||"", OUT=Q.get("outcome")||"all";
+  var WHO=Q.get("who")||"";
+  function href(over){
+    var p=new URLSearchParams(location.search);
+    Object.keys(over).forEach(function(k){
+      if(over[k]===""||over[k]==null)p.delete(k); else p.set(k,over[k]);});
+    return "?"+p.toString();
+  }
+  function tabs(name,key,opts,cur){
+    return '<div class="pick"><span>'+esc(name)+'</span>'+opts.map(function(o){
+      var h={}; h[key]=o[0];
+      return '<a href="'+esc(href(h))+'"'+(cur===o[0]?' aria-current="page"':'')+'>'
+        +esc(o[1])+'</a>';}).join("")+'</div>';
+  }
+
+  /* THE FUNNEL. A row per step: how many got there, what share of everybody that is, and — the
+     number actually being looked for — how many were lost between this step and the one above.
+     The drop-off is called out rather than left to be worked out from two percentages, and the
+     worst one on the board is underlined, because finding it is the entire job of this table. */
+  function funnel(steps){
+    var worst=0;
+    steps.forEach(function(s){if(s.lost!=null&&s.lost>worst)worst=s.lost;});
+    return '<table class="fn"><tbody>'+steps.map(function(s){
+      var top=steps[0].n||1, w=100*s.n/top;
+      return '<tr>'
+        +'<td class="step">'+esc(s.label)+'</td>'
+        +'<td class="track"><div class="bar"><i style="width:'+w.toFixed(1)+'%"></i>'
+          +'<b'+(w<12?' class="out"':'')+' style="left:'+(w<12?w.toFixed(1):0)+'%">'+s.n+'</b></div></td>'
+        +'<td class="pc">'+s.pct+'%</td>'
+        +'<td class="drop'+(s.lost!=null&&s.lost>=worst&&worst>0?' big':'')+'">'
+          +(s.lost==null?'<span style="color:var(--ink-3)">—</span>'
+            :'<s>'+s.lost+'% lost</s> ('+s.lost_n+')')+'</td>'
+        +'</tr>';
+    }).join("")+'</tbody></table>';
+  }
+
+  function drawJourney(d){
+    var h='<h3>Player journey</h3>'
+      +'<p class="lede">What players do inside a game, in the game\'s own vocabulary — a founding '
+      +'week, files on the roster, recruitment trips, postings on a board, and nights that end in '
+      +'one of five bands. '+d.players+' player'+(d.players===1?'':'s')+', '+d.events+' events.</p>';
+
+    h+='<div class="picks">'
+      +tabs("Players",'cohort',[["all","Everyone"],["new","First sitting"],["returning","Returning"]],COH)
+      +'<div class="pick"><span>Posting</span><select onchange="location=this.value">'
+        +'<option value="'+esc(href({cat:""}))+'"'+(CAT?"":" selected")+'>All kinds</option>'
+        +d.cats.map(function(c){return '<option value="'+esc(href({cat:c.k}))+'"'
+          +(CAT===c.k?" selected":"")+'>'+esc(c.l)+'</option>';}).join("")
+      +'</select></div>'
+      +tabs("Outcome",'outcome',[["all","All"],["won","Came off"],["lost","Did not"]],OUT)
+      +'</div>';
+
+    if(!d.players){
+      return h+'<div class="empty">No game events in this window yet.</div>';
+    }
+
+    h+='<section><h2>Core progression funnel</h2>'
+      +'<p class="lede">Every step here is something the game actually requires of the one below '
+      +'it: you cannot open a posting without a campaign, run one without opening it, or start a '
+      +'second while the first is still pending. So a later step vouches for the earlier ones, '
+      +'which is what keeps a dropped request from reading as a cliff. Recruitment is underneath — '
+      +'the board can be opened by a commander with nobody on the books, so those are not gates.</p>'
+      +funnel(d.funnel);
+    var inf=d.funnel.filter(function(s){return s.inferred>0;});
+    if(inf.length)h+='<p class="lede">'+inf.map(function(s){
+      return s.inferred+' counted at &ldquo;'+esc(s.label)+'&rdquo; on the strength of what they '
+        +'did next rather than their own event — a batch that never arrived.';}).join(" ")+'</p>';
+    h+='</section>';
+
+    /* CREW BUILDING. Counts and shares of all players, not a drop-off chain: none of these is
+       required before the board, so a percentage "lost" between them would not be a measurement. */
+    var c=d.crew;
+    h+='<div class="grid2">'
+      +'<section><h2>Building a crew</h2>'
+        +bars(c.steps,function(r){return r.label;},function(r){return r.n;},
+              function(r){return "("+r.pct+"%)";})
+        +'<p class="lede" style="margin-top:12px">Median files read before each signing: <b>'
+        +c.median_viewed_before_signing+'</b>. Median time from starting a campaign to a full crew: <b>'
+        +esc(dur(c.median_fill_ms))+'</b>. '+c.signings+' signings, '+c.dropped+' cut loose.</p>'
+      +'</section>'
+      +'<section><h2>Trades players sign</h2>'
+        +(c.trades.length
+          ? bars(c.trades,function(r){return r.k.charAt(0).toUpperCase()+r.k.slice(1);},
+                 function(r){return r.n;})
+          : '<div class="empty">Nobody has signed anybody in this window.</div>')
+      +'</section>'
+      +'</div>';
+
+    /* POSTINGS, BY CATEGORY AND TIER. Not by job id: an id is minted from each game's own seed
+       and a title is assembled from a verb pool and a noun pool, so no two players ever see the
+       same posting. Category × tier is the only unit that means the same thing twice. */
+    h+='<section><h2>Postings — by kind and tier</h2>'
+      +'<p class="lede">A posting\'s id and title are generated per game, so neither is comparable '
+      +'between players. These are the twelve kinds crossed with the four tiers, which is the unit '
+      +'that is the same in everybody\'s game. Take rate is of those who opened it; abandoned means '
+      +'opened and then left to go off the board.</p>';
+    if(!d.jobs.length){h+='<div class="empty">Nothing run in this window.</div>';}
+    else{
+      h+='<table><thead><tr><th>Kind</th><th class="num">Tier</th><th class="num">Viewed</th>'
+        +'<th class="num">Run</th><th class="num">Take</th><th class="num">Finished</th>'
+        +'<th class="num">Came off</th><th class="num">Failed</th><th class="num">Abandoned</th>'
+        +'<th class="num">Avg time</th><th class="num">Players</th></tr></thead><tbody>'
+        +d.jobs.map(function(r){
+          return '<tr><td>'+esc(r.label)+'</td><td class="num">'+r.tier+'</td>'
+            +'<td class="num">'+r.viewed+'</td><td class="num">'+r.run+'</td>'
+            +'<td class="num">'+r.take_rate+'%</td><td class="num">'+r.done+'</td>'
+            +'<td class="num">'+r.win_rate+'%</td><td class="num">'+r.loss_rate+'%</td>'
+            +'<td class="num">'+r.abandon_rate+'%</td>'
+            +'<td class="num">'+esc(dur(r.avg_ms))+'</td><td class="num">'+r.players+'</td></tr>';
+        }).join("")+'</tbody></table>';
+    }
+    h+='</section>';
+
+    h+='<div class="grid2">'
+      +'<section><h2>How nights end</h2>'
+        +bars(d.spread,function(r){return r.label;},function(r){return r.n;})
+      +'</section>'
+      /* EXITS. The last event of a sitting that has finished. Not evidence anybody disliked
+         anything — a browser closes for a hundred reasons, including a bus arriving — just the
+         last place the game was known to be. */
+      +'<section><h2>Where sittings end</h2>'
+        +'<p class="lede">The last thing that happened before a sitting stopped. A browser closes '
+        +'for a hundred reasons; this is where, not why.</p>'
+        +(d.exits.length
+          ? bars(d.exits,function(r){return r.where;},function(r){return r.n;},
+                 function(r){return "("+r.pct+"%)";})
+          : '<div class="empty">No finished sittings in this window.</div>')
+      +'</section>'
+      +'</div>';
+
+    h+='<section><h2>First-timers against people who came back</h2><table>'
+      +'<thead><tr><th>Players</th><th class="num">People</th><th class="num">Sittings</th>'
+      +'<th class="num">Per player</th><th class="num">Median sitting</th>'
+      +'<th class="num">Postings run</th><th class="num">Per player</th>'
+      +'<th class="num">Median week</th><th class="num">Furthest week</th></tr></thead><tbody>'
+      +d.cohorts.map(function(c){
+        return '<tr><td>'+esc(c.label)+'</td><td class="num">'+c.players+'</td>'
+          +'<td class="num">'+c.sessions+'</td><td class="num">'+c.sessions_per_player+'</td>'
+          +'<td class="num">'+esc(dur(c.median_ms))+'</td>'
+          +'<td class="num">'+c.jobs_run+'</td><td class="num">'+c.jobs_per_player+'</td>'
+          +'<td class="num">'+c.median_week+'</td><td class="num">'+c.furthest_week+'</td></tr>';
+      }).join("")+'</tbody></table></section>';
+    return h;
+  }
+
+  function drawWho(list,one){
+    var h='<section><h2>One player, in order</h2>'
+      +'<p class="lede">For reading a drop-off a percentage cannot explain. This is the anonymous '
+      +'id and what it did — there is no name, address or account to show, because none was ever '
+      +'stored. Busiest first.</p><div class="who">'
+      +list.map(function(p){
+        return '<a href="'+esc(href({who:p.anon}))+'"'+(WHO===p.anon?' aria-current="page"':'')
+          +'>'+esc(p.short)+' · '+esc(dur(p.active_ms))+'</a>';}).join("")
+      +(list.length?'':'<span class="empty">Nobody yet.</span>')+'</div>';
+    if(one&&one.found){
+      h+='<div class="jr">'+one.sessions.map(function(s){
+        return '<div class="sess"><div class="sh">Sitting '+s.session_no
+          +(s.is_new?' · their first':'')+' — '+esc(clock(s.started))+' · '+esc(dur(s.active_ms))
+          +(s.live?' · still playing':'')+'</div>'
+          +(s.events.length?s.events.map(function(e){
+              return '<div class="ev"><time>'+esc(new Date(e.at).toLocaleTimeString(undefined,
+                      {hour:"2-digit",minute:"2-digit"}))+'</time>'
+                +'<em>'+esc(e.name.replace(/_/g," "))+'</em><span>'+esc(e.line)+'</span></div>';
+            }).join("")
+            :'<div class="ev"><time>—</time><span style="color:var(--ink-3)">'
+             +'Nothing recorded; the sitting predates event tracking or sent nothing.</span></div>')
+          +'</div>';
+      }).join("")+'</div>';
+    }else if(WHO){
+      h+='<div class="empty">No such player in the records.</div>';
+    }
+    return h+'</section>';
+  }
+
+  /* The browser is already holding the Basic credentials for this origin, so these calls carry
      them with no token to paste. A 401 here means the sign-in was dropped; reloading puts the
-     prompt back up. */
-  fetch("/admin/analytics/data?window="+encodeURIComponent(W),{credentials:"same-origin"})
-    .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+     prompt back up. Each section is fetched and drawn on its own, so one of them failing leaves
+     the others on the screen rather than blanking the page. */
+  var qs=function(extra){
+    var p=new URLSearchParams({window:W,cohort:COH,outcome:OUT});
+    if(CAT)p.set("cat",CAT);
+    return p.toString()+(extra||"");
+  };
+  var get=function(u){return fetch(u,{credentials:"same-origin"}).then(function(r){
+    if(!r.ok)throw new Error("HTTP "+r.status);return r.json();});};
+
+  get("/admin/analytics/data?window="+encodeURIComponent(W))
     .then(draw)
     .catch(function(e){
       document.getElementById("sub").textContent="";
       document.getElementById("body").innerHTML='<div class="empty">Could not read the numbers ('
         +esc(e.message)+'). Reload to sign in again.</div>';
     });
+
+  Promise.all([
+    get("/admin/analytics/journey?"+qs()),
+    get("/admin/analytics/players?window="+encodeURIComponent(W)),
+    WHO?get("/admin/analytics/player/"+encodeURIComponent(WHO)):Promise.resolve(null)
+  ]).then(function(r){
+    document.getElementById("journey").innerHTML=drawJourney(r[0])+drawWho(r[1].players,r[2]);
+  }).catch(function(e){
+    document.getElementById("journey").innerHTML='<h3>Player journey</h3>'
+      +'<div class="empty">Could not read the events ('+esc(e.message)+').</div>';
+  });
 })();
 </script>
 </body></html>

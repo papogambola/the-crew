@@ -359,6 +359,27 @@ def test_guessing_the_password_gets_rate_limited(client, admin):
     assert 429 in codes, "rotating the forwarded-for header walked straight past the limit"
 
 
+def test_signing_in_correctly_costs_nothing(client, admin):
+    """THE BUG THE BROWSER TEST FOUND, and it would have shipped.
+
+    The dashboard fetches four endpoints per page load and the browser repeats the Basic
+    credentials on every one of them. Charging the limiter for success meant ten attempts an hour
+    bought two page loads, after which the owner was locked out of their own analytics for an hour
+    by a limiter meant to stop strangers. Only wrong passwords count now."""
+    h = basic(admin["email"], ADMIN_PW)
+    codes = [client.get("/admin/analytics/data?window=all", headers=h).status_code
+             for _ in range(40)]
+    assert set(codes) == {200}, "opening the dashboard repeatedly locked the owner out"
+
+
+def test_wrong_passwords_still_count_against_the_right_ones(client, admin):
+    """The other half: a budget spent on failures is not refunded by a success."""
+    for i in range(12):
+        client.get("/admin/analytics/data", headers=basic(admin["email"], f"nope-{i}"))
+    r = client.get("/admin/analytics/data?window=all", headers=basic(admin["email"], ADMIN_PW))
+    assert r.status_code == 429, "a flood of wrong passwords left the door open"
+
+
 def test_the_admin_can_still_get_in_when_the_basic_door_is_jammed(client, admin):
     """The reason a GLOBAL limit is safe here: it only covers the Basic path. Somebody flooding
     the password box cannot lock the real admin out, because the token they already have from

@@ -30,7 +30,7 @@ import re
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
-from app.analytics import record_beat
+from app.analytics import record_beat, record_events
 from app.database import get_db
 from app.rate_limit import guard_beat
 
@@ -41,9 +41,10 @@ router = APIRouter(prefix="/play", tags=["play"])
 # before a stranger's string gets near a query or an index.
 ID = re.compile(r"^[0-9a-f]{32}$")
 
-# A beat is about 120 bytes. A kilobyte is room for ten times that and refuses anything meant to
-# be a problem, read BEFORE parsing — json.loads on an unbounded body is the whole attack.
-MAX_BODY = 1024
+# A bare beat is about 120 bytes; one carrying a full batch of forty events is about six
+# kilobytes. Eight is room for that and refuses anything meant to be a problem — checked BEFORE
+# parsing, because json.loads on an unbounded body is the whole attack.
+MAX_BODY = 8192
 
 
 @router.post("/beat", status_code=status.HTTP_204_NO_CONTENT)
@@ -72,6 +73,12 @@ async def beat(request: Request, db: Session = Depends(get_db)) -> Response:
         sid = str(body.get("session") or "")
         active_ms = int(body.get("active_ms") or 0)
         ended = bool(body.get("ended"))
+        # Game events ride along with the heartbeat rather than having an endpoint of their own.
+        # The browser queues them and empties the queue on the next beat, so opening a posting
+        # costs nothing at the moment it happens and a sitting makes two requests a minute
+        # whatever the player is doing. One request also means one place to be refused, one body
+        # size to bound, and one clock to stamp everything with.
+        events = body.get("events")
     except (ValueError, TypeError, AttributeError):
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -80,6 +87,8 @@ async def beat(request: Request, db: Session = Depends(get_db)) -> Response:
     if guard_beat(anon):
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-    record_beat(db, anon_id=anon, session_id=sid, claimed_ms=active_ms, ended=ended)
+    s = record_beat(db, anon_id=anon, session_id=sid, claimed_ms=active_ms, ended=ended)
+    if events:
+        record_events(db, s, events)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

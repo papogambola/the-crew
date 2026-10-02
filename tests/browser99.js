@@ -259,6 +259,142 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   check(derr.length===0,"and no errors on the dashboard"+(derr.length?": "+derr[0]:""));
   await dash.screenshot({path:OUT+"/01-the-dashboard.png",fullPage:true});
 
+  /* ---------- game events, end to end ----------
+     The client half is driven for real: a campaign is created by filling in the dossier screen
+     and pressing the button, which is the only thing that fires game_started. Everything after it
+     is asserted at the SERVER, because what matters is not that pevent pushed onto an array but
+     that the row arrived with the right fields on it. */
+  console.log("— and what happens inside a game —");
+  const g=await browser.newPage({viewport:{width:1280,height:1000}});
+  const gerrs=[];
+  g.on("pageerror",e=>gerrs.push(String(e)));
+  g.on("console",m=>{const t=m.text();if(m.type()==="error"&&!noise(t))gerrs.push(t);});
+  await g.addInitScript(b=>{window.THE_CREW_API=b;},BASE);
+  await g.goto(SITE);
+  await g.evaluate(()=>{try{localStorage.clear();}catch(e){}});
+  await g.reload();
+  await g.waitForTimeout(700);
+  await g.click('[data-act="begin"]');
+  await g.fill("#pname","Vera");
+  await g.click('[data-act="confirm-create"]');
+  await g.waitForSelector(".topbar",{timeout:20000});
+  if(await g.$('[data-act="tut-skip"]'))await g.click('[data-act="tut-skip"]');
+  for(let i=0;i<25;i++){
+    const x=await g.$('button[data-act="crewname-later"]')||await g.$('.scrim button.x:not([disabled])');
+    if(x){await x.click();await g.waitForTimeout(40);continue;}
+    const q=await g.$$('.scrim .btn:not([disabled])');
+    if(q.length){await q[q.length-1].click();await g.waitForTimeout(40);continue;}
+    break;}
+
+  const queued=await g.evaluate(()=>({names:PE.q.map(e=>e.n),anon:PT.anon}));
+  check(queued.names.indexOf("game_started")>=0,
+    "making a commander queues game_started ("+queued.names.join(", ")+")");
+
+  /* ANALYTICS MUST NEVER INTERRUPT GAMEPLAY, asserted rather than asserted-about: pevent is
+     replaced with a function that throws every time, and then the game is driven. Grepping for
+     try/catch proves the shape of the source; this proves the behaviour, including for the
+     arguments evaluated BEFORE the call — which is where the one real gap was (jobPool(), read
+     inside the argument list and therefore outside pevent's own guard). */
+  const sabotage=await g.evaluate(()=>{
+    const real=window.pevent;
+    window.pevent=function(){throw new Error("analytics is on fire");};
+    const out={errors:[],week:S.week};
+    const press=(a,id)=>{const b=document.createElement("button");
+      b.setAttribute("data-act",a);if(id!=null)b.setAttribute("data-id",id);
+      document.body.appendChild(b);b.click();b.remove();};
+    try{
+      const cand=S.roster.find(c=>c.status==="available"&&!c.isPlayer);
+      const job=S.jobs.find(j=>!j.final);
+      press("open-recruit",cand.id);                 // candidate_viewed throws
+      S.modal=null;render();
+      press("open-job",job.id);                      // job_viewed throws, jobPool runs first
+      out.jobOpen=S.jobOpen===job.id;
+      weekTick(mulberry32(3));                       // week_turned throws
+      out.weekMoved=true;
+      refreshJobs(false);                            // job_expired throws
+      out.board=S.jobs.length;
+      render();
+      out.rendered=!!document.querySelector(".topbar");
+    }catch(e){out.errors.push(String(e));}
+    window.pevent=real;
+    return out;
+  });
+  check(sabotage.errors.length===0,
+    "with every single event throwing, the game carries on"
+    +(sabotage.errors.length?": "+sabotage.errors[0]:""));
+  check(sabotage.jobOpen===true&&sabotage.rendered===true&&sabotage.board>0,
+    "a posting still opens, the week still turns, the board still refills, the screen still draws");
+
+  // A file on the roster, and a posting, through the real buttons.
+  const opened=await g.evaluate(()=>{
+    const cand=S.roster.find(c=>c.status==="available"&&!c.isPlayer);
+    const job=S.jobs.find(j=>!j.final);
+    return {cand:cand?cand.id:null,job:job?job.id:null,cat:job?job.cat:null,tier:job?job.tier:null};});
+  /* Both go through the REAL click handler, with a button carrying the real data-act and the real
+     id — the same path a player's click takes, which is what the hook is attached to. A rendered
+     button would be better still, and was tried: the roster paginates at thirty, so the first
+     available file on a six-thousand-person roster is usually not on the screen, and a test that
+     waits for it to be is testing the pagination. */
+  const press=async(act,id)=>{
+    await g.evaluate(a=>{const b=document.createElement("button");
+      b.setAttribute("data-act",a[0]);b.setAttribute("data-id",a[1]);
+      document.body.appendChild(b);b.click();b.remove();},[act,id]);
+    await g.waitForTimeout(250);
+  };
+  await press("open-recruit",opened.cand);
+  await g.evaluate(()=>{S.modal=null;render();});
+  await press("open-job",opened.job);
+  await g.waitForTimeout(300);
+  const q2=await g.evaluate(()=>PE.q.map(e=>e.n+(e.c?":"+e.c:"")));
+  check(q2.some(n=>n.indexOf("candidate_viewed")===0),"opening a file queues candidate_viewed");
+  check(q2.some(n=>n.indexOf("job_viewed")===0),"opening a posting queues job_viewed");
+
+  /* THE BATCH. Forced out rather than waited for, because the beat is thirty seconds and what is
+     under test is that the queue empties onto it — not the clock. */
+  const before=await g.evaluate(()=>PE.q.length);
+  await g.evaluate(()=>{playSend(false);});
+  await g.waitForTimeout(600);
+  const after=await g.evaluate(()=>PE.q.length);
+  check(before>0&&after===0,"the queue empties onto a beat ("+before+" → "+after+")");
+
+  await sleep(400);
+  const jr=JSON.parse((await get(BASE+"/admin/analytics/journey?window=all",basic())).body);
+  const step=Object.fromEntries(jr.funnel.map(s=>[s.key,s]));
+  check(step.started.n>=1,"the server has them: a campaign was begun");
+  check(step.job1v.n>=1,"and a posting was opened");
+  check(jr.funnel.every((s,i)=>i===0||s.n<=jr.funnel[i-1].n),
+    "the funnel never goes up as it goes down — no negative drop-off");
+  const jrow=jr.jobs.find(r=>r.cat===opened.cat&&r.tier===opened.tier);
+  check(!!jrow&&jrow.viewed>=1,
+    "the posting is counted under its kind and tier, not its id ("+(jrow?jrow.label:"?")+" t"+opened.tier+")");
+
+  const one=JSON.parse((await get(BASE+"/admin/analytics/player/"+queued.anon,basic())).body);
+  check(one.found===true&&one.sessions.length>=1,"the player's journey reads back");
+  const lines=one.sessions.map(s=>s.events.map(e=>e.name).join(",")).join(" | ");
+  check(/game_started/.test(lines)&&/job_viewed/.test(lines),
+    "in order, in the game's own words: "+lines.slice(0,70));
+  check(!/@/.test(JSON.stringify(one)),"and with nobody's address in it");
+
+  // The dashboard draws the new half without complaint.
+  const dash2=await browser.newPage({viewport:{width:1280,height:2200},
+    httpCredentials:{username:ADMIN,password:PW}});
+  const d2=[];
+  dash2.on("pageerror",e=>d2.push(String(e)));
+  dash2.on("console",m=>{if(m.type()==="error"&&!/favicon/i.test(m.text()))d2.push(m.text());});
+  await dash2.goto(BASE+"/admin/analytics?window=all&who="+queued.anon);
+  await dash2.waitForTimeout(1200);
+  const txt=await dash2.evaluate(()=>document.body.innerText);
+  check(/Core progression funnel/i.test(txt),"the funnel is on the dashboard");
+  check(/Building a crew/i.test(txt),"the crew section is too");
+  check(/Postings — by kind and tier/i.test(txt),"and the postings table");
+  check(/Where sittings end/i.test(txt),"and where sittings end");
+  check(/One player, in order/i.test(txt)&&/Started a campaign/i.test(txt),
+    "and this player's own journey, opened by id");
+  check(d2.length===0,"with no errors"+(d2.length?": "+d2[0]:""));
+  await dash2.screenshot({path:OUT+"/04-events.png",fullPage:true});
+  check(gerrs.length===0,"and the game itself logged nothing"
+    +(gerrs.length?": "+gerrs.slice(0,2).join(" | "):""));
+
   check(errs.length===0,"no page or console errors through any of it"
     +(errs.length?": "+errs.slice(0,3).join(" | "):""));
   await browser.close();

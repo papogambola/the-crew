@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.models import Player
-from app.rate_limit import guard_admin
+from app.rate_limit import admin_failed, guard_admin
 from app.security import check_password, normalize_email, read_token
 
 
@@ -87,7 +87,7 @@ def admin_page(request: Request, db: Session = Depends(get_db)) -> Player:
             if p is not None and _minted_before_the_password_changed(claims, p):
                 p = None
     elif scheme == "basic":
-        # Rate-limited before bcrypt runs, not after: the hash is slow by design, which makes an
+        # Checked before bcrypt runs, not after: the hash is slow by design, which makes an
         # unmetered Basic endpoint a way to spend the server's CPU as well as to guess a password.
         guard_admin(request)
         try:
@@ -99,6 +99,11 @@ def admin_page(request: Request, db: Session = Depends(get_db)) -> Player:
                 select(Player).where(Player.email == normalize_email(email)))
             if candidate is not None and check_password(password, candidate.password_hash):
                 p = candidate
+        # ONLY A WRONG PASSWORD COSTS ANYTHING. The dashboard fetches four endpoints per page load
+        # and the browser repeats the credentials on every one of them, so charging for success
+        # meant the owner locking themselves out of their own analytics by opening the page twice.
+        if p is None:
+            admin_failed(request)
 
     if p is None:
         raise HTTPException(

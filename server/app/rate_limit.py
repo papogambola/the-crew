@@ -61,6 +61,20 @@ def hit(bucket: str, limit: int, window: float) -> bool:
     return False
 
 
+def over(bucket: str, limit: int, window: float) -> bool:
+    """Whether this bucket is already full, WITHOUT putting anything in it.
+
+    The difference matters wherever a limit should count failures rather than attempts. A password
+    box that spends its budget on correct passwords is a password box that locks the owner out for
+    being busy — see guard_admin, where the dashboard makes three calls per page load and ten
+    attempts an hour would have meant four page loads."""
+    now = time.monotonic()
+    seen = _hits[bucket]
+    while seen and now - seen[0] > window:
+        seen.popleft()
+    return len(seen) >= limit
+
+
 def guard_reset(request: Request | None, email: str) -> None:
     """Both windows for a forgot-password call. Raises 429 when either is full."""
     over = hit(f"reset:ip:{caller_key(request)}", RESET_PER_CALLER, RESET_WINDOW_SECONDS)
@@ -105,24 +119,41 @@ ADMIN_WINDOW_SECONDS = float(os.environ.get("ADMIN_RATE_WINDOW", "3600"))
 ENTRY = "Too many tries. Give it a few minutes, or sign in through the game instead."
 
 
-def guard_admin(request: Request | None) -> None:
-    """A ceiling on password attempts against the dashboard. Raises 429 when it is full.
+def admin_blocked(request: Request | None) -> bool:
+    """Whether the dashboard's password box is closed to this caller right now. Records nothing.
 
     TWO BUCKETS, for the reason guard_reset has two: caller_key reads the left-most
     X-Forwarded-For entry, which the caller supplies and can therefore rotate. A per-caller window
     alone is a window somebody bypasses by changing a header, and behind it is bcrypt — slow, but
     five guesses a second a core is not a wall.
 
-    So there is a second, GLOBAL ceiling on Basic attempts, which no header can get around. The
-    reason that is safe here and would not be on /auth/login is that **it cannot lock the real
-    admin out**: this guard runs only on the Basic path, and the Bearer path is untouched. Sign in
-    to the game as normal and read the dashboard with that token, and a flood of guesses by a
-    stranger is somebody else's problem rather than yours. The 429 says so."""
-    over = hit(f"admin:ip:{caller_key(request)}", ADMIN_PER_CALLER, ADMIN_WINDOW_SECONDS)
-    # Counted second and not short-circuited, so tripping one window is not a free pass on the
-    # other — the same reasoning, and the same comment, as guard_reset.
-    over = hit("admin:all", ADMIN_GLOBAL, ADMIN_WINDOW_SECONDS) or over
-    if over:
+    So there is a second, GLOBAL ceiling, which no header can get around. The reason that is safe
+    here and would not be on /auth/login is that **it cannot lock the real admin out**: this runs
+    only on the Basic path, and the Bearer path is untouched. Sign in to the game as normal and
+    read the dashboard with that token, and a flood of guesses by a stranger is somebody else's
+    problem rather than yours. The 429 says so."""
+    return (over(f"admin:ip:{caller_key(request)}", ADMIN_PER_CALLER, ADMIN_WINDOW_SECONDS)
+            or over("admin:all", ADMIN_GLOBAL, ADMIN_WINDOW_SECONDS))
+
+
+def admin_failed(request: Request | None) -> None:
+    """Record ONE WRONG password. Only wrong ones.
+
+    This counted every attempt for one build, including the right ones, and it would have shipped:
+    the dashboard makes three calls per page load, so ten attempts an hour meant the owner locked
+    themselves out of their own analytics by opening the page four times. A limiter that charges
+    for success is not a limiter, it is a quota — and nobody agreed to a quota.
+
+    Both buckets are charged, and neither short-circuits, so tripping one is not a free pass on
+    the other — the same reasoning, and the same comment, as guard_reset."""
+    bad = hit(f"admin:ip:{caller_key(request)}", ADMIN_PER_CALLER, ADMIN_WINDOW_SECONDS)
+    hit("admin:all", ADMIN_GLOBAL, ADMIN_WINDOW_SECONDS)
+    return bad
+
+
+def guard_admin(request: Request | None) -> None:
+    """Raise 429 if the password box is closed to this caller."""
+    if admin_blocked(request):
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, ENTRY)
 
 

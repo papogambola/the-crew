@@ -114,3 +114,97 @@ anybody, so there is no legal trigger that was not already there — but a paid 
 anything usually says so somewhere, even in one line. The honest options are a short paragraph on
 playthecrew.com, a line in the handbook, or nothing. It is a decision rather than a task, which is
 why it is written down here instead of done.
+
+---
+
+# Game events — what players do, and where they stop
+
+The second half of the same system: same anonymous id, same sitting, same single request. Events
+are queued in the browser and emptied onto the next heartbeat, so opening a posting costs nothing
+at the moment it happens and a sitting still makes two requests a minute whatever is going on.
+
+## Every event, what fires it, and what it carries
+
+Names come from the game, not from a generic list. The Crew has no levels, quests or characters;
+it has a founding week, a roster of six thousand files, recruitment trips you travel to, postings
+on a board, and nights that end in one of five bands.
+
+| Event | Fired by | Carries |
+|---|---|---|
+| `game_started` | `confirm-create` — a commander is made | week |
+| `game_resumed` | `continue` — a save loads | week |
+| `candidate_viewed` | `open-recruit` — a file opened on the roster | trade, experience rank, week |
+| `trip_started` | `hire()` — a recruitment trip begins | trade, rank, week |
+| `member_signed` | `finishTrip` signs · `applySign` (a walk-in) | trade, rank, crew size, `trip`/`walkin`, week |
+| `member_refused` | `finishTrip` — they said no | trade, rank, week |
+| `member_dropped` | `drop-yes` — cut loose | trade, rank, week |
+| `member_lost` | `leaveCrew` — dead, jailed, walked, poached, betrayed | reason, rank, trade, week |
+| `crew_filled` | every seat taken, first time in a sitting | crew size, time since the campaign began |
+| `job_viewed` | `open-job` — a posting opened | category, tier, how many could go, week |
+| `job_cased` | `caseJob` — a week spent watching one | category, tier, week |
+| `job_run` | `startJob` — the crew is committed | category, tier, crew size, wanted trades, **how long the decision took**, week |
+| `job_done` | `finishJob` — the verdict | category, tier, verdict 0–4, came off yes/no, crew size, time, week |
+| `job_expired` | a posting **you opened** goes off the board | category, tier, whether it had been cased, week |
+| `rival_ended` | `rivalEnd` — a rival chapter closes | how it ended, week |
+| `week_turned` | `weekTick` | week |
+| `game_over` | `S.over` — the last stage won, or no crew and no float | `win`/`lose`, week |
+| `new_game` | `newgame` — wiped and started again | week |
+
+Never sent: a title, a person's name, a city, a country, a line of narrative, or any game state.
+Only numbers and one short word from a fixed list. A name the server does not know is dropped.
+
+## Where each one appears
+
+| Section | Built from |
+|---|---|
+| **Core progression funnel** | `game_started`/`game_resumed`, `job_viewed`, `job_run`, `job_done` |
+| **Building a crew** | `candidate_viewed`, `trip_started`, `member_signed`, `member_refused`, `crew_filled`, `member_dropped`, `member_lost` |
+| **Trades players sign** | `member_signed` |
+| **Postings — by kind and tier** | `job_viewed`, `job_run`, `job_done`, `job_expired` |
+| **How nights end** | `job_done` verdicts |
+| **Where sittings end** | the last event of each finished sitting |
+| **First-timers against people who came back** | all of them, split by `PlaySession.is_new` |
+| **One player, in order** | all of them, for one anonymous id |
+
+## Two things that are not what you might expect, and why
+
+**Postings group by category × tier, not by job ID.** A posting's id is minted from each game's own
+seed and its title is assembled from a verb pool and a noun pool — "Intercept the night ferry" is
+one of thirty-six interceptions, and no two players ever see the same id. An id column would hold
+one row per value and could not answer "which assignment is too hard". The twelve categories
+(Interception, Recovery, Extraction, Escort, Surveillance, Infiltration, Cyber, Smuggling, Papers,
+Negotiation, Sabotage, Vault) crossed with the four tiers is the only unit that means the same thing
+in two different players' games.
+
+**Recruitment is not in the funnel.** The Crew does not gate the board on having a crew — you can
+open a posting with nobody on the books — so putting "filled the crew" between "began a campaign"
+and "opened a posting" produced a drop-off of **minus twelve per cent** on real seeded data. Every
+link in the funnel is now something the game genuinely requires of the step below it. Recruitment is
+counted in **Building a crew** as what it is: behaviour, not a gate.
+
+## Filters
+
+Window (Today · 7 days · 30 days · All time) applies to everything. The Game Events section adds:
+
+- **Players** — Everyone · First sitting · Returning
+- **Posting** — any of the twelve kinds. Narrows the postings table only; it deliberately does not
+  narrow the funnel, because "the funnel for people who ran vault jobs" silently drops everybody
+  who never ran one, which is the population the funnel exists to count.
+- **Outcome** — All · Came off · Did not
+
+## Checking the events work
+
+Carrying on from step 9 above:
+
+10. Open the game and press **Begin**, fill in a name, and press the confirm button.
+11. In the Network tab, the next **`beat`** (within 30 seconds) has an `events` array in its body
+    with `{"n":"game_started","q":1,"w":1}` in it.
+12. Open somebody's file on the **Roster** tab, then open a posting on the **Jobs** tab. The next
+    beat carries `candidate_viewed` and `job_viewed`.
+13. Reload **/admin/analytics**. **Core progression funnel** shows you at "Opened a posting", and
+    **Postings — by kind and tier** has a row for the kind you opened.
+14. Scroll to **One player, in order**, click the chip with your anonymous id on it, and read your
+    own sitting back as a list of times and sentences.
+
+If nothing appears: events only flow where `API_LIVE` is true **and** `/health` has answered, so a
+copy opened off a disk or on itch.io sends nothing at all — by design.
