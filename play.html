@@ -1655,6 +1655,20 @@ let ACC_ERR="";   // what went wrong last, in words, for the account screen to p
    way of failing to ask — offline, a dead server, a copy off the disk — fails towards letting
    somebody play. */
 let SHOPEN=false;
+/* AND WHETHER ANYTHING ACTUALLY ANSWERED. API_LIVE says this copy is ALLOWED to talk to its API;
+   this says the API talked back at all. The gap between the two is a dead or absent server on the
+   right host — a laptop with the API not started, a staging box mid-deploy.
+
+   It matters because the playtime beat is fire-and-forget, and a caught promise does not un-log a
+   failed response: the browser prints the red line whatever the code does with it. Nothing that
+   nobody is waiting on should be sent to a server that has not said hello.
+
+   WHAT IT DOES NOT COVER, because this was built expecting it to: a server that answers /health
+   and does not implement /play/beat. That is what the suite's three fake APIs were, and no flag
+   here could tell them from the real thing — a 404 on the beat is the only way to find out, which
+   is exactly the console line being avoided. The fakes were taught the route instead, which is
+   what they are for. Set by shopAsk, which was already asking. */
+let API_REAL=false;
 /* AND WHETHER PRESS-PASS CODES ARE BEING TAKEN, remembered the same way and for a sharper version
    of the same reason. It was read off ACC.invites_open — which is null until somebody signs in — so
    the line offering the code box could not be drawn for anybody who had not already got an account.
@@ -1748,9 +1762,11 @@ async function accRefresh(){
    count a free run that could not be reset. There is no free run, so there is nothing to count. */
 function shopAsk(){
   if(!API_LIVE)return Promise.resolve();
-  if(signedIn())return accRefresh().then(()=>{}).catch(()=>{});
+  if(signedIn())return accRefresh().then(()=>{API_REAL=true;}).catch(()=>{});
   return api("GET","/health").then(r=>{
     if(!(r&&r.ok&&r.body))return;
+    // Something answered, and it answered like this game's server. See API_REAL.
+    API_REAL=true;
     if(typeof r.body.shop==="boolean")SHOPEN=r.body.shop;
     if(typeof r.body.invites==="boolean")CODESON=r.body.invites;
   }).catch(()=>{});
@@ -11349,6 +11365,151 @@ const SET_KEY="thecrew_settings_v1";
 const SET={sound:true,music:true,volume:0.6,bright:100,lang:"en",tutorialDone:false,reminderDone:false,plays:0,lastSeen:0,speed:2};
 const PLAY_GAP_MS=30*60*1000;
 function loadSettings(){try{const r=localStorage.getItem(SET_KEY);if(r)Object.assign(SET,JSON.parse(r));}catch(e){}}
+
+/* ====================== HOW LONG THE GAME IS ACTUALLY PLAYED FOR ==========================
+
+   The one number nobody building a game can get from anywhere else, and the one that is easiest
+   to collect wrongly. Time between opening a tab and closing it is free to measure and is a lie:
+   a tab left open over lunch is an hour of play, a laptop shut without closing anything is a
+   session that never ends, and both of them round upwards. What is counted here is time the tab
+   was VISIBLE and somebody was TOUCHING IT, and nothing else.
+
+   WHAT IS SENT: an anonymous id this browser made up once, an id for this sitting, a count of
+   milliseconds, and whether this is goodbye. No account, no token, no email — deliberately not,
+   even though nearly everybody here is signed in and it would have been one line. See the note in
+   server/app/routers/play.py: the moment a beat names an account, "how long do people play" and
+   "how long does THIS PERSON play" are the same query, and nobody agreed to the second one.
+
+   WHAT STOPS THE CLOCK:
+     the tab going away      document.hidden, immediately. Another tab is not play.
+     nobody touching it      IDLE_MS of no pointer, key or touch. A game left on the jobs screen
+                             while somebody answers the door is not play either.
+     the machine stalling    a tick that arrives far later than it was due — a closed lid, a
+                             throttled background tab — contributes NOTHING rather than the gap.
+                             performance.now() keeps running while a laptop sleeps, so without
+                             this an overnight sleep would be eight hours of devoted play.
+
+   WHAT STARTS A NEW SITTING: coming back after PLAY_GAP_MS away. The same thirty minutes the game
+   already uses to decide whether this is a new "play" for the tutorial reminder — read from that
+   constant rather than written again, because two numbers that mean the same thing are one
+   rename away from disagreeing.
+
+   NOTHING HERE CAN INTERRUPT A GAME. Every entry point is wrapped, every failure is swallowed,
+   the transport is fire-and-forget, and if the API is not this copy's own site it never starts at
+   all — so the itch.io build, a copy off a disk and all sixty browser tests are silent. */
+const PLAY_ANON_KEY="thecrew_anon_v1";
+const PT={
+  tickMs:5000,        // how often the clock is looked at
+  beatMs:30000,       // how often the server is told — matches BEAT_SECONDS on the server
+  idleMs:90000,       // untouched this long and it is not play
+  on:false, anon:"", sid:"", activeMs:0, markAt:null, lastInput:0, sentMs:-1, awayAt:0, timer:0,
+};
+/* 32 hex characters of real randomness. crypto.getRandomValues on every browser this game runs
+   in; Math.random only if something has removed it, because an id is better than no id and this
+   one names nobody either way. */
+function playId(){
+  try{
+    const a=new Uint8Array(16);crypto.getRandomValues(a);
+    return Array.from(a,b=>b.toString(16).padStart(2,"0")).join("");
+  }catch(e){
+    let s="";while(s.length<32)s+=Math.floor(Math.random()*16).toString(16);
+    return s.slice(0,32);
+  }
+}
+/* The anonymous id, made once and kept. A cleared cache is a new player here and that is the
+   accepted cost of not having anything better to key on — anything better would be a fingerprint,
+   which is the thing being avoided. */
+function playAnon(){
+  try{
+    let v=localStorage.getItem(PLAY_ANON_KEY);
+    if(!/^[0-9a-f]{32}$/.test(v||"")){v=playId();localStorage.setItem(PLAY_ANON_KEY,v);}
+    return v;
+  }catch(e){return PT.anon||playId();}   // private mode: an id for this tab, and no complaint
+}
+/* Fire and forget. text/plain rather than application/json ON PURPOSE: it is a "simple request",
+   so there is no CORS preflight — which matters twice. Every ordinary beat costs one request
+   instead of two, and the LAST beat can be sent by sendBeacon during unload, where there is no
+   time for a preflight and a JSON content type would mean the goodbye never arrives at all. */
+function playSend(ended){
+  if(!PT.on||!API_REAL)return;   // nothing is sent to a server that has not answered /health
+  const body=JSON.stringify({anon:PT.anon,session:PT.sid,
+    active_ms:Math.round(PT.activeMs),ended:!!ended});
+  PT.sentMs=PT.activeMs;
+  try{
+    if(ended&&navigator.sendBeacon){
+      navigator.sendBeacon(API_BASE+"/play/beat",new Blob([body],{type:"text/plain"}));
+      return;
+    }
+  }catch(e){}
+  try{
+    fetch(API_BASE+"/play/beat",{method:"POST",body:body,keepalive:true,
+      headers:{"Content-Type":"text/plain"}}).catch(()=>{});
+  }catch(e){}
+}
+function playTick(){
+  try{
+    const now=performance.now();
+    const awake=!document.hidden&&(now-PT.lastInput)<PT.idleMs;
+    if(PT.markAt!==null){
+      /* CREDIT ONLY UP TO THE MOMENT ATTENTION ACTUALLY LAPSED, not up to the tick that noticed.
+         The clock is read every five seconds, so the tick that finds somebody has gone idle is up
+         to five seconds after they did — and crediting the whole interval would add five phantom
+         seconds at every lapse. One of those is nothing; one per tab-switch, in a game somebody
+         plays in a browser with other tabs open, is minutes an evening, and it only ever rounds
+         upwards. lastInput + idleMs is the exact instant it stopped being play.
+         Going HIDDEN needs no such clamp: visibilitychange fires at once and ticks there, so the
+         mark is already current. */
+      const until=awake?now:Math.min(now,PT.lastInput+PT.idleMs);
+      const d=until-PT.markAt;
+      // A gap far longer than a tick is a machine that stopped, not a person who kept playing.
+      if(d>0&&d<=PT.tickMs*3)PT.activeMs+=d;
+    }
+    if(awake){
+      // Back after half an hour away: that was a different sitting. Say goodbye to the old one
+      // so its playtime is final, and open a new one.
+      if(PT.awayAt&&(now-PT.awayAt)>PLAY_GAP_MS){
+        playSend(true);
+        PT.sid=playId();PT.activeMs=0;PT.sentMs=-1;
+      }
+      PT.awayAt=0;PT.markAt=now;
+    }else{
+      if(!PT.awayAt)PT.awayAt=now;
+      PT.markAt=null;
+    }
+    // Beat on a schedule, and only while there is something new to say. A sleeping tab sends
+    // nothing, which is what makes "playing now" on the dashboard mean what it says.
+    if(awake&&(PT.sentMs<0||PT.activeMs-PT.sentMs>=PT.beatMs))playSend(false);
+  }catch(e){}
+}
+/* Starts on the first real touch of the page rather than on load. A tab opened and never looked
+   at is not a session, and counting one would put a floor of zero-minute sittings under every
+   number on the dashboard. */
+function playWatch(){
+  if(!API_LIVE)return;                       // not this copy's own server: say nothing, anywhere
+  const touch=()=>{
+    try{
+      PT.lastInput=performance.now();
+      if(PT.on)return;
+      PT.on=true;PT.anon=playAnon();PT.sid=playId();
+      PT.markAt=PT.lastInput;
+      playSend(false);                       // the row exists from the first moment of play
+    }catch(e){}
+  };
+  try{
+    ["pointerdown","keydown","touchstart","wheel"].forEach(k=>
+      document.addEventListener(k,touch,{passive:true}));
+    document.addEventListener("visibilitychange",()=>{
+      // Going away is worth a beat of its own: it is the last thing known for certain before a
+      // tab that may never come back, and on a phone it is usually the only goodbye there is.
+      try{if(document.hidden&&PT.on){playTick();playSend(false);}}catch(e){}
+    });
+    // pagehide rather than beforeunload / unload: the other two do not fire reliably on iOS, and
+    // beforeunload makes a page ineligible for the back/forward cache, which would be a real
+    // performance cost paid by every player for one analytics call.
+    window.addEventListener("pagehide",()=>{try{if(PT.on){playTick();playSend(true);}}catch(e){}});
+    PT.timer=setInterval(playTick,PT.tickMs);
+  }catch(e){}
+}
 function saveSettings(){try{localStorage.setItem(SET_KEY,JSON.stringify(SET));}catch(e){}}
 
 /* ------------------------------ THE TILL ------------------------------ */
@@ -13370,7 +13531,7 @@ function screenOver(){
       +'<div class="b"><div class="k">Final float</div><div class="v num">'+money(S.money)+'</div></div></div>'
     +'<hr class="rule"><div style="display:flex;justify-content:center"><button class="btn stamp" data-act="newgame">Run it again →</button></div></div></div>'+footNote()+'</div>';
 }
-const BUILD="build 148 · September 2026";
+const BUILD="build 149 · October 2026";
 /* There was a version check here. A bundled copy fetched one line of text from the site, compared
    it with the build it was packed with, and printed a note in the footer when it was behind. It
    went with the download it was for, and so did the line of text and the constant that said where
@@ -14881,6 +15042,10 @@ function pcOnlyDoor(){
   shopAsk().then(()=>render()).catch(()=>{});
   // a play is a sitting: a return after half an hour away counts as the next one
   try{const now=Date.now();if(!SET.lastSeen||now-SET.lastSeen>PLAY_GAP_MS)SET.plays=(SET.plays||0)+1;SET.lastSeen=now;saveSettings();}catch(e){}
+  // How long the game is actually played for. Armed last and inside its own guard, so a failure
+  // here cannot keep the game from starting — it is the only thing on this page nobody is waiting
+  // for. It is silent unless this copy was served from the site its own API belongs to.
+  try{playWatch();}catch(e){}
   try{
     const hot=window.claude&&window.claude.hot;
     if(hot&&typeof hot.snapshot==="function")hot.snapshot(()=>S?packState():null);

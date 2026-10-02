@@ -40,6 +40,11 @@ const srv=http.createServer((q,r)=>{
                   invites_open:INVITES,pass_until:UNTIL,pass_ended:ENDED,kind:PAID&&UNTIL?"pass":PAID?"purchase":null});
   // `invites` on /health, which is the only thing a stranger can ask. See main.py: it is there so
   // the code box can be offered to somebody who has no account, which is everybody who has a code.
+  /* The playtime beat, which the real server answers 204 to and this stood in for the day the
+     route was added. A fake API that is missing a route the game calls is a fake API that reports
+     a console error on every player's behalf — which is a true thing about THIS FILE and nothing
+     at all about the game. See server/app/routers/play.py. */
+  if(url==="/play/beat"){r.writeHead(204).end();return;}
   if(url==="/health")return json({ok:true,mail:{configured:false},shop:SHOP,invites:INVITES});
   if(url==="/auth/me")return json(acc());
   if(url==="/auth/signup"||url==="/auth/login"){

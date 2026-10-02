@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.emailer import email_status
-from app.routers import auth, licence, saves
+from app.routers import admin, auth, licence, play, saves
 
 app = FastAPI(title="The Crew", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -27,6 +27,12 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(licence.router)
 app.include_router(saves.router)
+# What the game checks in to, and the one page that reads it back. Separate routers because they
+# have opposite rules: /play takes anything shaped right from anybody and answers 204 whatever
+# happens, /admin refuses everybody but one account. Keeping them in one file would be one edit
+# away from a dashboard that answers to a browser with no credentials.
+app.include_router(play.router)
+app.include_router(admin.router)
 
 
 # Read once, at import, so a deploy missing it fails NOW rather than at somebody's first sign-up.

@@ -31,6 +31,11 @@ const srv=http.createServer((q,r)=>{
   const url=q.url.split("?")[0];
   SEEN.push(q.method+" "+url);
   const json=o=>{r.writeHead(200,{"content-type":"application/json","cache-control":"no-store"});r.end(JSON.stringify(o));};
+  /* The playtime beat, which the real server answers 204 to and this stood in for the day the
+     route was added. A fake API that is missing a route the game calls is a fake API that reports
+     a console error on every player's behalf — which is a true thing about THIS FILE and nothing
+     at all about the game. See server/app/routers/play.py. */
+  if(url==="/play/beat"){r.writeHead(204).end();return;}
   if(url==="/health")return json({ok:true,mail:{configured:false},shop:SHOP});
   if(url==="/auth/me")return json({email:"paz@example.com",paid:PAID,over:!PAID,shop_open:SHOP});
   if(url==="/licence")return json({paid:PAID,over:!PAID,shop_open:SHOP,price:null,currency:null,bought_at:null});

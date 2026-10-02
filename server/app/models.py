@@ -4,6 +4,8 @@
     PasswordReset  one way back in, good once — because otherwise forgetting is permanent.
     Save           the crew itself, so it stops living in one browser.
     Licence        what they paid for, attached to the person rather than to a browser.
+    PlaySession    one sitting, and how much of it was play. Knows nobody's name.
+    PlayMilestone  that a sitting got past a minute, five, fifteen, half an hour, an hour, two.
 
 There was a FreeRun here — the twelve weeks, a row per game, summed — and the game is bought
 before it is played now, so nothing asks how many weeks anybody has had. The table is dropped in
@@ -15,8 +17,8 @@ save moves here, Player is what it hangs off, and a wide Player row is the thing
 way."""
 from datetime import datetime, timezone
 
-from sqlalchemy import (Boolean, DateTime, ForeignKey, Integer, String, Text,
-                        UniqueConstraint)
+from sqlalchemy import (BigInteger, Boolean, DateTime, ForeignKey, Index, Integer,
+                        String, Text, UniqueConstraint)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -154,3 +156,106 @@ class Save(Base):
                                                  onupdate=_now, nullable=False)
 
     player: Mapped[Player] = relationship(back_populates="saves")
+
+
+# ======================= WHAT IS WATCHED, AND WHAT IS NOT =======================
+#
+# These two tables answer one question — how long is the game actually played for — and they are
+# built so that they CANNOT answer any other. There is no email on them, no account id, no IP
+# address, no user agent, no country, no screen size, no name of anything that happened in the
+# game. A row says: an anonymous id nobody can turn back into a person, when a sitting began,
+# when it was last heard from, and how many milliseconds of it were play.
+#
+# WHY NOT HANG IT OFF Player. The game is bought before it is played, so very nearly everybody
+# measured here HAS an account and joining to it would have been one foreign key. That is exactly
+# why it is not done: the moment the row knows which account it is, "how long do people play for"
+# and "how long does THIS PERSON play for" are the same query, and the second one is a question
+# about somebody who was never asked. A column is a promise about what can be asked later.
+#
+# WHAT IS THEREFORE IMPOSSIBLE, and is meant to be: no "which of my customers is drifting away",
+# no mailing the people who played twice and stopped. If that is ever wanted it is a new decision
+# with a new migration and, properly, a word to the people it is about — not a join somebody
+# notices is available.
+
+
+class PlaySession(Base):
+    """One sitting at the game.
+
+    NOT one visit to the page, and not the gap between opening a tab and closing it. A tab left
+    open overnight on a title screen is the easiest number in the world to collect and it is a
+    lie — the sort that makes "average session: 4 hours" and a developer who believes it. What is
+    counted here is time the tab was visible AND somebody was touching it; see analytics.py for
+    the arithmetic and play.html for the half of it that runs in the browser.
+
+    THE CLIENT MEASURES IT AND THE SERVER DOES NOT BELIEVE IT. The browser is the only thing that
+    knows whether the tab is visible or whether a key has been pressed, so it has to be the one
+    counting. It is also a file on a stranger's computer that they can edit, so every beat is
+    clamped against this row's own wall-clock on arrival: a session can never have accrued more
+    active time than has passed since it started, and never less than it had a moment ago. The
+    worst a tampered client can do is claim all of its real elapsed time as play.
+
+    HOW AN ABANDONED ONE ENDS. `ended_at` is written when the browser says goodbye — and browsers
+    very often do not: a closed laptop, a killed tab, a train going into a tunnel. So the honest
+    end of a session is `ended_at or last_beat_at`, and a session with no goodbye is worth exactly
+    as much as its last checkpoint rather than running until somebody notices. That is the whole
+    reason heartbeats exist rather than a single call at each end.
+
+    `is_new` and `session_no` are decided HERE, on the first beat, by asking whether this anonymous
+    id has been seen before. Written down rather than worked out at read time because "was this
+    their first sitting" is a fact about the moment it happened, and a query that recomputes it
+    changes its mind every time the range filter moves."""
+    __tablename__ = "play_sessions"
+    __table_args__ = (
+        UniqueConstraint("session_id", name="uq_play_sessions_session_id"),
+        # The two shapes every dashboard query has: a window of time, and one player's history.
+        Index("ix_play_sessions_started_at", "started_at"),
+        Index("ix_play_sessions_anon_started", "anon_id", "started_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # 32 hex characters the browser made up once and kept. Not derived from anything about the
+    # person or the machine — a cleared cache is a new player here, and that is the right trade.
+    anon_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    session_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+    # Every checkpoint moves this. It is what makes an abandoned session cheap to end correctly.
+    last_beat_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+    # Only ever set by an explicit goodbye, or by the next sitting starting. Null is the ordinary
+    # state of a session that is still running AND of one that was abandoned — telling those two
+    # apart is what last_beat_at is for, and the dashboard does it with a clock rather than a cron.
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # BigInteger because milliseconds: a 32-bit column runs out at 24 days, which is not a limit
+    # anybody will reach and is also not a limit worth having a conversation about later.
+    active_ms: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    is_new: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Which sitting this was for this anonymous id: 1 for a first, 2 for a second.
+    session_no: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    milestones: Mapped[list["PlayMilestone"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan")
+
+
+class PlayMilestone(Base):
+    """That a sitting got past a minute, five, fifteen, thirty, sixty, a hundred and twenty.
+
+    A row rather than six boolean columns on the session, because the interesting question is
+    *when* each one was crossed and a column cannot hold that.
+
+    THE UNIQUE CONSTRAINT IS THE WHOLE MECHANISM. "Should not generate duplicate events" is not
+    something to remember to check for in the code that writes them — two beats arriving at once,
+    a client retrying a checkpoint it is not sure landed, and a page restored from the back/forward
+    cache all produce the same crossing twice. The pair (session, minutes) is unique in the
+    database, so the second one is refused by Postgres rather than by an `if`."""
+    __tablename__ = "play_milestones"
+    __table_args__ = (UniqueConstraint("session_pk", "minutes", name="uq_play_milestones_session_minutes"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_pk: Mapped[int] = mapped_column(ForeignKey("play_sessions.id", ondelete="CASCADE"),
+                                            nullable=False, index=True)
+    # Carried alongside the foreign key so "how many PEOPLE ever played an hour" is one query on
+    # this table rather than a join. It is the same anonymous id; it reveals nothing more.
+    anon_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    minutes: Mapped[int] = mapped_column(Integer, nullable=False)
+    reached_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+
+    session: Mapped[PlaySession] = relationship(back_populates="milestones")
